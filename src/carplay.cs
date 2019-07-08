@@ -678,6 +678,7 @@ namespace CarPlay {
 		[DesignatedInitializer]
 		IntPtr Constructor (ICPSessionConfigurationDelegate @delegate);
 
+		[Abstract] // this is not @required since Xcode 11 but kept for API compatibility
 		[Export ("limitedUserInterfaces")]
 		CPLimitableUserInterface LimitedUserInterfaces { get; }
 
