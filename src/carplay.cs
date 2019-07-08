@@ -940,4 +940,5 @@ namespace CarPlay {
 		CPAlertAction [] Actions { get; }
 	}
 }
+
 #endif // XAMCORE_2_0
