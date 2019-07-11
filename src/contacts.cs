@@ -449,7 +449,214 @@ namespace Contacts {
 #endif
 	delegate void CNContactStoreListContactsHandler (CNContact contact, ref bool stop);
 
-	[iOS (9,0), Mac (10,11)]
+	interface ICNChangeHistoryEventVisitor {}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[Protocol]
+	interface CNChangeHistoryEventVisitor
+	{
+		[Abstract]
+		[Export ("visitDropEverythingEvent:")]
+		void DropEverything (CNChangeHistoryDropEverythingEvent @event);
+
+		[Abstract]
+		[Export ("visitAddContactEvent:")]
+		void AddContact (CNChangeHistoryAddContactEvent @event);
+
+		[Abstract]
+		[Export ("visitUpdateContactEvent:")]
+		void UpdateContact (CNChangeHistoryUpdateContactEvent @event);
+
+		[Abstract]
+		[Export ("visitDeleteContactEvent:")]
+		void DeleteContact (CNChangeHistoryDeleteContactEvent @event);
+
+		[Export ("visitAddGroupEvent:")]
+		void AddGroup (CNChangeHistoryAddGroupEvent @event);
+
+		[Export ("visitUpdateGroupEvent:")]
+		void UpdateGroup (CNChangeHistoryUpdateGroupEvent @event);
+
+		[Export ("visitDeleteGroupEvent:")]
+		void DeleteGroup (CNChangeHistoryDeleteGroupEvent @event);
+
+		[Export ("visitAddMemberToGroupEvent:")]
+		void AddMemberToGroup (CNChangeHistoryAddMemberToGroupEvent @event);
+
+		[Export ("visitRemoveMemberFromGroupEvent:")]
+		void RemoveMemberFromGroup (CNChangeHistoryRemoveMemberFromGroupEvent @event);
+
+		[Export ("visitAddSubgroupToGroupEvent:")]
+		void AddSubgroupToGroup (CNChangeHistoryAddSubgroupToGroupEvent @event);
+
+		[Export ("visitRemoveSubgroupFromGroupEvent:")]
+		void RemoveSubgroupFromGroup (CNChangeHistoryRemoveSubgroupFromGroupEvent @event);
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryEvent : NSCopying, NSSecureCoding
+	{
+		[Export ("acceptEventVisitor:")]
+		void AcceptEventVisitor (ICNChangeHistoryEventVisitor visitor);
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	interface CNChangeHistoryDropEverythingEvent {}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddContactEvent
+	{
+		[Export ("contact", ArgumentSemantic.Strong)]
+		CNContact Contact { get; }
+
+		[NullAllowed, Export ("containerIdentifier", ArgumentSemantic.Strong)]
+		string ContainerIdentifier { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryUpdateContactEvent
+	{
+		[Export ("contact", ArgumentSemantic.Strong)]
+		CNContact Contact { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryDeleteContactEvent
+	{
+		[Export ("contactIdentifier", ArgumentSemantic.Strong)]
+		string ContactIdentifier { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddGroupEvent
+	{
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+
+		[Export ("containerIdentifier", ArgumentSemantic.Strong)]
+		string ContainerIdentifier { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryUpdateGroupEvent
+	{
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryDeleteGroupEvent
+	{
+		[Export ("groupIdentifier", ArgumentSemantic.Strong)]
+		string GroupIdentifier { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddMemberToGroupEvent
+	{
+		[Export ("member", ArgumentSemantic.Strong)]
+		CNContact Member { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryRemoveMemberFromGroupEvent
+	{
+		[Export ("member", ArgumentSemantic.Strong)]
+		CNContact Member { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddSubgroupToGroupEvent
+	{
+		[Export ("subgroup", ArgumentSemantic.Strong)]
+		CNGroup Subgroup { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryRemoveSubgroupFromGroupEvent
+	{
+		[Export ("subgroup", ArgumentSemantic.Strong)]
+		CNGroup Subgroup { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNFetchRequest {}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (CNFetchRequest))]
+	interface CNChangeHistoryFetchRequest : NSSecureCoding
+	{
+		[NullAllowed, Export ("startingToken", ArgumentSemantic.Copy)]
+		NSData StartingToken { get; set; }
+
+		[NullAllowed, Export ("additionalContactKeyDescriptors", ArgumentSemantic.Copy)]
+		// we cannot use ICNKeyDescriptor as Apple (and others) can adopt it from categories
+		// cannot be exposed as NSString since they could be internalized types, like CNAggregateKeyDescriptor
+		NSArray AdditionalContactKeyDescriptors { get; set; }
+
+		[Export ("shouldUnifyResults")]
+		bool ShouldUnifyResults { get; set; }
+
+		[Export ("mutableObjects")]
+		bool MutableObjects { get; set; }
+
+		[Export ("includeGroupChanges")]
+		bool IncludeGroupChanges { get; set; }
+
+		[Export ("excludedTransactionAuthors", ArgumentSemantic.Copy)]
+		string[] ExcludedTransactionAuthors { get; set; }
+	}
+
+	[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNFetchResult
+	{
+		[Export ("value", ArgumentSemantic.Strong)]
+		NSObject Value { get; }
+
+		[Export ("currentHistoryToken", ArgumentSemantic.Copy)]
+		NSData CurrentHistoryToken { get; }
+	}
+
+	[iOS (9,0), Mac (10,11, onlyOn64: true)]
 	[BaseType (typeof (NSObject))]
 	interface CNContactStore {
 
