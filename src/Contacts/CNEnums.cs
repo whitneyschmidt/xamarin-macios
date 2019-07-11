@@ -86,9 +86,7 @@ namespace Contacts {
 		DataAccessError = 2,
 		AuthorizationDenied = 100,
 		NoAccessibleWritableContainers = 101,
-		[Watch (6,0), Mac (10,14, onlyOn64: true), iOS (13,0)]
 		UnauthorizedKeys = 102,
-		[Watch (6,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
 		FeatureDisabledByUser = 103,
 		RecordDoesNotExist = 200,
 		InsertedRecordAlreadyExists = 201,
@@ -96,9 +94,7 @@ namespace Contacts {
 		ContainmentScope = 203,
 		ParentRecordDoesNotExist = 204,
 		RecordIdentifierInvalid = 205,
-		[Watch (6,0), Mac (10,14, onlyOn64: true), iOS (13,0)]
 		RecordNotWritable = 206,
-		[Watch (6,0), Mac (10,14, onlyOn64: true), iOS (13,0)]
 		ParentContainerNotWritable = 207,
 		ValidationMultipleErrors = 300,
 		ValidationTypeMismatch = 301,
