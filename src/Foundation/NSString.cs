@@ -174,7 +174,7 @@ namespace Foundation {
 			Handle = CreateWithCharacters (Handle, value, start, length);
 		}
 	
-		public unsafe override string ToString ()
+		public override string ToString ()
 		{
 			return FromHandle (Handle);
 		}
@@ -193,16 +193,26 @@ namespace Foundation {
 			return new NSString (str);
 		}
 
-		public unsafe static string FromHandle (IntPtr usrhandle)
+		public static string FromHandle (IntPtr usrhandle)
 		{
-			if (usrhandle == IntPtr.Zero)
+			return FromHandle (usrhandle, false);
+		}
+
+		public static string FromHandle (IntPtr handle, bool owns)
+		{
+			if (handle == IntPtr.Zero)
 				return null;
 
+			try {
 #if MONOMAC
-			return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (usrhandle, selUTF8StringHandle));
+				return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (handle, selUTF8StringHandle));
 #else
-			return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (usrhandle, Selector.GetHandle (selUTF8String)));
+				return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (handle, Selector.GetHandle (selUTF8String)));
 #endif
+			} finally {
+				if (owns)
+					DangerousRelease (handle);
+			}
 		}
 
 		public static bool Equals (NSString a, NSString b)
@@ -305,23 +315,8 @@ namespace Foundation {
 		
 		public override int GetHashCode ()
 		{
-#if XAMCORE_2_0
-			// for unified NSObject already deals with `hash` for both 32/64 bits
 			return base.GetHashCode ();
-#else
-			// for classic there's no GetHashCode override in NSObject, so Hash makes sense
-			return (int) GetNativeHash ();
-#endif
 		}
-
-#if !MONOMAC && !XAMCORE_2_0
-		[Advice ("Use the version with a `ref float actualFontSize`")]
-		public CGSize DrawString (CGPoint point, nfloat width, UIKit.UIFont font, nfloat minFontSize, nfloat actualFontSize, UIKit.UILineBreakMode breakMode, UIKit.UIBaselineAdjustment adjustment)
-		{
-			nfloat temp = actualFontSize;
-			return DrawString (point, width, font, minFontSize, ref temp, breakMode, adjustment);
-		}
-#endif
 #endif // !COREBUILD
 	}
 }

@@ -11,16 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
 using UIKit;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace Introspection {
@@ -52,8 +45,6 @@ namespace Introspection {
 			case "MTKModelIOVertexDescriptorFromMetal":
 			case "MTKModelIOVertexFormatFromMetal":
 			case "MTKMetalVertexFormatFromModelIO":
-			case "CVPixelBufferGetIOSurface":
-			case "CVPixelBufferCreateWithIOSurface":
 			case "MPSImageBatchIncrementReadCount":
 			case "MPSImageBatchSynchronize":
 			case "MPSImageBatchResourceSize":
@@ -63,7 +54,9 @@ namespace Introspection {
 			case "MPSHintTemporaryMemoryHighWaterMark":
 			case "MPSSetHeapCacheDuration":
 				return simulator;
-
+			case "CVPixelBufferGetIOSurface":
+			case "CVPixelBufferCreateWithIOSurface":
+				return simulator && !TestRuntime.CheckXcodeVersion (11, 0);
 			// it's not needed for ARM64/ARM64_32 and Apple does not have stubs for them in libobjc.dylib
 			case "objc_msgSend_stret":
 			case "objc_msgSendSuper_stret":

@@ -6,14 +6,13 @@ using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class CompileITunesMetadataTaskBase : Task
+	public abstract class CompileITunesMetadataTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -32,7 +31,7 @@ namespace Xamarin.iOS.Tasks
 
 			if (ITunesMetadata != null) {
 				if (ITunesMetadata.Length > 1) {
-					Log.LogError ("Cannot have more than 1 iTunesMetadata.plist.");
+					Log.LogError (MSBStrings.E0023);
 					return false;
 				}
 
@@ -41,7 +40,7 @@ namespace Xamarin.iOS.Tasks
 				try {
 					metadata = PDictionary.FromFile (path);
 				} catch (Exception ex) {
-					Log.LogError (null, null, null, path, 0, 0, 0, 0, "Error loading '{0}': {1}", path, ex.Message);
+					Log.LogError (null, null, null, path, 0, 0, 0, 0, MSBStrings.E0010, path, ex.Message);
 					return false;
 				}
 			} else {
@@ -51,7 +50,7 @@ namespace Xamarin.iOS.Tasks
 				try {
 					plist = PDictionary.FromFile (manifest);
 				} catch (Exception ex) {
-					Log.LogError (null, null, null, manifest, 0, 0, 0, 0, "Error loading '{0}': {1}", manifest, ex.Message);
+					Log.LogError (null, null, null, manifest, 0, 0, 0, 0, MSBStrings.E0010, manifest, ex.Message);
 					return false;
 				}
 

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Json;
+using System.Text.Json;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -10,6 +10,7 @@ using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
@@ -246,7 +247,7 @@ namespace Xamarin.MacDev.Tasks
 			case "AppleTVOS":
 				break;
 			default:
-				Log.LogError ("Unrecognized platform: {0}", SdkPlatform);
+				Log.LogError (MSBStrings.E0089, SdkPlatform);
 				return false;
 			}
 
@@ -276,7 +277,7 @@ namespace Xamarin.MacDev.Tasks
 					catalog = Path.GetDirectoryName (catalog);
 
 				if (string.IsNullOrEmpty (catalog)) {
-					Log.LogWarning (null, null, null, ImageAssets[i].ItemSpec, 0, 0, 0, 0, "Asset not part of an asset catalog: {0}", ImageAssets[i].ItemSpec);
+					Log.LogWarning (null, null, null, ImageAssets[i].ItemSpec, 0, 0, 0, 0, MSBStrings.W0090, ImageAssets[i].ItemSpec);
 					continue;
 				}
 
@@ -322,7 +323,7 @@ namespace Xamarin.MacDev.Tasks
 						var src = ImageAssets[i].GetMetadata ("FullPath");
 
 						if (!File.Exists (src)) {
-							Log.LogError (null, null, null, src, 0, 0, 0, 0, "File not found: {0}", src);
+							Log.LogError (null, null, null, src, 0, 0, 0, 0, MSBStrings.E0091, src);
 							return false;
 						}
 
@@ -380,53 +381,40 @@ namespace Xamarin.MacDev.Tasks
 					if (string.IsNullOrEmpty (text))
 						continue;
 
-					JsonObject json;
-					JsonValue value;
+					JsonDocument json;
+					JsonElement value;
 
 					try {
-						json = (JsonObject) JsonValue.Parse (text);
-					} catch (ArgumentException ex) {
-						// ... At line ###, column ###
-						int line = 0, column = 0;
-						int index, endIndex;
-
-						var message = ex.Message;
-						if (message.EndsWith (".", StringComparison.Ordinal))
-							message = message.Substring (0, message.Length - 1);
-						if ((index = message.IndexOf ("At line ", StringComparison.Ordinal)) != -1) {
-							index += "At line ".Length;
-
-							if ((endIndex = message.IndexOf (", column ", index, StringComparison.Ordinal)) != -1) {
-								var columnBuf = message.Substring (endIndex + ", column ".Length);
-								var lineBuf = message.Substring (index, endIndex - index);
-
-								int.TryParse (columnBuf, out column);
-								int.TryParse (lineBuf, out line);
-							}
-						}
-
-						Log.LogError (null, null, null, items[i].ItemSpec, line, column, line, column, "{0}", ex.Message);
+						var options = new JsonDocumentOptions () {
+							AllowTrailingCommas = true,
+						};
+						json = JsonDocument.Parse (text, options);
+					} catch (JsonException je) {
+						var line = (int) (je.LineNumber + 1 ?? 0);
+						var col = (int) (je.BytePositionInLine + 1 ?? 0);
+						Log.LogError (null, null, null, items [i].ItemSpec, line, col, line, col, "{0}", je.Message);
 						return false;
-					} catch (InvalidCastException) {
-						Log.LogError (null, null, null, items[i].ItemSpec, 0, 0, 0, 0, "Invalid json.");
+					} catch (Exception e) {
+						Log.LogError (null, null, null, items[i].ItemSpec, 0, 0, 0, 0, MSBStrings.E0092, e.Message);
 						return false;
+
 					}
 
-					if (!json.TryGetValue ("properties", out value) || value.JsonType != JsonType.Object)
+					if (!json.RootElement.TryGetProperty ("properties", out value) || value.ValueKind != JsonValueKind.Object)
 						continue;
 
-					var properties = (JsonObject) value;
+					var properties = value;
 
-					if (!properties.TryGetValue ("on-demand-resource-tags", out value) || value.JsonType != JsonType.Array)
+					if (!properties.TryGetProperty ("on-demand-resource-tags", out value) || value.ValueKind != JsonValueKind.Array)
 						continue;
 
-					var resourceTags = (JsonArray) value;
+					var resourceTags = value;
 					var tags = new HashSet<string> ();
 					string hash;
 
-					foreach (var tag in resourceTags) {
-						if (tag.JsonType == JsonType.String)
-							tags.Add ((string) tag);
+					foreach (var tag in resourceTags.EnumerateArray ()) {
+						if (tag.ValueKind == JsonValueKind.String)
+							tags.Add (tag.GetString ());
 					}
 
 					var tagList = tags.ToList ();
@@ -470,7 +458,7 @@ namespace Xamarin.MacDev.Tasks
 				return false;
 
 			if (PartialAppManifest != null && !File.Exists (PartialAppManifest.GetMetadata ("FullPath")))
-				Log.LogError ("Partial Info.plist file was not generated: {0}", PartialAppManifest.GetMetadata ("FullPath"));
+				Log.LogError (MSBStrings.E0093, PartialAppManifest.GetMetadata ("FullPath"));
 
 			try {
 				var manifestOutput = PDictionary.FromFile (manifest.ItemSpec);
@@ -480,7 +468,7 @@ namespace Xamarin.MacDev.Tasks
 				bundleResources.AddRange (GetCompiledBundleResources (manifestOutput, intermediateBundleDir));
 				outputManifests.Add (manifest);
 			} catch (Exception ex) {
-				Log.LogError ("Failed to load {0} log file `{1}`: {2}", ToolName, manifest.ItemSpec, ex.Message);
+				Log.LogError (MSBStrings.E0094, ToolName, manifest.ItemSpec, ex.Message);
 			}
 
 			foreach (var assetpack in specs.OfType<PDictionary> ()) {

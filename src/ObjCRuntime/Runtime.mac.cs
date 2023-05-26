@@ -38,12 +38,7 @@ namespace ObjCRuntime {
 	public static partial class Runtime {
 #if !COREBUILD
 		internal const string ProductName = "Xamarin.Mac";
-		internal const string CompatNamespace = "MonoMac";
-#if XAMCORE_2_0
 		internal const string AssemblyName = "Xamarin.Mac.dll";
-#else
-		internal const string AssemblyName = "XamMac.dll";
-#endif
 
 		public static string FrameworksPath {
 			get; set;
@@ -54,7 +49,6 @@ namespace ObjCRuntime {
 		}
 			
 		delegate void initialize_func ();
-		delegate void set_bool_func (bool value);
 		unsafe delegate sbyte *get_sbyteptr_func ();
 
 		static volatile bool originalWorkingDirectoryIsSet;
@@ -116,7 +110,6 @@ namespace ObjCRuntime {
 
 			VerifyMonoVersion ();
 
-			LookupInternalFunction<set_bool_func> ("xamarin_set_is_unified") (IsUnifiedBuild);
 			LookupInternalFunction<initialize_func> ("xamarin_initialize") ();
 		}
 
@@ -179,7 +172,7 @@ namespace ObjCRuntime {
 		[Preserve]
 		static IntPtr GetNullableType (IntPtr type)
 		{
-			return ObjectWrapper.Convert (Registrar.GetNullableType ((Type) ObjectWrapper.Convert (type)));
+			return AllocGCHandle (Registrar.GetNullableType ((Type) GetGCHandleTarget (type)));
 		}
 #endif // !COREBUILD
 	}

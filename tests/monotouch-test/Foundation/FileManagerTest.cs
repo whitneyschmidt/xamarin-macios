@@ -10,7 +10,6 @@
 using System;
 using System.IO;
 using System.Threading;
-#if XAMCORE_2_0
 using Foundation;
 #if MONOMAC
 using AppKit;
@@ -18,11 +17,6 @@ using AppKit;
 using UIKit;
 #endif
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
@@ -36,6 +30,23 @@ namespace MonoTouchFixtures.Foundation {
 				return !File.Exists ("/usr/lib/system/libsystem_kernel.dylib");
 			}
 		}
+
+		// we might believe that Envioment.UserName os the same as NSFileManager.UserName, but it is not. On the simulator for
+		// example, NSFileManager.UserName is an empty string while mono returns 'somebody'
+		[Test]
+		public void GetUserNameTest () => Assert.IsNotNull (NSFileManager.UserName);
+
+		[Test]
+		public void GetUserFullNameTest () => Assert.IsNotNull (NSFileManager.FullUserName); // cannot check the value since it depends on the enviroment
+
+		[Test]
+		public void GetHomeDirectoryTest () => Assert.IsNotNull (NSFileManager.HomeDirectory); // cannot check the value since it depends on the enviroment
+
+		[Test]
+		public void GetHomeDirectoryForUserTest () => Assert.AreEqual (NSFileManager.HomeDirectory, NSFileManager.GetHomeDirectory (NSFileManager.UserName));
+
+		[Test]
+		public void TemporaryDirectoryTest () => Assert.IsNotNull (NSFileManager.TemporaryDirectory); // cannot check the value since it depends on the enviroment
 
 		[Test]
 		public void GetUrlForUbiquityContainer ()

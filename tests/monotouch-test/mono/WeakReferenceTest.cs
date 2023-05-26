@@ -10,16 +10,9 @@
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
 using SpriteKit;
 using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.SpriteKit;
-using MonoTouch.ObjCRuntime;
-#endif
 
 using NUnit.Framework;
 using System.Threading;
@@ -29,7 +22,11 @@ namespace MonoTouchFixtures {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public partial class WeakReferenceTest {
+#if __WATCHOS__
+		const int totalTestObjects = 500;
+#else
 		const int totalTestObjects = 5000;
+#endif
 
 		[SetUp]
 		public void Setup ()

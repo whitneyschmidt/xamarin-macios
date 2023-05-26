@@ -1,4 +1,3 @@
-#if XAMCORE_2_0
 using System;
 using System.Collections.Generic;
 using Foundation;
@@ -14,9 +13,8 @@ namespace BusinessChat {
 				values [index] = new NSString (intentParameters [k]);
 				index++; 
 			}
-			using (var dict = NSDictionary<NSString, NSString>.FromObjectsAndKeys (values, keys))
+			using (var dict = NSDictionary<NSString, NSString>.FromObjectsAndKeys (values, keys, keys.Length))
 				OpenTranscript (businessIdentifier, dict);
 		}
 	}
 }
-#endif

@@ -44,7 +44,7 @@ namespace Xamarin.Bundler {
 		public HashSet<string> Frameworks = new HashSet<string> ();
 		public HashSet<string> WeakFrameworks = new HashSet<string> ();
 
-		internal IStaticRegistrar StaticRegistrar { get; set; }
+		internal StaticRegistrar StaticRegistrar { get; set; }
 
 		// If we didn't link because the existing (cached) assemblyes are up-to-date.
 		bool cached_link = false;
@@ -54,25 +54,15 @@ namespace Xamarin.Bundler {
 		// Note that each 'Target' can have multiple abis: armv7+armv7s for instance.
 		public List<Abi> Abis;
 
-		public MonoNativeMode MonoNativeMode { get; set; }
-
 #if MONOMAC
-		public bool Is32Build { get { return !Driver.Is64Bit; } }
-		public bool Is64Build { get { return Driver.Is64Bit; } }
+		public bool Is32Build { get { return false; } }
+		public bool Is64Build { get { return true; } }
 #endif
 
 		public Target (Application app)
 		{
 			this.App = app;
-#if MMP
-			if (Driver.IsClassic) {
-				this.StaticRegistrar = new ClassicStaticRegistrar (this);
-			} else {
-				this.StaticRegistrar = new StaticRegistrar (this);
-			}
-#else
 			this.StaticRegistrar = new StaticRegistrar (this);
-#endif
 		}
 
 		// This will find the link context, possibly looking in container targets.
@@ -105,7 +95,7 @@ namespace Xamarin.Bundler {
 
 #if MTOUCH
 			if (!App.OnlyStaticLibraries && Assemblies.Count ((v) => v.HasLinkWithAttributes) > 1) {
-				ErrorHelper.Warning (127, "Incremental builds have been disabled because this version of Xamarin.iOS does not support incremental builds in projects that include more than one third-party binding libraries.");
+				ErrorHelper.Warning (127, Errors.MT0127);
 				App.ClearAssemblyBuildTargets (); // the default is to compile to static libraries, so just revert to the default.
 			}
 #endif
@@ -116,12 +106,17 @@ namespace Xamarin.Bundler {
 
 		public static string GetRealPath (string path)
 		{
+			// For some reason realpath doesn't always like filenames only, and will randomly fail.
+			// Prepend the current directory if there's no directory specified.
+			if (string.IsNullOrEmpty (Path.GetDirectoryName (path)))
+				path = Path.Combine (Environment.CurrentDirectory, path);
+
 			var rv = realpath (path, IntPtr.Zero);
 			if (rv != null)
 				return rv;
 
 			var errno = Marshal.GetLastWin32Error ();
-			ErrorHelper.Warning (54, "Unable to canonicalize the path '{0}': {1} ({2}).", path, FileCopier.strerror (errno), errno);
+			ErrorHelper.Warning (54, Errors.MT0054, path, FileCopier.strerror (errno), errno);
 			return path;
 		}
 
@@ -130,7 +125,7 @@ namespace Xamarin.Bundler {
 			if (App.LinkMode != LinkMode.None) {
 				foreach (Assembly assembly in Assemblies) {
 					if ((assembly.AssemblyDefinition.MainModule.Attributes & ModuleAttributes.ILOnly) == 0)
-						throw ErrorHelper.CreateError (2014, "Unable to link assembly '{0}' as it is mixed-mode.", assembly.AssemblyDefinition.MainModule.FileName);
+						throw ErrorHelper.CreateError (2014, Errors.MT2014, assembly.AssemblyDefinition.MainModule.FileName);
 				}
 			}
 		}
@@ -153,7 +148,7 @@ namespace Xamarin.Bundler {
 			}
 
 			if (asm == null)
-				throw ErrorHelper.CreateError (99, $"Internal error: could not find the product assembly {Driver.GetProductAssembly (App)} in the list of assemblies referenced by the executable. Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+				throw ErrorHelper.CreateError (99, Errors.MX0099, $"could not find the product assembly {Driver.GetProductAssembly(App)} in the list of assemblies referenced by the executable");
 
 			AssemblyDefinition productAssembly = asm.AssemblyDefinition;
 
@@ -176,8 +171,14 @@ namespace Xamarin.Bundler {
 					Framework framework;
 					if (Driver.GetFrameworks (App).TryGetValue (nspace, out framework)) {
 						// framework specific processing
-#if !MONOMAC
 						switch (framework.Name) {
+#if MONOMAC
+						case "QTKit":
+							// we already warn in Frameworks.cs Gather method
+							if (!Driver.LinkProhibitedFrameworks)
+								continue;
+							break;
+#else
 						case "CoreAudioKit":
 							// CoreAudioKit seems to be functional in the iOS 9 simulator.
 							if (App.IsSimulatorBuild && App.SdkVersion.Major < 9)
@@ -187,9 +188,12 @@ namespace Xamarin.Bundler {
 						case "MetalKit":
 						case "MetalPerformanceShaders":
 						case "CoreNFC":
-						case "DeviceCheck":
 							// some frameworks do not exists on simulators and will result in linker errors if we include them
 							if (App.IsSimulatorBuild)
+								continue;
+							break;
+						case "DeviceCheck":
+							if (App.IsSimulatorBuild && App.SdkVersion.Major < 13)
 								continue;
 							break;
 						case "PushKit":
@@ -197,12 +201,19 @@ namespace Xamarin.Bundler {
 							// ld: embedded dylibs/frameworks are only supported on iOS 8.0 and later (@rpath/PushKit.framework/PushKit) for architecture armv7
 							// this was fixed in Xcode 6.2 (6.1 was still buggy) see #29786
 							if ((App.DeploymentTarget < v80) && (Driver.XcodeVersion < new Version (6, 2))) {
-								ErrorHelper.Warning (49, "{0}.framework is supported only if deployment target is 8.0 or later. {0} features might not work correctly.", framework.Name);
+								ErrorHelper.Warning (49, Errors.MT0049, framework.Name);
 								continue;
 							}
 							break;
-						}
+						case "WatchKit":
+							// Xcode 11 doesn't ship WatchKit for iOS
+							if (Driver.XcodeVersion.Major == 11 && App.Platform == ApplePlatform.iOS) {
+								ErrorHelper.Warning (5219, Errors.MT5219);
+								continue;
+							}
+							break;
 #endif
+						}
 
 						if (App.SdkVersion >= framework.Version) {
 							var add_to = framework.AlwaysWeakLinked || App.DeploymentTarget < framework.Version ? asm.WeakFrameworks : asm.Frameworks;
@@ -289,7 +300,7 @@ namespace Xamarin.Bundler {
 			foreach (var name in App.IgnoredSymbols) {
 				var symbol = dynamic_symbols.Find (name);
 				if (symbol == null) {
-					ErrorHelper.Warning (5218, $"Can't ignore the dynamic symbol {StringUtils.Quote (name)} (--ignore-dynamic-symbol={StringUtils.Quote (name)}) because it was not detected as a dynamic symbol.");
+					ErrorHelper.Warning (5218, Errors.MT5218, StringUtils.Quote (name));
 				} else {
 					symbol.Ignore = true;
 				}
@@ -352,7 +363,7 @@ namespace Xamarin.Bundler {
 					return true;
 				return App.Registrar != RegistrarMode.Static;
 			default:
-				throw ErrorHelper.CreateError (99, $"Internal error: invalid symbol type {symbol.Type} for symbol {symbol.Name}. Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+				throw ErrorHelper.CreateError (99, Errors.MX0099, $"invalid symbol type {symbol.Type} for symbol {symbol.Name}");
 			}
 		}
 
@@ -396,7 +407,7 @@ namespace Xamarin.Bundler {
 					sb.AppendLine ($"@interface {symbol.ObjectiveCName} : NSObject @end");
 					break;
 				default:
-					throw ErrorHelper.CreateError (99, $"Internal error: invalid symbol type {symbol.Type} for {symbol.Name}. Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+					throw ErrorHelper.CreateError (99, Errors.MX0099, $"invalid symbol type {symbol.Type} for symbol {symbol.Name}");
 				}
 			}
 			sb.AppendLine ("static void __xamarin_symbol_referencer () __attribute__ ((used)) __attribute__ ((optnone));");
@@ -413,7 +424,7 @@ namespace Xamarin.Bundler {
 					sb.AppendLine ($"\tvalue = [{symbol.ObjectiveCName} class];");
 					break;
 				default:
-					throw ErrorHelper.CreateError (99, $"Internal error: invalid symbol type {symbol.Type} for {symbol.Name}. Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+					throw ErrorHelper.CreateError (99, Errors.MX0099, $"invalid symbol type {symbol.Type} for symbol {symbol.Name}");
 				}
 			}
 			sb.AppendLine ("}");
@@ -439,5 +450,14 @@ namespace Xamarin.Bundler {
 			return reference_m;
 #endif
 		}
+
+		// This is to load the symbols for all assemblies, so that we can give better error messages
+		// (with file name / line number information).
+		public void LoadSymbols ()
+		{
+			foreach (var a in Assemblies)
+				a.LoadSymbols ();
+		}
+
 	}
 }

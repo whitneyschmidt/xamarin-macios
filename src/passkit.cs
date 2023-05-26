@@ -29,18 +29,14 @@ namespace PassKit {
 		[NullAllowed, Export ("name", ArgumentSemantic.Strong)]
 		NSPersonNameComponents Name { get; set; }
 	
-#if XAMCORE_2_0 // The Contacts framework (CNPostalAddress) uses generics heavily, which is only supported in Unified (for now at least)
 		[NullAllowed, Export ("postalAddress", ArgumentSemantic.Retain)]
 		CNPostalAddress PostalAddress { get; set; }
-#endif // XAMCORE_2_0
 	
 		[NullAllowed, Export ("emailAddress", ArgumentSemantic.Strong)]
 		string EmailAddress { get; set; }
 	
-#if XAMCORE_2_0 // The Contacts framework (CNPhoneNumber) uses generics heavily, which is only supported in Unified (for now at least)
 		[NullAllowed, Export ("phoneNumber", ArgumentSemantic.Strong)]
 		CNPhoneNumber PhoneNumber { get; set; }
-#endif // XAMCORE_2_0
 
 		[iOS (9,2)]
 		[Deprecated (PlatformName.iOS, 10,3, message:"Use 'SubLocality' and 'SubAdministrativeArea' on 'PostalAddress' instead.")]
@@ -48,8 +44,10 @@ namespace PassKit {
 		[NullAllowed, Export ("supplementarySubLocality", ArgumentSemantic.Strong)]
 		string SupplementarySubLocality { get; set; }
 	}
+
+	[Watch (6,2), iOS (13,4)]
+	delegate void PKPassLibrarySignDataCompletionHandler (NSData signedData, NSData signature, NSError error);
 	
-	[iOS (6,0)]
 	[BaseType (typeof (NSObject))]
 	interface PKPassLibrary {
 		[Static][Export ("isPassLibraryAvailable")]
@@ -93,15 +91,27 @@ namespace PassKit {
 		[Deprecated (PlatformName.iOS, 9, 0, message: "Use the library's instance 'IsLibraryPaymentPassActivationAvailable' property instead.")]
 		bool IsPaymentPassActivationAvailable { get; }
 
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'SecureElementPassActivationAvailable' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'SecureElementPassActivationAvailable' instead.")]
 		[iOS (9,0)]
 		[Export ("isPaymentPassActivationAvailable")]
 		bool IsLibraryPaymentPassActivationAvailable { get; }
 
+		[Watch (6,2), iOS (13,4)]
+		[Export ("secureElementPassActivationAvailable")]
+		bool SecureElementPassActivationAvailable { [Bind ("isSecureElementPassActivationAvailable")] get; }
+
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'ActivateSecureElementPass' instead.")]
 		[NoWatch]
 		[iOS (8,0)]
 		[Async]
 		[Export ("activatePaymentPass:withActivationData:completion:")]
 		void ActivatePaymentPass (PKPaymentPass paymentPass, NSData activationData, [NullAllowed] Action<bool, NSError> completion);
+
+		[Async]
+		[NoWatch, iOS (13,4)]
+		[Export ("activateSecureElementPass:withActivationData:completion:")]
+		void ActivateSecureElementPass (PKSecureElementPass secureElementPass, NSData activationData, [NullAllowed] Action<bool, NSError> completion);
 
 		[NoWatch]
 		[iOS (8,0)]
@@ -115,9 +125,15 @@ namespace PassKit {
 		[Export ("openPaymentSetup")]
 		void OpenPaymentSetup ();
 
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'CanAddSecureElementPass' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'CanAddSecureElementPass' instead.")]
 		[iOS (9,0)]
 		[Export ("canAddPaymentPassWithPrimaryAccountIdentifier:")]
 		bool CanAddPaymentPass (string primaryAccountIdentifier);
+
+		[Watch (6,2), iOS (13,4)]
+		[Export ("canAddSecureElementPassWithPrimaryAccountIdentifier:")]
+		bool CanAddSecureElementPass (string primaryAccountIdentifier);
 
 		[iOS (10,1)]
 		[Watch (3,1)]
@@ -136,9 +152,15 @@ namespace PassKit {
 		[Export ("isSuppressingAutomaticPassPresentation")]
 		bool IsSuppressingAutomaticPassPresentation { get; }
 
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'RemoteSecureElementPasses' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'RemoteSecureElementPasses' instead.")]
 		[iOS (9,0)]
 		[Export ("remotePaymentPasses")]
 		PKPaymentPass[] RemotePaymentPasses { get; }
+
+		[Watch (6,2), iOS (13,4)]
+		[Export ("remoteSecureElementPasses", ArgumentSemantic.Copy)]
+		PKSecureElementPass[] RemoteSecureElementPasses { get; }
 
 #if !WATCH
 		[NoWatch]
@@ -147,12 +169,22 @@ namespace PassKit {
 		[Export ("requestAutomaticPassPresentationSuppressionWithResponseHandler:")]
 		nuint RequestAutomaticPassPresentationSuppression (Action<PKAutomaticPassPresentationSuppressionResult> responseHandler);
 #endif
+
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'PresentSecureElementPass' instead.")]
 		[NoWatch][iOS (10,0)]
 		[Export ("presentPaymentPass:")]
 		void PresentPaymentPass (PKPaymentPass pass);
+
+		[NoWatch, iOS (13,4)]
+		[Export ("presentSecureElementPass:")]
+		void PresentSecureElementPass (PKSecureElementPass pass);
+
+		[Async (ResultTypeName = "PKSignDataCompletionResult")]
+		[Watch (6,2), iOS (13,4)]
+		[Export ("signData:withSecureElementPass:completion:")]
+		void SignData (NSData signData, PKSecureElementPass secureElementPass, PKPassLibrarySignDataCompletionHandler completion);
 	}
 
-	[iOS (6,0)]
 	[Static]
 	interface PKPassLibraryUserInfoKey
 	{
@@ -179,11 +211,13 @@ namespace PassKit {
 		[Export ("token", ArgumentSemantic.Strong)]
 		PKPaymentToken Token { get; }
 
+		[Unavailable (PlatformName.UIKitForMac)][Advice ("This API is not available when using UIKit on macOS.")]
 		[NoWatch]
 		[Export ("billingAddress", ArgumentSemantic.Assign)]
 		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'BillingContact' instead.")]
 		ABRecord BillingAddress { get; }
 
+		[Unavailable (PlatformName.UIKitForMac)][Advice ("This API is not available when using UIKit on macOS.")]
 		[NoWatch]
 		[Export ("shippingAddress", ArgumentSemantic.Assign)]
 		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'ShippingContact' instead.")]
@@ -206,10 +240,6 @@ namespace PassKit {
 	delegate void PKPaymentShippingAddressSelected (PKPaymentAuthorizationStatus status, PKShippingMethod [] shippingMethods, PKPaymentSummaryItem [] summaryItems);
 	delegate void PKPaymentShippingMethodSelected (PKPaymentAuthorizationStatus status, PKPaymentSummaryItem[] summaryItems);
 
-#if !XAMCORE_2_0
-	delegate void PKPaymentAuthorizationHandler (PKPaymentAuthorizationStatus status);
-#endif
-
 	[Protocol, Model]
 	[BaseType (typeof (NSObject))]
 	interface PKPaymentAuthorizationViewControllerDelegate {
@@ -220,12 +250,7 @@ namespace PassKit {
 #if !XAMCORE_4_0
 		[Abstract]
 #endif
-		void DidAuthorizePayment (PKPaymentAuthorizationViewController controller, PKPayment payment, 
-#if XAMCORE_2_0
-			Action<PKPaymentAuthorizationStatus> completion);
-#else
-			PKPaymentAuthorizationHandler completion);
-#endif
+		void DidAuthorizePayment (PKPaymentAuthorizationViewController controller, PKPayment payment, Action<PKPaymentAuthorizationStatus> completion);
 
 		[iOS (11,0)]
 		[Export ("paymentAuthorizationViewController:didAuthorizePayment:handler:")]
@@ -246,6 +271,7 @@ namespace PassKit {
 		[EventArgs ("PKPaymentRequestShippingMethodUpdate")]
 		void DidSelectShippingMethod2 (PKPaymentAuthorizationViewController controller, PKShippingMethod shippingMethod, Action<PKPaymentRequestShippingMethodUpdate> completion);
 
+		[Unavailable (PlatformName.UIKitForMac)][Advice ("This API is not available when using UIKit on macOS.")]
 		[Deprecated (PlatformName.iOS, 9, 0)]
 		[Export ("paymentAuthorizationViewController:didSelectShippingAddress:completion:")]
 		[EventArgs ("PKPaymentShippingAddressSelected")]
@@ -380,6 +406,7 @@ namespace PassKit {
 		[Export ("requiredBillingAddressFields", ArgumentSemantic.UnsafeUnretained)]
 		PKAddressField RequiredBillingAddressFields { get; set; }
 
+		[Unavailable (PlatformName.UIKitForMac)][Advice ("This API is not available when using UIKit on macOS.")]
 		[NoWatch]
 		[NullAllowed] // by default this property is null
 		[Export ("billingAddress", ArgumentSemantic.Assign)]
@@ -391,6 +418,7 @@ namespace PassKit {
 		[Export ("requiredShippingAddressFields", ArgumentSemantic.UnsafeUnretained)]
 		PKAddressField RequiredShippingAddressFields { get; set; }
 
+		[Unavailable (PlatformName.UIKitForMac)][Advice ("This API is not available when using UIKit on macOS.")]
 		[NoWatch]
 		[NullAllowed] // by default this property is null
 		[Export ("shippingAddress", ArgumentSemantic.Assign)]
@@ -442,7 +470,7 @@ namespace PassKit {
 
 		[Watch (4,0)][iOS (11,0)]
 		[Static]
-		[Wrap ("CreatePaymentContactInvalidError (contactField.GetConstant (), localizedDescription)")]
+		[Wrap ("CreatePaymentContactInvalidError (contactField.GetConstant ()!, localizedDescription)")]
 		NSError CreatePaymentContactInvalidError (PKContactFields contactField, [NullAllowed] string localizedDescription);
 
 		[Watch (4,0)][iOS (11,0)]
@@ -451,12 +479,10 @@ namespace PassKit {
 		[Export ("paymentShippingAddressInvalidErrorWithKey:localizedDescription:")]
 		NSError CreatePaymentShippingAddressInvalidError (NSString postalAddressKey, [NullAllowed] string localizedDescription);
 
-#if XAMCORE_2_0
 		[Watch (4,0)][iOS (11,0)]
 		[Static]
-		[Wrap ("CreatePaymentShippingAddressInvalidError (postalAddress.GetConstant (), localizedDescription)")]
+		[Wrap ("CreatePaymentShippingAddressInvalidError (postalAddress.GetConstant ()!, localizedDescription)")]
 		NSError CreatePaymentShippingAddressInvalidError (CNPostalAddressKeyOption postalAddress, [NullAllowed] string localizedDescription);
-#endif
 
 		[Watch (4,0)][iOS (11,0)]
 		[Static]
@@ -464,12 +490,10 @@ namespace PassKit {
 		[Export ("paymentBillingAddressInvalidErrorWithKey:localizedDescription:")]
 		NSError CreatePaymentBillingAddressInvalidError (NSString postalAddressKey, [NullAllowed] string localizedDescription);
 
-#if XAMCORE_2_0
 		[Watch (4,0)][iOS (11,0)]
 		[Static]
-		[Wrap ("CreatePaymentBillingAddressInvalidError (postalAddress.GetConstant (), localizedDescription)")]
+		[Wrap ("CreatePaymentBillingAddressInvalidError (postalAddress.GetConstant ()!, localizedDescription)")]
 		NSError CreatePaymentBillingAddressInvalidError (CNPostalAddressKeyOption postalAddress, [NullAllowed] string localizedDescription);
-#endif
 
 		[Watch (4,0)][iOS (11,0)]
 		[Static]
@@ -525,7 +549,6 @@ namespace PassKit {
 	}
 
 #if !WATCH
-	[iOS (6,0)]
 	[BaseType (typeof (UIViewController), Delegates = new string [] {"WeakDelegate"}, Events = new Type [] { typeof (PKAddPassesViewControllerDelegate) })]
 	// invalid null handle for default 'init'
 	[DisableDefaultCtor]
@@ -555,7 +578,6 @@ namespace PassKit {
 		PKAddPassesViewControllerDelegate Delegate { get; set;  }
 	}
 
-	[iOS (6,0)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
@@ -626,6 +648,11 @@ namespace PassKit {
 		[iOS (12, 0)]
 		[Export ("style", ArgumentSemantic.Assign)]
 		PKAddPaymentPassStyle Style { get; set; }
+
+		[NoWatch] // https://feedbackassistant.apple.com/feedback/6301809 https://github.com/xamarin/maccore/issues/1819
+		[iOS (12,3)]
+		[Export ("productIdentifiers", ArgumentSemantic.Copy)]
+		NSSet<NSString> ProductIdentifiers { get; set; }
 	}
 
 	[iOS (9,0)]
@@ -671,7 +698,6 @@ namespace PassKit {
 	}
 #endif // !WATCH
 		
-	[iOS (6,0)]
 	[BaseType (typeof (PKObject))]
 	interface PKPass : NSSecureCoding, NSCopying {
 		[Export ("initWithData:error:")]
@@ -725,9 +751,15 @@ namespace PassKit {
 		[Export ("passType")]
 		PKPassType PassType { get; }
 
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'SecureElementPass' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'SecureElementPass' instead.")]
 		[iOS (8,0)]
 		[Export ("paymentPass")]
 		PKPaymentPass PaymentPass { get; }
+
+		[Watch (6,2), iOS (13,4)]
+		[NullAllowed, Export ("secureElementPass")]
+		PKSecureElementPass SecureElementPass { get; }
 
 		[iOS (9,0)]
 		[Export ("remotePass")]
@@ -752,26 +784,26 @@ namespace PassKit {
 		[Export ("type")]
 		PKPaymentMethodType Type { get; }
 
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'SecureElementPass' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'SecureElementPass' instead.")]
 		[NullAllowed, Export ("paymentPass", ArgumentSemantic.Copy)]
 		PKPaymentPass PaymentPass { get; }
+
+		[Watch (6,2), iOS (13,4)]
+		[NullAllowed, Export ("secureElementPass", ArgumentSemantic.Copy)]
+		PKSecureElementPass SecureElementPass { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[NullAllowed, Export ("billingAddress", ArgumentSemantic.Copy)]
+		CNContact BillingAddress { get; }
 	}
 
 	[iOS (8,0)]
-	[BaseType (typeof (PKPass))]
+	[BaseType (typeof (PKSecureElementPass))]
 	interface PKPaymentPass {
 
-		[Export ("primaryAccountIdentifier")]
-		string PrimaryAccountIdentifier { get; }
-
-		[Export ("primaryAccountNumberSuffix")]
-		string PrimaryAccountNumberSuffix { get; }
-
-		[Export ("deviceAccountIdentifier")]
-		string DeviceAccountIdentifier { get; }
-
-		[Export ("deviceAccountNumberSuffix")]
-		string DeviceAccountNumberSuffix { get; }
-
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'PKSecureElementPass.PassActivationState' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'PKSecureElementPass.PassActivationState' instead.")]
 		[Export ("activationState")]
 		PKPaymentPassActivationState ActivationState { get; }
 	}
@@ -1151,6 +1183,15 @@ namespace PassKit {
 	[DisableDefaultCtor]
 	interface PKPaymentRequestPaymentMethodUpdate {
 
+		[Watch (6,0), iOS (13,0)]
+		[Export ("initWithErrors:paymentSummaryItems:")]
+		[DesignatedInitializer]
+		IntPtr Constructor ([NullAllowed] NSError[] errors, PKPaymentSummaryItem [] paymentSummaryItems);
+
+		[Watch (6,0), iOS (13,0)]
+		[Export ("errors", ArgumentSemantic.Copy)]
+		NSError [] Errors { get; set; }
+
 		// inlined
 		[Export ("initWithPaymentSummaryItems:")]
 		[DesignatedInitializer]
@@ -1247,5 +1288,32 @@ namespace PassKit {
 
 		[Export ("redemptionURL", ArgumentSemantic.Copy)]
 		NSUrl RedemptionUrl { get; }
+	}
+
+	[Watch (6,2), iOS (13,4)]
+	[BaseType (typeof (PKPass))]
+	[DisableDefaultCtor]
+	interface PKSecureElementPass {
+
+		[Export ("primaryAccountIdentifier")]
+		string PrimaryAccountIdentifier { get; }
+
+		[Export ("primaryAccountNumberSuffix")]
+		string PrimaryAccountNumberSuffix { get; }
+
+		[Export ("deviceAccountIdentifier", ArgumentSemantic.Strong)]
+		string DeviceAccountIdentifier { get; }
+
+		[Export ("deviceAccountNumberSuffix", ArgumentSemantic.Strong)]
+		string DeviceAccountNumberSuffix { get; }
+
+		[Export ("passActivationState")]
+		PKSecureElementPassActivationState PassActivationState { get; }
+
+		[NullAllowed, Export ("devicePassIdentifier")]
+		string DevicePassIdentifier { get; }
+
+		[NullAllowed, Export ("pairedTerminalIdentifier")]
+		string PairedTerminalIdentifier { get; }
 	}
 }

@@ -11,16 +11,9 @@
 
 using System;
 using System.Collections.Generic;
-#if XAMCORE_2_0
 using Foundation;
 using AVFoundation;
 using AudioToolbox;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaPlayer;
-using MonoTouch.AudioToolbox;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.AudioToolbox {
@@ -36,9 +29,10 @@ namespace MonoTouchFixtures.AudioToolbox {
 			TestRuntime.RequestMicrophonePermission ();
 
 			var b = new InputAudioQueue (AudioStreamBasicDescription.CreateLinearPCM ());
-			b.HardwareCodecPolicy = AudioQueueHardwareCodecPolicy.PreferHardware;
+			
+			b.HardwareCodecPolicy = AudioQueueHardwareCodecPolicy.UseSoftwareOnly;
 
-			Assert.That (b.HardwareCodecPolicy, Is.EqualTo (AudioQueueHardwareCodecPolicy.PreferHardware), "#1");
+			Assert.That (b.HardwareCodecPolicy, Is.EqualTo (AudioQueueHardwareCodecPolicy.UseSoftwareOnly), "#1");
 		}
 
 		[Test]

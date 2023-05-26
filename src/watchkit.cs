@@ -4,7 +4,8 @@
 // Authors:
 //   Miguel de Icaza
 //
-// Copyrigh 2014-2016, Xamarin Inc.
+// Copyright 2014-2016, Xamarin Inc.
+// Copyright 2019 Microsoft Corporation
 //
 //
 using ObjCRuntime;
@@ -25,6 +26,7 @@ using System.ComponentModel;
 
 namespace WatchKit {
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (NSObject))]
 	[Abstract] // <quote>To use this class, subclass it</quote> 
 	[DisableDefaultCtor] // DesignatedInitializer below
@@ -113,15 +115,19 @@ namespace WatchKit {
 		[Export ("dismissTextInputController")]
 		void DismissTextInputController ();
 
+		[return: NullAllowed]
 		[Export ("contextForSegueWithIdentifier:")]
 		NSObject GetContextForSegue (string segueIdentifier);
 
+		[return: NullAllowed]
 		[Export ("contextsForSegueWithIdentifier:")]
 		NSObject [] GetContextsForSegue (string segueIdentifier);
 
+		[return: NullAllowed]
 		[Export ("contextForSegueWithIdentifier:inTable:rowIndex:")]
 		NSObject GetContextForSegue (string segueIdentifier, WKInterfaceTable table, nint rowIndex);
 
+		[return: NullAllowed]
 		[Export ("contextsForSegueWithIdentifier:inTable:rowIndex:")]
 		NSObject [] GetContextsForSegue (string segueIdentifier, WKInterfaceTable table, nint rowIndex);
 
@@ -223,11 +229,12 @@ namespace WatchKit {
 
 		[Export ("pickerDidSettle:")]
 		void PickerDidSettle (WKInterfacePicker picker);
-#endif
+
 		[NoiOS]
 		[Export ("presentMediaPlayerControllerWithURL:options:completion:")]
 		[Async (ResultType = typeof (WKPresentMediaPlayerResult))]
 		void PresentMediaPlayerController (NSUrl url, [NullAllowed] NSDictionary options, Action<bool, double, NSError> completion);
+#endif
 
 		[Watch (3,0)][NoiOS]
 		[Export ("crownSequencer", ArgumentSemantic.Strong)]
@@ -263,6 +270,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (WKInterfaceController))]
 	[DisableDefaultCtor] // DesignatedInitializer below
 	interface WKUserNotificationInterfaceController {
@@ -324,6 +332,7 @@ namespace WatchKit {
 	}
 	
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	// just like we inlined UIAccessibility into UIViewm UIImage and UIBarItem instead of stuffing it all into NSObject
@@ -375,6 +384,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[Category]
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKAccessibility {
@@ -411,6 +421,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // does not make sense to create, it should only be used thru the singleton
 	interface WKInterfaceDevice {
@@ -504,9 +515,26 @@ namespace WatchKit {
 		[Watch (4,0)][NoiOS]
 		[Export ("batteryState")]
 		WKInterfaceDeviceBatteryState BatteryState { get; }
+
+		[Watch (6,0)][NoiOS]
+		[Export ("supportsAudioStreaming")]
+		bool SupportsAudioStreaming { get; }
+
+		[Watch (6,2), NoiOS]
+		[NullAllowed, Export ("identifierForVendor", ArgumentSemantic.Strong)]
+		NSUuid IdentifierForVendor { get; }
+
+		[Watch (6,1)][NoiOS]
+		[Export ("enableWaterLock")]
+		void EnableWaterLock ();
+
+		[Watch (6,1)][NoiOS]
+		[Export ("isWaterLockEnabled")]
+		bool IsWaterLockEnabled { get; }
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceButton {
@@ -533,6 +561,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceGroup : WKImageAnimatable {
@@ -557,6 +586,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceImage : WKImageAnimatable {
@@ -574,6 +604,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceLabel {
@@ -589,6 +620,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceDate {
@@ -603,6 +635,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceTimer {
@@ -621,6 +654,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceTable {
@@ -633,6 +667,7 @@ namespace WatchKit {
 		[Export ("setNumberOfRows:withRowType:")]
 		void SetNumberOfRows (nint numberOfRows, string rowType);
 
+		[return: NullAllowed]
 		[Export ("rowControllerAtIndex:")]
 		NSObject GetRowController (nint index);
 
@@ -659,9 +694,15 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceMap {
+
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
 
 		[Export ("addAnnotation:withImage:centerOffset:")]
 		void AddAnnotation (CLLocationCoordinate2D location, [NullAllowed] UIImage image, CGPoint offset);
@@ -680,9 +721,22 @@ namespace WatchKit {
 
 		[Export ("removeAllAnnotations")]
 		void RemoveAllAnnotations ();
+
+		[Watch (6,1)]
+		[Export ("setShowsUserHeading:")]
+		void SetShowsUserHeading (bool showsUserHeading);
+
+		[Watch (6,1)]
+		[Export ("setShowsUserLocation:")]
+		void SetShowsUserLocation (bool showsUserLocation);
+
+		[Watch (6,1)]
+		[Export ("setUserTrackingMode:animated:")]
+		void SetUserTrackingMode (WKInterfaceMapUserTrackingMode mode, bool animated);
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceSeparator {
@@ -691,6 +745,7 @@ namespace WatchKit {
 	}
 	
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceSlider {
@@ -708,6 +763,7 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	[BaseType (typeof (WKInterfaceObject))]
 	interface WKInterfaceSwitch {
@@ -729,13 +785,13 @@ namespace WatchKit {
 	}
 
 	[iOS (8,2)]
+	[Unavailable (PlatformName.iOS)]
 	[BaseType (typeof (NSObject))]
 	interface WKAccessibilityImageRegion {
 
 		[Export ("frame")]
 		CGRect Frame { get; set; }
 
-		[NullAllowed]
 		[Export ("label")]
 		string Label { get; set; }
 	}
@@ -743,6 +799,7 @@ namespace WatchKit {
 	interface IWKImageAnimatable {}
 
 	[iOS (9,0)]
+	[Unavailable (PlatformName.iOS)]
 	[Protocol]
 	interface WKImageAnimatable {
 		[iOS (8,2)]
@@ -797,6 +854,7 @@ namespace WatchKit {
 	}
 
 	[NoiOS]
+	[Deprecated (PlatformName.WatchOS, 6,0, message: "Use 'AVPlayer' or 'AVQueuePlayer' instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface WKAudioFileAsset {
@@ -825,6 +883,7 @@ namespace WatchKit {
 	}
 
 	[NoiOS]
+	[Deprecated (PlatformName.WatchOS, 6,0, message: "Use 'AVPlayer' or 'AVQueuePlayer' instead.")]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
 	interface WKAudioFilePlayer {
@@ -858,6 +917,7 @@ namespace WatchKit {
 	}
 
 	[NoiOS]
+	[Deprecated (PlatformName.WatchOS, 6,0, message: "Use 'AVPlayer' or 'AVQueuePlayer' instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface WKAudioFilePlayerItem {
@@ -951,7 +1011,20 @@ namespace WatchKit {
 
 		[Watch (4,0)]
 		[Export ("enableWaterLock")]
+		[Deprecated (PlatformName.WatchOS, 6,1, message: "Use WKInterfaceDevice.EnableWaterLock ()")]
 		void EnableWaterLock ();
+
+		[Watch (6,0)]
+		[Export ("registerForRemoteNotifications")]
+		void RegisterForRemoteNotifications ();
+
+		[Watch (6,0)]
+		[Export ("unregisterForRemoteNotifications")]
+		void UnregisterForRemoteNotifications ();
+
+		[Watch (6,0)]
+		[Export ("registeredForRemoteNotifications")]
+		bool RegisteredForRemoteNotifications { [Bind ("isRegisteredForRemoteNotifications")] get; }
 	}
 
 	[NoiOS]
@@ -1030,6 +1103,22 @@ namespace WatchKit {
 		[Watch (5,0)]
 		[Export ("handleIntent:completionHandler:")]
 		void HandleIntent (INIntent intent, Action<INIntentResponse> completionHandler);
+
+		[Watch (6,0)]
+		[Export ("handleExtendedRuntimeSession:")]
+		void HandleExtendedRuntimeSession (WKExtendedRuntimeSession extendedRuntimeSession);
+
+		[Watch (6,0)]
+		[Export ("didRegisterForRemoteNotificationsWithDeviceToken:")]
+		void DidRegisterForRemoteNotifications (NSData deviceToken);
+
+		[Watch (6,0)]
+		[Export ("didFailToRegisterForRemoteNotificationsWithError:")]
+		void DidFailToRegisterForRemoteNotifications (NSError error);
+
+		[Watch (6,0)]
+		[Export ("didReceiveRemoteNotification:fetchCompletionHandler:")]
+		void DidReceiveRemoteNotification (NSDictionary userInfo, Action<WKBackgroundFetchResult> completionHandler);
 	}
 
 	[Watch (2,2), NoiOS]
@@ -1037,6 +1126,11 @@ namespace WatchKit {
 	[DisableDefaultCtor] // The super class' init method is unavailable.
 	interface WKInterfaceActivityRing
 	{
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
+
 		[Export ("setActivitySummary:animated:")]
 		void SetActivitySummary ([NullAllowed] HKActivitySummary activitySummary, bool animated);
 	}
@@ -1045,6 +1139,12 @@ namespace WatchKit {
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // The super class' init method is unavailable.
 	interface WKInterfaceMovie {
+
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
+
 		[Export ("setMovieURL:")]
 		void SetMovieUrl (NSUrl url);
 
@@ -1098,6 +1198,7 @@ namespace WatchKit {
 	}
 
 	[NoiOS]
+	[Deprecated (PlatformName.WatchOS, 6,0, message: "Use 'AVPlayer' or 'AVQueuePlayer' instead.")]
 	[BaseType (typeof (WKAudioFilePlayer))]
 	[DisableDefaultCtor]
 	interface WKAudioFileQueuePlayer {
@@ -1328,6 +1429,11 @@ namespace WatchKit {
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceHMCamera {
 
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
+
 		[Export ("setCameraSource:")]
 		void SetCameraSource ([NullAllowed] HMCameraSource cameraSource);
 	}
@@ -1336,6 +1442,11 @@ namespace WatchKit {
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceInlineMovie {
+
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
 
 		[Export ("setMovieURL:")]
 		void SetMovieUrl (NSUrl url);
@@ -1366,12 +1477,21 @@ namespace WatchKit {
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfacePaymentButton {
+
+		[Watch (6,0)]
+		[Export ("initWithTarget:action:")]
+		IntPtr Constructor ([NullAllowed] NSObject target, Selector action);
 	}
 
 	[Watch (3,0)][NoiOS]
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceSCNScene : SCNSceneRenderer {
+
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
 
 		[Export ("snapshot")]
 		UIImage GetSnapshot ();
@@ -1387,6 +1507,11 @@ namespace WatchKit {
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor] // Do not subclass or create instances of this class yourself. -> Handle is nil if init is called
 	interface WKInterfaceSKScene {
+
+		[Watch (6,0)][Advice ("This API exists for SwiftUI and is not generally needed.")]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("init")]
+		IntPtr Constructor ();
 
 		[Export ("paused")]
 		bool Paused { [Bind ("isPaused")] get; set; }
@@ -1416,7 +1541,242 @@ namespace WatchKit {
 	[BaseType (typeof (WKInterfaceObject))]
 	[DisableDefaultCtor]
 	interface WKInterfaceVolumeControl {
+		[Watch (6,0)]
+		[Export ("initWithOrigin:")]
+		IntPtr Constructor (WKInterfaceVolumeControlOrigin origin);
+
 		[Export ("setTintColor:")]
 		void SetTintColor ([NullAllowed] UIColor tintColor);
+
+		[Watch (6,0)]
+		[Export ("focus")]
+		void Focus ();
+
+		[Watch (6,0)]
+		[Export ("resignFocus")]
+		void ResignFocus ();
+	}
+
+	[Watch (6,0), NoiOS]
+	[Native]
+	enum WKBackgroundFetchResult : ulong {
+		NewData,
+		NoData,
+		Failed,
+	}
+
+	[Watch (6,0), NoiOS]
+	[Native]
+	[ErrorDomain ("WKExtendedRuntimeSessionErrorDomain")]
+	enum WKExtendedRuntimeSessionErrorCode : long {
+		Unknown = 1,
+		ScheduledTooFarInAdvance = 2,
+		MustBeActiveToStartOrSchedule = 3,
+		NotYetStarted = 4,
+		ExceededResourceLimits = 5,
+		BARDisabled = 6,
+		NotApprovedToStartSession = 7,
+		NotApprovedToSchedule = 8,
+	}
+
+	[Watch (6,0), NoiOS]
+	[Native]
+	enum WKExtendedRuntimeSessionInvalidationReason : long {
+		None,
+		SessionInProgress,
+		Expired,
+		ResignedFrontmost,
+		Error = -1,
+	}
+
+	[Watch (6,0), NoiOS]
+	[Native]
+	enum WKExtendedRuntimeSessionState : long {
+		NotStarted,
+		Scheduled,
+		Running,
+		Invalid,
+	}
+
+	[Watch (6,0), NoiOS]
+	[Native]
+	enum WKInterfaceVolumeControlOrigin : long {
+		Local,
+		Companion,
+	}
+
+	[Watch (6,1), NoiOS]
+	[Native]
+	enum WKInterfaceAuthorizationAppleIdButtonStyle: long {
+		Default,
+		White,
+	}
+
+	[Watch (6,1), NoiOS]
+	[Native]
+	enum WKInterfaceMapUserTrackingMode: long {
+		None,
+		Follow,
+	}
+
+	interface IWKExtendedRuntimeSessionDelegate {}
+
+	[Watch (6,0), NoiOS]
+	[Protocol, Model (AutoGeneratedName = true)]
+	[BaseType (typeof (NSObject))]
+	interface WKExtendedRuntimeSessionDelegate {
+
+		[Abstract]
+		[Export ("extendedRuntimeSession:didInvalidateWithReason:error:")]
+		void DidInvalidate (WKExtendedRuntimeSession extendedRuntimeSession, WKExtendedRuntimeSessionInvalidationReason reason, [NullAllowed] NSError error);
+
+		[Abstract]
+		[Export ("extendedRuntimeSessionDidStart:")]
+		void DidStart (WKExtendedRuntimeSession extendedRuntimeSession);
+
+		[Abstract]
+		[Export ("extendedRuntimeSessionWillExpire:")]
+		void WillExpire (WKExtendedRuntimeSession extendedRuntimeSession);
+	}
+
+	[Watch (6,0), NoiOS]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor] // Create method exists and `NSInvalidArgumentException Reason: *** -[__NSSetM addObject:]: object cannot be nil`
+	interface WKExtendedRuntimeSession {
+
+		[Static]
+		[Export ("session")]
+		WKExtendedRuntimeSession Create ();
+
+		[Wrap ("WeakDelegate")]
+		[NullAllowed]
+		IWKExtendedRuntimeSessionDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Export ("state")]
+		WKExtendedRuntimeSessionState State { get; }
+
+		[NullAllowed, Export ("expirationDate")]
+		NSDate ExpirationDate { get; }
+
+		[Export ("start")]
+		void Start ();
+
+		[Export ("startAtDate:")]
+		void Start (NSDate date);
+
+		[Export ("invalidate")]
+		void Invalidate ();
+
+		[Export ("notifyUserWithHaptic:repeatHandler:")]
+		void NotifyUser (WKHapticType type, [NullAllowed] WKNofityUserIntervalHandler repeatHandler);
+	}
+
+	delegate double WKNofityUserIntervalHandler (WKHapticType type);
+
+	[Watch (6,0), NoiOS]
+	[BaseType (typeof (WKInterfaceObject), Name = "WKInterfaceAuthorizationAppleIDButton")]
+	[DisableDefaultCtor] // Handle is `nil`
+	interface WKInterfaceAuthorizationAppleIdButton {
+		[Export ("initWithTarget:action:")]
+		[Deprecated (PlatformName.WatchOS, 6,1, message: "Use 'new WKInterfaceAuthorizationAppleIdButton (WKInterfaceVolumeControlOrigin,NSObject,Selector)' instead.")]
+		IntPtr Constructor ([NullAllowed] NSObject target, Selector action);
+
+		[Watch (6,1)]
+		[Export ("initWithStyle:target:action:")]
+		IntPtr Constructor (WKInterfaceAuthorizationAppleIdButtonStyle style, [NullAllowed] NSObject target, Selector action);
+	}
+
+	[Watch (6,0), NoiOS]
+	enum WKTextContentType {
+		[DefaultEnumValue]
+		[Field (null)] // API using fields accept `nil`
+		None,
+		[Field ("WKTextContentTypeName")]
+		Name,
+		[Field ("WKTextContentTypeNamePrefix")]
+		NamePrefix,
+		[Field ("WKTextContentTypeGivenName")]
+		GivenName,
+		[Field ("WKTextContentTypeMiddleName")]
+		MiddleName,
+		[Field ("WKTextContentTypeFamilyName")]
+		FamilyName,
+		[Field ("WKTextContentTypeNameSuffix")]
+		NameSuffix,
+		[Field ("WKTextContentTypeNickname")]
+		Nickname,
+		[Field ("WKTextContentTypeJobTitle")]
+		JobTitle,
+		[Field ("WKTextContentTypeOrganizationName")]
+		OrganizationName,
+		[Field ("WKTextContentTypeLocation")]
+		Location,
+		[Field ("WKTextContentTypeFullStreetAddress")]
+		FullStreetAddress,
+		[Field ("WKTextContentTypeStreetAddressLine1")]
+		StreetAddressLine1,
+		[Field ("WKTextContentTypeStreetAddressLine2")]
+		StreetAddressLine2,
+		[Field ("WKTextContentTypeAddressCity")]
+		AddressCity,
+		[Field ("WKTextContentTypeAddressState")]
+		AddressState,
+		[Field ("WKTextContentTypeAddressCityAndState")]
+		AddressCityAndState,
+		[Field ("WKTextContentTypeSublocality")]
+		Sublocality,
+		[Field ("WKTextContentTypeCountryName")]
+		CountryName,
+		[Field ("WKTextContentTypePostalCode")]
+		PostalCode,
+		[Field ("WKTextContentTypeTelephoneNumber")]
+		TelephoneNumber,
+		[Field ("WKTextContentTypeEmailAddress")]
+		EmailAddress,
+		[Field ("WKTextContentTypeURL")]
+		Url,
+		[Field ("WKTextContentTypeCreditCardNumber")]
+		CreditCardNumber,
+		[Field ("WKTextContentTypeUsername")]
+		Username,
+		[Field ("WKTextContentTypePassword")]
+		Password,
+		[Field ("WKTextContentTypeNewPassword")]
+		NewPassword,
+		[Field ("WKTextContentTypeOneTimeCode")]
+		OneTimeCode,
+	}
+
+	[Watch (6,0), NoiOS]
+	[BaseType (typeof (WKInterfaceObject))]
+	[DisableDefaultCtor] // Handle is `nil`
+	interface WKInterfaceTextField {
+
+		[Export ("setText:")]
+		void SetText ([NullAllowed] string text);
+
+		[Export ("setAttributedText:")]
+		void SetText ([NullAllowed] NSAttributedString attributedText);
+
+		[Export ("setPlaceholder:")]
+		void SetPlaceholder ([NullAllowed] string placeholder);
+
+		[Export ("setAttributedPlaceholder:")]
+		void SetPlaceholder ([NullAllowed] NSAttributedString attributedPlaceholder);
+
+		[Export ("setTextColor:")]
+		void SetTextColor ([NullAllowed] UIColor color);
+
+		[Export ("setEnabled:")]
+		void SetEnabled (bool enabled);
+
+		[Export ("setTextContentType:")]
+		void SetTextContentType ([BindAs (typeof (WKTextContentType?))] [NullAllowed] NSString textContentType);
+
+		[Export ("setSecureTextEntry:")]
+		void SetSecureTextEntry (bool secureTextEntry);
 	}
 }

@@ -12,16 +12,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace Introspection {
 
@@ -47,12 +39,6 @@ namespace Introspection {
 			case "JSExport":
 				return true;
 			default:
-#if !XAMCORE_2_0
-				// in Classic our internal delegates _inherits_ the type with the [Protocol] attribute
-				// in Unified our internal delegates _implements_ the interface that has the [Protocol] attribute
-				if (type.GetCustomAttribute<ProtocolAttribute> (true) != null)
-					return true;
-#endif
 				return SkipDueToAttribute (type);
 			}
 		}
@@ -103,6 +89,12 @@ namespace Introspection {
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
 				case "HKCumulativeQuantitySeriesSample":
+				// Xcode 11 - Conformance not in headers
+				case "UISceneActivationConditions":
+				case "UISceneSession":
+					return true;
+				// Xcode 11
+				case "NSFileProviderSearchQuery":
 					return true;
 				}
 				break;
@@ -114,6 +106,8 @@ namespace Introspection {
 				// Xcode 10
 				case "UNNotificationCategory":
 				case "UNNotificationSound":
+				// Xcode 11 - Conformance not in headers
+				case "UISceneSession":
 					return true;
 				}
 				break;
@@ -153,6 +147,19 @@ namespace Introspection {
 				case "VSAccountMetadataRequest":
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
+					return true;
+				// Xcode 11 (on device only)
+				case "ICHandle":
+				case "ICNotification":
+				case "ICNotificationManagerConfiguration":
+				case "MPSNNNeuronDescriptor":
+				// Xcode 11
+				case "NSFileProviderItemVersion":
+				case "NSFileProviderRequest":
+				case "NSFileProviderSearchQuery":
+					return true;
+				// Xcode 11.4, not documented
+				case "NSHttpCookie":
 					return true;
 				}
 				break;
@@ -201,6 +208,21 @@ namespace Introspection {
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
 					return true;
+				// Xcode 11 (on device only)
+				case "ICHandle":
+				case "ICNotification":
+				case "ICNotificationManagerConfiguration":
+				case "MPSNNNeuronDescriptor":
+					return true;
+				// Xcode 11
+				case "NSFileProviderItemVersion":
+				case "NSFileProviderRequest":
+				case "NSFileProviderSearchQuery":
+				case "INUserContext": // Header shows NSSecureCoding but intro on both device and simulator says nope FB7604793
+					return true;
+				// Xcode 11.4, not documented
+				case "NSHttpCookie":
+					return true;
 				}
 				break;
 			// conformance added in Xcode 8 (iOS 10 / macOS 10.12)
@@ -218,8 +240,16 @@ namespace Introspection {
 				}
 				break;
 			case "NSProgressReporting":
-				if (!TestRuntime.CheckXcodeVersion (9, 0))
-					return true;
+				switch (type.Name) {
+				case "NSOperationQueue":
+					if (!TestRuntime.CheckXcodeVersion (11,0))
+						return true;
+					break;
+				default:
+					if (!TestRuntime.CheckXcodeVersion (9, 0))
+						return true;
+					break;
+				}
 				break;
 			case "GKSceneRootNodeType":
 				// it's an empty protocol, defined by a category and does not reply as expected
@@ -243,6 +273,31 @@ namespace Introspection {
 					return true;
 				}
 				break;
+			case "SCNTechniqueSupport":
+				if (!TestRuntime.CheckXcodeVersion (11,0))
+					return false;
+				switch (type.Name) {
+				case "SCNLight":
+					return true;
+				}
+				break;
+			case "VNRequestRevisionProviding":
+				switch (type.Name) {
+				case "VNFaceLandmarks":
+				case "VNFaceLandmarks2D":
+				case "VNFaceLandmarkRegion":
+				case "VNFaceLandmarkRegion2D":
+					if (!TestRuntime.CheckXcodeVersion (11,0))
+						return true;
+					break;
+				}
+				break;
+#if !XAMCORE_4_0
+			case "MTLCounter":
+			case "MTLCounterSampleBuffer":
+			case "MTLCounterSet":
+				return true; // Incorrectly bound, will be fixed for XAMCORE_4_0.
+#endif
 			}
 			return false;
 		}
@@ -389,13 +444,6 @@ namespace Introspection {
 						// we have special test cases for them
 						continue;
 					default:
-#if !XAMCORE_2_0
-						// in Classic our internal delegates _inherits_ the type with the [Protocol] attribute
-						// in Unified our internal delegates _implements_ the interface that has the [Protocol] attribute
-						var pt = Type.GetType (intf.Namespace + "." + protocolName + ", " + intf.Assembly.FullName);
-						if (SkipDueToAttribute (pt))
-							continue;
-#endif
 						if (Skip (t, protocolName))
 							continue;
 						break;

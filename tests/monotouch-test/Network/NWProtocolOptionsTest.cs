@@ -1,14 +1,8 @@
-﻿#if !__WATCHOS__
+#if !__WATCHOS__
 using System;
-#if XAMCORE_2_0
 using Foundation;
 using Network;
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.Network;
-#endif
-
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.Network {
@@ -48,6 +42,21 @@ namespace MonoTouchFixtures.Network {
 			using (var options = NWProtocolOptions.CreateUdp ()) {
 				// we cannot test much more :(
 				Assert.AreNotEqual (IntPtr.Zero, options.Handle);
+			}
+		}
+
+		[Test]
+		public void SetIPLocalAddressPreference ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			foreach (var ipOption in new [] { NWIPLocalAddressPreference.Default, NWIPLocalAddressPreference.Stable, NWIPLocalAddressPreference.Temporary}) {
+				using (var options = NWProtocolOptions.CreateTls ())
+					Assert.DoesNotThrow (() => options.IPLocalAddressPreference = ipOption, "Tls");
+				using (var options = NWProtocolOptions.CreateTcp ())
+					Assert.DoesNotThrow (() => options.IPLocalAddressPreference = ipOption, "Tcp");
+				using (var options = NWProtocolOptions.CreateUdp ())
+					Assert.DoesNotThrow (() => options.IPLocalAddressPreference = ipOption, "Udp");
 			}
 		}
 	}

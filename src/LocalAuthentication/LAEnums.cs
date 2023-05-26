@@ -10,7 +10,11 @@ namespace LocalAuthentication {
 	public enum LAPolicy : long {
 		[Mac (10,12,2)]
 		DeviceOwnerAuthenticationWithBiometrics = 1,
-		DeviceOwnerAuthentication = 2
+		DeviceOwnerAuthentication = 2,
+		[NoiOS][Mac (10,15)][Introduced (PlatformName.UIKitForMac, 13,0)]
+		DeviceOwnerAuthenticationWithWatch = 3,
+		[NoiOS][Mac (10,15)][Introduced (PlatformName.UIKitForMac, 13,0)]
+		OwnerAuthenticationWithBiometricsOrWatch = 4,
 	}
 
 	[iOS (8,0)]
@@ -44,6 +48,7 @@ namespace LocalAuthentication {
 		TouchIDLockout       = -8,
 		AppCancel            = -9,
 		InvalidContext       = -10,
+		WatchNotAvailable    = -11,
 
 		BiometryNotAvailable = TouchIDNotAvailable,
 		BiometryNotEnrolled = TouchIDNotEnrolled,
@@ -55,7 +60,9 @@ namespace LocalAuthentication {
 	[iOS (9,0), Mac (10,11), Watch (3,0), TV (11,0)]
 	[Native]
 	public enum LACredentialType : long {
-		ApplicationPassword = 0
+		ApplicationPassword = 0,
+		[iOS (13,4), Mac (10,15,4), NoWatch, NoTV]
+		SmartCardPin = -3,
 	}
 
 	[iOS (9,0)]

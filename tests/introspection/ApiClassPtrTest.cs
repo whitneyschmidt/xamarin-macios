@@ -14,16 +14,8 @@ using NUnit.Framework;
 using Xamarin.Utils;
 using System.Runtime.CompilerServices;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace Introspection {
 
@@ -38,6 +30,11 @@ namespace Introspection {
 				if (ca is ModelAttribute)
 					return true;
 			}
+
+			// skip types that we renamed / rewrite since they won't behave correctly (by design)
+			if (SkipDueToRejectedTypes (type))
+				return true;
+
 			return SkipDueToAttribute (type);
 		}
 

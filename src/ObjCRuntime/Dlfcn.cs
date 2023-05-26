@@ -116,7 +116,7 @@ namespace ObjCRuntime {
 			// "no cache image with name (<top>)"
 			if (path.IndexOf ('/') == -1){
 				if (!warningShown){
-					Console.WriteLine ("You are using dlopen without a full path, retrying by prepending /usr/lib");
+					Runtime.NSLog ("You are using dlopen without a full path, retrying by prepending /usr/lib");
 					warningShown = true;
 				}
 				
@@ -279,7 +279,6 @@ namespace ObjCRuntime {
 			Marshal.WriteIntPtr (indirect, arrayHandle);
 		}
 
-#if XAMCORE_2_0
 		public static nint GetNInt (IntPtr handle, string symbol)
 		{
 			return (nint)GetIntPtr (handle, symbol);
@@ -325,7 +324,6 @@ namespace ObjCRuntime {
 				*ptr = value;
 			}
 		}
-#endif
 
 		public static IntPtr GetIntPtr (IntPtr handle, string symbol)
 		{
@@ -342,31 +340,6 @@ namespace ObjCRuntime {
 				return;
 			Marshal.WriteIntPtr (indirect, value);
 		}
-
-#if !XAMCORE_2_0
-		public static SizeF GetSizeF (IntPtr handle, string symbol)
-		{
-			var indirect = dlsym (handle, symbol);
-			if (indirect == IntPtr.Zero)
-				return SizeF.Empty;
-			unsafe {
-				float *ptr = (float *) indirect;
-				return new SizeF (ptr [0], ptr [1]);
-			}
-		}
-
-		public static void SetSizeF (IntPtr handle, string symbol, SizeF value)
-		{
-			var indirect = dlsym (handle, symbol);
-			if (indirect == IntPtr.Zero)
-				return;
-			unsafe {
-				float *ptr = (float *) indirect;
-				ptr [0] = value.Width;
-				ptr [1] = value.Height;
-			}
-		}
-#endif
 
 		public static CGRect GetCGRect (IntPtr handle, string symbol)
 		{

@@ -16,9 +16,7 @@ using ObjCRuntime;
 using Foundation;
 using CoreGraphics;
 using CoreLocation;
-#if XAMCORE_2_0
 using MapKit;
-#endif
 using System;
 #if MONOMAC
 using AppKit;
@@ -28,11 +26,8 @@ using UIKit;
 
 namespace EventKit {
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (NSObject))]
-#if XAMCORE_2_0 || MONOMAC
 	[Abstract]
-#endif
 	interface EKObject {
 		[Export ("hasChanges")]
 		bool HasChanges { get; }
@@ -50,7 +45,6 @@ namespace EventKit {
 		bool Refresh ();
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 #if XAMCORE_4_0	
 	[Abstract] // "The EKCalendarItem class is a an abstract superclass ..." from Apple docs.
@@ -83,6 +77,7 @@ namespace EventKit {
 		[Export ("URL", ArgumentSemantic.Copy)]
 		NSUrl Url { get; set;  }
 
+		[NullAllowed]
 		[Export ("lastModifiedDate")]
 		NSDate LastModifiedDate { get;  }
 
@@ -105,6 +100,7 @@ namespace EventKit {
 		[Export ("hasNotes")]
 		bool HasNotes { get;  }
 
+		[NullAllowed]
 		[Export ("attendees")]
 		EKParticipant [] Attendees { get;  }
 
@@ -112,6 +108,7 @@ namespace EventKit {
 		[Export ("alarms", ArgumentSemantic.Copy)]
 		EKAlarm [] Alarms { get; set;  }
 
+		[NullAllowed]
 		[Export ("recurrenceRules", ArgumentSemantic.Copy)]
 		EKRecurrenceRule [] RecurrenceRules { get; set;  }
 
@@ -127,16 +124,13 @@ namespace EventKit {
 		[Export ("removeRecurrenceRule:")]
 		void RemoveRecurrenceRule (EKRecurrenceRule rule);
 
-		[iOS (6,0)]
 		[Export ("calendarItemIdentifier")]
 		string CalendarItemIdentifier { get;  }
 
-		[iOS (6,0)]
 		[Export ("calendarItemExternalIdentifier")]
 		string CalendarItemExternalIdentifier { get;  }
 	}
 	
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 	interface EKSource {
 		[Export ("sourceType")]
@@ -154,13 +148,10 @@ namespace EventKit {
 		[Export ("sourceIdentifier")]
 		string SourceIdentifier { get; }
 
-		[iOS (6, 0)]
 		[Export ("calendarsForEntityType:")]
 		NSSet GetCalendars (EKEntityType entityType);
 	}
 
-	[iOS (6,0)]
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 	interface EKStructuredLocation : NSCopying {
 		[NullAllowed] // by default this property is null
@@ -177,15 +168,12 @@ namespace EventKit {
 		[Export ("locationWithTitle:"), Static]
 		EKStructuredLocation FromTitle (string title);
 
-#if XAMCORE_2_0
 		[iOS (9,0), Mac(10,11)]
 		[Static]
 		[Export ("locationWithMapItem:")]
 		EKStructuredLocation FromMapItem (MKMapItem mapItem);
-#endif
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 	[DisableDefaultCtor] // Documentation says to use the static methods FromDate/FromTimeInterval to create instances
 	interface EKAlarm : NSCopying {
@@ -204,12 +192,10 @@ namespace EventKit {
 		[Export ("alarmWithRelativeOffset:")]
 		EKAlarm FromTimeInterval (double offsetSeconds);
 
-		[iOS (6,0)]
 		[Export ("structuredLocation", ArgumentSemantic.Copy)]
 		[NullAllowed]
 		EKStructuredLocation StructuredLocation { get; set;  }
 
-		[iOS (6,0)]
 		[Export ("proximity")]
 		EKAlarmProximity Proximity { get; set;  }
 
@@ -217,19 +203,21 @@ namespace EventKit {
 		[Export ("type")]
 		EKAlarmType Type { get; }
 
+		[NullAllowed]
 		[Export ("emailAddress")]
 		string EmailAddress { get; set; }
 
+		[NullAllowed]
 		[Export ("soundName")]
 		string SoundName { get; set; }
 
 		[Deprecated (PlatformName.MacOSX, 10, 9)]
+		[NullAllowed]
 		[Export ("url", ArgumentSemantic.Copy)]
 		NSUrl Url { get; set; }
 #endif
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 	[DisableDefaultCtor]
 	interface EKCalendar {
@@ -245,11 +233,11 @@ namespace EventKit {
 #if MONOMAC
 		[Export ("color", ArgumentSemantic.Copy)]
 		NSColor Color { get; set; }
-#else
+#endif
+		[Mac (10, 15)]
 		[Export ("CGColor")]
 		CGColor CGColor { get; set; }
-#endif
-
+		
 		[Export ("supportedEventAvailabilities")]
 		EKCalendarEventAvailability SupportedEventAvailabilities { get; }
 
@@ -271,17 +259,14 @@ namespace EventKit {
 		[Export ("source", ArgumentSemantic.Retain)]
 		EKSource Source { get; set; }
 
-		[iOS (6,0)]
 		[Export ("allowedEntityTypes")]
 		EKEntityMask AllowedEntityTypes { get;  }
 
-		[iOS (6,0)]
 		[Static]
 		[Export ("calendarForEntityType:eventStore:")]
 		EKCalendar Create (EKEntityType entityType, EKEventStore eventStore);
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKCalendarItem))]
 	// Objective-C exception thrown.  Name: NSInvalidArgumentException Reason: You must use [EKEvent eventWithStore:] to create an event
 	[DisableDefaultCtor]
@@ -298,6 +283,7 @@ namespace EventKit {
 		[Export ("endDate", ArgumentSemantic.Copy)]
 		NSDate EndDate { get; set;  }
 
+		[NullAllowed]
 		[Export ("organizer")]
 		EKParticipant Organizer { get;  }
 
@@ -329,6 +315,7 @@ namespace EventKit {
 
 #if MONOMAC
 		[Availability (Deprecated = Platform.Mac_10_11, Message = "Replaced by 'BirthdayContactIdentifier'.")]
+		[NullAllowed]
 		[Export ("birthdayPersonUniqueID")]
 		string BirthdayPersonUniqueID { get; }
 #else
@@ -341,7 +328,6 @@ namespace EventKit {
 		string BirthdayContactIdentifier { get; }
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 #if XAMCORE_3_0
 	[DisableDefaultCtor]
@@ -350,6 +336,7 @@ namespace EventKit {
 		[Export ("URL")]
 		NSUrl Url { get;  }
 
+		[NullAllowed]
 		[Export ("name")]
 		string Name { get;  }
 
@@ -369,12 +356,12 @@ namespace EventKit {
 #else
 #if !WATCH
 		[Availability (Deprecated = Platform.iOS_9_0, Message = "Replaced by 'ContactPredicate'.")]
+		[return: NullAllowed]
 		[Export ("ABRecordWithAddressBook:")]
 		ABRecord GetRecord (ABAddressBook addressBook);
 #endif // !WATCH
 
 #endif
-		[iOS (6,0)]
 		[Mac (10,9)]
 		[Export ("isCurrentUser")]
 		bool IsCurrentUser { get; }
@@ -384,9 +371,9 @@ namespace EventKit {
 		NSPredicate ContactPredicate { get; }
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (NSObject))]
 	interface EKRecurrenceEnd : NSCopying, NSSecureCoding {
+		[NullAllowed]
 		[Export ("endDate")]
 		NSDate EndDate { get;  }
 
@@ -402,7 +389,6 @@ namespace EventKit {
 		EKRecurrenceEnd FromOccurrenceCount (nint occurrenceCount);
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (NSObject))]
 	interface EKRecurrenceDayOfWeek : NSCopying, NSSecureCoding {
 		[Export ("dayOfTheWeek")]
@@ -419,22 +405,18 @@ namespace EventKit {
 		[Export ("dayOfWeek:")]
 #if XAMCORE_4_0
 		EKRecurrenceDayOfWeek FromDay (EKWeekday dayOfTheWeek);
-#elif XAMCORE_2_0
+#else
 		[Internal]
 		EKRecurrenceDayOfWeek _FromDay (nint dayOfTheWeek);
-#else
-		EKRecurrenceDayOfWeek FromDay (EKDay dayOfTheWeek);
 #endif
 
 		[Static]
 		[Export ("dayOfWeek:weekNumber:")]
 #if XAMCORE_4_0
 		EKRecurrenceDayOfWeek FromDay (EKWeekday dayOfTheWeek, nint weekNumber);
-#elif XAMCORE_2_0
+#else
 		[Internal]
 		EKRecurrenceDayOfWeek _FromDay (nint dayOfTheWeek, nint weekNumber);
-#else
-		EKRecurrenceDayOfWeek FromDay (EKDay dayOfTheWeek, nint weekNumber);
 #endif
 
 		[Export ("initWithDayOfTheWeek:weekNumber:")]
@@ -445,7 +427,6 @@ namespace EventKit {
 #endif
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKObject))]
 	interface EKRecurrenceRule : NSCopying {
 		[Export ("calendarIdentifier")]
@@ -464,28 +445,32 @@ namespace EventKit {
 		[Export ("firstDayOfTheWeek")]
 #if XAMCORE_4_0
 		EKWeekday FirstDayOfTheWeek { get; }
-#elif XAMCORE_2_0
+#else
 		[Internal]
 		nint _FirstDayOfTheWeek { get; }
-#else
-		EKDay FirstDayOfTheWeek { get;  }
 #endif
 
+		[NullAllowed]
 		[Export ("daysOfTheWeek")]
 		EKRecurrenceDayOfWeek [] DaysOfTheWeek { get;  }
 
+		[NullAllowed]
 		[Export ("daysOfTheMonth")]
 		NSNumber [] DaysOfTheMonth { get;  }
 
+		[NullAllowed]
 		[Export ("daysOfTheYear")]
 		NSNumber [] DaysOfTheYear { get;  }
 
+		[NullAllowed]
 		[Export ("weeksOfTheYear")]
 		NSNumber [] WeeksOfTheYear { get;  }
 
+		[NullAllowed]
 		[Export ("monthsOfTheYear")]
 		NSNumber [] MonthsOfTheYear { get;  }
 
+		[NullAllowed]
 		[Export ("setPositions")]
 #if XAMCORE_4_0
 		NSNumber [] SetPositions { get; }
@@ -502,10 +487,9 @@ namespace EventKit {
 
 	}
 
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (NSObject))]
 	interface EKEventStore {
-		[NoiOS, Mac (10,11, onlyOn64: true), NoWatch]
+		[NoiOS, Mac (10,11), NoWatch]
 		[Export ("initWithSources:")]
 		IntPtr Constructor (EKSource[] sources);
 
@@ -520,17 +504,16 @@ namespace EventKit {
 
 		[Export ("defaultCalendarForNewEvents"), NullAllowed]
 		EKCalendar DefaultCalendarForNewEvents { get;  }
-
-#if !MONOMAC
-		[NoWatch]
+		
+		[NoWatch, Mac (10,15)]
 		[Export ("saveEvent:span:error:")]
 		bool SaveEvent (EKEvent theEvent, EKSpan span, out NSError error);
 
-		[NoWatch]
+		[NoWatch, Mac (10,15)]
 		[Export ("removeEvent:span:error:")]
 		bool RemoveEvents (EKEvent theEvent, EKSpan span, out NSError error);
-#endif
 
+		[return: NullAllowed]
 		[Export ("eventWithIdentifier:")]
 		EKEvent EventFromIdentifier (string identifier);
 
@@ -554,6 +537,7 @@ namespace EventKit {
 		[Export ("sourceWithIdentifier:")]
 		EKSource GetSource (string identifier);
 
+		[return: NullAllowed]
 		[Export ("calendarWithIdentifier:")]
 		EKCalendar GetCalendar (string identifier);
 
@@ -584,52 +568,41 @@ namespace EventKit {
 		[Export ("refreshSourcesIfNecessary")]
 		void RefreshSourcesIfNecessary ();
 
-		[iOS (6,0)]
 		[return: NullAllowed]
 		[Export ("calendarItemWithIdentifier:")]
 		EKCalendarItem GetCalendarItem (string identifier);
 
-		[iOS (6,0)]
 		[Export ("calendarItemsWithExternalIdentifier:")]
 		EKCalendarItem[] GetCalendarItems(string externalIdentifier);
 
-		[iOS (6,0)]
 		[Export ("calendarsForEntityType:")]
 		EKCalendar[] GetCalendars (EKEntityType entityType);
 
-		[iOS (6,0)]
 		[NullAllowed]
 		[Export ("defaultCalendarForNewReminders")]
 		EKCalendar DefaultCalendarForNewReminders { get; }
 
-		[iOS (6,0)]
 		[Export ("fetchRemindersMatchingPredicate:completion:")]
 		[Async]
 		IntPtr FetchReminders (NSPredicate predicate, Action<EKReminder[]> completion);
 
-		[iOS (6,0)]
 		[Export ("cancelFetchRequest:")]
 		void CancelFetchRequest (IntPtr fetchIdentifier);
 
-		[iOS (6,0)]
 		[Export ("predicateForIncompleteRemindersWithDueDateStarting:ending:calendars:")]
 		NSPredicate PredicateForIncompleteReminders ([NullAllowed] NSDate startDate, [NullAllowed] NSDate endDate, [NullAllowed] EKCalendar[] calendars);
 
-		[iOS (6,0)]
 		[Export ("predicateForCompletedRemindersWithCompletionDateStarting:ending:calendars:")]
 		NSPredicate PredicateForCompleteReminders ([NullAllowed] NSDate startDate, [NullAllowed] NSDate endDate, [NullAllowed] EKCalendar[] calendars);
 
-		[iOS (6,0)]
 		[Export ("predicateForRemindersInCalendars:")]
 		NSPredicate PredicateForReminders ([NullAllowed] EKCalendar[] calendars);
 
 		[NoWatch]
-		[iOS (6,0)]
 		[Export ("removeReminder:commit:error:")]
 		bool RemoveReminder (EKReminder reminder, bool commit, out NSError error);
 
 		[NoWatch]
-		[iOS (6,0)]
 		[Export ("saveReminder:commit:error:")]
 		bool SaveReminder (EKReminder reminder, bool commit, out NSError error);
 
@@ -637,18 +610,16 @@ namespace EventKit {
 		[Deprecated (PlatformName.MacOSX, 10, 9)]
 		[Export ("initWithAccessToEntityTypes:")]
 		IntPtr Constructor (EKEntityMask accessToEntityTypes);
-
-		[Mac (10,11)]
+#endif
+		[Mac (10,11), Watch (5,0), iOS (12,0)]
 		[Export ("delegateSources")]
 		EKSource[] DelegateSources { get; }
-#endif
-		[iOS (6,0)]
+
 		[Mac (10,9)]
 		[Export ("requestAccessToEntityType:completion:")]
 		[Async]
 		void RequestAccess (EKEntityType entityType, Action<bool, NSError> completionHandler);
 
-		[iOS (6,0)]
 		[Mac (10,9)]
 		[Static]
 		[Export ("authorizationStatusForEntityType:")]
@@ -657,9 +628,8 @@ namespace EventKit {
 
 	delegate void EKEventSearchCallback (EKEvent theEvent, ref bool stop);
 
-	[iOS (6,0)]
-	[Mac (10,8, onlyOn64: true)]
 	[BaseType (typeof (EKCalendarItem))]
+	[DisableDefaultCtor]
 	interface EKReminder {
 		[Export ("startDateComponents", ArgumentSemantic.Copy)]
 		[NullAllowed]

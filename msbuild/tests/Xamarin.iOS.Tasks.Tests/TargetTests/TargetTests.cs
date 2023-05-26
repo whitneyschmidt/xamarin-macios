@@ -116,22 +116,23 @@ namespace Xamarin.iOS.Tasks
 			}
 		}
 
-		static bool BundleResourceExists (string path, ref int extra)
+		static void BundleResourceExists (string path)
 		{
 			if (Path.GetExtension (path) == ".nib") {
 				if (Directory.Exists (path)) {
 					// Note: this suggests that things were built with the iOS 8 SDK...
 					var objects8Nib = Path.Combine (path, "objects-8.0+.nib");
+					var objects13Nib = Path.Combine (path, "objects-13.0+.nib");
 					var objectsNib = Path.Combine (path, "objects.nib");
 					var runtimeNib = Path.Combine (path, "runtime.nib");
 
-					extra++;
-
-					return File.Exists (runtimeNib) && (File.Exists (objectsNib) || File.Exists (objects8Nib));
+					Assert.That (File.Exists (runtimeNib), $"File exists: {runtimeNib}");
+					Assert.That (File.Exists (objectsNib) || File.Exists (objects8Nib) || File.Exists (objects13Nib), $"File exists: {objectsNib} || {objects8Nib} || {objects13Nib}");
+					return;
 				}
 			}
 
-			return File.Exists (path);
+			Assert.IsTrue (File.Exists (path), $"Existence of {path}");
 		}
 
 		[Test]
@@ -177,13 +178,18 @@ namespace Xamarin.iOS.Tasks
 		public void BuildExecutable ()
 		{
 			var expectedFiles = ExpectedExecutableFiles;
-			int extra = 0;
 
 			RunTargetOnInstance (MonoTouchProjectInstance, TargetName.Build);
 
 			Assert.IsTrue (Directory.Exists (AppBundlePath), "#1");
+
+			var bundleResources = Directory.GetFileSystemEntries (AppBundlePath, "*", SearchOption.AllDirectories);
+			var inexistentResource = expectedFiles.Except (expectedFiles).ToArray ();
+
+			Assert.That (inexistentResource, Is.Empty, "No missing resources");
+
 			foreach (var file in expectedFiles)
-				Assert.IsTrue (BundleResourceExists (file, ref extra), "#2. " + file);
+				BundleResourceExists (file);
 
 			// Verify that we have not bundled BundleResource or Content items as embedded resources
 			var assemblyDef = AssemblyDefinition.ReadAssembly (Path.Combine (AppBundlePath, "MySingleView.exe"));
@@ -401,7 +407,7 @@ namespace Xamarin.iOS.Tasks
 
 			// Now we should have an AppBundleDir
 			RunTargetOnInstance (MonoTouchProjectInstance, TargetName.GenerateBundleName);
-			Assert.AreEqual (@"bin\iPhoneSimulator\Debug\MySingleView.app", MonoTouchProjectInstance.GetPropertyValue ("AppBundleDir"), "#3");
+			Assert.AreEqual (@"bin/iPhoneSimulator/Debug/MySingleView.app", MonoTouchProjectInstance.GetPropertyValue ("AppBundleDir"), "#3");
 		}
 
 		[Test]
@@ -496,20 +502,24 @@ namespace Xamarin.iOS.Tasks
 			plist.SetMinimumOSVersion ("7.0");
 			plist.Save (path, true);
 
-			var projectInstance = project.CreateProjectInstance ();
-			RunTargetOnInstance (projectInstance, TargetName.CompileImageAssets, 0);
+			ProjectInstance projectInstance = null;
+			try {
+				projectInstance = project.CreateProjectInstance ();
+				RunTargetOnInstance (projectInstance, TargetName.CompileImageAssets, 0);
 
-			var bundleItemsNoAppIcon = projectInstance.GetItems ("_BundleResourceWithLogicalName").ToArray ();
-			Assert.IsFalse (bundleItemsNoAppIcon.Any (i => i.EvaluatedInclude == Path.Combine (actool, "AppIcons60x60@2x.png") && i.GetMetadataValue ("LogicalName") == "AppIcons60x60@2x.png"), "#1");
+				var bundleItemsNoAppIcon = projectInstance.GetItems ("_BundleResourceWithLogicalName").ToArray ();
+				Assert.IsFalse (bundleItemsNoAppIcon.Any (i => i.EvaluatedInclude == Path.Combine (actool, "AppIcons60x60@2x.png") && i.GetMetadataValue ("LogicalName") == "AppIcons60x60@2x.png"), "#1");
 
-			project = SetupProject (Engine, MonoTouchProjectCSProjPath);
-			projectInstance = project.CreateProjectInstance ();
+				project = SetupProject (Engine, MonoTouchProjectCSProjPath);
+				projectInstance = project.CreateProjectInstance ();
 
-			// Put a thread.sleep so that we get noticeable timestamps.
-			EnsureFilestampChange ();
+				// Put a thread.sleep so that we get noticeable timestamps.
+				EnsureFilestampChange ();
 
-			// Re-save the original plist (adding app icon).
-			plistCopy.Save (path, true);
+			} finally {
+				// Re-save the original plist (adding app icon).
+				plistCopy.Save (path, true);
+			}
 
 			// Re-run the task with app icon set this time and no clean.
 			// The task should be aware the app icon is now being used.
@@ -567,7 +577,7 @@ namespace Xamarin.iOS.Tasks
 			MonoTouchProjectInstance = MonoTouchProject.CreateProjectInstance ();
 
 			RunTarget_WithErrors (MonoTouchProjectInstance, TargetName.DetectAppManifest);
-			Assert.IsNullOrEmpty (MonoTouchProjectInstance.GetPropertyValue ("_AppManifest"), "#1");
+			Assert.That (MonoTouchProjectInstance.GetPropertyValue ("_AppManifest"), Is.Null.Or.Empty, "#1");
 		}
 
 		[Test]
@@ -617,7 +627,7 @@ namespace Xamarin.iOS.Tasks
 		public void DetectAppManifest_LibraryProject ()
 		{
 			RunTargetOnInstance (LibraryProjectInstance, TargetName.DetectAppManifest);
-			Assert.IsNullOrEmpty (LibraryProjectInstance.GetPropertyValue ("_AppManifest"), "#1");
+			Assert.That (LibraryProjectInstance.GetPropertyValue ("_AppManifest"), Is.Not.Null.Or.Empty, "#1");
 		}
 	}
 }

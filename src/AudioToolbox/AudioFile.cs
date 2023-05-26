@@ -64,6 +64,9 @@ namespace AudioToolbox {
 		AMR = 0x616d7266, // amrf
 		[NoWatch, iOS (11,0), Mac(10,13), TV (11,0)]
 		FLAC =  0x666c6163, // flac
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[NoWatch, iOS (13,0), Mac(10,15), TV (13,0)]
+		LatmInLoas = 0x6c6f6173, // loas
 	}
 
 	public enum AudioFileError {// Implictly cast to OSType in AudioFile.h
@@ -196,8 +199,7 @@ namespace AudioToolbox {
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct AudioFileMarker
-	{
+	public struct AudioFileMarker {
 		public double FramePosition;
 		internal IntPtr Name_cfstringref;
 		public int    MarkerID;
@@ -210,6 +212,44 @@ namespace AudioToolbox {
 			get {
 				return CFString.FetchString (Name_cfstringref);
 			}
+		}
+	}
+
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoWatch, iOS (13,0), Mac (10,15), TV (13,0)]
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AudioPacketRangeByteCountTranslation {
+		public long Packet;
+		public long PacketCount;
+		public long ByteCountUpperBound;
+	}
+
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoWatch, iOS (13,0), Mac (10,15), TV (13,0)]
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AudioPacketRollDistanceTranslation {
+		public long Packet;
+		public long RollDistance;
+	}
+
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoWatch, iOS (13,0), Mac (10,15), TV (13,0)]
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AudioIndependentPacketTranslation {
+		public long Packet;
+		public long IndependentlyDecodablePacket;
+	}
+
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoWatch, iOS (13,0), Mac (10,15), TV (13,0)]
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AudioPacketDependencyInfoTranslation {
+		public long Packet;
+		uint isIndependentlyDecodable;
+		public uint NumberPrerollPackets;
+		public bool IsIndependentlyDecodable {
+			get { return isIndependentlyDecodable != 0;}
+			set { isIndependentlyDecodable =  (value)? 1U: 0U;}
 		}
 	}
 
@@ -473,9 +513,6 @@ namespace AudioToolbox {
 
 	public class AudioFile : IDisposable, INativeObject {
 
-#if !XAMCORE_2_0
-		protected
-#endif
 		internal IntPtr handle;
 		
 		protected internal AudioFile (bool x)
@@ -753,22 +790,6 @@ namespace AudioToolbox {
 		{
 			return ReadPacketData (useCache, inStartingPacket, ref nPackets, buffer, offset, ref count, out error);
 		}
-
-#if !XAMCORE_2_0
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioFileError AudioFileReadPackets (IntPtr inAudioFile, bool inUseCache, out int numBytes,
-			[MarshalAs (UnmanagedType.LPArray)] AudioStreamPacketDescription[] packetDescriptions, long startingPacket, ref int numPackets, IntPtr buffer);
-
-		[Obsolete ("Use 'ReadPacketData' instead.")]
-		public AudioFileError ReadPackets (bool useCache, out int numBytes,
-			AudioStreamPacketDescription[] packetDescriptions, long startingPacket, ref int numPackets, IntPtr buffer)
-		{
-			if (buffer == IntPtr.Zero)
-				throw new ArgumentException ("buffer");
-
-			return AudioFileReadPackets (handle, useCache, out numBytes, packetDescriptions, startingPacket, ref numPackets, buffer);
-		}
-#endif
 
 		static internal AudioStreamPacketDescription [] PacketDescriptionFrom (int nPackets, IntPtr b)
 		{
@@ -1255,11 +1276,10 @@ namespace AudioToolbox {
 				int size;
 				var h = GetProperty (AudioFileProperty.MagicCookieData, out size);
 				if (h == IntPtr.Zero)
-					return new byte [0];
+					return Array.Empty<byte> ();
 				
 				byte [] cookie = new byte [size];
-				for (int i = 0; i < cookie.Length; i++)
-					cookie [i] = Marshal.ReadByte (h, i);
+				Marshal.Copy (h, cookie, 0, size);
 				Marshal.FreeHGlobal (h);
 
 				return cookie;

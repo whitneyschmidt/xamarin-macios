@@ -8,8 +8,6 @@
 // Copyright 2012-2014 Xamarin Inc
 //
 
-#if !WATCH
-
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
@@ -31,6 +29,7 @@ using UIKit;
 namespace CoreMedia {
 
 	// untyped enum (used as an OSStatus) -> CMSampleBuffer.h
+	[Watch (6,0)]
 	public enum CMSampleBufferError : int {
 		None							= 0,
 		AllocationFailed				= -12730,
@@ -50,6 +49,7 @@ namespace CoreMedia {
 		Invalidated						= -12744,
 	}
 
+	[Watch (6,0)]
 	public class CMSampleBuffer : ICMAttachmentBearer 
 #if !COREBUILD
 	, IDisposable
@@ -346,20 +346,6 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* CMFormatDescriptionRef */ IntPtr CMSampleBufferGetFormatDescription (/* CMSampleBufferRef */ IntPtr sbuf);
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'GetAudioFormatDescription' or 'GetVideoFormatDescription'.")]
-		public CMFormatDescription GetFormatDescription ()
-		{
-			var desc = default(CMFormatDescription);
-			var descHandle = CMSampleBufferGetFormatDescription (handle);
-			if (descHandle != IntPtr.Zero)
-			{
-				desc = new CMFormatDescription (descHandle, false);
-			}
-			return desc;					
-		}
-#endif
-
 		public CMAudioFormatDescription GetAudioFormatDescription ()
 		{
 			var descHandle = CMSampleBufferGetFormatDescription (handle);
@@ -440,13 +426,6 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferSetOutputPresentationTimeStamp (/* CMSampleBufferRef */ IntPtr sbuf, CMTime outputPresentationTimeStamp);
 
-#if !XAMCORE_2_0
-		public int SetOutputPresentationTimeStamp (CMTime outputPresentationTimeStamp)
-		{
-			return (int)CMSampleBufferSetOutputPresentationTimeStamp (handle, outputPresentationTimeStamp);
-		}
-#endif
-
 		/*[DllImport(Constants.CoreMediaLibrary)]
 		int CMSampleBufferGetOutputSampleTimingInfoArray (
 		   CMSampleBufferRef sbuf,
@@ -462,13 +441,11 @@ namespace CoreMedia {
 			get {
 				return CMSampleBufferGetPresentationTimeStamp (handle);
 			}
-#if XAMCORE_2_0
 			set {
 				var result = CMSampleBufferSetOutputPresentationTimeStamp (handle, value);
 				if (result != 0)
 					throw new ArgumentException (result.ToString ());
 			}
-#endif
 		}
 
 		[DllImport(Constants.CoreMediaLibrary)]
@@ -575,17 +552,10 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferInvalidate (/* CMSampleBufferRef */ IntPtr sbuf);
 
-#if XAMCORE_2_0
 		public CMSampleBufferError Invalidate ()
 		{
 			return CMSampleBufferInvalidate (handle);
 		}
-#else
-		public int Invalidate()
-		{
-			return (int)CMSampleBufferInvalidate (handle);
-		}
-#endif
 		
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* Boolean */ bool CMSampleBufferIsValid (/* CMSampleBufferRef */ IntPtr sbuf);
@@ -601,38 +571,19 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferMakeDataReady (IntPtr handle);
 
-#if XAMCORE_2_0
 		public CMSampleBufferError MakeDataReady ()
 		{
 			return CMSampleBufferMakeDataReady (handle);
 		}
-#else
-		public int MakeDataReady ()
-		{
-			return (int)CMSampleBufferMakeDataReady (handle);
-		}
-#endif
 		
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferSetDataBuffer (IntPtr handle, IntPtr dataBufferHandle);
 		
-#if XAMCORE_2_0
 		public CMSampleBufferError SetDataBuffer (CMBlockBuffer dataBuffer)
 		{
 			var dataBufferHandle = dataBuffer == null ? IntPtr.Zero : dataBuffer.handle;
 			return CMSampleBufferSetDataBuffer (handle, dataBufferHandle);
 		}
-#else
-		public int /*CMSampleBufferError*/ SetDataBuffer (CMBlockBuffer dataBuffer)
-		{
-			var dataBufferHandle = IntPtr.Zero;
-			if (dataBuffer != null)
-			{
-				dataBufferHandle = dataBuffer.handle;
-			}
-			return (int)CMSampleBufferSetDataBuffer (handle, dataBufferHandle);
-		}
-#endif
 		
 		/*[DllImport(Constants.CoreMediaLibrary)]
 		int CMSampleBufferSetDataBufferFromAudioBufferList (
@@ -646,17 +597,10 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferSetDataReady (/* CMSampleBufferRef */ IntPtr sbuf);
 
-#if XAMCORE_2_0
 		public CMSampleBufferError SetDataReady ()
 		{
 			return CMSampleBufferSetDataReady (handle);
 		}
-#else
-		public int/*CMSampleBufferError*/ SetDataReady ()
-		{
-			return (int)CMSampleBufferSetDataReady (handle);
-		}
-#endif
 		
 #if false
 		// new in iOS 8 beta 5 - but the signature is not easy to bind with the AOT limitation, i.e. MonoPInvokeCallback
@@ -709,22 +653,11 @@ namespace CoreMedia {
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMSampleBufferError CMSampleBufferTrackDataReadiness (/* CMSampleBufferRef */ IntPtr sbuf, /* CMSampleBufferRef */ IntPtr sbufToTrack);
 
-#if XAMCORE_2_0
 		public CMSampleBufferError TrackDataReadiness (CMSampleBuffer bufferToTrack)
 		{
 			var handleToTrack = bufferToTrack == null ? IntPtr.Zero : bufferToTrack.handle;
 			return CMSampleBufferTrackDataReadiness (handle, handleToTrack);
 		}
-#else
-		public int/*CMSampleBufferError*/ TrackDataReadiness (CMSampleBuffer bufferToTrack)
-		{
-			var handleToTrack = IntPtr.Zero;
-			if (bufferToTrack != null) {
-				handleToTrack = bufferToTrack.handle;
-			}
-			return (int)CMSampleBufferTrackDataReadiness (handle, handleToTrack);
-		}
-#endif
 
 		[iOS (7,0)][Mac (10,9)]
 		[DllImport(Constants.CoreMediaLibrary)]
@@ -817,6 +750,7 @@ namespace CoreMedia {
 			/* CMSampleBufferRef* */ out IntPtr sBufOut);
 
 #if !XAMCORE_4_0
+#if !WATCH
 		[Obsolete ("Use the 'CreateReadyWithImageBuffer' overload with a single ref, not array, 'CMSampleTimingInfo' parameter.")]
 		[iOS (8,0)][Mac (10,10)]
 		public static CMSampleBuffer CreateReadyWithImageBuffer (CVImageBuffer imageBuffer, 
@@ -828,7 +762,8 @@ namespace CoreMedia {
 				throw new ArgumentException ("Only a single sample is allowed.", nameof (sampleTiming));
 			return CreateReadyWithImageBuffer (imageBuffer, formatDescription, sampleTiming, out error);
 		}
-#endif
+#endif // !WATCH
+#endif // !XAMCORE_4_0
 		[iOS (8,0)][Mac (10,10)]
 		public static CMSampleBuffer CreateReadyWithImageBuffer (CVImageBuffer imageBuffer,
 			CMFormatDescription formatDescription, ref CMSampleTimingInfo sampleTiming, out CMSampleBufferError error)
@@ -850,7 +785,9 @@ namespace CoreMedia {
 #endif // !COREBUILD
 	}
 
+#if !WATCH
 	public enum LensStabilizationStatus { Active, OutOfRange, Unavailable, Off, None }
+#endif
 
 #if !COREBUILD
 	public partial class CMSampleBufferAttachmentSettings : DictionaryContainer {
@@ -1005,13 +942,13 @@ namespace CoreMedia {
 		}
 
 #if !MONOMAC
-		[iOS (6,0)]
 		public string DroppedFrameReason {
 			get {
 				return GetStringValue (CMSampleAttachmentKey.DroppedFrameReason);
 			}
 		}
 
+#if !WATCH
 		[iOS (9,0)]
 		public LensStabilizationStatus StillImageLensStabilizationStatus {
 			get {
@@ -1031,9 +968,8 @@ namespace CoreMedia {
 				return LensStabilizationStatus.None;
 			}
 		}
-#endif
+#endif // !WATCH
+#endif // !MONOMAC
 	}
 #endif
 }
-
-#endif // !WATCH

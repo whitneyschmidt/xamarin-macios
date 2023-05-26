@@ -2,21 +2,19 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-
-using Gdk;
+using System.Runtime.InteropServices;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class CollectITunesArtworkTaskBase : Task
+	public abstract class CollectITunesArtworkTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		public ITaskItem[] ITunesArtwork { get; set; }
 
@@ -73,15 +71,63 @@ namespace Xamarin.iOS.Tasks
 			}
 		}
 
+		const string CoreGraphicsLibrary = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static /* CGDataProviderRef */ IntPtr CGDataProviderCreateWithFilename (/* const char* */ string filename);
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static void CGDataProviderRelease (/* CGDataProviderRef */ IntPtr provider);
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static IntPtr CGImageGetWidth (/* CGImageRef */ IntPtr image);
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static IntPtr CGImageGetHeight (/* CGImageRef */ IntPtr image);
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static /* CGImageRef */ IntPtr CGImageCreateWithJPEGDataProvider (/* CGDataProviderRef */ IntPtr source, /* CGFloat[] */ IntPtr decode, bool shouldInterpolate, CGColorRenderingIntent intent);
+
+		[DllImport (CoreGraphicsLibrary)]
+		extern static void CGImageRelease (/* CGImageRef */ IntPtr image);
+
+		// untyped enum -> CGColorSpace.h
+		enum CGColorRenderingIntent
+		{
+			Default,
+			AbsoluteColorimetric,
+			RelativeColorimetric,
+			Perceptual,
+			Saturation,
+		};
+
 		static bool GetJpgImageSize (string path, out int width, out int height)
 		{
+			width = height = -1;
 			try {
-				var type = Pixbuf.GetFileInfo (path, out width, out height);
-				return type != null && type.Name == "jpeg";
+				var provider = CGDataProviderCreateWithFilename (path);
+				if (provider == IntPtr.Zero)
+					return false;
+
+				try {
+					var img = CGImageCreateWithJPEGDataProvider (provider, IntPtr.Zero, false, CGColorRenderingIntent.Default);
+					if (img == IntPtr.Zero)
+						return false;
+
+					try {
+						width = (int) CGImageGetWidth (img);
+						height = (int) CGImageGetHeight (img);
+					} finally {
+						CGImageRelease (img);
+					}
+				} finally {
+					CGDataProviderRelease (provider);
+				}
 			} catch {
-				width = height = -1;
 				return false;
 			}
+
+			return true;
 		}
 
 		public override bool Execute ()
@@ -97,24 +143,24 @@ namespace Xamarin.iOS.Tasks
 					int width, height;
 
 					if (!File.Exists (path)) {
-						Log.LogError ("  '{0}' not found.", path);
+						Log.LogError (MSBStrings.E0006, path);
 						continue;
 					}
 
 					if (!GetPngImageSize (path, out width, out height) && !GetJpgImageSize (path, out width, out height)) {
-						Log.LogError (null, null, null, path, 0, 0, 0, 0, "Error loading '{0}': Unknown image format.", path);
+						Log.LogError (null, null, null, path, 0, 0, 0, 0, MSBStrings.E0007, path);
 						return false;
 					}
 
 					if (width != height || (width != 512 && width != 1024)) {
-						Log.LogError (null, null, null, path, 0, 0, 0, 0, "Invalid iTunesArtwork dimensions ({0}x{1}) for '{2}'.", width, height, path);
+						Log.LogError (null, null, null, path, 0, 0, 0, 0, MSBStrings.E0008, width, height, path);
 						return false;
 					}
 
 					logicalName = width == 1024 ? "iTunesArtwork@2x" : "iTunesArtwork";
 
 					if (!artwork.Add (logicalName)) {
-						Log.LogError (null, null, null, path, 0, 0, 0, 0, "Multiple iTunesArtwork files with the same dimensions detected.");
+						Log.LogError (null, null, null, path, 0, 0, 0, 0, MSBStrings.E0009, width, height, path);
 						return false;
 					}
 

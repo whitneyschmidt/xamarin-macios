@@ -7,10 +7,10 @@
 // Copyright 2018 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
 using System;
 using Foundation;
 using ObjCRuntime;
+using CoreGraphics;
 using System.Reflection;
 
 namespace ClassKit {
@@ -44,6 +44,10 @@ namespace ClassKit {
 		Document,
 		Audio,
 		Video,
+		[iOS (13,4)]
+		Course,
+		[iOS (13,4)]
+		Custom,
 	}
 
 	[NoWatch, NoTV, NoMac, iOS (11,4)]
@@ -138,6 +142,7 @@ namespace ClassKit {
 		[Export ("duration")]
 		double Duration { get; }
 
+		[NullAllowed]
 		[Export ("primaryActivityItem", ArgumentSemantic.Strong)]
 		CLSActivityItem PrimaryActivityItem { get; set; }
 
@@ -195,6 +200,10 @@ namespace ClassKit {
 	[DisableDefaultCtor]
 	interface CLSContext {
 
+		[iOS (13,4)]
+		[Export ("identifierPath", ArgumentSemantic.Copy)]
+		string [] IdentifierPath { get; }
+
 		[Export ("identifier")]
 		string Identifier { get; }
 
@@ -204,11 +213,23 @@ namespace ClassKit {
 		[Export ("type", ArgumentSemantic.Assign)]
 		CLSContextType Type { get; }
 
+		[iOS (13,4)]
+		[NullAllowed, Export ("customTypeName")]
+		string CustomTypeName { get; set; }
+
 		[Export ("title")]
 		string Title { get; set; }
 
 		[Export ("displayOrder")]
 		nint DisplayOrder { get; set; }
+
+		[iOS (13,4)]
+		[NullAllowed, Export ("summary")]
+		string Summary { get; set; }
+
+		[iOS (13,4)]
+		[NullAllowed, Export ("thumbnail", ArgumentSemantic.Assign)]
+		CGImage Thumbnail { get; set; }
 
 		[Protected]
 		[NullAllowed, Export ("topic")]
@@ -260,6 +281,7 @@ namespace ClassKit {
 
 		[Abstract]
 		[Export ("createContextForIdentifier:parentContext:parentIdentifierPath:")]
+		[return: NullAllowed]
 		CLSContext CreateContext (string identifier, CLSContext parentContext, string [] parentIdentifierPath);
 	}
 
@@ -347,4 +369,3 @@ namespace ClassKit {
 		void UpdateDescendants (CLSContext context, Action<NSError> completion);
 	}
 }
-#endif

@@ -12,7 +12,6 @@
 
 using System;
 using System.Linq;
-#if XAMCORE_2_0
 using CoreGraphics;
 using Foundation;
 #if !MONOMAC
@@ -23,18 +22,9 @@ using MultipeerConnectivity;
 #endif
 using ModelIO;
 using ObjCRuntime;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#if !__TVOS__
-using MonoTouch.MultipeerConnectivity;
-#endif
-using MonoTouch.UIKit;
-using MonoTouch.ModelIO;
-using MonoTouch.ObjCRuntime;
-#endif
 using OpenTK;
 using NUnit.Framework;
+using System.Runtime.InteropServices;
 
 namespace MonoTouchFixtures.ModelIO {
 	[TestFixture]
@@ -474,6 +464,55 @@ namespace MonoTouchFixtures.ModelIO {
 			for (int i = 0; i < retNMatrix4dArr.Length; i++)
 				Asserts.AreEqual (TestMatrices.NMatrix4dArray [i], retNMatrix4dArr [i], $"retNMatrix4dArr iter: {i}");
 		}
+
+		[Test]
+		public void MDLAnimatedQuaternionTest ()
+		{
+			// Quaternion
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			using (var animatedQuat = new MDLAnimatedQuaternion ()) {
+				var quat = new Quaternion (1.1f, 2.2f, 3.3f, 4.4f);
+
+				animatedQuat.SetQuaternion (quat, 0);
+				var returnedQuat = animatedQuat.GetFloatQuaternion (0);
+				Asserts.AreEqual (quat, returnedQuat, "A");
+
+				animatedQuat.Reset (TestMatrices.QuaternionArray, TestMatrices.GetTimesArray (TestMatrices.QuaternionArray.Length));
+				var arr = animatedQuat.GetQuaternionValues (20);
+				Asserts.AreEqual (TestMatrices.QuaternionArray, arr, "C1");
+			}
+
+
+			using (var animatedQuat = new MDLAnimatedQuaternion ()) {
+				var quatd = new Quaterniond (10.1, 20.2, 30.3, 40.4);
+
+				animatedQuat.SetQuaternion (quatd, 0);
+				Asserts.AreEqual (quatd, animatedQuat.GetDoubleQuaternion (0), 0.0001, "B");
+
+				animatedQuat.Reset (TestMatrices.QuaterniondArray, TestMatrices.GetTimesArray (TestMatrices.QuaterniondArray.Length));
+				var arrd = animatedQuat.GetQuaterniondValues (20);
+				Asserts.AreEqual (TestMatrices.QuaterniondArray, arrd, "C2");
+			} 
+		}
+
+		[Test]
+		public unsafe void OpenTKSizeOfTests ()
+		{
+			Assert.AreEqual (sizeof (Matrix4), Marshal.SizeOf (typeof (Matrix4)));
+			Assert.AreEqual (sizeof (Matrix4d), Marshal.SizeOf (typeof (Matrix4d)));
+
+			Assert.AreEqual (sizeof (Quaternion), Marshal.SizeOf (typeof (Quaternion)));
+			Assert.AreEqual (sizeof (Quaterniond), Marshal.SizeOf (typeof (Quaterniond)));
+
+			Assert.AreEqual (sizeof (Vector2), Marshal.SizeOf (typeof (Vector2)));
+			Assert.AreEqual (sizeof (Vector3), Marshal.SizeOf (typeof (Vector3)));
+			Assert.AreEqual (sizeof (Vector4), Marshal.SizeOf (typeof (Vector4)));
+			Assert.AreEqual (sizeof (Vector2d), Marshal.SizeOf (typeof (Vector2d)));
+			Assert.AreEqual (sizeof (Vector3d), Marshal.SizeOf (typeof (Vector3d)));
+			Assert.AreEqual (sizeof (Vector4d), Marshal.SizeOf (typeof (Vector4d)));
+		}
+
 	}
 
 	[Preserve (AllMembers = true)]
@@ -678,9 +717,9 @@ namespace MonoTouchFixtures.ModelIO {
 			return array;
 		}
 
-		public static double [] GetTimesArray (int lenght)
+		public static double [] GetTimesArray (int length)
 		{
-			return Enumerable.Range (0, lenght).Select (v => (double) v).ToArray ();
+			return Enumerable.Range (0, length).Select (v => (double) v).ToArray ();
 		}
 	}
 }

@@ -35,7 +35,6 @@ using AudioToolbox;
 namespace AVFoundation {
 
 	// Should be called AVAudioSetting but AVAudioSetting has been already used by keys class
-	[iOS (6,0)]
 	public class AudioSettings : DictionaryContainer
 	{
 #if !COREBUILD
@@ -58,21 +57,12 @@ namespace AVFoundation {
 			}
 		}
 
-#if XAMCORE_2_0
-	public double?
-#else
-		public float?
-#endif
-			SampleRate {
+		public double? SampleRate {
 			set {
 				SetNumberValue (AVAudioSettings.AVSampleRateKey, value);
 			}
 			get {
-#if XAMCORE_2_0
 				return GetDoubleValue (AVAudioSettings.AVSampleRateKey);
-#else
-				return GetFloatValue (AVAudioSettings.AVSampleRateKey);
-#endif
 			}
 		}			
 
@@ -189,12 +179,10 @@ namespace AVFoundation {
 				case AVAudioBitRateStrategy.Variable:
 					v = AVAudioSettings._Variable;
 					break;
-#if XAMCORE_2_0
 				case null:
 					break;
 				default:
 					throw new ArgumentOutOfRangeException ("value");
-#endif
 				}
 				SetStringValue (AVAudioSettings.AVEncoderBitRateStrategyKey, v);
 			}
@@ -231,12 +219,10 @@ namespace AVFoundation {
 				case AVSampleRateConverterAlgorithm.Normal:
 					v = AVAudioSettings.AVSampleRateConverterAlgorithm_Normal;
 					break;
-#if XAMCORE_2_0
 				case null:
 					break;
 				default:
 					throw new ArgumentOutOfRangeException ("value");
-#endif
 				}
 				SetStringValue (AVAudioSettings.AVSampleRateConverterAlgorithmKey, v);
 			}

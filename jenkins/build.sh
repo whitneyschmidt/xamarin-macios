@@ -120,15 +120,21 @@ if test -z "$ENABLE_DEVICE_BUILD"; then
 	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ios-device"
 fi
 
-make reset
-make git-clean-all
-make print-versions
+# Enable dotnet bits on the bots
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-dotnet"
 
 echo "Configuring the build with: $CONFIGURE_FLAGS"
 # shellcheck disable=SC2086
 ./configure $CONFIGURE_FLAGS
 
+# If we're building mono from source, we might not have it cloned yet
+make reset
+
 time make -j8
 time make install -j8
 
 printf "✅ [Build succeeded](%s/console)\\n" "$BUILD_URL" >> "$WORKSPACE/jenkins/pr-comments.md"
+
+if grep MONO_BUILD_FROM_SOURCE=. configure.inc Make.config.inc >& /dev/null; then
+	printf "    ⚠️ Mono built from source\\n" >> "$WORKSPACE/jenkins/pr-comments.md"
+fi

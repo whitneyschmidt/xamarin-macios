@@ -47,6 +47,7 @@ namespace WatchConnectivity {
 		bool ComplicationEnabled { [Bind ("isComplicationEnabled")] get; }
 
 		[Export ("watchDirectoryURL")]
+		[NullAllowed]
 		NSUrl WatchDirectoryUrl { get; }
 #endif
 
@@ -103,6 +104,11 @@ namespace WatchConnectivity {
 		[NoWatch][iOS (10,0)]
 		[Export ("remainingComplicationUserInfoTransfers")]
 		nuint RemainingComplicationUserInfoTransfers { get; }
+
+		[Watch (6,0)]
+		[NoiOS]
+		[Export ("companionAppInstalled")]
+		bool CompanionAppInstalled { [Bind("isCompanionAppInstalled")] get; }
 	}
 
 	interface IWCSessionDelegate { }
@@ -142,7 +148,7 @@ namespace WatchConnectivity {
 		void DidReceiveUserInfo (WCSession session, NSDictionary<NSString, NSObject> userInfo);
 
 		[Export ("session:didFinishFileTransfer:error:")]
-		void DidFinishFileTransfer (WCSession session, WCSessionFileTransfer fileTransfer, NSError error);
+		void DidFinishFileTransfer (WCSession session, WCSessionFileTransfer fileTransfer, [NullAllowed] NSError error);
 
 		[Export ("session:didReceiveFile:")]
 		void DidReceiveFile (WCSession session, WCSessionFile file);
@@ -167,6 +173,11 @@ namespace WatchConnectivity {
 		[NoWatch][iOS (9,3)]
 		[Export ("sessionDidDeactivate:")]
 		void DidDeactivate (WCSession session);
+
+		[Watch (6,0)]
+		[NoiOS]
+		[Export ("sessionCompanionAppInstalledDidChange:")]
+		void CompanionAppInstalledDidChange (WCSession session);
 	}
 
 	[iOS (9,0)]

@@ -10,15 +10,9 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-#if XAMCORE_2_0
 using Foundation;
 using CoreGraphics;
 using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
@@ -58,7 +52,8 @@ namespace MonoTouchFixtures.CoreGraphics {
 			Assert.That (CGDataProviderCreateWithFilename (null), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithFilename");
 			Assert.That (CGDataProviderCreateWithURL (IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataConsumerCreateWithURL");
 			Assert.That (CGDataProviderCreateWithCFData (IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithCFData");
-			Assert.That (CGDataProviderCreateWithData (IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithData");
+			// crash with iOS 13 beta 3
+			// Assert.That (CGDataProviderCreateWithData (IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithData");
 		}
 
 		[Test]

@@ -6,13 +6,11 @@ using Microsoft.Build.Framework;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class ScnToolTaskBase : ToolTask
+	public abstract class ScnToolTaskBase : XamarinToolTask
 	{
 		string sdkDevPath;
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string IntermediateOutputPath { get; set; }
@@ -45,8 +43,10 @@ namespace Xamarin.MacDev.Tasks
 			get { return Path.Combine (SdkDevPath, "usr", "bin"); }
 		}
 
-		protected abstract string OperatingSystem {
-			get;
+		protected virtual string OperatingSystem {
+			get {
+				return PlatformFrameworkHelper.GetOperatingSystem (TargetFrameworkMoniker);
+			}
 		}
 
 		protected override string ToolName {

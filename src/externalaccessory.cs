@@ -14,7 +14,7 @@ using UIKit;
 
 namespace ExternalAccessory {
 
-	[Mac (10, 13, onlyOn64: true)][TV (10,0)]
+	[Mac (10, 13)][TV (10,0)]
 	[BaseType (typeof (NSObject), Delegates=new string [] { "WeakDelegate" }, Events=new Type [] {typeof(EAAccessoryDelegate)})]
 	// Objective-C exception thrown.  Name: EAAccessoryInitException Reason: -init not supported. EAAccessoryManager is responsible for creating all objects.
 	[DisableDefaultCtor]
@@ -54,11 +54,14 @@ namespace ExternalAccessory {
 		EAAccessoryDelegate Delegate { get; set; }
 
 		[iOS (9,0)]
+		[Deprecated (PlatformName.iOS, 13,0)]
+		[Deprecated (PlatformName.TvOS, 13,0)]
+		[Deprecated (PlatformName.MacOSX, 10,14)]
 		[Export ("dockType")]
 		string DockType { get; }
 	}
 
-	[Mac (10, 13, onlyOn64: true)][TV (10,0)]
+	[Mac (10, 13)][TV (10,0)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
@@ -67,17 +70,16 @@ namespace ExternalAccessory {
 		void Disconnected (EAAccessory accessory);
 	}
 
-	[Mac (10, 13, onlyOn64: true)][TV (10,0)]
+	[Mac (10, 13)][TV (10,0)]
 	interface EAAccessoryEventArgs {
 		[Export ("EAAccessoryKey")]
 		EAAccessory Accessory { get; }
 
-		[iOS (6,0)]
 		[Export ("EAAccessorySelectedKey")]
 		EAAccessory Selected { get; }
 	}
 	
-	[Mac (10, 13, onlyOn64: true)][TV (10,0)]
+	[Mac (10, 13)][TV (10,0)]
 	[BaseType (typeof (NSObject))]
 	// Objective-C exception thrown.  Name: EAAccessoryManagerInitException Reason: -init is not supported. Use +sharedAccessoryManager.
 	[DisableDefaultCtor]
@@ -104,19 +106,17 @@ namespace ExternalAccessory {
 
 #if !XAMCORE_3_0 && !MONOMAC
 		// now exposed with the corresponding EABluetoothAccessoryPickerError enum
-		[iOS (6,0)]
 		[Field ("EABluetoothAccessoryPickerErrorDomain")]
 		NSString BluetoothAccessoryPickerErrorDomain { get; }
 #endif
 
 		[NoMac]
-		[iOS (6,0)]
 		[Export ("showBluetoothAccessoryPickerWithNameFilter:completion:")]
 		[Async]
 		void ShowBluetoothAccessoryPicker ([NullAllowed] NSPredicate predicate, [NullAllowed] Action<NSError> completion);
 	}
 
-	[Mac (10, 13, onlyOn64: true)][TV (10,0)]
+	[Mac (10, 13)][TV (10,0)]
 	[BaseType (typeof (NSObject))]
 	// Objective-C exception thrown.  Name: EASessionInitException Reason: -init not supported. use -initWithAccessory:forProtocol.
 	[DisableDefaultCtor]
@@ -124,15 +124,19 @@ namespace ExternalAccessory {
 		[Export ("initWithAccessory:forProtocol:")]
 		IntPtr Constructor (EAAccessory accessory, string protocol);
 
+		[NullAllowed]
 		[Export ("accessory")]
 		EAAccessory Accessory { get; }
 
+		[NullAllowed]
 		[Export ("protocolString")]
 		string ProtocolString { get; }
 
+		[NullAllowed]
 		[Export ("inputStream")]
 		NSInputStream InputStream { get; }
 
+		[NullAllowed]
 		[Export ("outputStream")]
 		NSOutputStream OutputStream { get; }
 	}
@@ -221,27 +225,19 @@ namespace ExternalAccessory {
 	[BaseType (typeof (NSObject))]
 	interface EAWiFiUnconfiguredAccessoryBrowserDelegate {
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("accessoryBrowser:didUpdateState:"), EventArgs ("EAWiFiUnconfiguredAccessory")]
 		void DidUpdateState(EAWiFiUnconfiguredAccessoryBrowser browser, EAWiFiUnconfiguredAccessoryBrowserState state);
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("accessoryBrowser:didFindUnconfiguredAccessories:"), EventArgs ("EAWiFiUnconfiguredAccessoryBrowser")]
 		void DidFindUnconfiguredAccessories (EAWiFiUnconfiguredAccessoryBrowser browser, NSSet accessories);
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("accessoryBrowser:didRemoveUnconfiguredAccessories:"), EventArgs ("EAWiFiUnconfiguredAccessoryBrowser")]
 		void DidRemoveUnconfiguredAccessories (EAWiFiUnconfiguredAccessoryBrowser browser, NSSet accessories);
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("accessoryBrowser:didFinishConfiguringAccessory:withStatus:"), EventArgs ("EAWiFiUnconfiguredAccessoryDidFinish")]
 		void DidFinishConfiguringAccessory (EAWiFiUnconfiguredAccessoryBrowser browser, EAWiFiUnconfiguredAccessory accessory, EAWiFiUnconfiguredAccessoryConfigurationStatus status);
 	}

@@ -11,8 +11,6 @@ using System;
 using ObjCRuntime;
 using Foundation;
 
-#if XAMCORE_2_0 // The Contacts framework uses generics heavily, which is only supported in Unified (for now at least)
-
 namespace Contacts {
 
 	// NSInteger -> CNContact.h
@@ -86,12 +84,16 @@ namespace Contacts {
 		DataAccessError = 2,
 		AuthorizationDenied = 100,
 		NoAccessibleWritableContainers = 101,
+		UnauthorizedKeys = 102,
+		FeatureDisabledByUser = 103,
 		RecordDoesNotExist = 200,
 		InsertedRecordAlreadyExists = 201,
 		ContainmentCycle = 202,
 		ContainmentScope = 203,
 		ParentRecordDoesNotExist = 204,
 		RecordIdentifierInvalid = 205,
+		RecordNotWritable = 206,
+		ParentContainerNotWritable = 207,
 		ValidationMultipleErrors = 300,
 		ValidationTypeMismatch = 301,
 		ValidationConfigurationError = 302,
@@ -110,7 +112,3 @@ namespace Contacts {
 		MailingAddress,
 	}
 }
-
-#endif // XAMCORE_2_0
-
-

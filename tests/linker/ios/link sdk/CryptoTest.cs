@@ -12,12 +12,9 @@ using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-#if XAMCORE_2_0
 using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
 using NUnit.Framework;
+using MonoTests.System.Net.Http;
 
 namespace LinkSdk {
 	
@@ -57,7 +54,7 @@ namespace LinkSdk {
 					return true;
 				};
 				WebClient wc = new WebClient ();
-				Assert.IsNotNull (wc.DownloadString ("https://wrench.internalx.com/Wrench/Login.aspx"));
+				Assert.IsNotNull (wc.DownloadString (NetworkResources.XamarinUrl));
 				// caching means it will be called at least for the first run, but it might not
 				// be called again in subsequent requests (unless it expires)
 				Assert.That (trust_validation_callback, Is.GreaterThan (0), "validation done");
@@ -75,7 +72,7 @@ namespace LinkSdk {
 #endif
 			WebClient wc = new WebClient ();
 			// the certificate contains (several rules) the host name
-			Assert.NotNull (wc.DownloadString ("https://www.google.com"));
+			Assert.NotNull (wc.DownloadString (NetworkResources.MicrosoftUrl));
 
 			// IP are (generally) not allowed
 			foreach (var ip in Dns.GetHostAddresses ("www.google.com")) {
@@ -115,7 +112,7 @@ namespace LinkSdk {
 				};
 				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls;
 				WebClient wc = new WebClient ();
-				Assert.IsNotNull (wc.DownloadString ("https://api.imgur.com/2/stats"));
+				Assert.IsNotNull (wc.DownloadString (NetworkResources.StatsUrl));
 			}
 			catch (WebException we) {
 				// failing to get data does not mean the SSL/TLS session was not established

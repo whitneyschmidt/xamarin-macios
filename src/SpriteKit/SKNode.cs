@@ -15,7 +15,6 @@ using ObjCRuntime;
 
 namespace SpriteKit
 {
-#if XAMCORE_2_0 || !MONOMAC
 	public partial class SKNode : IEnumerable, IEnumerable<SKNode>
 	{
 		[iOS (8,0), Mac (10,10)]
@@ -51,7 +50,7 @@ namespace SpriteKit
 			return GetEnumerator ();
 		}
 
-		[Watch (5,0), TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Watch (5,0), TV (12,0), Mac (10,14), iOS (12,0)]
 		public static SKNode Create (string filename, Type [] types, out NSError error)
 		{
 			// Let's fail early.
@@ -69,8 +68,7 @@ namespace SpriteKit
 			}
 		}
 
-		[Watch (5,0), TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Watch (5,0), TV (12,0), Mac (10,14), iOS (12,0)]
 		public static SKNode Create (string filename, NSSet<Class> classes, out NSError error) => Create (filename, classes.Handle, out error);
 	}
-#endif
 }

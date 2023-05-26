@@ -33,7 +33,6 @@ using ObjCRuntime;
 namespace CoreVideo {
 
 	[Watch (4,0)]
-	[iOS (6,0)]
 	public class CVPixelBufferAttributes : DictionaryContainer
 	{
 #if !COREBUILD
@@ -54,13 +53,6 @@ namespace CoreVideo {
 			Width = width;
 			Height = height;
 		}
-
-#if !XAMCORE_2_0
-		public CVPixelBufferAttributes (CVPixelFormatType pixelFormatType, System.Drawing.Size size)
-			: this (pixelFormatType, size.Width, size.Height)
-		{
-		}
-#endif
 
 		public CVPixelFormatType? PixelFormatType {
 			set {
@@ -180,7 +172,7 @@ namespace CoreVideo {
 		}
 
 		// TODO: kCVPixelBufferIOSurfacePropertiesKey
-#if !MONOMAC || !XAMCORE_2_0
+#if !MONOMAC
 		// The presence of the IOSurfacePropertiesKey mandates the allocation via IOSurfaceProperty
 		public bool? AllocateWithIOSurface {
 			set {
@@ -195,7 +187,6 @@ namespace CoreVideo {
 		}
 
 #if !WATCH
-		[iOS (6,0)]
 		public bool? OpenGLESCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.OpenGLESCompatibilityKey, value);

@@ -10,7 +10,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-#if XAMCORE_2_0
 #if !__TVOS__
 using PassKit;
 #endif
@@ -20,13 +19,6 @@ using Metal;
 #endif
 using ObjCRuntime;
 using UIKit;
-#else
-using MonoTouch.PassKit;
-using MonoTouch.Foundation;
-using MonoTouch.Metal;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 
 using NUnit.Framework;
 
@@ -157,19 +149,8 @@ namespace Introspection {
 
 			// Metal is not available on the (iOS8) simulator
 			case "CAMetalLayer":
-				return (Runtime.Arch == Arch.SIMULATOR);
+				return (Runtime.Arch == Arch.SIMULATOR) && !TestRuntime.CheckXcodeVersion (11, 0);
 
-#if !XAMCORE_2_0
-			// from iOS8 (beta4) they do not return a valid handle
-			case "AVAssetResourceLoader":
-			case "AVAssetResourceLoadingRequest":
-			case "AVAssetResourceLoadingContentInformationRequest":
-				return true;
-			// Started with iOS8 on simulator (always) but it looks like it can happen on devices too
-			// NSInvalidArgumentException Use initWithAccessibilityContainer:
-			case "UIAccessibilityElement":
-				return TestRuntime.CheckXcodeVersion (6, 0);
-#endif
 			// in 8.2 beta 1 this crash the app (simulator) without giving any details in the logs
 			case "WKUserNotificationInterfaceController":
 				return true;
@@ -214,7 +195,8 @@ namespace Introspection {
 				return true;
 			case "INBookRestaurantReservationIntentResponse": // iOS 11 beta 2: stack overflow in description. radar:32945914
 				return true;
-			case "IOSurface": // Only works on device
+			case "IOSurface": // Only works on device before Xcode 11
+				return !TestRuntime.CheckXcodeVersion (11, 0);
 			case "NEHotspotEapSettings": // Wireless Accessory Configuration is not supported in the simulator.
 			case "NEHotspotConfigurationManager":
 			case "NEHotspotHS20Settings":
@@ -232,6 +214,14 @@ namespace Introspection {
 				return Runtime.Arch == Arch.SIMULATOR;
 			case "RPSystemBroadcastPickerView": // Symbol not available in simulator
 				return Runtime.Arch == Arch.SIMULATOR;
+			case "ICNotificationManagerConfiguration": // This works on device but not on simulator, and docs explicitly says it is user creatable
+				return Runtime.Arch == Arch.SIMULATOR;
+			case "VNDocumentCameraViewController": // Name: NSGenericException Reason: Document camera is not available on simulator
+				return Runtime.Arch == Arch.SIMULATOR;
+			case "AVAudioRecorder": // Stopped working with Xcode 11.2 beta 2
+				return TestRuntime.CheckXcodeVersion (11, 2);
+			case "UIMenuController": // Stopped working with Xcode 11.3 beta 1
+				return TestRuntime.CheckXcodeVersion (11, 3);
 			default:
 				return base.Skip (type);
 			}

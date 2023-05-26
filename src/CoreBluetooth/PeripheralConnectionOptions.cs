@@ -48,25 +48,6 @@ namespace CoreBluetooth {
 		}
 
 #if !MONOMAC
-#if !XAMCORE_2_0
-		[iOS (6,0)]
-		[Obsolete ("Use 'NotifyOnConnection' property instead.")]
-		public bool NotifyOnConnectionKey {
-			set {
-				NotifyOnConnection = value;
-			}
-		}
-
-		[iOS (6,0)]
-		[Obsolete ("Use 'NotifyOnNotification' property instead.")]
-		public bool NotifyOnNotificationKey {
-			set {
-				NotifyOnNotification = value;
-			}
-		}
-#endif
-	
-		[iOS (6,0)]
 		public bool? NotifyOnConnection {
 			get {
 				return GetBoolValue (CBCentralManager.OptionNotifyOnConnectionKey);
@@ -81,7 +62,6 @@ namespace CoreBluetooth {
 			}
 		}
 
-		[iOS (6,0)]
 		public bool? NotifyOnNotification {
 			get {
 				return GetBoolValue (CBCentralManager.OptionNotifyOnNotificationKey);
@@ -96,15 +76,6 @@ namespace CoreBluetooth {
 				
 				SetNumberValue (CBCentralManager.OptionNotifyOnNotificationKey, value.Value ? 1 : 0);
 			}
-		}
-#endif
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'NotifyOnDisconnection' property instead.")]
-		public bool NotifyOnDisconnectionKey {
-			set {
-				NotifyOnDisconnection = value;
-			}			
 		}
 #endif
 

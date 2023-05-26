@@ -70,7 +70,7 @@ namespace AudioToolbox {
 		EnqueueDuringReset   = -66632,
 		InvalidOfflineMode   = -66626,
 		BufferEnqueuedTwice  = -66666,
-		[iOS (10,0), Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), Mac (10,12)]
 		CannotStartYet       = -66665,
 		
 		// There is countless of not well documented error codes returned
@@ -303,7 +303,6 @@ namespace AudioToolbox {
 						      AudioTimeStamp *startTime, int descriptors, IntPtr AudioStreamPacketDescription_inPacketDesc);
 	delegate void AudioQueuePropertyListener (IntPtr userData, IntPtr AQ,  AudioQueueProperty id);
 
-#if XAMCORE_2_0
 	public class BufferCompletedEventArgs : EventArgs {
 		public BufferCompletedEventArgs (IntPtr audioQueueBuffer)
 		{
@@ -314,18 +313,6 @@ namespace AudioToolbox {
 		{
 			IntPtrBuffer = (IntPtr) audioQueueBuffer;
 		}
-#else
-	public class OutputCompletedEventArgs : EventArgs {
-		public OutputCompletedEventArgs (IntPtr audioQueueBuffer)
-		{
-			IntPtrBuffer = audioQueueBuffer;
-		}
-
-		public unsafe OutputCompletedEventArgs (AudioQueueBuffer *audioQueueBuffer)
-		{
-			IntPtrBuffer = (IntPtr) audioQueueBuffer;
-		}
-#endif
 
 		public IntPtr IntPtrBuffer { get; private set; }
 		public unsafe AudioQueueBuffer *UnsafeBuffer {
@@ -383,16 +370,12 @@ namespace AudioToolbox {
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static OSStatus AudioQueueDispose (IntPtr AQ, bool immediate);
 
-#if XAMCORE_2_0
 		protected virtual void Dispose (bool disposing)
 		{
 			Dispose (disposing, true);
 		}
 
 		void Dispose (bool disposing, bool immediate)
-#else
-		public virtual void Dispose (bool disposing, bool immediate)
-#endif
 		{
 			if (handle != IntPtr.Zero){
 				if (disposing){
@@ -988,11 +971,10 @@ namespace AudioToolbox {
 				int size;
 				var h = GetProperty (AudioQueueProperty.MagicCookie, out size);
 				if (h == IntPtr.Zero)
-					return new byte [0];
+					return Array.Empty<byte> ();
 				
 				byte [] cookie = new byte [size];
-				for (int i = 0; i < cookie.Length; i++)
-					cookie [i] = Marshal.ReadByte (h, i);
+				Marshal.Copy (h, cookie, 0, size);
 				Marshal.FreeHGlobal (h);
 
 				return cookie;
@@ -1129,7 +1111,6 @@ namespace AudioToolbox {
 			}
 		}
 
-		[iOS (6,0)]
 		public AudioQueueStatus SetChannelAssignments (params AudioQueueChannelAssignment[] channelAssignments)
 		{
 			if (channelAssignments == null)
@@ -1157,23 +1138,11 @@ namespace AudioToolbox {
 		}	
 #endif
 
-		[iOS (6,0)]
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueProcessingTapNew (IntPtr inAQ, AudioQueueProcessingTapCallbackShared inCallback,
 			IntPtr inClientData, AudioQueueProcessingTapFlags inFlags, out uint outMaxFrames,
 			out AudioStreamBasicDescription outProcessingFormat, out IntPtr outAQTap);
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'CreateProcessingTap (AudioQueueProcessingTapDelegate, AudioQueueProcessingTapFlags, out AudioQueueStatus)' instead.", true)]
-		[iOS (6,0)]
-		public AudioQueueProcessingTap CreateProcessingTap (AudioQueueProcessingTapCallback processingCallback, AudioQueueProcessingTapFlags flags,
-		                                                    out AudioQueueStatus status)
-		{
-			throw new NotSupportedException ();
-		}
-#endif
-
-		[iOS (6,0)]
 		public AudioQueueProcessingTap CreateProcessingTap (AudioQueueProcessingTapDelegate processingCallback, AudioQueueProcessingTapFlags flags,
 		                                                    out AudioQueueStatus status)
 		{		
@@ -1201,18 +1170,10 @@ namespace AudioToolbox {
 	                                                     ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
 	                                                     out uint outNumberFrames, IntPtr data);
 
-#if !XAMCORE_2_0
-	[Obsolete ("Use 'AudioQueueProcessingTapDelegate'.")]
-	public delegate uint AudioQueueProcessingTapCallback (AudioQueueProcessingTap audioQueueTap, uint numberOfFrames,
-	                                                      ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
-	                                                      AudioBufferList data);
-#endif
-
 	public delegate uint AudioQueueProcessingTapDelegate (AudioQueueProcessingTap audioQueueTap, uint numberOfFrames,
 	                                                      ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
 	                                                      AudioBuffers data);
 
-	[iOS (6,0)]
 	public class AudioQueueProcessingTap : IDisposable
 	{
 		internal static readonly AudioQueueProcessingTapCallbackShared CreateTapCallback = TapCallback;
@@ -1261,25 +1222,6 @@ namespace AudioToolbox {
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static OSStatus AudioQueueProcessingTapDispose (IntPtr inAQTap);
-
-#if !XAMCORE_2_0
-		[Obsolete]
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueProcessingTapGetSourceAudio (IntPtr inAQTap, uint inNumberFrames, ref AudioTimeStamp ioTimeStamp,
-		                                                               out AudioQueueProcessingTapFlags outFlags, out uint outNumberFrames,
-		                                                               AudioBufferList ioData);
-
-		[Obsolete ("Use overload with 'AudioBuffers'.")]
-		public AudioQueueStatus GetSourceAudio (uint numberOfFrames, ref AudioTimeStamp timeStamp,
-		                                        out AudioQueueProcessingTapFlags flags, out uint parentNumberOfFrames, AudioBufferList data)
-		{
-			if (data == null)
-				throw new ArgumentNullException ("data");
-
-			return AudioQueueProcessingTapGetSourceAudio (TapHandle, numberOfFrames, ref timeStamp,
-		                                                  out flags, out parentNumberOfFrames, data);
-		}
-#endif
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueProcessingTapGetSourceAudio (IntPtr inAQTap, uint inNumberFrames, ref AudioTimeStamp ioTimeStamp,
@@ -1330,14 +1272,9 @@ namespace AudioToolbox {
 		{
 			GCHandle gch = GCHandle.FromIntPtr (userData);
 			var aq = gch.Target as OutputAudioQueue;
-#if XAMCORE_2_0
 			aq.OnBufferCompleted (audioQueueBuffer);
-#else
-			aq.OnOutputCompleted (audioQueueBuffer);
-#endif
 		}
 
-#if XAMCORE_2_0
 		public event EventHandler<BufferCompletedEventArgs> BufferCompleted;
 
 		protected virtual void OnBufferCompleted (IntPtr audioQueueBuffer)
@@ -1346,16 +1283,6 @@ namespace AudioToolbox {
 			if (h != null)
 				h (this, new BufferCompletedEventArgs (audioQueueBuffer));
 		}
-#else
-		public event EventHandler<OutputCompletedEventArgs> OutputCompleted;
-		
-		protected virtual void OnOutputCompleted (IntPtr audioQueueBuffer)
-		{
-			var h = OutputCompleted;
-			if (h != null)
-				h (this, new OutputCompletedEventArgs (audioQueueBuffer));
-		}
-#endif
 
 		public OutputAudioQueue (AudioStreamBasicDescription desc) : this (desc, null, (CFString) null)
 		{
@@ -1502,11 +1429,7 @@ namespace AudioToolbox {
 			Dispose (true);
 		}
 	
-#if XAMCORE_2_0
 		protected virtual void Dispose (bool disposing)
-#else
-		public virtual void Dispose (bool disposing)
-#endif
 		{
 			if (timelineHandle != IntPtr.Zero){
 				AudioQueueDisposeTimeline (queueHandle, timelineHandle);

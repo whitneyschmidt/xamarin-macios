@@ -9,6 +9,7 @@
     <RootNamespace>ClassicExample</RootNamespace>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
     <AssemblyName>ClassicExample</AssemblyName>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,12 +22,11 @@
     <ConsolePause>false</ConsolePause>
     <UseRefCounting>false</UseRefCounting>
     <UseSGen>false</UseSGen>
-    <IncludeMonoRuntime>%INCLUDE_MONO_RUNTIME%</IncludeMonoRuntime>
+    <IncludeMonoRuntime>true</IncludeMonoRuntime>
     <EnablePackageSigning>false</EnablePackageSigning>
     <CodeSigningKey>Mac Developer</CodeSigningKey>
     <EnableCodeSigning>false</EnableCodeSigning>
     <CreatePackage>false</CreatePackage>
-%CODE%
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -40,10 +40,10 @@
     <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Main.cs" />
+    <Compile Include="MainClassic.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Info.plist" />
+    <None Include="Info-Classic.plist" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

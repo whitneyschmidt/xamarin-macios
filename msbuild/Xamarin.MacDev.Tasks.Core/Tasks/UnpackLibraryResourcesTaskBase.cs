@@ -5,16 +5,15 @@ using System.Collections.Generic;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class UnpackLibraryResourcesTaskBase : Task
+	public abstract class UnpackLibraryResourcesTaskBase : XamarinTask
 	{
 		List<ITaskItem> unpackedResources = new List<ITaskItem> ();
 		
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string Prefix { get; set; }
@@ -54,7 +53,7 @@ namespace Xamarin.MacDev.Tasks
 				// mscorlib.dll was not coming out with ResolvedFrom == {TargetFrameworkDirectory}
 				// and what we really care is where it comes from, not how it was resolved
 				if (IsFrameworkAssembly (asm)) {
-					Log.LogMessage (MessageImportance.Low, "  Skipping framework assembly: {0}", asm.ItemSpec);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0168, asm.ItemSpec);
 				} else {
 					var extracted = ExtractContentAssembly (asm.ItemSpec, IntermediateOutputPath);
 

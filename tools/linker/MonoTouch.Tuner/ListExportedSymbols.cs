@@ -33,7 +33,7 @@ namespace MonoTouch.Tuner
 		{
 			base.ProcessAssembly (assembly);
 
-			if (Context.Annotations.GetAction (assembly) == AssemblyAction.Delete)
+			if (Annotations.GetAction (assembly) == AssemblyAction.Delete)
 				return;
 
 			if (skip_sdk_assemblies && Profile.IsSdkAssembly (assembly))
@@ -125,11 +125,11 @@ namespace MonoTouch.Tuner
 				}
 			}
 
-			if (MarkStep.IsPropertyMethod (method)) {
-				var property = MarkStep.GetProperty (method);
+			if (method.IsPropertyMethod ()) {
+				var property = method.GetProperty ();
 				object symbol;
 				// The Field attribute may have been linked away, but we've stored it in an annotation.
-				if (property != null && Context.Annotations.GetCustomAnnotations ("ExportedFields").TryGetValue (property, out symbol)) {
+				if (property != null && Annotations.GetCustomAnnotations ("ExportedFields").TryGetValue (property, out symbol)) {
 					DerivedLinkContext.RequiredSymbols.AddField ((string) symbol).AddMember (property);
 				}
 			}

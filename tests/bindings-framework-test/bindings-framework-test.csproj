@@ -15,7 +15,8 @@
     <AssemblyOriginatorKeyFile>..\..\product.snk</AssemblyOriginatorKeyFile>
     <TargetFrameworkIdentifier>Xamarin.iOS</TargetFrameworkIdentifier>
     <IntermediateOutputPath>obj\$(Platform)\$(Configuration)-unified</IntermediateOutputPath>
-    <DefineConstants>XAMCORE_2_0</DefineConstants>
+    <DefineConstants></DefineConstants>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Debug32' Or '$(Configuration)' == 'Debug64' Or '$(Configuration)' == 'Debug64_32' ">
     <DebugSymbols>True</DebugSymbols>
@@ -54,13 +55,13 @@
     <TestLibrariesDirectory>..\..\tests\test-libraries</TestLibrariesDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios\XTest.framework">
+    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios-fat\XTest.framework">
       <Link>XTest.framework</Link>
     </ObjcBindingNativeFramework>
-    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios\XStaticObjectTest.framework">
+    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios-fat\XStaticObjectTest.framework">
       <Link>XStaticObjectTest.framework</Link>
     </ObjcBindingNativeFramework>
-    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios\XStaticArTest.framework">
+    <ObjcBindingNativeFramework Include="..\..\tests\test-libraries\.libs\ios-fat\XStaticArTest.framework">
       <Link>XStaticArTest.framework</Link>
     </ObjcBindingNativeFramework>
   </ItemGroup>
@@ -79,9 +80,9 @@
   </ItemGroup>
   <ItemGroup>
     <TestLibrariesInput Include="..\..\tests\test-libraries\libframework.m" />
-    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios\XTest.framework" />
-    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios\XSharedObjectTest.framework" />
-    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios\XSharedARTest.framework" />
+    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios-fat\XTest.framework" />
+    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios-fat\XSharedObjectTest.framework" />
+    <TestLibrariesOutput Include="..\..\tests\test-libraries\.libs\ios-fat\XSharedARTest.framework" />
   </ItemGroup>
   <Target Name="BeforeBuild" Inputs="@(TestLibrariesInput)" Outputs="@(TestLibrariesOutput)">
     <Exec Command="make -j8 -C $(TestLibrariesDirectory)" />

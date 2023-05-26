@@ -7,7 +7,6 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
 using System;
 using System.Runtime.InteropServices;
 using Foundation;
@@ -196,9 +195,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Vector3 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3));
 
 			unsafe {
+				int typeSize = sizeof (Vector3);
 				fixed (Vector3* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, time, _GetFloat3Array);
 			}
@@ -210,9 +209,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Vector3d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3d));
 
 			unsafe {
+				int typeSize = sizeof (Vector3d);
 				fixed (Vector3d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, time, _GetDouble3Array);
 			}
@@ -252,9 +251,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount * TimeSampleCount;
 			var timesArr = new Vector3 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3));
 
 			unsafe {
+				int typeSize = sizeof (Vector3);
 				fixed (Vector3* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat3Array);
 			}
@@ -266,9 +265,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount * TimeSampleCount;
 			var timesArr = new Vector3d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3d));
 
 			unsafe {
+				int typeSize = sizeof (Vector3d);
 				fixed (Vector3d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble3Array);
 			}
@@ -307,9 +306,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Quaternion [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Quaternion));
 
 			unsafe {
+				int typeSize = sizeof (Quaternion);
 				fixed (Quaternion* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, time, _GetFloatQuaternionArray);
 			}
@@ -321,9 +320,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Quaterniond [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Quaterniond));
 
 			unsafe {
+				int typeSize = sizeof (Quaterniond);
 				fixed (Quaterniond* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, time, _GetDoubleQuaternionArray);
 			}
@@ -363,9 +362,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount * TimeSampleCount;
 			var timesArr = new Quaternion [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Quaternion));
 
 			unsafe {
+				int typeSize = sizeof (Quaternion);
 				fixed (Quaternion* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloatQuaternionArray);
 			}
@@ -377,9 +376,8 @@ namespace ModelIO {
 		{
 			var count = ElementCount * TimeSampleCount;
 			var timesArr = new Quaterniond [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Quaterniond));
-
 			unsafe {
+				int typeSize = sizeof (Quaterniond);
 				fixed (Quaterniond* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDoubleQuaternionArray);
 			}
@@ -481,9 +479,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector2 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector2));
 
 			unsafe {
+				int typeSize = sizeof (Vector2);
 				fixed (Vector2* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat2Array);
 			}
@@ -495,9 +493,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector2d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector2d));
 
 			unsafe {
+				int typeSize = sizeof (Vector2d);
 				fixed (Vector2d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble2Array);
 			}
@@ -544,9 +542,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector3 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3));
 
 			unsafe {
+				int typeSize = sizeof (Vector3);
 				fixed (Vector3* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat3Array);
 			}
@@ -558,9 +556,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector3d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector3d));
 
 			unsafe {
+				int typeSize = sizeof (Vector3d);
 				fixed (Vector3d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble3Array);
 			}
@@ -607,9 +605,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector4 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector4));
 
 			unsafe {
+				int typeSize = sizeof (Vector4);
 				fixed (Vector4* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat4Array);
 			}
@@ -621,9 +619,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Vector4d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Vector4d));
 
 			unsafe {
+				int typeSize = sizeof (Vector4d);
 				fixed (Vector4d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble4Array);
 			}
@@ -670,9 +668,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Matrix4 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Matrix4));
 
 			unsafe {
+				int typeSize = sizeof (Matrix4);
 				fixed (Matrix4* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat4x4Array);
 			}
@@ -684,9 +682,9 @@ namespace ModelIO {
 		{
 			var count = TimeSampleCount;
 			var timesArr = new Matrix4d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Matrix4d));
 
 			unsafe {
+				int typeSize = sizeof (Matrix4d);
 				fixed (Matrix4d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble4x4Array);
 			}
@@ -725,9 +723,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Matrix4 [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Matrix4));
 
 			unsafe {
+				int typeSize = sizeof (Matrix4);
 				fixed (Matrix4* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetFloat4x4Array);
 			}
@@ -739,9 +737,9 @@ namespace ModelIO {
 		{
 			var count = ElementCount;
 			var timesArr = new Matrix4d [(int) count];
-			int typeSize = Marshal.SizeOf (typeof (Matrix4d));
 
 			unsafe {
+				int typeSize = sizeof (Matrix4d);
 				fixed (Matrix4d* arrptr = timesArr)
 					MDLMemoryHelper.FetchValues (typeSize, (IntPtr) arrptr, count, _GetDouble4x4Array);
 			}
@@ -874,4 +872,3 @@ namespace ModelIO {
 		}
 	}
 }
-#endif

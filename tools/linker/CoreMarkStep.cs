@@ -188,6 +188,17 @@ namespace Xamarin.Linker.Steps {
 			}
 		}
 
+		protected override bool AlwaysMarkTypeAsInstantiated (TypeDefinition td)
+		{
+			// if we mark a type then it should *always* keep it's `INativeObject` implementation
+			// since it's required at build time (e.g. static registrar) and at runtime - even if the instantiation is not marked
+			// as we have some special cases, e.g. `MTAudioProcessingTap.FromHandle`
+			// ref: https://github.com/xamarin/xamarin-macios/issues/6711
+			if (td.HasInterfaces && td.Implements ("ObjCRuntime.INativeObject"))
+				return true;
+			return base.AlwaysMarkTypeAsInstantiated (td);
+		}
+
 		protected override void ProcessMethod (MethodDefinition method)
 		{
 			// check for generated Dispose methods inside monotouch.dll
@@ -314,8 +325,11 @@ namespace Xamarin.Linker.Steps {
 				// If we're using the dynamic registrar, we need to mark interfaces that represent protocols
 				// even if it doesn't look like the interfaces are used, since we need them at runtime.
 				var isProtocol = type.IsNSObject (LinkContext) && resolvedInterfaceType.HasCustomAttribute (LinkContext, Namespaces.Foundation, "ProtocolAttribute");
-				if (isProtocol)
-					return true;
+				if (isProtocol) {
+					// return true only if not already marked (same check as `base` would do)
+					// otherwise we can enqueue something everytime and never get an empty queue
+					return !Annotations.IsMarked (iface);
+				}
 			}
 
 			return base.ShouldMarkInterfaceImplementation (type, iface, resolvedInterfaceType);

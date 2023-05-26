@@ -29,9 +29,20 @@ namespace UIKit {
 	[Native]
 	[NoWatch]
 	public enum UIActivityIndicatorViewStyle : long {
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'Large' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'Large' instead.")]
 		WhiteLarge,
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'Medium' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'Medium' instead.")]
 		White,
-		Gray
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'Medium' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'Medium' instead.")]
+		Gray,
+
+		[iOS (13,0), TV (13,0)]
+		Medium = 100,
+		[iOS (13,0), TV (13,0)]
+		Large = 101,
 	}
 
 	// NSInteger -> UIAlertView.h
@@ -84,7 +95,9 @@ namespace UIKit {
 		Undo,
 		Redo,
 		[Deprecated (PlatformName.iOS, 11, 0)]
-		PageCurl
+		PageCurl,
+		[iOS (13,0), NoTV]
+		Close,
 	} 
 
 	// NSUInteger -> UIControl.h
@@ -125,7 +138,13 @@ namespace UIKit {
 		Motion,
 		RemoteControl,
 		[iOS (9,0)]
-		Presses
+		Presses,
+		[iOS (13,4), TV (13,4)]
+		Scroll = 10,
+		[iOS (13,4), TV (13,4)]
+		Hover = 11,
+		[iOS (13,4), TV (13,4)]
+		Transform = 14,
 	}
 
 	// NSInteger -> UIEvent.h
@@ -283,6 +302,8 @@ namespace UIKit {
 		ContactAdd,
 		[TV (11,0)][NoiOS]
 		Plain,
+		[NoTV, iOS (13,0)]
+		Close,
 		System = RoundedRect,
 	}
 
@@ -505,7 +526,9 @@ namespace UIKit {
 	[NoWatch]
 	public enum UITableViewStyle : long {
 		Plain,
-		Grouped
+		Grouped,
+		[NoTV, iOS (13,0)]
+		InsetGrouped,
 	}
 
 	// NSInteger -> UITableView.h
@@ -547,7 +570,13 @@ namespace UIKit {
 		Moved,
 		Stationary,
 		Ended,
-		Cancelled,      
+		Cancelled,
+		[iOS (13,4), TV (13,4)]
+		RegionEntered,
+		[iOS (13,4), TV (13,4)]
+		RegionMoved,
+		[iOS (13,4), TV (13,4)]
+		RegionExited,
 	}
 
 	[NoWatch]
@@ -557,7 +586,9 @@ namespace UIKit {
 	{
 		Direct,
 		Indirect,
-		Stylus
+		Stylus,
+		[iOS (13,4), TV (13,4)]
+		IndirectPointer,
 	}
 
 	[NoWatch]
@@ -586,9 +617,7 @@ namespace UIKit {
 		Center,
 		Right, 
 
-		[iOS (6,0)]
 		Justified,
-		[iOS (6,0)]
 		Natural	
 	}
 
@@ -744,16 +773,13 @@ namespace UIKit {
 		LookupSuggestion       = 1 << 6,
 
 		None          = 0,
-#if XAMCORE_2_0
 		All           = UInt64.MaxValue
-#else
-		All           = UInt32.MaxValue
-#endif
 	}
 
 	// NSInteger -> UIActionSheet.h
 	[Native]
 	[NoTV][NoWatch]
+	[Deprecated (PlatformName.iOS, 13, 0, message: "'UIActionSheet' is deprecated.")]
 	public enum UIActionSheetStyle : long {
 		Automatic        = -1,
 		Default          = UIBarStyle.Default,
@@ -774,6 +800,9 @@ namespace UIKit {
 
 		[Deprecated (PlatformName.iOS, 7, 0, message : "Use 'LightContent' instead.")]
 		BlackOpaque = 2,
+
+		[iOS (13,0)]
+		DarkContent = 3,
 	}
 
 	// NSInteger -> UIApplication.h
@@ -843,6 +872,9 @@ namespace UIKit {
 	[Native]
 	[NoWatch]
 	public enum UIModalPresentationStyle : long {
+		None = -1,
+		[iOS (13,0)]
+		Automatic = -2,
 		FullScreen = 0,
 		[NoTV]
 		PageSheet,
@@ -855,7 +887,6 @@ namespace UIKit {
 		[NoTV]
 		Popover,
 		BlurOverFullScreen,
-		None = -1
 	}
 	
 	// NSUInteger -> UISwipeGestureRecognizer.h
@@ -879,11 +910,7 @@ namespace UIKit {
 		Left = 1 << 2,
 		Right = 1 << 3,
 		Any = Up | Down | Left | Right,
-#if XAMCORE_2_0
 		Unknown = UInt64.MaxValue
-#else
-		Unknown = UInt32.MaxValue
-#endif
 	};
 
 	// NSInteger -> UIMenuController.h
@@ -1117,7 +1144,12 @@ namespace UIKit {
 		Forward, Backward, Right, Left, Up, Down
 	}
 	
+#if !XAMCORE_4_0
 	// NSInteger -> UITextInput.h
+	// Not hard deprecating now but until XAMCORE_4_0 happens or we can
+	// properly fix all the API using this.
+	// see: https://github.com/xamarin/xamarin-macios/issues/6573
+	// Use Foundation.NSWritingDirection instead.
 	[Native]
 	[NoWatch]
 	public enum UITextWritingDirection : long {
@@ -1125,6 +1157,7 @@ namespace UIKit {
 		LeftToRight,
 		RightToLeft,
 	}
+#endif
 
 	// NSInteger -> UITextInput.h
 	[Native]
@@ -1225,6 +1258,12 @@ namespace UIKit {
 		DefaultHigh = 750,
 		DefaultLow = 250,
 		FittingSizeLevel = 50,
+		[iOS (13,0)]
+		DragThatCanResizeScene = 510,
+		[iOS (13,0)]
+		SceneSizeStayPut = 500,
+		[iOS (13,0)]
+		DragThatCannotResizeScene = 490,
 	}
 
 	// NSInteger -> NSLayoutConstraint.h
@@ -1283,7 +1322,7 @@ namespace UIKit {
 	}
 
 	// uint64_t -> UIAccessibilityConstants.h
-	// note: IMO not really worth changing to ulong in XAMCORE_2_0
+	// note: IMO not really worth changing to ulong for backwards compatibility concerns
 	// This is not an enum in ObjC but several fields exported (and we have them too)
 	// Unit tests (ViewTest.cs) already ensure we expose the same value as iOS returns
 	[Flags]
@@ -1374,11 +1413,7 @@ namespace UIKit {
 	public enum UICollisionBehaviorMode : ulong  {
 		Items = 1,
 		Boundaries = 2,
-#if XAMCORE_2_0
 		Everything = UInt64.MaxValue
-#else
-		Everything = UInt32.MaxValue
-#endif
 	}
 
 	// uint32_t -> UIFontDescriptor.h
@@ -1596,6 +1631,36 @@ namespace UIKit {
 		Regular = 4,
 		[iOS (10,0)]
 		Prominent = 5,
+		[iOS (13,0), NoTV]
+		SystemUltraThinMaterial,
+		[iOS (13,0), NoTV]
+		SystemThinMaterial,
+		[iOS (13,0), NoTV]
+		SystemMaterial,
+		[iOS (13,0), NoTV]
+		SystemThickMaterial,
+		[iOS (13,0), NoTV]
+		SystemChromeMaterial,
+		[iOS (13,0), NoTV]
+		SystemUltraThinMaterialLight,
+		[iOS (13,0), NoTV]
+		SystemThinMaterialLight,
+		[iOS (13,0), NoTV]
+		SystemMaterialLight,
+		[iOS (13,0), NoTV]
+		SystemThickMaterialLight,
+		[iOS (13,0), NoTV]
+		SystemChromeMaterialLight,
+		[iOS (13,0), NoTV]
+		SystemUltraThinMaterialDark,
+		[iOS (13,0), NoTV]
+		SystemThinMaterialDark,
+		[iOS (13,0), NoTV]
+		SystemMaterialDark,
+		[iOS (13,0), NoTV]
+		SystemThickMaterialDark,
+		[iOS (13,0), NoTV]
+		SystemChromeMaterialDark,
 	}
 
 	[Native]
@@ -1682,6 +1747,7 @@ namespace UIKit {
 
 	[Native]
 	[NoTV][NoWatch]
+	[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'UIContextualActionStyle' and corresponding APIs instead.")]
 	public enum UITableViewRowActionStyle : long {
 		Default, Destructive = Default, Normal
 	}
@@ -1972,7 +2038,9 @@ namespace UIKit {
 		None = 0,
 		DataTable,
 		List,
-		Landmark
+		Landmark,
+		[iOS (13,0), TV (13,0), Watch (6,0)]
+		SemanticGroup,
 	}
 	
 	[NoWatch]
@@ -2272,4 +2340,572 @@ namespace UIKit {
 		UnknownImageFormatError,
 		JobFailedError
 	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	[ErrorDomain ("UISceneErrorDomain")]
+	[Native]
+	public enum UISceneErrorCode : long
+	{
+		MultipleScenesNotSupported,
+		RequestDenied,
+	}
+
+	[Watch (6,0), TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UIImageSymbolScale : long
+	{
+		Default = -1,
+		Unspecified = 0,
+		Small = 1,
+		Medium,
+		Large,
+	}
+
+	[Watch (6,0), TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UIImageSymbolWeight : long
+	{
+		Unspecified = 0,
+		UltraLight = 1,
+		Thin,
+		Light,
+		Regular,
+		Medium,
+		Semibold,
+		Bold,
+		Heavy,
+		Black,
+	}
+
+	[Mac (10,15), iOS (13,0), TV (13,0)]
+	[Native]
+	public enum NSTextScalingType : long {
+		Standard = 0,
+		iOS,
+	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	[Native]
+	public enum UISceneActivationState : long {
+		Unattached = -1,
+		ForegroundActive,
+		ForegroundInactive,
+		Background,
+	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	[Native]
+	public enum UIMenuElementState : long {
+		Off,
+		On,
+		Mixed,
+	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	[Native]
+	public enum UIMenuElementAttributes : ulong {
+		Disabled = 1uL << 0,
+		Destructive = 1uL << 1,
+		Hidden = 1uL << 2,
+	}
+
+	[Flags]
+	[iOS (13,0), TV (13,0), NoWatch]
+	[Native]
+	public enum UIMenuOptions : ulong {
+		DisplayInline = 1uL << 0,
+		Destructive = 1uL << 1,
+	}
+
+	[NoWatch, NoTV, iOS (13, 0)]
+	[Native]
+	public enum UIContextMenuInteractionCommitStyle : long {
+		Dismiss = 0,
+		Pop,
+	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	public enum UIWindowSceneSessionRole {
+		[Field ("UIWindowSceneSessionRoleApplication")]
+		Application,
+
+		[Field ("UIWindowSceneSessionRoleExternalDisplay")]
+		ExternalDisplay,
+	}
+
+	[iOS (13,0), TV (13,0), NoWatch]
+	public enum UIMenuIdentifier {
+		[DefaultEnumValue]
+		[Field (null)]
+		None,
+		[Field ("UIMenuApplication")]
+		Application,
+		[Field ("UIMenuFile")]
+		File,
+		[Field ("UIMenuEdit")]
+		Edit,
+		[Field ("UIMenuView")]
+		View,
+		[Field ("UIMenuWindow")]
+		Window,
+		[Field ("UIMenuHelp")]
+		Help,
+		[Field ("UIMenuAbout")]
+		About,
+		[Field ("UIMenuPreferences")]
+		Preferences,
+		[Field ("UIMenuServices")]
+		Services,
+		[Field ("UIMenuHide")]
+		Hide,
+		[Field ("UIMenuQuit")]
+		Quit,
+		[Field ("UIMenuNewScene")]
+		NewScene,
+		[Field ("UIMenuClose")]
+		Close,
+		[Field ("UIMenuPrint")]
+		Print,
+		[Field ("UIMenuUndoRedo")]
+		UndoRedo,
+		[Field ("UIMenuStandardEdit")]
+		StandardEdit,
+		[Field ("UIMenuFind")]
+		Find,
+		[Field ("UIMenuReplace")]
+		Replace,
+		[Field ("UIMenuShare")]
+		Share,
+		[Field ("UIMenuTextStyle")]
+		TextStyle,
+		[Field ("UIMenuSpelling")]
+		Spelling,
+		[Field ("UIMenuSpellingPanel")]
+		SpellingPanel,
+		[Field ("UIMenuSpellingOptions")]
+		SpellingOptions,
+		[Field ("UIMenuSubstitutions")]
+		Substitutions,
+		[Field ("UIMenuSubstitutionsPanel")]
+		SubstitutionsPanel,
+		[Field ("UIMenuSubstitutionOptions")]
+		SubstitutionOptions,
+		[Field ("UIMenuTransformations")]
+		Transformations,
+		[Field ("UIMenuSpeech")]
+		Speech,
+		[Field ("UIMenuLookup")]
+		Lookup,
+		[Field ("UIMenuLearn")]
+		Learn,
+		[Field ("UIMenuFormat")]
+		Format,
+		[Field ("UIMenuFont")]
+		Font,
+		[Field ("UIMenuTextSize")]
+		TextSize,
+		[Field ("UIMenuTextColor")]
+		TextColor,
+		[Field ("UIMenuTextStylePasteboard")]
+		TextStylePasteboard,
+		[Field ("UIMenuText")]
+		Text,
+		[Field ("UIMenuWritingDirection")]
+		WritingDirection,
+		[Field ("UIMenuAlignment")]
+		Alignment,
+		[Field ("UIMenuToolbar")]
+		Toolbar,
+		[Field ("UIMenuFullscreen")]
+		Fullscreen,
+		[Field ("UIMenuMinimizeAndZoom")]
+		MinimizeAndZoom,
+		[Field ("UIMenuBringAllToFront")]
+		BringAllToFront,
+		[Field ("UIMenuRoot")]
+		Root,
+	}
+
+	[iOS (13,0), TV (13,0), Watch (6,0)]
+	public enum UIAccessibilityTextualContext {
+		[Field ("UIAccessibilityTextualContextWordProcessing")]
+		WordProcessing,
+		[Field ("UIAccessibilityTextualContextNarrative")]
+		Narrative,
+		[Field ("UIAccessibilityTextualContextMessaging")]
+		Messaging,
+		[Field ("UIAccessibilityTextualContextSpreadsheet")]
+		Spreadsheet,
+		[Field ("UIAccessibilityTextualContextFileSystem")]
+		FileSystem,
+		[Field ("UIAccessibilityTextualContextSourceCode")]
+		SourceCode,
+		[Field ("UIAccessibilityTextualContextConsole")]
+		Console,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UICollectionLayoutSectionOrthogonalScrollingBehavior : long {
+		None,
+		Continuous,
+		ContinuousGroupLeadingBoundary,
+		Paging,
+		GroupPaging,
+		GroupPagingCentered,
+	}
+
+	[Flags, Watch (6,0), TV (13,0), iOS (13,0)]
+	[Native]
+	public enum NSDirectionalRectEdge : ulong {
+		None = 0x0,
+		Top = 1uL << 0,
+		Leading = 1uL << 1,
+		Bottom = 1uL << 2,
+		Trailing = 1uL << 3,
+		All = Top | Leading | Bottom | Trailing,
+	}
+
+	[Watch (6,0), TV (13,0), iOS (13,0)]
+	[Native]
+	public enum NSRectAlignment : long {
+		None = 0,
+		Top,
+		TopLeading,
+		Leading,
+		BottomLeading,
+		Bottom,
+		BottomTrailing,
+		Trailing,
+		TopTrailing,
+	}
+
+	[TV (13,0), NoWatch, iOS (13,0)]
+	[Native]
+	public enum UIAccessibilityContrast : long {
+		Unspecified = -1,
+		Normal,
+		High,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UILegibilityWeight : long {
+		Unspecified = -1,
+		Regular,
+		Bold,
+	}
+
+	[NoWatch, NoTV, iOS (13,0)]
+	[Native]
+	public enum UIUserInterfaceLevel : long {
+		Unspecified = -1,
+		Base,
+		Elevated,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UIEditingInteractionConfiguration : long {
+		None = 0,
+		Default = 1,
+	}
+
+	[NoTV, NoWatch, iOS (13,0)]
+	[Native]
+	public enum UISplitViewControllerBackgroundStyle : long {
+		None,
+		Sidebar,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UITabBarItemAppearanceStyle : long {
+		Stacked,
+		Inline,
+		CompactInline,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UITextAlternativeStyle : long {
+		None,
+		LowConfidence,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UITextInteractionMode : long {
+		Editable,
+		NonEditable,
+	}
+
+	[NoWatch, NoTV, iOS (13,0)]
+	[Native]
+	public enum UIVibrancyEffectStyle : long {
+		Label,
+		SecondaryLabel,
+		TertiaryLabel,
+		QuaternaryLabel,
+		Fill,
+		SecondaryFill,
+		TertiaryFill,
+		Separator,
+	}
+
+	[NoWatch, TV (13,0), iOS (13,0)]
+	[Native]
+	public enum UIWindowSceneDismissalAnimation : long {
+		Standard = 1,
+		Commit = 2,
+		Decline = 3,
+	}
+
+	[NoWatch, NoTV, iOS (13,0)]
+	public enum UIActivityItemsConfigurationInteraction {
+		[Field ("UIActivityItemsConfigurationInteractionShare")]
+		Share,
+	}
+
+	[NoWatch, NoTV, iOS (13,0)]
+	public enum UIActivityItemsConfigurationPreviewIntent {
+		[Field ("UIActivityItemsConfigurationPreviewIntentFullSize")]
+		FullSize,
+		[Field ("UIActivityItemsConfigurationPreviewIntentThumbnail")]
+		Thumbnail,
+	}
+
+	[NoWatch, NoTV, iOS (13,4)]
+	[Native]
+	public enum UIDatePickerStyle : long {
+		Automatic,
+		Wheels,
+		Compact,
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 13, 4)]
+	[iOS (13,4), NoWatch, TV (13,4)]
+	[Native]
+	public enum UIKeyboardHidUsage : long {
+		KeyboardErrorRollOver = 1,
+		KeyboardPostFail = 2,
+		KeyboardErrorUndefined = 3,
+		KeyboardA = 4,
+		KeyboardB = 5,
+		KeyboardC = 6,
+		KeyboardD = 7,
+		KeyboardE = 8,
+		KeyboardF = 9,
+		KeyboardG = 10,
+		KeyboardH = 11,
+		KeyboardI = 12,
+		KeyboardJ = 13,
+		KeyboardK = 14,
+		KeyboardL = 15,
+		KeyboardM = 16,
+		KeyboardN = 17,
+		KeyboardO = 18,
+		KeyboardP = 19,
+		KeyboardQ = 20,
+		KeyboardR = 21,
+		KeyboardS = 22,
+		KeyboardT = 23,
+		KeyboardU = 24,
+		KeyboardV = 25,
+		KeyboardW = 26,
+		KeyboardX = 27,
+		KeyboardY = 28,
+		KeyboardZ = 29,
+		Keyboard1 = 30,
+		Keyboard2 = 31,
+		Keyboard3 = 32,
+		Keyboard4 = 33,
+		Keyboard5 = 34,
+		Keyboard6 = 35,
+		Keyboard7 = 36,
+		Keyboard8 = 37,
+		Keyboard9 = 38,
+		Keyboard0 = 39,
+		KeyboardReturnOrEnter = 40,
+		KeyboardEscape = 41,
+		KeyboardDeleteOrBackspace = 42,
+		KeyboardTab = 43,
+		KeyboardSpacebar = 44,
+		KeyboardHyphen = 45,
+		KeyboardEqualSign = 46,
+		KeyboardOpenBracket = 47,
+		KeyboardCloseBracket = 48,
+		KeyboardBackslash = 49,
+		KeyboardNonUSPound = 50,
+		KeyboardSemicolon = 51,
+		KeyboardQuote = 52,
+		KeyboardGraveAccentAndTilde = 53,
+		KeyboardComma = 54,
+		KeyboardPeriod = 55,
+		KeyboardSlash = 56,
+		KeyboardCapsLock = 57,
+		KeyboardF1 = 58,
+		KeyboardF2 = 59,
+		KeyboardF3 = 60,
+		KeyboardF4 = 61,
+		KeyboardF5 = 62,
+		KeyboardF6 = 63,
+		KeyboardF7 = 64,
+		KeyboardF8 = 65,
+		KeyboardF9 = 66,
+		KeyboardF10 = 67,
+		KeyboardF11 = 68,
+		KeyboardF12 = 69,
+		KeyboardPrintScreen = 70,
+		KeyboardScrollLock = 71,
+		KeyboardPause = 72,
+		KeyboardInsert = 73,
+		KeyboardHome = 74,
+		KeyboardPageUp = 75,
+		KeyboardDeleteForward = 76,
+		KeyboardEnd = 77,
+		KeyboardPageDown = 78,
+		KeyboardRightArrow = 79,
+		KeyboardLeftArrow = 80,
+		KeyboardDownArrow = 81,
+		KeyboardUpArrow = 82,
+		KeypadNumLock = 83,
+		KeypadSlash = 84,
+		KeypadAsterisk = 85,
+		KeypadHyphen = 86,
+		KeypadPlus = 87,
+		KeypadEnter = 88,
+		Keypad1 = 89,
+		Keypad2 = 90,
+		Keypad3 = 91,
+		Keypad4 = 92,
+		Keypad5 = 93,
+		Keypad6 = 94,
+		Keypad7 = 95,
+		Keypad8 = 96,
+		Keypad9 = 97,
+		Keypad0 = 98,
+		KeypadPeriod = 99,
+		KeyboardNonUSBackslash = 100,
+		KeyboardApplication = 101,
+		KeyboardPower = 102,
+		KeypadEqualSign = 103,
+		KeyboardF13 = 104,
+		KeyboardF14 = 105,
+		KeyboardF15 = 106,
+		KeyboardF16 = 107,
+		KeyboardF17 = 108,
+		KeyboardF18 = 109,
+		KeyboardF19 = 110,
+		KeyboardF20 = 111,
+		KeyboardF21 = 112,
+		KeyboardF22 = 113,
+		KeyboardF23 = 114,
+		KeyboardF24 = 115,
+		KeyboardExecute = 116,
+		KeyboardHelp = 117,
+		KeyboardMenu = 118,
+		KeyboardSelect = 119,
+		KeyboardStop = 120,
+		KeyboardAgain = 121,
+		KeyboardUndo = 122,
+		KeyboardCut = 123,
+		KeyboardCopy = 124,
+		KeyboardPaste = 125,
+		KeyboardFind = 126,
+		KeyboardMute = 127,
+		KeyboardVolumeUp = 128,
+		KeyboardVolumeDown = 129,
+		KeyboardLockingCapsLock = 130,
+		KeyboardLockingNumLock = 131,
+		KeyboardLockingScrollLock = 132,
+		KeypadComma = 133,
+		KeypadEqualSignAS400 = 134,
+		KeyboardInternational1 = 135,
+		KeyboardInternational2 = 136,
+		KeyboardInternational3 = 137,
+		KeyboardInternational4 = 138,
+		KeyboardInternational5 = 139,
+		KeyboardInternational6 = 140,
+		KeyboardInternational7 = 141,
+		KeyboardInternational8 = 142,
+		KeyboardInternational9 = 143,
+		KeyboardLang1 = 144,
+		KeyboardLang2 = 145,
+		KeyboardLang3 = 146,
+		KeyboardLang4 = 147,
+		KeyboardLang5 = 148,
+		KeyboardLang6 = 149,
+		KeyboardLang7 = 150,
+		KeyboardLang8 = 151,
+		KeyboardLang9 = 152,
+		KeyboardAlternateErase = 153,
+		KeyboardSysReqOrAttention = 154,
+		KeyboardCancel = 155,
+		KeyboardClear = 156,
+		KeyboardPrior = 157,
+		KeyboardReturn = 158,
+		KeyboardSeparator = 159,
+		KeyboardOut = 160,
+		KeyboardOper = 161,
+		KeyboardClearOrAgain = 162,
+		KeyboardCrSelOrProps = 163,
+		KeyboardExSel = 164,
+		KeyboardLeftControl = 224,
+		KeyboardLeftShift = 225,
+		KeyboardLeftAlt = 226,
+		KeyboardLeftGui = 227,
+		KeyboardRightControl = 228,
+		KeyboardRightShift = 229,
+		KeyboardRightAlt = 230,
+		KeyboardRightGui = 231,
+		KeyboardReserved = 65535,
+		KeyboardHangul = KeyboardLang1,
+		KeyboardHanja = KeyboardLang2,
+		KeyboardKanaSwitch = KeyboardLang1,
+		KeyboardAlphanumericSwitch = KeyboardLang2,
+		KeyboardKatakana = KeyboardLang3,
+		KeyboardHiragana = KeyboardLang4,
+		KeyboardZenkakuHankakuKanji = KeyboardLang5,
+	}
+
+	[Flags, NoWatch, NoTV, iOS (13,4)]
+	[Native]
+	public enum UIEventButtonMask : ulong {
+		Primary = 1L << 0,
+		Secondary = 1L << 1,
+	}
+
+	[Flags, TV (13,4), NoWatch, iOS (13,4)]
+	[Native]
+	public enum UIAxis : ulong {
+		Neither = 0uL,
+		Horizontal = 1uL << 0,
+		Vertical = 1uL << 1,
+		Both = (Horizontal | Vertical),
+	}
+
+	[NoWatch, NoTV, iOS (13,4)]
+	[Native]
+	public enum UIScrollType : long {
+		Discrete,
+		Continuous,
+	}
+
+	[Flags, NoWatch, NoTV, iOS (13,4)]
+	[Native]
+	public enum UIScrollTypeMask : ulong {
+		Discrete = 1L << 0,
+		Continuous = 1L << 1,
+		All = Discrete | Continuous,
+	}
+
+	[NoWatch, NoTV, iOS (13,4)]
+	[Native]
+	public enum UIPointerEffectTintMode : long {
+		None = 0,
+		Overlay,
+		Underlay,
+	}
+
 }

@@ -7,8 +7,6 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
-
 using System;
 using System.Runtime.InteropServices;
 using ObjCRuntime;
@@ -18,21 +16,21 @@ using Vector3 = global::OpenTK.Vector3;
 
 namespace GameplayKit {
 
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	[iOS (10,0), TV (10,0), Mac (10,12)]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKBox {
 		public Vector3 Min;
 		public Vector3 Max;
 	}
 
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	[iOS (10,0), TV (10,0), Mac (10,12)]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKQuad {
 		public Vector2 Min;
 		public Vector2 Max;
 	}
 
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	[iOS (10,0), TV (10,0), Mac (10,12)]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKTriangle {
 		[MarshalAs (UnmanagedType.ByValArray, SizeConst = 3)]
@@ -51,4 +49,3 @@ namespace GameplayKit {
 		}
 	}
 }
-#endif

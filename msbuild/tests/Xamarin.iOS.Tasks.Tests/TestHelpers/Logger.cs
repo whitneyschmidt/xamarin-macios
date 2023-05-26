@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using Microsoft.Build.Framework;
@@ -53,6 +52,14 @@ namespace Xamarin.iOS.Tasks
 
 		public LoggerVerbosity Verbosity {
 			get; set;
+		}
+
+		public void Clear ()
+		{
+			CustomEvents.Clear ();
+			ErrorEvents.Clear ();
+			MessageEvents.Clear ();
+			WarningsEvents.Clear ();
 		}
 	}
 

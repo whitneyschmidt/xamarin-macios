@@ -45,17 +45,13 @@ namespace MonoTouch.Tuner {
 		// If certain conditions are met, we can optimize away the code for the dynamic registrar.
 		bool RequiresDynamicRegistrar (AssemblyDefinition assembly, bool warnIfRequired)
 		{
-			// Disable removing the dynamic registrar for XM/Classic to simplify the code a little bit.
-			if (!Driver.IsUnified)
-				return true;
-
 			// We know that the SDK assemblies we ship don't use the methods we're looking for.
 			if (Profile.IsSdkAssembly (assembly))
 				return false;
 
 			// The product assembly itself is safe as long as it's linked
 			if (Profile.IsProductAssembly (assembly))
-				return LinkContext.Annotations.GetAction (assembly) != Mono.Linker.AssemblyAction.Link;
+				return Annotations.GetAction (assembly) != Mono.Linker.AssemblyAction.Link;
 
 			// Can't touch the forbidden fruit in the product assembly unless there's a reference to it
 			var hasProductReference = false;
@@ -116,7 +112,7 @@ namespace MonoTouch.Tuner {
 							// Fortunately the linker is able to rewrite calls to SetupBlock[Unsafe] to call
 							// SetupBlockImpl (which doesn't need the dynamic registrar), which means we only have
 							// to look in assemblies that aren't linked.
-							if (LinkContext.Annotations.GetAction (assembly) == Mono.Linker.AssemblyAction.Link && LinkContext.App.Optimizations.OptimizeBlockLiteralSetupBlock == true)
+							if (Annotations.GetAction (assembly) == Mono.Linker.AssemblyAction.Link && LinkContext.App.Optimizations.OptimizeBlockLiteralSetupBlock == true)
 								break;
 
 							if (warnIfRequired)
@@ -146,7 +142,7 @@ namespace MonoTouch.Tuner {
 
 		void Show2107 (AssemblyDefinition assembly, MemberReference mr)
 		{
-			ErrorHelper.Warning (2107, $"It's not safe to remove the dynamic registrar, because {assembly.Name.Name} references '{mr.DeclaringType.FullName}.{mr.Name} ({string.Join (", ", ((MethodReference) mr).Parameters.Select ((v) => v.ParameterType.FullName))})'.");
+			ErrorHelper.Warning (2107, Errors.MM2107, assembly.Name.Name, mr.DeclaringType.FullName, mr.Name, string.Join (", ", ((MethodReference) mr).Parameters.Select ((v) => v.ParameterType.FullName)));
 		}
 
 		protected override void EndProcess ()

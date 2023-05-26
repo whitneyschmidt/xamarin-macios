@@ -5,14 +5,13 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class PrepareResourceRulesTaskBase : Task
+	public abstract class PrepareResourceRulesTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -37,7 +36,7 @@ namespace Xamarin.iOS.Tasks
 				var destination = Path.Combine (AppBundleDir, "ResourceRules.plist");
 
 				if (!File.Exists (ResourceRules)) {
-					Log.LogError ("Resources rules file '{0}' not found.", ResourceRules);
+					Log.LogError (MSBStrings.E0065, ResourceRules);
 					return false;
 				}
 

@@ -4,8 +4,10 @@
 // Authors:
 //   Alex Soto alex.soto@xamarin.com
 //   Miguel de Icaza (miguel@xamarin.com)
+//   Whitney Schmidt (whschm@microsoft.com)
 //
 // Copyright 2014-2015 Xamarin Inc.
+// Copyright 2019 Microsoft Corporation. All rights reserved.
 //
 
 using CoreFoundation;
@@ -71,12 +73,9 @@ namespace HealthKit {
 	}
 
 	delegate void HKAnchoredObjectResultHandler2 (HKAnchoredObjectQuery query, HKSample[] results, nuint newAnchor, NSError error);
-#if XAMCORE_2_0
+
 	[Obsolete ("Use HKAnchoredObjectResultHandler2 instead")]
 	delegate void HKAnchoredObjectResultHandler (HKAnchoredObjectQuery query, HKSampleType[] results, nuint newAnchor, NSError error);
-#else
-	delegate void HKAnchoredObjectResultHandler (HKAnchoredObjectQuery query, NSObject[] results, nuint newAnchor, NSError error);
-#endif
 
 	delegate void HKAnchoredObjectUpdateHandler (HKAnchoredObjectQuery query, HKSample[] addedObjects, HKDeletedObject[] deletedObjects, HKQueryAnchor newAnchor, NSError error);
 
@@ -89,9 +88,7 @@ namespace HealthKit {
 	interface HKAnchoredObjectQuery {
 
 		[NoWatch]
-#if XAMCORE_2_0
 		[Obsolete ("Use the overload that takes HKAnchoredObjectResultHandler2 instead")]
-#endif
 		[Availability (Introduced = Platform.iOS_8_0, Deprecated = Platform.iOS_9_0)]
 		[Export ("initWithType:predicate:anchor:limit:completionHandler:")]
 		IntPtr Constructor (HKSampleType type, [NullAllowed] NSPredicate predicate, nuint anchor, nuint limit, HKAnchoredObjectResultHandler completion);
@@ -201,6 +198,38 @@ namespace HealthKit {
 		[NoWatch, iOS (12, 0)]
 		[Field ("HKPredicateKeyPathClinicalRecordFHIRResourceType")]
 		NSString ClinicalRecordFhirResourceType { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMin")]
+		NSString Min { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathAverage")]
+		NSString Average { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMax")]
+		NSString Max { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMostRecent")]
+		NSString MostRecent { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMostRecentStartDate")]
+		NSString MostRecentStartDate { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMostRecentEndDate")]
+		NSString MostRecentEndDate { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathMostRecentDuration")]
+		NSString MostRecentDuration { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKPredicateKeyPathCount")]
+		NSString PathCount { get; }
 	}
 
 	[NoWatch] // headers says it's available but it's only usable from another, unavailable, type
@@ -237,7 +266,7 @@ namespace HealthKit {
 		HKCategorySample FromType (HKCategoryType type, nint value, NSDate startDate, NSDate endDate, [NullAllowed] NSDictionary metadata);
 
 		[Static]
-		[Wrap ("FromType (type, value, startDate, endDate, metadata != null ? metadata.Dictionary : null)")]
+		[Wrap ("FromType (type, value, startDate, endDate, metadata.GetDictionary ())")]
 		HKCategorySample FromType (HKCategoryType type, nint value, NSDate startDate, NSDate endDate, HKMetadata metadata);
 
 		[Static]
@@ -275,7 +304,8 @@ namespace HealthKit {
 		[return: NullAllowed]
 		HKCdaDocumentSample Create (NSData documentData, NSDate startDate, NSDate endDate, [NullAllowed] NSDictionary metadata, out NSError validationError);
 
-		[Static, Wrap ("Create (documentData, startDate, endDate, metadata != null ? metadata.Dictionary : null, out validationError)")]
+		[Static, Wrap ("Create (documentData, startDate, endDate, metadata.GetDictionary (), out validationError)")]
+		[return: NullAllowed]
 		HKCdaDocumentSample Create (NSData documentData, NSDate startDate, NSDate endDate, HKMetadata metadata, out NSError validationError);
 	}
 
@@ -319,7 +349,7 @@ namespace HealthKit {
 		[EditorBrowsable (EditorBrowsableState.Advanced)] // this is not the one we want to be seen (compat only)
 		HKCorrelation Create (HKCorrelationType correlationType, NSDate startDate, NSDate endDate, NSSet objects, [NullAllowed] NSDictionary metadata);
 
-		[Static, Wrap ("Create (correlationType, startDate, endDate, objects, metadata != null ? metadata.Dictionary : null)")]
+		[Static, Wrap ("Create (correlationType, startDate, endDate, objects, metadata.GetDictionary ())")]
 		HKCorrelation Create (HKCorrelationType correlationType, NSDate startDate, NSDate endDate, NSSet objects, HKMetadata metadata);
 
 		[Static, Export ("correlationWithType:startDate:endDate:objects:")]
@@ -546,6 +576,12 @@ namespace HealthKit {
 		[Export ("bloodType")]
 		HKBloodType BloodType { get; }
 	}
+
+	[Watch (6,0)]
+	[iOS (13,0)]
+	[BaseType (typeof (HKSampleType))]
+	[DisableDefaultCtor]
+	interface HKAudiogramSampleType {}
 
 	[StrongDictionary ("HKMetadataKey")]
 	interface HKMetadata {
@@ -851,6 +887,14 @@ namespace HealthKit {
 		[Watch (5, 2), iOS (12, 2)]
 		[Field ("HKMetadataKeyHeartRateEventThreshold")]
 		NSString HeartRateEventThreshold { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKMetadataKeyAverageMETs")]
+		NSString AverageMets { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKMetadataKeyAudioExposureLevel")]
+		NSString AudioExposureLevel { get; }
 	}
 
 	[Watch (2,0)]
@@ -969,8 +1013,14 @@ namespace HealthKit {
 
 		[Watch (5,0), iOS (12,0)]
 		[Static]
-		[Wrap ("GetClinicalType (identifier.GetConstant ())")]
+		[Wrap ("GetClinicalType (identifier.GetConstant ()!)")]
+		[return: NullAllowed]
 		HKClinicalType GetClinicalType (HKClinicalTypeIdentifier identifier);
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Static]
+		[Export ("audiogramSampleType")]
+		HKAudiogramSampleType AudiogramSampleType { get; }
 	}
 
 	[Watch (2,0)]
@@ -985,11 +1035,23 @@ namespace HealthKit {
 	[iOS (8,0)]
 	[DisableDefaultCtor] // NSInvalidArgumentException Reason: The -init method is not available on HKSampleType
 	[BaseType (typeof (HKObjectType))]
-#if XAMCORE_2_0
 	[Abstract] // The HKSampleType class is an abstract subclass of the HKObjectType class, used to represent data samples. Never instantiate an HKSampleType object directly. Instead, you should always work with one of its concrete subclasses [...]
-#endif
 	interface HKSampleType {
+		[iOS (13,0), Watch (6,0)]
+		[Export ("isMaximumDurationRestricted")]
+		bool IsMaximumDurationRestricted { get; }
 
+		[iOS (13,0), Watch (6,0)]
+		[Export ("maximumAllowedDuration")]
+		double MaximumAllowedDuration { get; }
+
+		[iOS (13,0), Watch (6,0)]
+		[Export ("isMinimumDurationRestricted")]
+		bool IsMinimumDurationRestricted { get; }
+
+		[iOS (13,0), Watch (6,0)]
+		[Export ("minimumAllowedDuration")]
+		double MinimumAllowedDuration { get; }
 	}
 
 	[Watch (5,0)]
@@ -1028,12 +1090,7 @@ namespace HealthKit {
 		bool IsCompatible (HKUnit unit);
 	}
 
-#if XAMCORE_2_0
 	delegate void HKObserverQueryUpdateHandler (HKObserverQuery query, [BlockCallback] Action completion, NSError error);
-#else
-	delegate void HKObserverQueryCompletionHandler ();
-	delegate void HKObserverQueryUpdateHandler (HKObserverQuery query, [BlockCallback] HKObserverQueryCompletionHandler completion, NSError error);
-#endif
 
 	[Watch (2,0)]
 	[iOS (8,0)]
@@ -1087,7 +1144,7 @@ namespace HealthKit {
 		HKQuantitySample FromType (HKQuantityType quantityType, HKQuantity quantity, NSDate startDate, NSDate endDate, [NullAllowed] NSDictionary metadata);
 
 		[Static]
-		[Wrap ("FromType (quantityType, quantity, startDate, endDate, metadata != null ? metadata.Dictionary : null)")]
+		[Wrap ("FromType (quantityType, quantity, startDate, endDate, metadata.GetDictionary ())")]
 		HKQuantitySample FromType (HKQuantityType quantityType, HKQuantity quantity, NSDate startDate, NSDate endDate, HKMetadata metadata);
 
 		[iOS (9,0)]
@@ -1234,7 +1291,7 @@ namespace HealthKit {
 
 		[NoWatch, iOS (12,0)]
 		[Static]
-		[Wrap ("GetPredicateForClinicalRecords (resourceType.GetConstant ())")]
+		[Wrap ("GetPredicateForClinicalRecords (resourceType.GetConstant ()!)")]
 		NSPredicate GetPredicateForClinicalRecords (HKFhirResourceType resourceType);
 
 		[NoWatch, iOS (12,0)]
@@ -1380,6 +1437,15 @@ namespace HealthKit {
 		[Watch (5, 0), iOS (12, 0)]
 		[NullAllowed, Export ("mostRecentQuantityDateInterval")]
 		NSDateInterval MostRecentQuantityDateInterval { get; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[NullAllowed, Export ("duration")]
+		HKQuantity Duration { get; }
+
+		[Watch (6,0), iOS (13,0)]
+		[Export ("durationForSource:")]
+		[return: NullAllowed]
+		HKQuantity GetDuration (HKSource source);
 	}
 
 	delegate void HKStatisticsCollectionEnumerator (HKStatistics result, bool stop);
@@ -1706,6 +1772,17 @@ namespace HealthKit {
 		[Field ("HKQuantityTypeIdentifierHeartRateVariabilitySDNN")]
 		HeartRateVariabilitySdnn,
 
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKQuantityTypeIdentifierAppleStandTime")]
+		AppleStandTime,
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKQuantityTypeIdentifierEnvironmentalAudioExposure")]
+		EnvironmentalAudioExposure,
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKQuantityTypeIdentifierHeadphoneAudioExposure")]
+		HeadphoneAudioExposure,
 	}
 
 	[Watch (2,0)]
@@ -1716,6 +1793,13 @@ namespace HealthKit {
 		
 		[Field ("HKCorrelationTypeIdentifierFood")]
 		Food,
+	}
+
+	[Watch (6, 0), iOS (13, 0)]
+	enum HKDataTypeIdentifier
+	{
+		[Field ("HKDataTypeIdentifierHeartbeatSeries")]
+		HeartbeatSeries,
 	}
 
 	[Watch (2,0)]
@@ -1766,6 +1850,14 @@ namespace HealthKit {
 		[Watch (5,2), iOS (12,2)]
 		[Field ("HKCategoryTypeIdentifierIrregularHeartRhythmEvent")]
 		IrregularHeartRhythmEvent,
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKCategoryTypeIdentifierAudioExposureEvent")]
+		AudioExposureEvent,
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Field ("HKCategoryTypeIdentifierToothbrushingEvent")]
+	 	ToothbrushingEvent,
 	}
 
 	[Watch (2,0)]
@@ -1790,6 +1882,11 @@ namespace HealthKit {
 		[iOS (10,0), Watch (3,0)]
 		[Field ("HKCharacteristicTypeIdentifierWheelchairUse")]
 		WheelchairUse,
+
+		// API unavailable https://github.com/xamarin/maccore/issues/1899
+		// [Watch (6, 0), iOS (13, 0)]
+		// [Field ("HKCharacteristicTypeIdentifierActivityMoveMode")]
+		// ActivityMoveMode,
 	}
 
 	[Watch (2,0)]
@@ -2047,6 +2144,30 @@ namespace HealthKit {
 		[Static]
 		[Export ("internationalUnit")]
 		HKUnit InternationalUnit { get; }
+
+		// HKUnit (DecibelAWeightedSoundPressureLevel) Category
+		[Watch (6,0), iOS (13,0)]
+		[Static]
+		[Export ("decibelAWeightedSoundPressureLevelUnit")]
+		HKUnit DecibelAWeightedSoundPressureLevelUnit { get; }
+
+		// HKUnit (HearingSensitivity) Category
+		[Watch (6,0), iOS (13,0)]
+		[Static]
+		[Export ("decibelHearingLevelUnit")]
+		HKUnit DecibelHearingLevelUnit { get; }
+
+		// HKUnit (Frequency) Category
+
+		[Watch (6,0), iOS (13,0)]
+		[Static]
+		[Export ("hertzUnitWithMetricPrefix:")]
+		HKUnit GetHertzUnit (HKMetricPrefix prefix);
+
+		[Watch (6,0), iOS (13,0)]
+		[Static]
+		[Export ("hertzUnit")]
+		HKUnit HertzUnit { get; }
 	}
 
 	[Watch (2,0)]
@@ -2080,14 +2201,14 @@ namespace HealthKit {
 		[EditorBrowsable (EditorBrowsableState.Advanced)] // this is not the one we want to be seen (compat only)
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, [NullAllowed] HKWorkoutEvent [] workoutEvents, [NullAllowed] HKQuantity totalEnergyBurned, [NullAllowed] HKQuantity totalDistance, [NullAllowed] NSDictionary metadata);
 
-		[Static, Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, metadata == null ? null : metadata.Dictionary)")]
+		[Static, Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, metadata.GetDictionary ())")]
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, HKWorkoutEvent [] workoutEvents, HKQuantity totalEnergyBurned, HKQuantity totalDistance, HKMetadata metadata);
 		
 		[Static, Export ("workoutWithActivityType:startDate:endDate:duration:totalEnergyBurned:totalDistance:metadata:")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)] // this is not the one we want to be seen (compat only)
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, double duration, [NullAllowed] HKQuantity totalEnergyBurned, [NullAllowed] HKQuantity totalDistance, [NullAllowed] NSDictionary metadata);
 
-		[Static, Wrap ("Create (workoutActivityType, startDate, endDate, duration, totalEnergyBurned, totalDistance, metadata == null ? null : metadata.Dictionary)")]
+		[Static, Wrap ("Create (workoutActivityType, startDate, endDate, duration, totalEnergyBurned, totalDistance, metadata.GetDictionary ())")]
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, double duration, HKQuantity totalEnergyBurned, HKQuantity totalDistance, HKMetadata metadata);
 
 		[iOS (9,0)]
@@ -2097,7 +2218,7 @@ namespace HealthKit {
 
 		[iOS (9,0)]
 		[Static]
-		[Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, device, metadata == null ? null : metadata.Dictionary)")]
+		[Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, device, metadata.GetDictionary ())")]
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, HKWorkoutEvent[] workoutEvents, HKQuantity totalEnergyBurned, HKQuantity totalDistance, HKDevice device, HKMetadata metadata);
 
 		[iOS (9,0)]
@@ -2107,7 +2228,7 @@ namespace HealthKit {
 
 		[iOS (9,0)]
 		[Static]
-		[Wrap ("Create (workoutActivityType, startDate, endDate, duration, totalEnergyBurned, totalDistance, device, metadata == null ? null : metadata.Dictionary)")]
+		[Wrap ("Create (workoutActivityType, startDate, endDate, duration, totalEnergyBurned, totalDistance, device, metadata.GetDictionary ())")]
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, double duration, HKQuantity totalEnergyBurned, HKQuantity totalDistance, HKDevice device, HKMetadata metadata);
 
 		[Watch (3,0), iOS (10,0)]
@@ -2117,7 +2238,7 @@ namespace HealthKit {
 
 		[Watch (3,0), iOS (10,0)]
 		[Static]
-		[Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, totalSwimmingStrokeCount, device, metadata == null ? null : metadata.Dictionary)")]
+		[Wrap ("Create (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, totalSwimmingStrokeCount, device, metadata.GetDictionary ())")]
 		HKWorkout Create (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, HKWorkoutEvent[] workoutEvents, HKQuantity totalEnergyBurned, HKQuantity totalDistance, HKQuantity totalSwimmingStrokeCount, HKDevice device, HKMetadata metadata);
 
 		[Watch (4, 0), iOS (11, 0)]
@@ -2127,7 +2248,7 @@ namespace HealthKit {
 
 		[Watch (4, 0), iOS (11, 0)]
 		[Static]
-		[Wrap ("CreateFlightsClimbedWorkout (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, totalFlightsClimbed, device, metadata == null ? null : metadata.Dictionary)")]
+		[Wrap ("CreateFlightsClimbedWorkout (workoutActivityType, startDate, endDate, workoutEvents, totalEnergyBurned, totalDistance, totalFlightsClimbed, device, metadata.GetDictionary ())")]
 		HKWorkout CreateFlightsClimbedWorkout (HKWorkoutActivityType workoutActivityType, NSDate startDate, NSDate endDate, [NullAllowed] HKWorkoutEvent [] workoutEvents, [NullAllowed] HKQuantity totalEnergyBurned, [NullAllowed] HKQuantity totalDistance, [NullAllowed] HKQuantity totalFlightsClimbed, [NullAllowed] HKDevice device, [NullAllowed] HKMetadata metadata);
 
 		// TODO: where is this thing used?
@@ -2193,7 +2314,7 @@ namespace HealthKit {
 		[Deprecated (PlatformName.iOS, 11, 0, message: "Use 'Create (HKWorkoutEventType, NSDateInterval, HKMetadata)' instead.")]
 		[Deprecated (PlatformName.WatchOS, 4, 0, message: "Use 'Create (HKWorkoutEventType, NSDateInterval, HKMetadata)' instead.")]
 		[Static]
-		[Wrap ("Create (type, date, metadata != null ? metadata.Dictionary : null)")]
+		[Wrap ("Create (type, date, metadata.GetDictionary ()!)")]
 		HKWorkoutEvent Create (HKWorkoutEventType type, NSDate date, HKMetadata metadata);
 
 		[Watch (4, 0), iOS (11, 0)]
@@ -2203,7 +2324,7 @@ namespace HealthKit {
 
 		[Watch (4, 0), iOS (11, 0)]
 		[Static]
-		[Wrap ("Create (type, dateInterval, metadata != null ? metadata.Dictionary : null)")]
+		[Wrap ("Create (type, dateInterval, metadata.GetDictionary ())")]
 		HKWorkoutEvent Create (HKWorkoutEventType type, NSDateInterval dateInterval, HKMetadata metadata);
 
 		[Watch (4, 0), iOS (11, 0)]
@@ -2555,6 +2676,11 @@ namespace HealthKit {
 		[Static]
 		[Export ("workoutRouteType")]
 		HKSeriesType WorkoutRouteType { get; }
+
+		[Watch (6,0), iOS (13,0)]
+		[Static]
+		[Export ("heartbeatSeriesType")]
+		HKSeriesType HeartbeatSeriesType { get; }
 	}
 
 	[iOS (11,0)]
@@ -2598,7 +2724,7 @@ namespace HealthKit {
 		[Async, Protected, Export ("finishRouteWithWorkout:metadata:completion:")]
 		void FinishRoute (HKWorkout workout, [NullAllowed] NSDictionary metadata, Action<HKWorkoutRoute, NSError> completion);
 
-		[Async, Wrap ("FinishRoute (workout, metadata != null ? metadata.Dictionary : null, completion)")]
+		[Async, Wrap ("FinishRoute (workout, metadata.GetDictionary (), completion)")]
 		void FinishRoute (HKWorkout workout, HKMetadata metadata, Action<HKWorkoutRoute, NSError> completion);
 
 		[Watch (5, 0), iOS (12, 0)]
@@ -2607,7 +2733,7 @@ namespace HealthKit {
 		void AddMetadata (NSDictionary metadata, HKWorkoutRouteBuilderAddMetadataHandler completion);
 
 		[Watch (5, 0), iOS (12, 0)]
-		[Async, Wrap ("AddMetadata (metadata != null ? metadata.Dictionary : null, completion)")]
+		[Async, Wrap ("AddMetadata (metadata.GetDictionary ()!, completion)")]
 		void AddMetadata (HKMetadata metadata, HKWorkoutRouteBuilderAddMetadataHandler completion);
 	}
 
@@ -2667,7 +2793,7 @@ namespace HealthKit {
 		void Add (NSDictionary metadata, HKWorkoutBuilderCompletionHandler completionHandler);
 
 		[Async]
-		[Wrap ("Add (metadata.Dictionary, completionHandler)")]
+		[Wrap ("Add (metadata.GetDictionary ()!, completionHandler)")]
 		void Add (HKMetadata metadata, HKWorkoutBuilderCompletionHandler completionHandler);
 
 		[Async]
@@ -2693,13 +2819,27 @@ namespace HealthKit {
 	}
 
 	delegate void HKQuantitySeriesSampleQueryQuantityDelegate (HKQuantitySeriesSampleQuery query, HKQuantity quantity, NSDate date, bool done, NSError error);
+	delegate void HKQuantitySeriesSampleQueryQuantityHandler (HKQuantitySeriesSampleQuery query, HKQuantity quantity, NSDateInterval date, bool done, NSError error);
 
 	[Watch (5,0), iOS (12,0)]
 	[BaseType (typeof(HKQuery))]
 	interface HKQuantitySeriesSampleQuery
 	{
+		[Watch (6, 0), iOS (13, 0)]
+		[Export ("includeSample")]
+		bool IncludeSample { get; set; }
+
+		[Watch (6, 0), iOS (13, 0)]
+		[Export ("orderByQuantitySampleStartDate")]
+		bool OrderByQuantitySampleStartDate { get; set; }
+
+		[Watch (6,0), iOS (13,0)]
+		[Export ("initWithQuantityType:predicate:quantityHandler:")]
+		IntPtr Constructor (HKQuantityType quantityType, [NullAllowed] NSPredicate predicate, HKQuantitySeriesSampleQueryQuantityHandler quantityHandler);
+
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use Constructor that takes 'NSDateInterval' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 0, message: "Use Constructor that takes 'NSDateInterval' instead.")]
 		[Export ("initWithSample:quantityHandler:")]
-		[DesignatedInitializer]
 		IntPtr Constructor (HKQuantitySample quantitySample, HKQuantitySeriesSampleQueryQuantityDelegate quantityHandler);
 	}
 
@@ -2730,11 +2870,26 @@ namespace HealthKit {
 		void FinishSeries ([NullAllowed] NSDictionary metadata, HKQuantitySeriesSampleBuilderFinishSeriesDelegate completionHandler);
 
 		[Async]
-		[Wrap ("FinishSeries (metadata?.Dictionary, completionHandler)")]
+		[Wrap ("FinishSeries (metadata.GetDictionary (), completionHandler)")]
 		void FinishSeries ([NullAllowed] HKMetadata metadata, HKQuantitySeriesSampleBuilderFinishSeriesDelegate completionHandler);
+
+		[Watch (6,0), iOS (13,0)]
+		[Async]
+		[Export ("finishSeriesWithMetadata:endDate:completion:")]
+		void FinishSeries ([NullAllowed] NSDictionary metadata, [NullAllowed] NSDate endDate, HKQuantitySeriesSampleBuilderFinishSeriesDelegate completionHandler);
+
+		[Watch (6,0), iOS (13,0)]
+		[Async]
+		[Wrap ("FinishSeries (metadata.GetDictionary (), endDate, completionHandler)")]
+		void FinishSeries ([NullAllowed] HKMetadata metadata, [NullAllowed] NSDate endDate, HKQuantitySeriesSampleBuilderFinishSeriesDelegate completionHandler);
+
 
 		[Export ("discard")]
 		void Discard ();
+
+		[Watch (6,0), iOS (13,0)]
+		[Export ("insertQuantity:dateInterval:error:")]
+		bool Insert (HKQuantity quantity, NSDateInterval dateInterval, [NullAllowed] out NSError error);
 	}
 
 	[Watch (5,0), NoiOS]
@@ -2778,12 +2933,23 @@ namespace HealthKit {
 	}
 
 	[Watch (5,0), iOS (12,0)]
+	[Deprecated (PlatformName.iOS, 13, 0, message: "Use HKCumulativeQuantitySample instead.")]
+	[Deprecated (PlatformName.WatchOS, 6, 0, message: "Use HKCumulativeQuantitySample instead.")]
 	[DisableDefaultCtor]
-	[BaseType (typeof(HKQuantitySample))]
+	[BaseType (typeof (HKCumulativeQuantitySample))]
 	interface HKCumulativeQuantitySeriesSample
 	{
 		[Export ("sum", ArgumentSemantic.Copy)]
 		HKQuantity Sum { get; }
+	}
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (HKQuantitySample))]
+	[DisableDefaultCtor]
+	interface HKCumulativeQuantitySample
+	{
+		[Export ("sumQuantity", ArgumentSemantic.Copy)]
+		HKQuantity SumQuantity { get; }
 	}
 
 	[NoWatch, iOS (12,0)]
@@ -2839,5 +3005,104 @@ namespace HealthKit {
 
 		[Export ("elapsedTime")]
 		double ElapsedTime { get; }
+	}
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface HKAudiogramSensitivityPoint
+	{
+		[Export ("frequency", ArgumentSemantic.Copy)]
+		HKQuantity Frequency { get; }
+
+		[NullAllowed, Export ("leftEarSensitivity", ArgumentSemantic.Copy)]
+		HKQuantity LeftEarSensitivity { get; }
+
+		[NullAllowed, Export ("rightEarSensitivity", ArgumentSemantic.Copy)]
+		HKQuantity RightEarSensitivity { get; }
+
+		[Static]
+		[Export ("sensitivityPointWithFrequency:leftEarSensitivity:rightEarSensitivity:error:")]
+		[return: NullAllowed]
+		HKAudiogramSensitivityPoint GetSensitivityPoint (HKQuantity frequency, [NullAllowed] HKQuantity leftEarSensitivity, [NullAllowed] HKQuantity rightEarSensitivity, [NullAllowed] out NSError error);
+	}
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (HKSample))]
+	[DisableDefaultCtor]
+	interface HKAudiogramSample
+	{
+		[Export ("sensitivityPoints", ArgumentSemantic.Copy)]
+		HKAudiogramSensitivityPoint[] SensitivityPoints { get; }
+
+		[Static]
+		[Export ("audiogramSampleWithSensitivityPoints:startDate:endDate:metadata:")]
+		HKAudiogramSample GetAudiogramSample (HKAudiogramSensitivityPoint[] sensitivityPoints, NSDate startDate, NSDate endDate, [NullAllowed] NSDictionary<NSString, NSObject> metadata);
+	}
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (HKQuantitySample))]
+	[DisableDefaultCtor]
+	interface HKDiscreteQuantitySample
+	{
+		[Export ("minimumQuantity", ArgumentSemantic.Copy)]
+		HKQuantity Minimum { get; }
+
+		[Export ("averageQuantity", ArgumentSemantic.Copy)]
+		HKQuantity Average { get; }
+
+		[Export ("maximumQuantity", ArgumentSemantic.Copy)]
+		HKQuantity Maximum { get; }
+
+		[Export ("mostRecentQuantity", ArgumentSemantic.Copy)]
+		HKQuantity MostRecent { get; }
+
+		[Export ("mostRecentQuantityDateInterval", ArgumentSemantic.Copy)]
+		NSDateInterval MostRecentDateInterval { get; }
+	}
+	
+	[iOS (13,0)]
+	[Watch (6,0)]
+	[BaseType (typeof (HKSeriesSample))]
+	[DisableDefaultCtor]
+	interface HKHeartbeatSeriesSample : NSSecureCoding {}
+	
+	delegate void HKHeartbeatSeriesBuilderCompletionHandler (bool success, NSError error);
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (HKSeriesBuilder))]
+	[DisableDefaultCtor]
+	interface HKHeartbeatSeriesBuilder
+	{
+		[Static]
+		[Export ("maximumCount")]
+		nuint MaximumCount { get; }
+
+		[Export ("initWithHealthStore:device:startDate:")]
+		[DesignatedInitializer]
+		IntPtr Constructor (HKHealthStore healthStore, [NullAllowed] HKDevice device, NSDate startDate);
+
+		[Export ("addHeartbeatWithTimeIntervalSinceSeriesStartDate:precededByGap:completion:")]
+		[Async]
+		void AddHeartbeat (double timeInterval, bool precededByGap, HKHeartbeatSeriesBuilderCompletionHandler completion);
+
+		[Export ("addMetadata:completion:")]
+		[Async]
+		void AddMetadata (NSDictionary<NSString, NSObject> metadata, HKHeartbeatSeriesBuilderCompletionHandler completion);
+
+		[Export ("finishSeriesWithCompletion:")]
+		[Async]
+		void FinishSeries (Action<HKHeartbeatSeriesSample, NSError> completion);
+	}
+
+	delegate void HKHeartbeatSeriesQueryDataHandler (HKHeartbeatSeriesQuery query, double timeSinceSeriesStart, bool precededByGap, bool done, NSError error);
+
+	[Watch (6,0), iOS (13,0)]
+	[BaseType (typeof (HKQuery))]
+	interface HKHeartbeatSeriesQuery
+	{
+		[Export ("initWithHeartbeatSeries:dataHandler:")]
+		[DesignatedInitializer]
+		IntPtr Constructor (HKHeartbeatSeriesSample heartbeatSeries, HKHeartbeatSeriesQueryDataHandler dataHandler);
 	}
 }

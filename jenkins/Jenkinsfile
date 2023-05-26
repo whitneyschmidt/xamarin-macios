@@ -10,6 +10,8 @@ packagePrefix = null
 virtualPath = null
 xiPackageUrl = null
 xmPackageUrl = null
+xiNotarizedPackageUrl = null
+xmNotarizedPackageUrl = null
 utils = null
 errorMessage = null
 currentStage = null
@@ -19,6 +21,8 @@ manualException = false
 
 xiPackageFilename = null
 xmPackageFilename = null
+xiNotarizedPkgFilename = null
+xmNotarizedPkgFilename = null
 msbuildZipFilename = null
 bundleZipFilename = null
 manifestFilename = null
@@ -38,7 +42,7 @@ def getRedirect () {
     if (response == 302) {
         return connection.getHeaderField("Location")
     } else {
-        throw new Exception("DL link failed ${response}: ${content}")
+        throw new Exception("Failed to get redirect link for Xamarin.Build.Tasks: ${response}")
     }
 }
 
@@ -82,8 +86,42 @@ def githubGetPullRequestLabels ()
     return github_pull_request_labels
 }
 
+custom_labels = null
+def getCustomLabels ()
+{
+    if (custom_labels == null) {
+        custom_labels = []
+        def custom_labels_file = "${workspace}/xamarin-macios/jenkins/custom-labels.txt"
+        if (fileExists (custom_labels_file)) {
+            def contents = sh (script: "grep -v '^[[:space:]]*#' ${custom_labels_file} | grep -v '^[[:space:]]*\$' | tr \$'\n' ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*\$//'", returnStdout: true)
+            custom_labels += contents.tokenize (' ')
+            echo ("Found labels ${custom_labels} in ${custom_labels_file}")
+        } else {
+            echo ("The custom labels file ${custom_labels_file} does not exist")
+        }
+    }
+    return custom_labels
+}
+
+labels = null
+def getLabels ()
+{
+    if (labels == null) {
+        labels = []
+        labels += githubGetPullRequestLabels ()
+        labels += getCustomLabels ()
+        echo ("Found labels: ${labels}")
+    }
+    return labels
+}
+
 def githubAddComment (url, markdown)
 {
+    if (markdown.length () > 32768) {
+        // GitHub only allows adding comments < 65536 characters log, so lets cap at half that, which should be more than enough to say that something went horribly wrong
+        markdown = markdown.substring (0, 32768)
+    }
+
     def json = groovy.json.JsonOutput.toJson ([body: markdown])
     def jsonFile = "${workspace}/xamarin-macios/jenkins/commit-comments.json"
     try {
@@ -152,8 +190,8 @@ def reportFinalStatusToSlack (err, gitHash, currentStage, fileContents)
             authorEmail = env.CHANGE_AUTHOR_EMAIL
             slackMessage = "Pull Request #<${env.CHANGE_URL}|${env.CHANGE_ID}> failed to build."
         } else {
-            authorName = sh (script: "cd ${workspace} && git log -1 --pretty=%an", returnStdout: true).trim ()
-            authorEmail = sh (script: "cd ${workspace} && git log -1 --pretty=%ae", returnStdout: true).trim ()
+            authorName = sh (script: "cd ${workspace}/xamarin-macios && git log -1 --pretty=%an", returnStdout: true).trim ()
+            authorEmail = sh (script: "cd ${workspace}/xamarin-macios && git log -1 --pretty=%ae", returnStdout: true).trim ()
             slackMessage = "Commit <https://github.com/${repository}/commit/${gitHash}|${gitHash}> failed to build."
         }
 
@@ -203,8 +241,11 @@ def reportFinalStatus (err, gitHash, currentStage)
         comment += "🔥 [Jenkins job](${env.RUN_DISPLAY_URL}) (on internal Jenkins) failed"
         if (currentStage != "" && !failedStages.contains (currentStage))
             failedStages.add (currentStage)
-        if (failedStages.size () > 0)
+        if (failedStages.size () > 0) {
+            // Somehow the same stage can end up in the list of failed stages multiple times. Avoid showing that to the user.
+            failedStages.unique ()
             comment += " in stage(s) '${failedStages.join (', ')}'"
+        }
         comment += " 🔥"
         if (!manualException && err != "")
             comment += " : ${err}"
@@ -345,7 +386,7 @@ def runXamarinMacTests (url, macOS, maccore_hash, xamarin_macios_hash)
             }
         }
     } finally {
-        sh ("rm -rf ${workspace}/mac-test-package ${workspace}/*.zip")
+        sh ("rm -rf ${workspace}/mac-test-package ${workspace}/*.zip ${workspace}/*.7z")
         // Find and upload any crash reports
         sh (script: """
             rm -Rf ${workspace}/crash-reports
@@ -393,7 +434,7 @@ def abortExecutingBuilds ()
 }
 
 timestamps {
-    def mainMacOSVersion = 14
+    def mainMacOSVersion = 15
     node ("xamarin-macios && macos-10.${mainMacOSVersion}") {
         try {
             timeout (time: 15, unit: 'HOURS') {
@@ -403,6 +444,7 @@ timestamps {
                 workspace = "${env.HOME}/jenkins/workspace/xamarin-macios"
                 commentFile = "${workspace}/xamarin-macios/jenkins/pr-comments.md"
                 withEnv ([
+                    "BUILD_REVISION=jenkins",
                     "PATH=/Library/Frameworks/Mono.framework/Versions/Current/Commands:${env.PATH}",
                     "WORKSPACE=${workspace}"
                     ]) {
@@ -429,8 +471,8 @@ timestamps {
                     }
 
                     if (isPr) {
-                        def hasBuildPackage = githubGetPullRequestLabels ().contains ("build-package")
-                        def hasRunInternalTests = githubGetPullRequestLabels ().contains ("run-internal-tests")
+                        def hasBuildPackage = getLabels ().contains ("build-package")
+                        def hasRunInternalTests = getLabels ().contains ("run-internal-tests")
 
                         if (!hasBuildPackage && !hasRunInternalTests) {
                             // don't add a comment to the pull request, since the public jenkins will also add comments, which ends up being too much.
@@ -438,7 +480,6 @@ timestamps {
                             echo ("Build skipped because the pull request doesn't have either of the labels 'build-package' or 'run-internal-tests'.")
                             return
                         }
-
 
                         if (!hasRunInternalTests)
                             skipLocalTestRunReason = "Not running tests here because they're run on public Jenkins."
@@ -471,35 +512,98 @@ timestamps {
                         stage ('Packaging') {
                             currentStage = "${STAGE_NAME}"
                             echo ("Building on ${env.NODE_NAME}")
-                            sh ("${workspace}/xamarin-macios/jenkins/build-package.sh")
-                            sh (script: "ls -la ${workspace}/package", returnStatus: true /* don't throw exceptions if something goes wrong */)
+                            def skipPackages = getLabels ().contains ("skip-packages")
+                            if (!skipPackages) {
+                                sh ("${workspace}/xamarin-macios/jenkins/build-package.sh")
+                                sh (script: "ls -la ${workspace}/package", returnStatus: true /* don't throw exceptions if something goes wrong */)
+                            } else {
+                                echo ("Packaging skipped because the label 'skip-packages' was found")
+                            }
+                        }
+
+                        stage ('Nugetizing') {
+                            currentStage = "${STAGE_NAME}"
+                            echo ("Building on ${env.NODE_NAME}")
+                            def skipNugets = getLabels ().contains ("skip-nugets")
+                            if (!skipNugets) {
+                                sh ("${workspace}/xamarin-macios/jenkins/build-nugets.sh")
+                                sh (script: "ls -la ${workspace}/package", returnStatus: true /* don't throw exceptions if something goes wrong */)
+                            } else {
+                                echo ("Nugetizing skipped because the label 'skip-nugets' was found")
+                            }
                         }
 
                         stage ('Signing') {
+                            def entitlements = "${workspace}/xamarin-macios/mac-entitlements.plist"
                             currentStage = "${STAGE_NAME}"
                             echo ("Building on ${env.NODE_NAME}")
-                            def xiPackages = findFiles (glob: "package/xamarin.ios-*.pkg")
-                            if (xiPackages.length > 0) {
-                                xiPackageFilename = xiPackages [0].name
-                                echo ("Created Xamarin.iOS package: ${xiPackageFilename}")
-                            }
-                            def xmPackages = findFiles (glob: "package/xamarin.mac-*.pkg")
-                            if (xmPackages.length > 0) {
-                                xmPackageFilename = xmPackages [0].name
-                                echo ("Created Xamarin.Mac package: ${xmPackageFilename}")
-                            }
-                            def msbuildZip = findFiles (glob: "package/msbuild.zip")
-                            if (msbuildZip.length > 0)
-                                msbuildZipFilename = msbuildZip [0].name
-                            def bundleZip = findFiles (glob: "package/bundle.zip")
-                            if (bundleZip.length > 0)
-                                bundleZipFilename = bundleZip [0].name
-                            withCredentials ([string (credentialsId: 'codesign_keychain_pw', variable: 'PRODUCTSIGN_KEYCHAIN_PASSWORD')]) {
-                                sh ("${workspace}/xamarin-macios/jenkins/productsign.sh")
+                            def skipSigning = getLabels ().contains ("skip-signing")
+                            if (!skipSigning) {
+                                def xiPackages = findFiles (glob: "package/xamarin.ios-*.pkg")
+                                if (xiPackages.length > 0) {
+                                    xiPackageFilename = xiPackages [0].name
+                                    echo ("Created Xamarin.iOS package: ${xiPackageFilename}")
+                                }
+                                def xmPackages = findFiles (glob: "package/xamarin.mac-*.pkg")
+                                if (xmPackages.length > 0) {
+                                    xmPackageFilename = xmPackages [0].name
+                                    echo ("Created Xamarin.Mac package: ${xmPackageFilename}")
+                                }
+                                def msbuildZip = findFiles (glob: "package/msbuild.zip")
+                                if (msbuildZip.length > 0)
+                                    msbuildZipFilename = msbuildZip [0].name
+                                def bundleZip = findFiles (glob: "package/bundle.zip")
+                                if (bundleZip.length > 0)
+                                    bundleZipFilename = bundleZip [0].name
+
+                                if (isPr) {
+                                  withCredentials ([string (credentialsId: 'codesign_keychain_pw', variable: 'PRODUCTSIGN_KEYCHAIN_PASSWORD')]) {
+                                    sh ("${workspace}/xamarin-macios/jenkins/productsign.sh")
+                                  }
+                                } else {
+                                    try {
+                                        pkgs = xiPackages + xmPackages
+                                        if (fileExists('release-scripts')) {
+                                            dir('release-scripts') {
+                                                sh ('git checkout sign-and-notarized && git pull')
+                                            }
+                                        } else {
+                                            sh ('git clone git@github.com:xamarin/release-scripts -b sign-and-notarized')
+                                        }
+                                        withCredentials([string(credentialsId: 'codesign_keychain_pw', variable: 'KEYCHAIN_PASS'), string(credentialsId: 'team_id', variable: 'TEAM_ID'), string(credentialsId: 'application_id', variable: 'APP_ID'), string(credentialsId: 'installer_id', variable: 'INSTALL_ID'), usernamePassword(credentialsId: 'apple_account', passwordVariable: 'APPLE_PASS', usernameVariable: 'APPLE_ACCOUNT')]) {
+                                            sh (returnStatus: true, script: "security create-keychain -p ${env.KEYCHAIN_PASS} login.keychain") // needed to repopulate the keychain
+                                            sh ("security unlock-keychain -p ${env.KEYCHAIN_PASS} login.keychain")
+                                            timeout (time: 90, unit: 'MINUTES') {
+                                              sh ("python release-scripts/sign_and_notarize.py -a ${env.APP_ID} -i ${env.INSTALL_ID} -u ${env.APPLE_ACCOUNT} -p ${env.APPLE_PASS} -t ${env.TEAM_ID} -d package/notarized -e ${entitlements} -k login.keychain " + pkgs.flatten ().join (" "))
+                                            }
+                                        }
+
+                                        def xiNotarizedPackages = findFiles (glob: "package/notarized/xamarin.ios-*.pkg")
+                                        if (xiNotarizedPackages.length > 0) {
+                                            xiNotarizedPkgFilename = xiNotarizedPackages [0].name
+                                            echo ("Created notarized Xamarin.iOS package: ${xiNotarizedPkgFilename}")
+                                        }
+                                        def xmNotarizedPackages = findFiles (glob: "package/notarized/xamarin.mac-*.pkg")
+                                        if (xmNotarizedPackages.length > 0) {
+                                            xmNotarizedPkgFilename = xmNotarizedPackages [0].name
+                                            echo ("Created notarized Xamarin.Mac package: ${xmNotarizedPkgFilename}")
+                                        }
+                                    } catch (ex) {
+                                        echo "Notarization failed:\n${ex.getMessage()}"
+                                        for (def stack : ex.getStackTrace()) {
+                                            echo "\t${stack}"
+                                        }
+                                        manager.addWarningBadge("PKGs are not notarized")
+                                    }
+                                }
+                            } else {
+                                echo ("Signing skipped because the label 'skip-signing' was found")
                             }
                         }
 
                         stage ('Generate Workspace Info') {
+                            currentStage = "${STAGE_NAME}"
+                            echo ("Building on ${env.NODE_NAME}")
                             withCredentials([string (credentialsId: '92cf81e5-6db5-408c-8a0d-192b36200a16', variable: 'GITHUB_AUTH_TOKEN'), string (credentialsId: 'xamarin-build-tasks', variable: 'XAMARIN_BUILD_TASKS')]) {
                                 def redirect = getRedirect ()
                                 sh "curl -o Xamarin.Build.Tasks.nupkg \"${redirect}\""
@@ -514,6 +618,7 @@ timestamps {
 
                         stage ('Upload to Azure') {
                             currentStage = "${STAGE_NAME}"
+                            echo ("Building on ${env.NODE_NAME}")
                             virtualPath = "jenkins/${branchName}/${gitHash}/${env.BUILD_NUMBER}"
                             packagePrefix = "https://bosstoragemirror.blob.core.windows.net/wrench/${virtualPath}/package"
 
@@ -530,6 +635,10 @@ timestamps {
 
                             sh ("ls -la package")
                             uploadFiles ("package/*", "wrench", virtualPath)
+
+                            def notarized_files = findFiles (glob: "package/notarized/*")
+                            if (notarized_files.size () > 0)
+                              uploadFiles ("package/notarized/*", "wrench", virtualPath)
                             uploadFiles ("package-internal/*", "jenkins-internal", virtualPath)
 
                             // Also upload manifest to a predictable url (without the build number)
@@ -537,6 +646,8 @@ timestamps {
                             uploadFiles ("package/manifest", "wrench", "jenkins/${branchName}/${gitHash}")
                             // And also create a 'latest' version (which really means 'latest built', not 'latest hash', but it will hopefully be good enough)
                             uploadFiles ("package/manifest", "wrench", "jenkins/${branchName}/latest")
+                            // And finally create a per-hash manifest (which will be overwritten in rebuilds of the same hash)
+                            uploadFiles ("package/manifest", "wrench", "jenkins/${gitHash}")
 
                             manifestFilename = "manifest"
                         }
@@ -544,25 +655,43 @@ timestamps {
                         stage ('Generate artifacts.json') {
                             withCredentials ([string (credentialsId: '92cf81e5-6db5-408c-8a0d-192b36200a16', variable: 'GITHUB_AUTH_TOKEN'), usernamePassword (credentialsId: 'd146d4aa-a437-4633-908f-b455876c44d0', passwordVariable: 'STORAGE_PASSWORD', usernameVariable: 'STORAGE_ACCOUNT')]) {
                                 dir ("BuildTasks") {
-                                    sh "mono tools/BuildTasks/build-tasks.exe artifacts -s ${workspace}/xamarin-macios -a ${env.STORAGE_ACCOUNT} -c ${env.STORAGE_PASSWORD} -u wrench/${virtualPath}/package"
-                                    artifactsFilename = "artifacts.json"
+                                    try {
+                                        sh "mono tools/BuildTasks/build-tasks.exe artifacts -s ${workspace}/xamarin-macios -a ${env.STORAGE_ACCOUNT} -c ${env.STORAGE_PASSWORD} -u wrench/${virtualPath}/package"
+                                        artifactsFilename = "artifacts.json"
+                                    } catch (err) {
+                                        def msg = "Failed to generate/upload artifacts.json: " + err.getMessage ();
+                                        echo ("⚠️ ${msg} ⚠️")
+                                        manager.addWarningBadge (msg)
+                                        appendFileComment ("⚠️ [${msg}](${env.RUN_DISPLAY_URL}) 🔥\n")
+                                    }
                                 }
                             }
                         }
 
                         stage ('Publish builds to GitHub') {
                             currentStage = "${STAGE_NAME}"
+                            echo ("Building on ${env.NODE_NAME}")
                             utils = load ("${workspace}/xamarin-macios/jenkins/utils.groovy")
                             def packagesMessage = ""
                             if (xiPackageFilename != null) {
                                 xiPackageUrl = "${packagePrefix}/${xiPackageFilename}"
                                 utils.reportGitHubStatus (gitHash, 'PKG-Xamarin.iOS', "${xiPackageUrl}", 'SUCCESS', "${xiPackageFilename}")
-                                packagesMessage += "[${xiPackageFilename}](${xiPackageUrl}) "
+                                packagesMessage += "* [${xiPackageFilename} (Not notarized)](${xiPackageUrl})\n"
                             }
                             if (xmPackageFilename != null) {
                                 xmPackageUrl = "${packagePrefix}/${xmPackageFilename}"
                                 utils.reportGitHubStatus (gitHash, 'PKG-Xamarin.Mac', "${xmPackageUrl}", 'SUCCESS', "${xmPackageFilename}")
-                                packagesMessage += "[${xmPackageFilename}](${xmPackageUrl})"
+                                packagesMessage += "* [${xmPackageFilename} (Not notarized)](${xmPackageUrl})\n"
+                            }
+                            if (xiNotarizedPkgFilename != null) {
+                                xiNotarizedPackageUrl = "${packagePrefix}/notarized/${xiNotarizedPkgFilename}"
+                                utils.reportGitHubStatus (gitHash, 'PKG-Xamarin.iOS-notarized', "${xiNotarizedPackageUrl}", 'SUCCESS', "${xiNotarizedPkgFilename}")
+                                packagesMessage += "* [${xiNotarizedPkgFilename} (Notarized)](${xiNotarizedPackageUrl})\n"
+                            }
+                            if (xmNotarizedPkgFilename != null) {
+                                xmNotarizedPackageUrl = "${packagePrefix}/notarized/${xmNotarizedPkgFilename}"
+                                utils.reportGitHubStatus (gitHash, 'PKG-Xamarin.Mac-notarized', "${xmNotarizedPackageUrl}", 'SUCCESS', "${xmNotarizedPkgFilename}")
+                                packagesMessage += "* [${xmNotarizedPkgFilename} (Notarized)](${xmNotarizedPackageUrl})\n"
                             }
                             if (manifestFilename != null) {
                                 def manifestUrl = "${packagePrefix}/${manifestFilename}"
@@ -581,24 +710,54 @@ timestamps {
                                 utils.reportGitHubStatus (gitHash, "msbuild.zip", "${msbuildZipUrl}", 'SUCCESS', "${msbuildZipFilename}")
                             }
 
+                            def nupkgs = findFiles (glob: "package/*.nupkg")
+                            for (def i = 0; i < nupkgs.size (); i++) {
+                                def nupkg = nupkgs [i]
+                                def nupkg_name = nupkg.name
+                                def nupkgUrl = "${packagePrefix}/${nupkg_name}"
+                                utils.reportGitHubStatus (gitHash, nupkg_name, nupkgUrl, "SUCCESS", nupkg_name)
+                                packagesMessage += "* [${nupkg_name}](${nupkgUrl})\n"
+                            }
+
                             if (packagesMessage != "")
-                                appendFileComment ("✅ Packages: ${packagesMessage}\n")
+                                appendFileComment ("✅ Packages built successfully\n<details><summary>View packages</summary>\n\n${packagesMessage}\n</details>\n\n")
+                        }
+
+                        stage ('Publish Nugets') {
+                            currentStage = "${STAGE_NAME}"
+                            withCredentials ([string (credentialsId: 'azdo-package-feed-token', variable: 'AZDO_PACKAGE_FEED_TOKEN')]) {
+                                def nugetResult = sh (script: "${workspace}/xamarin-macios/jenkins/publish-to-nuget.sh --apikey=${AZDO_PACKAGE_FEED_TOKEN} --source=https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json package/*.nupkg", returnStatus: true)
+                                if (nugetResult != 0) {
+                                    failedStages.add (currentStage)
+                                    manualException = true
+                                    def msg = "Failed to publish NuGet packages. Please review log for details."
+                                    echo ("⚠️ ${msg} ⚠️")
+                                    manager.addWarningBadge (msg)
+                                    appendFileComment ("⚠️ [${msg}](${env.RUN_DISPLAY_URL}) 🔥\n")
+                                } else {
+                                    echo ("${currentStage} succeeded")
+                                }
+                            }
                         }
 
                         dir ('xamarin-macios') {
                             stage ('Launch external tests') {
                                 currentStage = "${STAGE_NAME}"
+                                echo ("Building on ${env.NODE_NAME}")
                                 // VSTS does not allow any branch name anymore, it has to be an existing branch.
                                 // Since pull requests don't create branches in the xamarin org (that VSTS sees at least),
                                 // I've created a 'pull-request' branch which we'll use for pull requests.
                                 def vsts_branch = isPr ? "pull-request" : branchName;
-                                if (isPr) {
-                                    echo "Currently not launching external tests for pull requests"
+                                def skipExternalTests = getLabels ().contains ("skip-external-tests")
+                                if (skipExternalTests) {
+                                    echo ("Skipping external tests because the label 'skip-external-tests' was found")
+                                } else if (isPr && !getLabels ().contains ("trigger-device-tests")) {
+                                    echo ("Skipping external tests because the label 'trigger-device-tests' was not found and it's required for external tests to run for pull requests")
                                 } else {
                                     def outputFile = "${workspace}/xamarin-macios/wrench-launch-external.output.tmp"
                                     try {
-                                        withCredentials ([string (credentialsId: 'macios_provisionator_pat', variable: 'PROVISIONATOR_VSTS_PAT')]) {
-                                            sh ("make -C ${workspace}/xamarin-macios/tests wrench-launch-external MAC_PACKAGE_URL=${xmPackageUrl} IOS_PACKAGE_URL=${xiPackageUrl} WRENCH_URL=${env.RUN_DISPLAY_URL} BUILD_REVISION=${gitHash} BUILD_LANE=${vsts_branch} BUILD_WORK_HOST=${env.NODE_NAME} 2>&1 | tee ${outputFile}")
+                                        withCredentials ([string (credentialsId: 'macios_provisionator_pat', variable: 'PROVISIONATOR_VSTS_PAT'), string (credentialsId: 'macios_github_comment_token', variable: 'GITHUB_PAT_TOKEN')]) {
+                                            sh ("make -C ${workspace}/xamarin-macios/tests wrench-launch-external MAC_PACKAGE_URL=${xmPackageUrl} IOS_PACKAGE_URL=${xiPackageUrl} WRENCH_URL=${env.RUN_DISPLAY_URL} BUILD_REVISION=${gitHash} BUILD_LANE=${vsts_branch} BUILD_WORK_HOST=${env.NODE_NAME} GITHUB_TOKEN=${GITHUB_PAT_TOKEN} 2>&1 | tee ${outputFile}")
                                         }
                                         processAtMonkeyWrench (outputFile)
                                     } catch (error) {
@@ -609,7 +768,7 @@ timestamps {
                                     }
                                 }
 
-                                if (isPr && githubGetPullRequestLabels ().contains ("run-sample-tests")) {
+                                if (getLabels ().contains ("run-sample-tests")) {
                                     def outputFile = "${workspace}/xamarin-macios/wrench-launch-external.output.tmp"
                                     try {
                                         withCredentials ([string (credentialsId: 'macios_provisionator_pat', variable: 'PROVISIONATOR_VSTS_PAT')]) {
@@ -627,11 +786,15 @@ timestamps {
 
                             stage ('Install Provisioning Profiles') {
                                 currentStage = "${STAGE_NAME}"
-                                sh ("${workspace}/maccore/tools/install-qa-provisioning-profiles.sh")
+                                echo ("Building on ${env.NODE_NAME}")
+                                withCredentials ([string (credentialsId: 'login-keychain-password', variable: "LOGIN_KEYCHAIN_PASSWORD")]) {
+                                    sh ("${workspace}/maccore/tools/install-qa-provisioning-profiles.sh")
+                                }
                             }
 
                             stage ('Publish reports') {
                                 currentStage = "${STAGE_NAME}"
+                                echo ("Building on ${env.NODE_NAME}")
                                 reportPrefix = sh (script: "${workspace}/xamarin-macios/jenkins/publish-results.sh | grep '^Url Prefix: ' | sed 's/^Url Prefix: //'", returnStdout: true).trim ()
                                 if (skipLocalTestRunReason == "") {
                                     echo ("Html report: ${reportPrefix}/tests/index.html")
@@ -645,6 +808,7 @@ timestamps {
 
                             stage ('API diff') {
                                 currentStage = "${STAGE_NAME}"
+                                echo ("Building on ${env.NODE_NAME}")
                                 def apidiffResult = sh (script: "${workspace}/xamarin-macios/jenkins/build-api-diff.sh --publish", returnStatus: true)
                                 if (apidiffResult != 0)
                                     manager.addWarningBadge ("Failed to generate API diff")
@@ -653,6 +817,7 @@ timestamps {
 
                             stage ('API & Generator comparison') {
                                 currentStage = "${STAGE_NAME}"
+                                echo ("Building on ${env.NODE_NAME}")
                                 def compareResult = sh (script: "${workspace}/xamarin-macios/jenkins/compare.sh --publish", returnStatus: true)
                                 if (compareResult != 0)
                                     manager.addWarningBadge ("Failed to generate API / Generator diff")
@@ -663,13 +828,17 @@ timestamps {
                             def hasXamarinMacTests = true
                             stage ("Package XM tests") {
                                 currentStage = "${STAGE_NAME}"
+                                echo ("Building on ${env.NODE_NAME}")
                                 def exitCode = sh (script: "make -C ${workspace}/xamarin-macios/tests package-tests", returnStatus: true)
                                 if (exitCode != 0) {
                                     hasXamarinMacTests = false
-                                    echoError ("Failed to package Xamarin.Mac tests (exit code: ${exitCode}")
+                                    echoError ("Failed to package Xamarin.Mac tests (exit code: ${exitCode})")
                                     failedStages.add (currentStage)
+                                } else {
+                                    def packaged_xm_tests = findFiles (glob: "tests/*.7z")
+                                    if (packaged_xm_tests.size () > 0)
+                                        uploadFiles ("tests/*.7z", "wrench", virtualPath)
                                 }
-                                uploadFiles ("tests/*.zip", "wrench", virtualPath)
                             }
 
                             timeout (time: 13, unit: 'HOURS') {
@@ -685,14 +854,14 @@ timestamps {
 
                                     // Add test runs on older macOS versions
                                     if (hasXamarinMacTests) {
-                                        def url = "https://bosstoragemirror.blob.core.windows.net/wrench/${virtualPath}/tests/mac-test-package.zip"
+                                        def url = "https://bosstoragemirror.blob.core.windows.net/wrench/${virtualPath}/tests/mac-test-package.7z"
                                         def maccore_hash = sh (script: "grep NEEDED_MACCORE_VERSION ${workspace}/xamarin-macios/mk/xamarin.mk | sed 's/NEEDED_MACCORE_VERSION := //'", returnStdout: true).trim ()
                                         // Get the min and current macOS version from Make.config,
                                         // and calculate all the macOS versions in between (including both end points).
                                         // The trims/splits/toIntegers at the end are to select the minor part of the macOS version number,
                                         // then we just loop from the minor part of the min version to the minor part of the current version.
                                         def firstOS = sh (returnStdout: true, script: "grep ^MIN_OSX_SDK_VERSION= '${workspace}/xamarin-macios/Make.config' | sed 's/.*=//'").trim ().split ("\\.")[1].toInteger ()
-                                        def lastOS = sh (returnStdout: true, script: "grep ^OSX_SDK_VERSION= '${workspace}/xamarin-macios/Make.config' | sed 's/.*=//'").trim ().split ("\\.")[1].toInteger ()
+                                        def lastOS = sh (returnStdout: true, script: "grep ^MACOS_NUGET_VERSION= '${workspace}/xamarin-macios/Make.versions' | sed -e 's/.*=//' -e 's/.[0-9]*\$//'").trim ().split ("\\.")[1].toInteger ()
                                         def macOSes = []
                                         def excludedOSes = []
                                         for (os = firstOS; os <= lastOS; os++)
@@ -715,12 +884,14 @@ timestamps {
                                             }
                                             builders [nodeText] = {
                                                 try {
-                                                    if (excluded) {
-                                                        echo (nodeText)
-                                                    } else {
-                                                        node ("xamarin-macios && macos-10.${macOS}") {
-                                                            stage ("Running XM tests on '10.${macOS}'") {
-                                                                runXamarinMacTests (url, "macOS 10.${macOS}", maccore_hash, gitHash)
+                                                    timeout (time: 15, unit: 'MINUTES') {
+                                                        if (excluded) {
+                                                            echo (nodeText)
+                                                        } else {
+                                                            node ("xamarin-macios && macos-10.${macOS}") {
+                                                                stage ("Running XM tests on '10.${macOS}'") {
+                                                                    runXamarinMacTests (url, "macOS 10.${macOS}", maccore_hash, gitHash)
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -776,12 +947,16 @@ timestamps {
                 reportFinalStatus ("", "${gitHash}", "${currentStage}")
             } // timeout
         } catch (err) {
-            reportFinalStatus ("${err}", "${gitHash}", "${currentStage}")
+            timeout (time: 5, unit: 'MINUTES') { // Give 5 minutes to publish results to GitHub/Slack
+                reportFinalStatus ("${err}", "${gitHash}", "${currentStage}")
+            } // timeout
         } finally {
-            stage ('Final tasks') {
-                sh (script: "${workspace}/xamarin-macios/jenkins/publish-results.sh", returnStatus: true /* don't throw exceptions if something goes wrong */)
-                sh (script: "make git-clean-all -C ${workspace}/xamarin-macios", returnStatus: true /* don't throw exceptions if something goes wrong */)
-            }
-        }
+            timeout (time: 60, unit: 'MINUTES') { // Give an hour to publish and upload stuff
+                stage ('Final tasks') {
+                    sh (script: "${workspace}/xamarin-macios/jenkins/publish-results.sh", returnStatus: true /* don't throw exceptions if something goes wrong */)
+                    sh (script: "make git-clean-all -C ${workspace}/xamarin-macios", returnStatus: true /* don't throw exceptions if something goes wrong */)
+                }
+            } // timeout
+        } // try
     } // node
 } // timestamps

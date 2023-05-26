@@ -21,14 +21,10 @@ using ObjCRuntime;
 using CoreVideo;
 using AudioToolbox;
 
-#if !XAMCORE_2_0
-using System.Drawing;
-using CMVideoDimensions = System.Drawing.Size;
-#endif
-
 namespace CoreMedia {
 
 	// untyped enum (uses as OSStatus) -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMFormatDescriptionError : int {
 		None				= 0,
 		InvalidParameter	= -12710,
@@ -36,6 +32,7 @@ namespace CoreMedia {
 		ValueNotAvailable   = -12718,
 	}
 
+	[Watch (6,0)]
 	public class CMFormatDescription : INativeObject, IDisposable {
 		internal IntPtr handle;
 
@@ -322,44 +319,10 @@ namespace CoreMedia {
 		[DllImport (Constants.CoreMediaLibrary)]
 		internal extern static /* Boolean */ bool CMVideoFormatDescriptionMatchesImageBuffer (/* CMVideoFormatDescriptionRef */ IntPtr videoDesc, /* CVImageBufferRef */ IntPtr imageBuffer);
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'CMVideoFormatDescription'.")]
-		public Size  VideoDimensions {
-			get {
-				return CMVideoFormatDescriptionGetDimensions (handle);
-			}
-		}
-
-		[Advice ("Use 'CMVideoFormatDescription'.")]
-		public CGRect GetVideoCleanAperture (bool originIsAtTopLeft)
-		{
-			return CMVideoFormatDescriptionGetCleanAperture (handle, originIsAtTopLeft);
-		}
-
-		// Belongs to CMVideoFormatDescription
-		public static NSObject [] GetExtensionKeysCommonWithImageBuffers ()
-		{
-			var arr = CMVideoFormatDescriptionGetExtensionKeysCommonWithImageBuffers ();
-			return NSArray.ArrayFromHandle<NSString> (arr);
-		}
-
-		[Advice ("Use 'CMVideoFormatDescription'.")]
-		public CGSize GetVideoPresentationDimensions (bool usePixelAspectRatio, bool useCleanAperture)
-		{
-			return CMVideoFormatDescriptionGetPresentationDimensions (handle, usePixelAspectRatio, useCleanAperture);
-		}
-
-		// Belongs to CMVideoFormatDescription
-		public bool VideoMatchesImageBuffer (CVImageBuffer imageBuffer)
-		{
-			if (imageBuffer == null)
-				throw new ArgumentNullException ("imageBuffer");
-			return CMVideoFormatDescriptionMatchesImageBuffer (handle, imageBuffer.Handle);
-		}
-#endif
 #endif
 	}
 
+	[Watch (6,0)]
 	public class CMAudioFormatDescription : CMFormatDescription {
 		
 		internal CMAudioFormatDescription (IntPtr handle)
@@ -375,6 +338,7 @@ namespace CoreMedia {
 		// TODO: Move more audio specific methods here
 	}
 
+	[Watch (6,0)]
 	public partial class CMVideoFormatDescription : CMFormatDescription {
 		
 		internal CMVideoFormatDescription (IntPtr handle)
@@ -521,7 +485,6 @@ namespace CoreMedia {
 			return CMVideoFormatDescriptionGetPresentationDimensions (handle, usePixelAspectRatio, useCleanAperture);
 		}
 
-#if XAMCORE_2_0
 		public static NSObject [] GetExtensionKeysCommonWithImageBuffers ()
 		{
 			var arr = CMVideoFormatDescriptionGetExtensionKeysCommonWithImageBuffers ();
@@ -534,7 +497,6 @@ namespace CoreMedia {
 				throw new ArgumentNullException ("imageBuffer");
 			return CMVideoFormatDescriptionMatchesImageBuffer (handle, imageBuffer.Handle);
 		}
-#endif
 
 		[iOS (11,0), Mac (10,13), TV (11,0)]
 		[DllImport (Constants.CoreMediaLibrary)]

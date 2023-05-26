@@ -73,12 +73,7 @@ namespace AVFoundation {
 		
 		
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
+		public AVLayerVideoGravity VideoGravity
 		{
 			set {
 				WeakVideoGravity = EnumToKey (value);
@@ -93,12 +88,7 @@ namespace AVFoundation {
 	partial class AVCaptureVideoPreviewLayer
 	{
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
+		public AVLayerVideoGravity VideoGravity
 		{
 			set {
 				WeakVideoGravity = AVPlayerLayer.EnumToKey (value);
@@ -113,11 +103,9 @@ namespace AVFoundation {
 	partial class AVPlayer
 	{
 		public AVLayerVideoGravity? ExternalPlaybackVideoGravity {
-			[iOS (6,0)]
 			set {
 				WeakExternalPlaybackVideoGravity = value.HasValue ? AVPlayerLayer.EnumToKey (value.Value) : null;
 			}
-			[iOS (6,0)]
 			get {
 				var r = AVPlayerLayer.KeyToEnum (WeakExternalPlaybackVideoGravity, false);
 				if (((int) r) == -1)

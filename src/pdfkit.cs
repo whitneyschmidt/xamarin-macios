@@ -26,11 +26,12 @@
 //
 // PdfKit.cs: Bindings for the PdfKit API
 //
-#if MONOMAC || (IOS && XAMCORE_2_0)
+#if MONOMAC || IOS
 
 using System;
 #if MONOMAC
 using AppKit;
+using UIViewController = Foundation.NSObject;
 #else
 using UIKit;
 using NSColor = UIKit.UIColor;
@@ -453,9 +454,7 @@ namespace PdfKit {
 
 	[iOS (11,0)]
 	[BaseType (typeof (NSObject), Name = "PDFAction")]
-#if XAMCORE_2_0
 	[Abstract]
-#endif
 	interface PdfAction : NSCopying {
 		//This is an abstract superclass with no public init - should it have a private constructor??
 		//As it is, I can create instances, that segfault when you access the type method.
@@ -546,7 +545,7 @@ namespace PdfKit {
 		IntPtr Constructor (CGRect bounds, NSString annotationType, [NullAllowed] NSDictionary properties);
 
 		[Mac (10,13)]
-		[Wrap ("this (bounds, annotationType.GetConstant (), properties)")]
+		[Wrap ("this (bounds, annotationType.GetConstant ()!, properties)")]
 		IntPtr Constructor (CGRect bounds, PdfAnnotationKey annotationType, [NullAllowed] NSDictionary properties);
 
 		[Deprecated (PlatformName.iOS, 11, 0, message: "Use '.ctor (CGRect, PDFAnnotationKey, NSDictionary)' instead.")]
@@ -647,7 +646,7 @@ namespace PdfKit {
 		bool SetValue (bool boolean, NSString key);
 
 		[Mac (10,12)]
-		[Wrap ("SetValue (boolean, key.GetConstant ())")]
+		[Wrap ("SetValue (boolean, key.GetConstant ()!)")]
 		bool SetValue (bool boolean, PdfAnnotationKey key);
 
 		[Protected]
@@ -656,7 +655,7 @@ namespace PdfKit {
 		bool SetValue (CGRect rect, NSString key);
 
 		[Mac (10,12)]
-		[Wrap ("SetValue (rect, key.GetConstant ())")]
+		[Wrap ("SetValue (rect, key.GetConstant ()!)")]
 		bool SetValue (CGRect rect, PdfAnnotationKey key);
 
 		[Mac (10,13)]
@@ -669,7 +668,7 @@ namespace PdfKit {
 		void RemoveValue (NSString key);
 
 		[Mac (10,12)]
-		[Wrap ("RemoveValue (key.GetConstant ())")]
+		[Wrap ("RemoveValue (key.GetConstant ()!)")]
 		void RemoveValue (PdfAnnotationKey key);
 
 		// PDFAnnotation (PDFAnnotationUtilities) Category
@@ -979,11 +978,7 @@ namespace PdfKit {
 	[BaseType (typeof (PdfAnnotation), Name = "PDFAnnotationMarkup")]
 	interface PdfAnnotationMarkup {
 		[Export ("quadrilateralPoints", ArgumentSemantic.Assign), NullAllowed]
-#if XAMCORE_2_0
 		NSArray WeakQuadrilateralPoints { get; set; }
-#else
-		NSArray QuadrilateralPoints { get; set; }
-#endif
 
 		[Export ("markupType")]
 		PdfMarkupType MarkupType { get; set; }
@@ -1066,11 +1061,7 @@ namespace PdfKit {
 		nfloat LineWidth { get; set; }
 
 		[Export ("dashPattern", ArgumentSemantic.Assign), NullAllowed]
-#if XAMCORE_2_0
 		NSArray WeakDashPattern { get; set; }
-#else
-		NSArray DashPattern { get; set; }
-#endif
 
 		[Mac (10,13)]
 		[Export ("borderKeyValues", ArgumentSemantic.Copy)]
@@ -1178,7 +1169,7 @@ namespace PdfKit {
 		[Wrap ("new PdfDocumentAttributes (DocumentAttributes)")]
 		PdfDocumentAttributes GetDocumentAttributes ();
 
-		[Wrap ("DocumentAttributes = attributes?.Dictionary")]
+		[Wrap ("DocumentAttributes = attributes.GetDictionary ()!")]
 		void SetDocumentAttributes (PdfDocumentAttributes attributes);
 
 #if XAMCORE_4_0 || IOS
@@ -1256,7 +1247,7 @@ namespace PdfKit {
 		bool Write (string path, NSDictionary options);
 
 		[Mac (10,13)]
-		[Wrap ("Write (path, options.Dictionary)")]
+		[Wrap ("Write (path, options.GetDictionary ()!)")]
 		bool Write (string path, PdfDocumentWriteOptions options);
 
 		[Export ("writeToURL:")]
@@ -1266,7 +1257,7 @@ namespace PdfKit {
 		bool Write (NSUrl url, NSDictionary options);
 
 		[Mac (10,13)]
-		[Wrap ("Write (url, options?.Dictionary)")]
+		[Wrap ("Write (url, options.GetDictionary ()!)")]
 		bool Write (NSUrl url, PdfDocumentWriteOptions options);
 
 		[NullAllowed]
@@ -1635,7 +1626,8 @@ namespace PdfKit {
 		[Notification]
 		NSString DocumentEditedNotification { get; }
 
-		[Export ("PDFView"), NullAllowed]
+		[Export ("PDFView", ArgumentSemantic.Weak)]
+		[NullAllowed]
 		PdfView PdfView { get; set; }
 
 		[Export ("thumbnailSize")]
@@ -1786,7 +1778,7 @@ namespace PdfKit {
 		[Export ("interpolationQuality", ArgumentSemantic.Assign)]
 		PdfInterpolationQuality InterpolationQuality { get; set; }
 
-		[iOS (12,0), Mac (10,14, onlyOn64: true)]
+		[iOS (12,0), Mac (10,14)]
 		[Export ("pageShadowsEnabled")]
 		bool PageShadowsEnabled { get; [Bind ("enablePageShadows:")] set; }
 
@@ -2036,7 +2028,12 @@ namespace PdfKit {
 
 		[Export ("PDFViewOpenPDF:forRemoteGoToAction:"), EventArgs ("PdfViewAction")]
 		void OpenPdf (PdfView sender, PdfActionRemoteGoTo action);
+
+		[iOS (13,0)]
+		[NoMac]
+		[Export ("PDFViewParentViewController")]
+		UIViewController ParentViewController { get; }
 	}
 
 }
-#endif // MONOMAC || (IOS && XAMCORE_2_0)
+#endif // MONOMAC || IOS

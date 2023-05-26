@@ -10,10 +10,11 @@ using ParallelOptions = System.Threading.Tasks.ParallelOptions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System.Collections.Generic;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CodesignTaskBase : Task
+	public abstract class CodesignTaskBase : XamarinTask
 	{
 		const string ToolName = "codesign";
 		const string MacOSDirName = "MacOS";
@@ -21,8 +22,6 @@ namespace Xamarin.MacDev.Tasks
 		string toolExe;
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string CodesignAllocate { get; set; }
@@ -142,7 +141,7 @@ namespace Xamarin.MacDev.Tasks
 			int exitCode;
 
 			try {
-				Log.LogMessage (MessageImportance.Normal, "Tool {0} execution started with arguments: {1}", startInfo.FileName, startInfo.Arguments);
+				Log.LogMessage (MessageImportance.Normal, MSBStrings.M0001, startInfo.FileName, startInfo.Arguments);
 
 				using (var stdout = new StringWriter (messages)) {
 					using (var stderr = new StringWriter (errors)) {
@@ -153,10 +152,10 @@ namespace Xamarin.MacDev.Tasks
 						}
 					}
 
-					Log.LogMessage (MessageImportance.Low, "Tool {0} execution finished (exit code = {1}).", startInfo.FileName, exitCode);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0002, startInfo.FileName, exitCode);
 				}
 			} catch (Exception ex) {
-				Log.LogError ("Error executing tool '{0}': {1}", startInfo.FileName, ex.Message);
+				Log.LogError (MSBStrings.E0003, startInfo.FileName, ex.Message);
 				return;
 			}
 
@@ -167,7 +166,7 @@ namespace Xamarin.MacDev.Tasks
 				if (errors.Length > 0)
 					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, "{0}", errors);
 				else
-					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, "{0} failed.", startInfo.FileName);
+					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, MSBStrings.E0098, startInfo.FileName);
 			}
 		}
 

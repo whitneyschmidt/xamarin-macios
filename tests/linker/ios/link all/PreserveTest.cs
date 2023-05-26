@@ -9,13 +9,8 @@
 
 using System;
 using System.Reflection;
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 using NUnit.Framework;
 
 // this will preserve the specified type (only)
@@ -59,13 +54,8 @@ namespace LinkAll.Attributes {
 #else
 		const bool Debug = false;
 #endif
-#if XAMCORE_2_0
 		const string NamespacePrefix = "";
 		string AssemblyName = typeof (NSObject).Assembly.ToString ();
-#else
-		const string NamespacePrefix = "MonoTouch.";
-		const string AssemblyName = "monotouch";
-#endif
 
 		[Test]
 		public void PreserveTypeWithMembers ()

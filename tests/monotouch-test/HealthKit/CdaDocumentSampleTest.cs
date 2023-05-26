@@ -10,15 +10,9 @@
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
 using HealthKit;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.HealthKit;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.HealthKit {
@@ -33,11 +27,20 @@ namespace MonoTouchFixtures.HealthKit {
 			TestRuntime.AssertXcodeVersion (8, 0);
 
 			NSError error;
-			using (var d = new NSData ())
-			using (var s = HKCdaDocumentSample.Create (d, NSDate.DistantPast, NSDate.DistantFuture, (NSDictionary) null, out error)) {
-				Assert.NotNull (error, "error");
-				var details = new HKDetailedCdaErrors (error.UserInfo);
-				Assert.That (details.ValidationError.Length, Is.EqualTo (0), "Length");
+			using (var d = new NSData ()) {
+				TestDelegate action = () => {
+					using (var s = HKCdaDocumentSample.Create (d, NSDate.DistantPast, NSDate.DistantFuture, (NSDictionary)null, out error)) {
+						Assert.NotNull (error, "error");
+						var details = new HKDetailedCdaErrors (error.UserInfo);
+						Assert.That (details.ValidationError.Length, Is.EqualTo (0), "Length");
+					}
+				};
+				if (TestRuntime.CheckXcodeVersion (11, 0)) {
+					var ex = Assert.Throws<MonoTouchException> (action, "Exception");
+					Assert.That (ex.Message, Is.StringMatching ("startDate.*and endDate.*exceed the maximum allowed duration for this sample type"), "Exception Message");
+				} else {
+					action ();
+				}
 			}
 		}
 	}

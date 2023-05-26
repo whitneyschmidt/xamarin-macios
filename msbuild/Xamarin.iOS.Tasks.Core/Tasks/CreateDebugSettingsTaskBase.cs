@@ -7,14 +7,13 @@ using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class CreateDebugSettingsTaskBase : Task
+	public abstract class CreateDebugSettingsTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -34,7 +33,7 @@ namespace Xamarin.iOS.Tasks
 				try {
 					plist = PDictionary.FromFile (path);
 				} catch (Exception ex) {
-					Log.LogError ("Error loading Settings plist file '{0}/Settings.bundle/Root.plist': {1}.", Path.GetFileName (AppBundleDir), ex.Message);
+					Log.LogError (MSBStrings.E0024, Path.GetFileName (AppBundleDir), ex.Message);
 					return false;
 				}
 			} else {

@@ -53,11 +53,7 @@ namespace AssetsLibrary {
 		public ALAssetOrientation Orientation {
 			get {
 				NSNumber n = (NSNumber) ValueForProperty (_PropertyOrientation);
-#if XAMCORE_2_0
 				return (ALAssetOrientation) (int)n.NIntValue;
-#else
-				return (ALAssetOrientation) (int)n.IntValue;
-#endif
 			}
 		}
 
@@ -80,7 +76,6 @@ namespace AssetsLibrary {
 			}
 		}
 
-		[iOS (6,0)]
 		public NSUrl AssetUrl {
 			get {
 				// do not show an ArgumentNullException inside the

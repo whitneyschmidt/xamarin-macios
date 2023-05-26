@@ -6,11 +6,7 @@
 //
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
-
-#if !__WATCHOS__
-
 using System;
-#if XAMCORE_2_0
 using Foundation;
 #if !__TVOS__
 using EventKit;
@@ -18,13 +14,6 @@ using EventKit;
 using ObjCRuntime;
 using CoreVideo;
 using CoreMedia;
-#else
-using MonoTouch.EventKit;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.CoreVideo;
-using MonoTouch.CoreMedia;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreMedia {
@@ -85,7 +74,7 @@ namespace MonoTouchFixtures.CoreMedia {
 			}
 		}
 
-#if !XAMCORE_4_0
+#if !XAMCORE_4_0 && !__WATCHOS__
 		[Test]
 		public void CreateReadyWithImageBuffer_ArrayValidations ()
 		{
@@ -236,5 +225,3 @@ namespace MonoTouchFixtures.CoreMedia {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -8,7 +8,6 @@
 //
 
 using System;
-#if XAMCORE_2_0
 using CoreGraphics;
 using CoreText;
 using Foundation;
@@ -17,29 +16,13 @@ using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreText {
 	
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class A_FontTest {
+	public class FontTest {
 
 		[Test]
 		public void CTFontCreateWithNameAndOptions ()
@@ -106,6 +89,30 @@ namespace MonoTouchFixtures.CoreText {
 				Assert.True (ctfont.GetGlyphsForCharacters ("\ud83d\ude00".ToCharArray (), gid), "GetGlyphsForCharacters");
 				Assert.That (gid [0], Is.Not.EqualTo (0), "0");
 				Assert.That (gid [1], Is.EqualTo (0), "1");
+			}
+		}
+
+		[Test]
+		public void CTFontCreateForString ()
+		{
+			TestRuntime.AssertXcodeVersion (5, 0);
+
+			using (var f1 = new CTFont ("HoeflerText-Regular", 10, CTFontOptions.Default))
+			using (var f2 = f1.ForString ("xamarin", new NSRange (0, 3))) {
+				Assert.That (f2.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
+			}
+		}
+
+		[Test]
+		public void CTFontCreateForStringWithLanguage ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			using (var f1 = new CTFont ("HoeflerText-Regular", 10, CTFontOptions.Default)) {
+				using (var f2 = f1.ForString ("xamarin", new NSRange (0, 3), null))
+					Assert.That (f2.Handle, Is.Not.EqualTo (IntPtr.Zero), "f2");
+				using (var f3 = f1.ForString ("xamarin", new NSRange (0, 3), "FR"))
+					Assert.That (f3.Handle, Is.Not.EqualTo (IntPtr.Zero), "f3");
 			}
 		}
 	}

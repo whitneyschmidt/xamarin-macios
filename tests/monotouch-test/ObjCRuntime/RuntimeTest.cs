@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-#if XAMCORE_2_0
+using CoreGraphics;
 using Foundation;
 using ObjCRuntime;
 #if !__WATCHOS__
@@ -15,24 +15,9 @@ using SpriteKit;
 #if !MONOMAC
 using UIKit;
 #endif
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.SpriteKit;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using MonoTests.System.Net.Http;
 
 namespace MonoTouchFixtures.ObjCRuntime {
 
@@ -125,8 +110,8 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
 
 			IntPtr class_ptr = Class.GetHandle ("SKPhysicsBody");
-			SizeF size = new SizeF (3, 2);
-			using (var body = Runtime.GetNSObject<SKPhysicsBody> (Messaging.IntPtr_objc_msgSend_SizeF (class_ptr, Selector.GetHandle ("bodyWithRectangleOfSize:"), size))) {
+			var size = new CGSize (3, 2);
+			using (var body = Runtime.GetNSObject<SKPhysicsBody> (Messaging.IntPtr_objc_msgSend_CGSize (class_ptr, Selector.GetHandle ("bodyWithRectangleOfSize:"), size))) {
 				// This would normally return a PKPhysicsBody which is not a subclass but answers the same selectors
 				// as a SKPhysicsBody. That's an issue since we can't register PKPhysicsBody (Apple won't like it since
 				// it's a private type) and the non-generic version of GetNSObject (and bindings) would throw an 
@@ -144,7 +129,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
 
 			NSUrlSession session = NSUrlSession.SharedSession;
-			using (var request = new NSUrlRequest (new NSUrl ("http://www.example.com"))) {
+			using (var request = new NSUrlRequest (new NSUrl (NetworkResources.MicrosoftUrl))) {
 				// In iOS 8 the native CreateDownloadTask function returns an instance of a
 				// __NSCFLocalDownloadTask, which does not derive from 
 				// NSUrlSessionDownloadTask (which is the documented/expected return type from
@@ -699,5 +684,24 @@ Additional information:
 			}
 #endif
 		} 
+
+		[Test]
+		public void GetINativeObject_ForcedType ()
+		{
+			using (var str = new NSString ("hello world")) {
+				NSDate date;
+
+				Assert.Throws<InvalidCastException> (() => Runtime.GetINativeObject<NSDate> (str.Handle, false), "EX1"); //
+				Assert.Throws<InvalidCastException> (() => Runtime.GetINativeObject<NSDate> (str.Handle, false, false), "EX2"); //
+
+				// Making a string quack like a date.
+				// This is a big hack, but hopefully it works well enough for this particular test case.
+				// Just don't inspect the date variable in a debugger (it will most likely crash the app).
+				date = Runtime.GetINativeObject<NSDate> (str.Handle, true, false);
+				Assert.AreEqual (date.Handle, str.Handle, "Same native pointer");
+				date.Dispose ();
+				date = null;
+			}
+		}
 	}
 }

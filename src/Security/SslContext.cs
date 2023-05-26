@@ -19,6 +19,10 @@ using Foundation;
 using ObjCRuntime;
 
 namespace Security {
+	[Deprecated (PlatformName.MacOSX, 10,15, message: "Use 'Network.framework' instead.")]
+	[Deprecated (PlatformName.iOS, 13,0, message: "Use 'Network.framework' instead.")]
+	[Deprecated (PlatformName.TvOS, 13,0, message: "Use 'Network.framework' instead.")]
+	[Deprecated (PlatformName.WatchOS, 6,0, message: "Use 'Network.framework' instead.")]
 	public class SslContext : INativeObject, IDisposable {
 
 		SslConnection connection;
@@ -335,7 +339,7 @@ namespace Security {
 
 			var array = ciphers.ToArray ();
 			fixed (SslCipherSuite *p = array)
-			result = SSLSetEnabledCiphers (Handle, p, ciphers.Count ());
+			result = SSLSetEnabledCiphers (Handle, p, array.Length);
 			return result;
 		}
 
@@ -539,7 +543,7 @@ namespace Security {
 		[Obsolete ("'SetSessionStrengthPolicy' is not available anymore.")]
 		public SslStatus SetSessionStrengthPolicy (SslSessionStrengthPolicy policyStrength)
 		{
-			Console.WriteLine ("SetSessionStrengthPolicy is not available anymore.");
+			Runtime.NSLog ("SetSessionStrengthPolicy is not available anymore.");
 			return SslStatus.Success;
 		}
 #endif

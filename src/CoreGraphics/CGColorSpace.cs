@@ -68,10 +68,7 @@ namespace CoreGraphics {
 
 #if !XAMCORE_3_0
 		[Obsolete ("Use a real 'null' value instead of this managed wrapper over a null native instance.")]
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CGColorSpace Null = new CGColorSpace (IntPtr.Zero);
+		public readonly static CGColorSpace Null = new CGColorSpace (IntPtr.Zero);
 #endif
 
 		// Invoked by the marshallers, we need to take a ref
@@ -361,13 +358,11 @@ namespace CoreGraphics {
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static void CGColorSpaceGetColorTable (/* CGColorSpaceRef */ IntPtr space, /* uint8_t* */ byte[] table);
 		
-		static byte[] Empty = new byte [0];
-		
 		public byte[] GetColorTable ()
 		{
 			nint n = CGColorSpaceGetColorTableCount (handle);
 			if (n == 0)
-				return Empty;
+				return Array.Empty<byte> ();
 			
 			byte[] table = new byte [n * GetBaseColorSpace ().Components];
 			CGColorSpaceGetColorTable (handle, table);
@@ -532,7 +527,27 @@ namespace CoreGraphics {
 				return null;
 			return new CFPropertyList (x, owns: true);
 		}
-		
+
+		[Mac (10,15)][iOS(13,0)]
+		[TV (13,0)][Watch (6,0)]
+		[Deprecated (PlatformName.MacOSX, 10,15,4)]
+		[Deprecated (PlatformName.iOS, 13,4)]
+		[Deprecated (PlatformName.TvOS, 13,4)]
+		[Deprecated (PlatformName.WatchOS, 6,2)]
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		static extern bool CGColorSpaceIsHDR (/* CGColorSpaceRef */ IntPtr space);
+
+		[Mac (10,15)][iOS(13,0)]
+		[TV (13,0)][Watch (6,0)]
+		[Deprecated (PlatformName.MacOSX, 10,15,4)]
+		[Deprecated (PlatformName.iOS, 13,4)]
+		[Deprecated (PlatformName.TvOS, 13,4)]
+		[Deprecated (PlatformName.WatchOS, 6,2)]
+		public bool IsHdr {
+			get {
+				return CGColorSpaceIsHDR (handle);
+			}
+		}
 #endif // !COREBUILD
 	}
 }

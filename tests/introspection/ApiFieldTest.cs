@@ -26,28 +26,14 @@ using System.Reflection;
 
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace Introspection {
 
 	[Preserve (AllMembers = true)]
 	public abstract class ApiFieldTest : ApiBaseTest {
-#if XAMCORE_2_0
 		const string NSStringType = "Foundation.NSString";
-#elif MONOMAC
-		const string NSStringType = "MonoMac.Foundation.NSString";
-#else
-		const string NSStringType = "MonoTouch.Foundation.NSString";
-#endif
 
 		/// <summary>
 		/// Override if you want to skip testing the specified type.
@@ -201,6 +187,9 @@ namespace Introspection {
 			int n = 0;
 			foreach (var p in AllProperties ()) {
 				if (p.PropertyType.FullName != NSStringType)
+					continue;
+
+				if (p.GetCustomAttribute<ObsoleteAttribute> () != null)
 					continue;
 
 				string name;

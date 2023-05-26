@@ -1,5 +1,5 @@
 TOP=.
-SUBDIRS=builds runtime fsharp src msbuild tools
+SUBDIRS=builds runtime fsharp src msbuild tools dotnet
 include $(TOP)/Make.config
 include $(TOP)/mk/versions.mk
 
@@ -8,7 +8,7 @@ include $(TOP)/mk/versions.mk
 #
 
 all-local:: check-system
-install-local:: check-system
+install-local::
 
 .PHONY: world
 world: check-system
@@ -30,7 +30,14 @@ check-system:
 		exit 1; \
 	fi
 	@./system-dependencies.sh
-	@echo "Building Xamarin.iOS $(IOS_PACKAGE_VERSION) and Xamarin.Mac $(MAC_PACKAGE_VERSION)"
+	@echo "Building the packages:"
+	@echo "    Xamarin.iOS $(IOS_PACKAGE_VERSION)"
+	@echo "    Xamarin.Mac $(MAC_PACKAGE_VERSION)"
+	@echo "and the NuGets:"
+	@echo "    Xamarin.iOS $(IOS_NUGET_VERSION_FULL)"
+	@echo "    Xamarin.tvOS $(TVOS_NUGET_VERSION_FULL)"
+	@echo "    Xamarin.watchOS $(WATCHOS_NUGET_VERSION_FULL)"
+	@echo "    Xamarin.macOS $(MACOS_NUGET_VERSION_FULL)"
 
 check-permissions:
 ifdef INCLUDE_MAC
@@ -41,6 +48,10 @@ ifdef INCLUDE_IOS
 	@UNREADABLE=`find $(IOS_DESTDIR) ! -perm -0644`; if ! test -z "$$UNREADABLE"; then echo "There are files with invalid permissions (all installed files at least be readable by everybody, and writable by owner: 0644): "; find $(IOS_DESTDIR) ! -perm -0644 | xargs ls -la; exit 1; fi
 	@echo Validated file permissions for Xamarin.iOS.
 endif
+
+all-local:: global.json
+global.json: Make.config Makefile
+	$(Q) printf "{\n\t\"sdk\": {\n\t\t\"version\": \"$(DOTNET_VERSION)\"\n\t}\n}\n" > $@
 
 install-hook::
 	@$(MAKE) check-permissions
@@ -123,7 +134,8 @@ git-clean-all:
 	@echo "$(COLOR_RED)You have 5 seconds to cancel (Ctrl-C) if you wish.$(COLOR_CLEAR)"
 	@sleep 5
 	@echo "Cleaning xamarin-macios..."
-	@git clean -xffdq
+	@git clean -xffdq -e external/mono
+	@test -d external/mono && echo "Cleaning mono..." && cd external/mono && git clean -xffdq && git submodule foreach -q --recursive 'git clean -xffdq && git reset --hard -q' || true
 	@git submodule foreach -q --recursive 'git clean -xffdq && git reset --hard -q'
 	@for dir in $(DEPENDENCY_DIRECTORIES); do if test -d $(CURDIR)/$$dir; then echo "Cleaning $$dir" && cd $(CURDIR)/$$dir && git clean -xffdq && git reset --hard -q && git submodule foreach -q --recursive 'git clean -xffdq'; else echo "Skipped  $$dir (does not exist)"; fi; done
 ifdef ENABLE_XAMARIN

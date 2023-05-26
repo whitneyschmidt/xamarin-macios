@@ -4,19 +4,12 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
 #if !MONOMAC
 using UIKit;
 #endif
 using Bindings.Test;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 
 using NUnit.Framework;
 
@@ -36,7 +29,11 @@ namespace MonoTouchFixtures.ObjCRuntime {
 		MarshalObjectiveCExceptionMode defaultObjectiveCExceptionMode = MarshalObjectiveCExceptionMode.ThrowManagedException;
 		MarshalManagedExceptionMode defaultManagedExceptionMode = MarshalManagedExceptionMode.Default;
 #else
+#if __MACOS__ && DEBUG
+		MarshalObjectiveCExceptionMode defaultObjectiveCExceptionMode = MarshalObjectiveCExceptionMode.ThrowManagedException;
+#else
 		MarshalObjectiveCExceptionMode defaultObjectiveCExceptionMode = MarshalObjectiveCExceptionMode.UnwindManagedCode;
+#endif
 		MarshalManagedExceptionMode defaultManagedExceptionMode = MarshalManagedExceptionMode.Default;
 #endif
 

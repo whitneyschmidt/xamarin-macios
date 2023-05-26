@@ -28,6 +28,7 @@
 using System;
 using System.Runtime.InteropServices;
 using CoreFoundation;
+using Foundation;
 using ObjCRuntime;
 
 namespace CoreVideo {
@@ -145,11 +146,7 @@ namespace CoreVideo {
 
 	[Flags]
 	[Watch (4,0)]
-#if XAMCORE_2_0
 	public enum CVTimeStampFlags : ulong {
-#else
-	public enum CVTimeStampFlags {
-#endif
 		VideoTimeValid              = (1 << 0),
 		HostTimeValid               = (1 << 1),
 		SMPTETimeValid              = (1 << 2),
@@ -195,5 +192,15 @@ namespace CoreVideo {
 	[iOS (9,0)][Mac (10,11)]
 	public enum CVPixelBufferPoolFlushFlags : ulong {
 		FlushExcessBuffers = 1,
+	} 
+
+#if !WATCH
+	[TV (13,0), Mac (10,15), iOS (13,0)]
+	public enum CVImageBufferAlphaChannelMode {
+		[Field ("kCVImageBufferAlphaChannelMode_StraightAlpha")]
+		Straight,
+		[Field ("kCVImageBufferAlphaChannelMode_PremultipliedAlpha")]
+		Premultiplied, 
 	}
+#endif
 }

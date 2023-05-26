@@ -11,15 +11,9 @@
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
 using HealthKit;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.HealthKit;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.HealthKit {
@@ -46,6 +40,11 @@ namespace MonoTouchFixtures.HealthKit {
 				case HKCategoryTypeIdentifier.LowHeartRateEvent:
 				case HKCategoryTypeIdentifier.IrregularHeartRhythmEvent:
 					if (!TestRuntime.CheckXcodeVersion (10, 2))
+						continue;
+					break;
+				case HKCategoryTypeIdentifier.AudioExposureEvent:
+				case HKCategoryTypeIdentifier.ToothbrushingEvent:
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
 						continue;
 					break;
 				default:

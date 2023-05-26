@@ -1,11 +1,7 @@
 ﻿using System;
-#if XAMCORE_2_0
 #if !__WATCHOS__
 using ModelIO;
 using MetalPerformanceShaders;
-#endif
-#else
-using MonoTouch.ModelIO;
 #endif
 using OpenTK;
 using MatrixFloat2x2 = global::OpenTK.NMatrix2;
@@ -178,12 +174,52 @@ public static class Asserts
 		Assert.AreEqual (expected.W, actual.W, message + " (W)");
 	}
 
+	public static void AreEqual (Quaternion [] expected, Quaternion [] actual, string message)
+	{
+		if (expected == null) {
+			if (actual == null)
+				return;
+			Assert.Fail ($"Expected null, got {actual}. {message}");
+		} else if (actual == null) {
+			Assert.Fail ($"Expected {expected}, got null. {message}");
+		}
+
+		Assert.AreEqual (expected.Length, actual.Length, message + " array lengths");
+		for (var i = 0; i < expected.Length; i++) {
+			AreEqual (expected [i], actual [i], message + $" [{i}]");
+		}
+	}
+
 	public static void AreEqual (Quaterniond expected, Quaterniond actual, string message)
 	{
+		if (expected == null) {
+			if (actual == null)
+				return;
+			Assert.Fail ($"Expected null, got {actual}. {message}");
+		} else if (actual == null) {
+			Assert.Fail ($"Expected {expected}, got null. {message}");
+		}
+
 		Assert.AreEqual (expected.X, actual.X, message + " (X)");
 		Assert.AreEqual (expected.Y, actual.Y, message + " (Y)");
 		Assert.AreEqual (expected.Z, actual.Z, message + " (Z)");
 		Assert.AreEqual (expected.W, actual.W, message + " (W)");
+	}
+
+	public static void AreEqual (Quaterniond expected, Quaterniond actual, double delta, string message)
+	{
+		Assert.AreEqual (expected.X, actual.X, delta, message + " (X)");
+		Assert.AreEqual (expected.Y, actual.Y, delta, message + " (Y)");
+		Assert.AreEqual (expected.Z, actual.Z, delta, message + " (Z)");
+		Assert.AreEqual (expected.W, actual.W, delta, message + " (W)");
+	}
+
+	public static void AreEqual (Quaterniond [] expected, Quaterniond [] actual, string message)
+	{
+		Assert.AreEqual (expected.Length, actual.Length, message + " array lengths");
+		for (var i = 0; i < expected.Length; i++) {
+			AreEqual (expected [i], actual [i], message + $" [{i}]");
+		}
 	}
 
 #if !__WATCHOS__

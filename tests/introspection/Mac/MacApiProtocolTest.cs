@@ -9,14 +9,9 @@
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
 using AppKit;
 using CoreImage;
-#else
-using MonoMac.AppKit;
-using MonoMac.CoreImage;
-#endif
 
 using NUnit.Framework;
 using Xamarin.Tests;
@@ -74,17 +69,22 @@ namespace Introspection {
 				case "NSTextBlock":
 				case "NSTextTable":
 				case "NSTextTableBlock":
+				// Xcode 11 (running on macOS 10.15)
+				case "LAContext": // Conformance not in headers
+				case "ICHandle": // Conformance not in headers
+				case "ICNotification": // Conformance not in headers
+				case "ICNotificationManagerConfiguration": // Conformance not in headers
+				case "MKPolygon": // Conformance not in headers
+				case "MLPredictionOptions": // Conformance not in headers
+				case "NSUrlSessionTaskMetrics": // Conformance not in headers
+				case "NSUrlSessionTaskTransactionMetrics": // Conformance not in headers
+				case "NSFileProviderDomain": // Conformance not in headers
+				case "FPUIActionExtensionContext": // Conformance not in headers
 					return true;
-#if !UNIFIED
-				// existing classic/old binary is not updated
-				case "NSAppearance":
-				case "NSBezierPath":
-				case "NSFileWrapper":
-				case "NSGradient":
-				case "NSSound":
-				case "NSShadow":
+				// macOS 10.15.2
+				case "NSPrintInfo": // Conformance not in headers
+				case "NSPrinter": // Conformance not in headers
 					return true;
-#endif
 				default:
 					// CIFilter started implementing NSSecureCoding in 10.11
 					if (!Mac.CheckSystemVersion (10, 11) && (type == typeof(CIFilter) || type.IsSubclassOf (typeof(CIFilter))))
@@ -106,6 +106,10 @@ namespace Introspection {
 				case "ACAccount": // Not declared in header file
 				case "NEFlowMetaData": // Not declared in header file
 				case "ACAccountCredential": // Not declared in header file
+				// Xcode 11 (running on macOS 10.15)
+				case "NSCollectionViewUpdateItem": // Not declared in header file
+				case "MLPredictionOptions": // Not declared in header file
+				case "FPUIActionExtensionContext": // Conformance not in headers
 					return true;
 				}
 				break;
@@ -155,6 +159,17 @@ namespace Introspection {
 				case "NSPersistentHistoryToken": // Conformance not in headers
 				// Xcode 10 (running on macOS 10.14)
 				case "NSTextAlternatives":
+				// Xcode 11 (running on macOS 10.15)
+				case "ICHandle": // Conformance not in headers
+				case "ICNotification": // Conformance not in headers
+				case "ICNotificationManagerConfiguration": // Conformance not in headers
+				case "LAContext": // Conformance not in headers
+				case "MKPolygon": // Conformance not in headers
+				case "MLPredictionOptions": // Conformance not in headers
+				case "NSUrlSessionTaskMetrics": // Conformance not in headers
+				case "NSUrlSessionTaskTransactionMetrics": // Conformance not in headers
+				case "NSFileProviderDomain": // Conformance not in headers
+				case "FPUIActionExtensionContext": // Conformance not in headers
 					return true;
 				}
 				break;

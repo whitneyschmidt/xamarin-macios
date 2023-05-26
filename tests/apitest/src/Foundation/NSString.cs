@@ -1,20 +1,10 @@
 using System;
 using NUnit.Framework;
 
-#if !XAMCORE_2_0
-using MonoMac.AppKit;
-using MonoMac.ObjCRuntime;
-using MonoMac.Foundation;
-using nuint = System.UInt32;
-using nint = System.Int32;
-using CGRect = System.Drawing.RectangleF;
-using CGSize = System.Drawing.SizeF;
-#else
 using AppKit;
 using ObjCRuntime;
 using Foundation;
 using CoreGraphics;
-#endif
 
 namespace Xamarin.Mac.Tests
 {
@@ -53,6 +43,23 @@ namespace Xamarin.Mac.Tests
 			CGRect rect = input.BoundingRectWithSize (new CGSize (20, 30), NSStringDrawingOptions.UsesLineFragmentOrigin | NSStringDrawingOptions.UsesFontLeading, new NSDictionary ());
 			Assert.IsTrue (rect.Width > 0);
 			Assert.IsTrue (rect.Height > 0);
+		}
+
+		[Test]
+		public void NSString_CompareTo ()
+		{
+			using (var a = new NSString ("a"))
+			using (var b = new NSString ("b"))
+			using (var c = new NSString ("c"))
+			{
+				var tests = new NSString[] { c, a, b };
+
+				Array.Sort (tests);
+
+				Assert.AreSame (a, tests[0], "0");
+				Assert.AreSame (b, tests[1], "1");
+				Assert.AreSame (c, tests[2], "2");
+			}
 		}
 	}
 

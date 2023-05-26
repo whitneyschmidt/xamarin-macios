@@ -52,13 +52,13 @@ Copyright (C) 2015-2016 Xamarin. All rights reserved.
 		</ItemGroup>
 	</Target>
 
-	<Target Name="_ResolveNativeWatchApp" DependsOnTargets="_DetectSdkLocations;_GenerateBundleName">
+	<Target Name="_ResolveNativeWatchApp" DependsOnTargets="_DetectSdkLocations;_GenerateBundleName;_ComputeTargetFrameworkMoniker">
 		<ResolveNativeWatchApp
 			Condition="'$(IsMacEnabled)' == 'true'"
 			SessionId="$(BuildSessionId)"
-			SdkVersion="$(MtouchSdkVersion)"
+			SdkVersion="$(_SdkVersion)"
 			SdkIsSimulator="$(_SdkIsSimulator)"
-			TargetFrameworkIdentifier="$(TargetFrameworkIdentifier)"
+			TargetFrameworkMoniker="$(_ComputedTargetFrameworkMoniker)"
 			>
 			<Output TaskParameter="NativeWatchApp" PropertyName="_NativeWatchApp" />
 		</ResolveNativeWatchApp>

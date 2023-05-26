@@ -33,7 +33,6 @@ using AUViewControllerBase = UIKit.UIViewController;
 #endif
 
 namespace AudioUnit {
-#if XAMCORE_2_0 || !MONOMAC
 	delegate AudioUnitStatus AUInternalRenderBlock (ref AudioUnitRenderActionFlags actionFlags, ref AudioTimeStamp timestamp, uint frameCount, nint outputBusNumber, AudioBuffers outputData, AURenderEventEnumerator realtimeEventListHead, [BlockCallback][NullAllowed]AURenderPullInputBlock pullInputBlock);
 	delegate AudioUnitStatus AURenderBlock (ref AudioUnitRenderActionFlags actionFlags, ref AudioTimeStamp timestamp, uint frameCount, nint outputBusNumber, AudioBuffers outputData, [BlockCallback][NullAllowed] AURenderPullInputBlock pullInputBlock);
 
@@ -69,12 +68,11 @@ namespace AudioUnit {
 	delegate void AUMidiCIProfileChangedCallback (byte cable, byte channel, MidiCIProfile profile, bool enabled);
 #endif
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
 	interface AUAudioUnit
 	{
-#if XAMCORE_2_0 // AudioComponentDescription went under large changes between Classic and Unified. Since this is a new API, no reason to pollute it with the Classic hacks
 		[Static]
 		[Export ("registerSubclass:asComponentDescription:name:version:")] // AUAudioUnitImplementation
 		void RegisterSubclass (Class cls, AudioComponentDescription componentDescription, string name, uint version);
@@ -93,7 +91,6 @@ namespace AudioUnit {
 
 		[Export ("componentDescription")]
 		AudioComponentDescription ComponentDescription { get; }
-#endif
 
 		[Export ("renderBlock")]
 		AURenderBlock RenderBlock { get; }
@@ -173,7 +170,13 @@ namespace AudioUnit {
 		uint MaximumFramesToRender { get; set; }
 
 		[NullAllowed, Export ("parameterTree")]
-		AUParameterTree ParameterTree { get; [NotImplemented] set;}
+		
+		AUParameterTree ParameterTree {
+			get; 
+			[Introduced (PlatformName.UIKitForMac, 13,0)]
+			[Watch (6, 0), TV (13, 0), Mac (10, 15), iOS (13, 0)]
+			set;
+		}
 
 		[Export ("parametersForOverviewWithCount:")]
 		NSNumber[] GetParametersForOverview (nint count);
@@ -225,11 +228,11 @@ namespace AudioUnit {
 		[NullAllowed, Export ("contextName")]
 		string ContextName { get; set; }
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true), TV (10,0), Watch (4, 0)]
+		[iOS (10,0), Mac (10,12), TV (10,0), Watch (4, 0)]
 		[Export ("supportsMPE")]
 		bool SupportsMpe { get; }
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true), TV (10,0)]
+		[iOS (10,0), Mac (10,12), TV (10,0)]
 		[Export ("channelMap"), NullAllowed]
 		NSNumber [] ChannelMap { get; set; }
 
@@ -259,28 +262,59 @@ namespace AudioUnit {
 
 #if IOS || MONOMAC
 
-		[Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Mac (10,14), iOS (12,0)]
 		[Export ("profileStateForCable:channel:")]
 		MidiCIProfileState GetProfileState (byte cable, byte channel);
 
-		[Mac (10,14, onlyOn64: true), iOS (12, 0)]
+		[Mac (10,14), iOS (12, 0)]
 		[NullAllowed, Export ("profileChangedBlock", ArgumentSemantic.Assign)]
 		AUMidiCIProfileChangedCallback ProfileChangedCallback { get; set; }
 
-		[Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Mac (10,14), iOS (12,0)]
 		[Export ("disableProfile:cable:onChannel:error:")]
 		bool Disable (MidiCIProfile profile, byte cable, byte channel, [NullAllowed] out NSError outError);
 
-		[Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Mac (10,14), iOS (12,0)]
 		[Export ("enableProfile:cable:onChannel:error:")]
 		bool Enable (MidiCIProfile profile, byte cable, byte channel, [NullAllowed] out NSError outError);
 
 #endif
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[Watch (6, 0), TV (13, 0), Mac (10, 15), iOS (13, 0)]
+		[Export ("userPresets", ArgumentSemantic.Copy)]
+		AUAudioUnitPreset[] UserPresets { get; }
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+		[Export ("saveUserPreset:error:")]
+		bool SaveUserPreset (AUAudioUnitPreset userPreset, [NullAllowed] out NSError outError);
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+		[Export ("deleteUserPreset:error:")]
+		bool DeleteUserPreset (AUAudioUnitPreset userPreset, [NullAllowed] out NSError outError);
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+		[Export ("presetStateFor:error:")]
+		[return: NullAllowed]
+		NSDictionary<NSString, NSObject> GetPresetState (AUAudioUnitPreset userPreset, [NullAllowed] out NSError outError);
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[Watch (6, 0), TV (13, 0), Mac (10, 15), iOS (13, 0)]
+		[Export ("supportsUserPresets")]
+		bool SupportsUserPresets { get; }
+
+		[Introduced (PlatformName.UIKitForMac, 13,0)]
+		[NoWatch, NoTV, NoiOS, Mac (10, 15)]
+		[Export ("isLoadedInProcess")]
+		bool IsLoadedInProcess { get; }
 	}
 
 	// kept separate from AUAudioUnit, quote:
 	// These methods will fail if the audio unit is not an input/output audio unit.
-	[iOS (9,0), Mac(10,11, onlyOn64: true)]
+	[iOS (9,0), Mac(10,11)]
 	[Category]
 	[BaseType (typeof (AUAudioUnit))]
 	interface AUAudioUnit_AUAudioInputOutputUnit {
@@ -311,6 +345,7 @@ namespace AudioUnit {
 		[Export ("setOutputEnabled:")]
 		bool SetOutputEnabled (bool enabled);
 		
+		[return: NullAllowed]
 		[Export ("inputHandler", ArgumentSemantic.Copy)]
 		AUInputHandler GetInputHandler ();
 
@@ -323,6 +358,7 @@ namespace AudioUnit {
 		[Export ("stopHardware")]
 		void StopHardware ();
 
+		[return: NullAllowed]
 		[Export ("outputProvider", ArgumentSemantic.Copy)]
 		AURenderPullInputBlock GetOutputProvider ();
 
@@ -343,7 +379,7 @@ namespace AudioUnit {
 		bool IsRunning ();
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(NSObject))]
 	interface AUAudioUnitBus
 	{
@@ -389,7 +425,7 @@ namespace AudioUnit {
 		bool ShouldAllocateBuffer { get; set; }
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
 	interface AUAudioUnitBusArray : INSFastEnumeration
@@ -433,7 +469,7 @@ namespace AudioUnit {
 		void ReplaceBusses (AUAudioUnitBus[] busArray);
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(NSObject))]
 	interface AUAudioUnitPreset : NSSecureCoding
 	{
@@ -444,7 +480,7 @@ namespace AudioUnit {
 		string Name { get; set; }
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(AUParameterNode))]
 	interface AUParameter : NSSecureCoding
 	{
@@ -503,21 +539,21 @@ namespace AudioUnit {
 		[Export ("valueFromString:")]
 		float GetValue (string str);
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true)]
+		[iOS (10,0), Mac (10,12)]
 		[TV (10,0)]
 		[Internal]
 		[Export ("setValue:originator:atHostTime:eventType:")]
 		void SetValue (float value, IntPtr originator, ulong hostTime, AUParameterAutomationEventType eventType);
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true), Watch (4, 0), TV (10, 0)]
+		[iOS (10,0), Mac (10,12), Watch (4, 0), TV (10, 0)]
 		[Wrap ("SetValue (value, originator.ObserverToken, hostTime, eventType)")]
 		void SetValue (float value, AUParameterObserverToken originator, ulong hostTime, AUParameterAutomationEventType eventType);
 	}
 
-	[iOS (10,0), Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0), Mac (10,12)]
 	delegate void AUParameterAutomationObserver (ulong address, float value);
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(NSObject))]
 	interface AUParameterNode
 	{
@@ -575,19 +611,19 @@ namespace AudioUnit {
 		[Export ("implementorDisplayNameWithLengthCallback", ArgumentSemantic.Copy)]
 		AUImplementorDisplayNameWithLengthCallback ImplementorDisplayNameWithLengthCallback { get; set; }
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true)]
+		[iOS (10,0), Mac (10,12)]
 		[TV (10,0)]
 		[Internal]
 		[Export ("tokenByAddingParameterAutomationObserver:")]
 		IntPtr _GetToken (AUParameterAutomationObserver observer);
 
-		[iOS (10,0), Mac (10,12, onlyOn64 : true)]
+		[iOS (10,0), Mac (10,12)]
 		[TV (10,0)]
 		[Wrap ("new AUParameterObserverToken (_GetToken (observer))")]
 		AUParameterObserverToken GetToken (AUParameterAutomationObserver observer);
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(AUParameterNode))]
 	interface AUParameterGroup : NSSecureCoding
 	{
@@ -598,7 +634,7 @@ namespace AudioUnit {
 		AUParameter[] AllParameters { get; }
 	}
 
-	[iOS (9,0), Mac(10,11, onlyOn64 : true)]
+	[iOS (9,0), Mac(10,11)]
 	[BaseType (typeof(AUParameterGroup))]
 	interface AUParameterTree : NSSecureCoding
 	{
@@ -632,7 +668,6 @@ namespace AudioUnit {
 		AUParameterTree CreateTree (AUParameterNode[] children);
 	}
 
-#if XAMCORE_2_0
 	[Protocol]
 	interface AUAudioUnitFactory : NSExtensionRequestHandling
 	{
@@ -641,6 +676,4 @@ namespace AudioUnit {
 		[return: NullAllowed]
 		AUAudioUnit CreateAudioUnit (AudioComponentDescription desc, [NullAllowed] out NSError error);
 	}
-#endif
-#endif
 }

@@ -25,7 +25,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if !MONOMAC
+#if !MONOMAC && !WATCH
 
 using System;
 
@@ -35,7 +35,6 @@ using ObjCRuntime;
 
 namespace StoreKit {
 
-	[iOS (6,0)]
 	public partial class StoreProductParameters : DictionaryContainer
 	{
 #if !COREBUILD

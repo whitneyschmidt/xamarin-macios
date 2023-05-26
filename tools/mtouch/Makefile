@@ -29,6 +29,7 @@ UNREFERENCED_SYMBOLS = 							\
 	_xamarin_start_wwan							\
 	_xamarin_timezone_get_data					\
 	_xamarin_timezone_get_names					\
+	_xamarin_timezone_get_local_name			\
 	_xamarin_IntPtr_objc_msgSend_IntPtr			\
 	_xamarin_IntPtr_objc_msgSendSuper_IntPtr	\
 	_xamarin_release_managed_ref				\
@@ -60,7 +61,6 @@ SIMLAUNCHER_FRAMEWORKS =  \
 	-framework CoreText			\
 	-framework ExternalAccessory		\
 	-framework GameKit				\
-	-framework IOKit			\
 	-framework MapKit			\
 	-framework MediaPlayer			\
 	-framework MessageUI			\
@@ -112,8 +112,6 @@ SIMLAUNCHER_FRAMEWORKS =  \
 	-weak_framework Metal				\
 	-weak_framework CoreAudioKit		\
 						\
-	-weak_framework WatchKit		\
-						\
 	-weak_framework ReplayKit					\
 	-weak_framework Contacts					\
 	-weak_framework ContactsUI					\
@@ -146,35 +144,53 @@ SIMLAUNCHER_FRAMEWORKS =  \
 						\
 	-weak_framework AuthenticationServices	\
 	-weak_framework CarPlay					\
+	-weak_framework IdentityLookupUI		\
 	-weak_framework NaturalLanguage			\
 	-weak_framework Network				\
 	-weak_framework IdentityLookupUI		\
+	-weak_framework VisionKit		\
+						\
+	-weak_framework BackgroundTasks 		\
+	-weak_framework CoreHaptics \
+	-weak_framework LinkPresentation 		\
+	-weak_framework MetricKit		\
+	-weak_framework PencilKit			\
+	-weak_framework QuickLookThumbnailing		\
+	-weak_framework SoundAnalysis			\
+	-weak_framework VisionKit			\
+						\
+	-weak_framework AutomaticAssessmentConfiguration	\
+
+# keep the above list of weak_framework
+# 1. grouped by iOS versions;
+# 2. sorted and
+# 3. in sync with the list inside `tools/common/Frameworks.cs`
+# except it is no a mistake that GameController and MediaAccessibility (#13636) are not built into simlauncher
 
 # note: there _was_ no CoreAudioKit.framework or Metal.framework for the simulator (before recent iOS9 betas)
 # note 2: there's no GameKit, in iOS 9 (beta 3 at least), you're supposed to reference GameCenter instead (looks fixed in beta 4)
 # note 3: there's no MetalKit or MetalPerformanceShaders in iOS 9 beta 4 - but other frameworks were added
 # note 4: GameCenter was removed in Xcode 7 beta 5, and GameKit is back.
 # note 5: Metal* seems to be supported as of some Xcode 7 beta (b2 didn't, but the final release does)
-
-# keep the above list of weak_framework in sync with mtouch.cs
-# except it is no a mistake that GameController and MediaAccessibility (#13636) are not built into simlauncher
+# note 6: Xcode 11 beta 1 shipped without WatchKit.
+# note 7: Xcode 11 beta 3 documented that shipping without WatchKit was done on purpose (in the release notes).
 
 define SimlauncherTemplate
 
-simlauncher$(3)-sgen: simlauncher.m $(TOP)/runtime/.libs/ios/libxamarin.a Makefile Xamarin.iOS.registrar.ios.simulator.a
+simlauncher$(3)-sgen: simlauncher.mm $(TOP)/runtime/.libs/iphonesimulator/libxamarin-debug.a Makefile Xamarin.iOS.registrar.ios.simulator.a
 	$(QT_CC) $(SIMULATOR_CC) -DDEBUG -DSIMLAUNCHER $(1) -gdwarf-2 \
-		-L$(TOP)/runtime/.libs/ios \
+		-L$(TOP)/runtime/.libs/iphonesimulator \
 		-I$(TOP)/runtime \
 		$(MONO_IOS_SDK_DESTDIR)/ios-libs/ios-sim/libmonosgen-2.0.a \
 		$(foreach u,$(UNREFERENCED_SYMBOLS),-u $u)  \
-		$(TOP)/runtime/.libs/ios/libapp.a \
+		$(TOP)/runtime/.libs/iphonesimulator/libapp.a \
 		-Wl,-w \
-		-lz -liconv $(TOP)/runtime/.libs/ios/libxamarin-debug.a simlauncher.m $(SIMLAUNCHER_FRAMEWORKS) $(SIMULATOR$(2)_OBJC_CFLAGS) -o $$@
-
+		-lz -liconv $(TOP)/runtime/.libs/iphonesimulator/libxamarin-debug.a simlauncher.mm $(SIMLAUNCHER_FRAMEWORKS) $(SIMULATOR$(2)_OBJC_CFLAGS) -o $$@
+	$(Q) xcrun otool -L $$@ > $$@.frameworks
 endef
 
-$(eval $(call SimlauncherTemplate,-DXAMCORE_2_0 Xamarin.iOS.registrar.ios.simulator.a,86,32))
-$(eval $(call SimlauncherTemplate,-DXAMCORE_2_0 Xamarin.iOS.registrar.ios.simulator.a,64,64))
+$(eval $(call SimlauncherTemplate,Xamarin.iOS.registrar.ios.simulator.a,86,32))
+$(eval $(call SimlauncherTemplate,Xamarin.iOS.registrar.ios.simulator.a,64,64))
 
 #
 # mtouch
@@ -183,11 +199,9 @@ $(eval $(call SimlauncherTemplate,-DXAMCORE_2_0 Xamarin.iOS.registrar.ios.simula
 MTOUCH_CONF=Release
 MTOUCH_DIR=bin/$(MTOUCH_CONF)
 LOCAL_MTOUCH=$(MTOUCH_DIR)/mtouch.exe
+LOCAL_MTOUCH_COMMAND=$(SYSTEM_MONO) --debug $(LOCAL_MTOUCH)
 
 # mtouch.csproj.inc contains the mtouch_dependencies variable used to determine if mtouch needs to be rebuilt or not.
-mtouch.csproj.inc: Makefile ../common/create-makefile-fragment.sh $(TOP)/Make.config
-	$(Q_GEN) ../common/create-makefile-fragment.sh $(CURDIR)/mtouch.csproj
-
 -include mtouch.csproj.inc
 
 $(MTOUCH_DIR)/mtouch.exe: $(mtouch_dependencies)
@@ -196,42 +210,28 @@ $(MTOUCH_DIR)/mtouch.exe: $(mtouch_dependencies)
 #
 # Partial static registrar libraries
 #
+define RunRegistrar
+%.registrar.$(1).$(2).m %.registrar.$(1).$(2).h: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/$(3)bits/%.dll $(LOCAL_MTOUCH)
+	$$(Q_GEN) $$(LOCAL_MTOUCH_COMMAND) --xamarin-framework-directory=$$(IOS_DESTDIR)/$$(MONOTOUCH_PREFIX) $$(MTOUCH_VERBOSITY) --runregistrar:$$(abspath $$(basename $$@).m) --sdkroot $$(XCODE_DEVELOPER_ROOT) --sdk $(4) $$< --registrar:static --target-framework Xamarin.$(5),v1.0 --abi $(2) -r:$(8)/mscorlib.dll
+	$$(Q) touch $$(basename $$@).m $$(basename $$@).h
 
-%.registrar.ios.i386.m     %.registrar.ios.i386.h:     $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/%.dll     $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(IOS_SDK_VERSION)   $< --registrar:static --target-framework Xamarin.iOS,v1.0    --abi i386
-	$(Q) touch $(basename $@).m $(basename $@).h
+%.registrar.$(1).$(2).a: %.registrar.$(1).$(2).m %.registrar.$(1).$(2).h
+	$$(Q_CC) $$(IOS_CC) -DDEBUG -g -gdwarf-2 $(6) -stdlib=libc++ -std=c++14 -x objective-c++ -o $$@ -c $$< -Wall -Wno-unguarded-availability-new -I$(7)
 
-%.registrar.ios.x86_64.m   %.registrar.ios.x86_64.h:   $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/%.dll     $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(IOS_SDK_VERSION)   $< --registrar:static --target-framework Xamarin.iOS,v1.0    --abi x86_64
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.ios.armv7.m   %.registrar.ios.armv7.h:   $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/%.dll     $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(IOS_SDK_VERSION)   $< --registrar:static --target-framework Xamarin.iOS,v1.0    --abi armv7
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.ios.armv7s.m   %.registrar.ios.armv7s.h:   $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/%.dll     $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(IOS_SDK_VERSION)   $< --registrar:static --target-framework Xamarin.iOS,v1.0    --abi armv7s
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.ios.arm64.m   %.registrar.ios.arm64.h:   $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/%.dll     $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(IOS_SDK_VERSION)   $< --registrar:static --target-framework Xamarin.iOS,v1.0    --abi arm64
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.watchos.i386.m %.registrar.watchos.i386.h: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/%.dll $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(WATCH_SDK_VERSION) $< --registrar:static --target-framework Xamarin.WatchOS,1.0 --abi i386
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.watchos.armv7k.m %.registrar.watchos.armv7k.h: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/%.dll $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(WATCH_SDK_VERSION) $< --registrar:static --target-framework Xamarin.WatchOS,1.0 --abi armv7k
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.tvos.x86_64.m    %.registrar.tvos.x86_64.h:    $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/%.dll    $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(TVOS_SDK_VERSION)  $< --registrar:static --target-framework Xamarin.TVOS,1.0    --abi x86_64
-	$(Q) touch $(basename $@).m $(basename $@).h
-
-%.registrar.tvos.arm64.m    %.registrar.tvos.arm64.h:    $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/%.dll    $(LOCAL_MTOUCH)
-	$(Q_GEN) $(SYSTEM_MONO) --debug $(LOCAL_MTOUCH) --xamarin-framework-directory=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX) $(MTOUCH_VERBOSITY) --runregistrar:$(abspath $(basename $@).m) --sdkroot $(XCODE_DEVELOPER_ROOT) --sdk $(TVOS_SDK_VERSION)  $< --registrar:static --target-framework Xamarin.TVOS,1.0    --abi arm64
-	$(Q) touch $(basename $@).m $(basename $@).h
+# make will automatically consider files created in chained implicit rules as temporary files, and delete them afterwards
+# marking those files as .SECONDARY will prevent that deletion.
+.SECONDARY: Xamarin.$(5).registrar.$(1).$(2).m Xamarin.$(5).registrar.$(1).$(2).h Xamarin.$(5).registrar.$(1).$(2).a
+endef
+$(eval $(call RunRegistrar,ios,i386,32,$(IOS_SDK_VERSION),iOS,$(SIMULATOR86_CFLAGS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphonesimulator.sdk/include,$(MONOTOUCH_MONO_PATH)))
+$(eval $(call RunRegistrar,ios,x86_64,64,$(IOS_SDK_VERSION),iOS,$(SIMULATOR64_CFLAGS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphonesimulator.sdk/include,$(MONOTOUCH_MONO_PATH)))
+$(eval $(call RunRegistrar,ios,armv7,32,$(IOS_SDK_VERSION),iOS,$(DEVICE7_CFLAGS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/include,$(MONOTOUCH_MONO_PATH)))
+$(eval $(call RunRegistrar,ios,armv7s,32,$(IOS_SDK_VERSION),iOS,$(DEVICE7S_CFLAGS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/include,$(MONOTOUCH_MONO_PATH)))
+$(eval $(call RunRegistrar,ios,arm64,64,$(IOS_SDK_VERSION),iOS,$(DEVICE64_CFLAGS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/include,$(MONOTOUCH_MONO_PATH)))
+$(eval $(call RunRegistrar,tvos,x86_64,64,$(TVOS_SDK_VERSION),TVOS,$(SIMULATORTV_CFLAGS),$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/include,$(MONOTOUCH_TV_MONO_PATH)))
+$(eval $(call RunRegistrar,tvos,arm64,64,$(TVOS_SDK_VERSION),TVOS,$(DEVICETV_CFLAGS),$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/include,$(MONOTOUCH_TV_MONO_PATH)))
+$(eval $(call RunRegistrar,watchos,i386,32,$(WATCH_SDK_VERSION),WatchOS,$(SIMULATORWATCH_CFLAGS),$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/include,$(MONOTOUCH_WATCH_MONO_PATH)))
+$(eval $(call RunRegistrar,watchos,armv7k,32,$(WATCH_SDK_VERSION),WatchOS,$(DEVICEWATCH_CFLAGS),$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/include,$(MONOTOUCH_WATCH_MONO_PATH)))
+$(eval $(call RunRegistrar,watchos,arm64_32,32,$(WATCH_SDK_VERSION),WatchOS,$(DEVICEWATCH64_32_CFLAGS),$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/include,$(MONOTOUCH_WATCH_MONO_PATH)))
 
 %.registrar.ios.simulator.a:     %.registrar.ios.i386.a %.registrar.ios.x86_64.a
 	$(Q_LIPO) $(DEVICE_BIN_PATH)/lipo -create -output $@ $^
@@ -239,63 +239,35 @@ $(MTOUCH_DIR)/mtouch.exe: $(mtouch_dependencies)
 %.registrar.ios.device.a:        %.registrar.ios.arm64.a %.registrar.ios.armv7.a %.registrar.ios.armv7s.a
 	$(Q_LIPO) $(DEVICE_BIN_PATH)/lipo -create -output $@ $^
 
-# In Xcode 10 beta 1 simd/vector.h won't compile as Objective-C++ (can't find 'cmath'), so include a directory that contains the cmath file.
-# This is filed as rdar://40824697
-REGISTRAR_CFLAGS=-stdlib=libc++
-
-%.registrar.ios.i386.a:   %.registrar.ios.i386.m      %.registrar.ios.i386.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(SIMULATOR86_CFLAGS)    $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphonesimulator.sdk/usr/include
-
-%.registrar.ios.x86_64.a: %.registrar.ios.x86_64.m    %.registrar.ios.x86_64.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(SIMULATOR64_CFLAGS)    $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphonesimulator.sdk/usr/include
-
-%.registrar.ios.armv7.a:   %.registrar.ios.armv7.m      %.registrar.ios.armv7.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(DEVICE7_CFLAGS)        $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/usr/include
-
-%.registrar.ios.armv7s.a:   %.registrar.ios.armv7s.m      %.registrar.ios.armv7s.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(DEVICE7S_CFLAGS)       $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/usr/include
-
-%.registrar.ios.arm64.a:   %.registrar.ios.arm64.m      %.registrar.ios.arm64.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(DEVICE64_CFLAGS)       $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/SDKs/MonoTouch.iphoneos.sdk/usr/include
-
-%.registrar.watchos.i386.a:    %.registrar.watchos.i386.m  %.registrar.watchos.i386.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(SIMULATORWATCH_CFLAGS) $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/usr/include
-
-%.registrar.watchos.armv7k.a:    %.registrar.watchos.armv7k.m  %.registrar.watchos.armv7k.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(DEVICEWATCH_CFLAGS)    $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/usr/include
-
-%.registrar.tvos.x86_64.a:       %.registrar.tvos.x86_64.m     %.registrar.tvos.x86_64.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(SIMULATORTV_CFLAGS)    $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/usr/include
-
-%.registrar.tvos.arm64.a:       %.registrar.tvos.arm64.m     %.registrar.tvos.arm64.h
-	$(Q_CC) $(IOS_CC) -DDEBUG -g -gdwarf-2 $(DEVICETV_CFLAGS)       $(REGISTRAR_CFLAGS) -x objective-c++ -o $@ -c $< -Wall -Wno-unguarded-availability-new -I$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/usr/include
+%.registrar.watchos.device.a:    %.registrar.watchos.armv7k.a %.registrar.watchos.arm64_32.a
+	$(Q_LIPO) $(DEVICE_BIN_PATH)/lipo -create -output $@ $^
 
 TARGETS = \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/mtouch                                          \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mtouch/mtouch.exe                               \
 	$(foreach launcher,$(SIMLAUNCHERS),$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/$(launcher)) \
-	$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/usr/lib/Xamarin.iOS.registrar.a       \
+	$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/lib/Xamarin.iOS.registrar.a                  \
 
 ifdef INCLUDE_DEVICE
-TARGETS += $(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/usr/lib/Xamarin.iOS.registrar.a
+TARGETS += $(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/lib/Xamarin.iOS.registrar.a
 endif
 
 ifdef INCLUDE_WATCH
 TARGETS += \
-	$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/usr/lib/Xamarin.WatchOS.registrar.a \
+	$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/lib/Xamarin.WatchOS.registrar.a \
 
 ifdef INCLUDE_DEVICE
-TARGETS += $(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/usr/lib/Xamarin.WatchOS.registrar.a
+TARGETS += $(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/lib/Xamarin.WatchOS.registrar.a
 endif
 endif
 
 
 ifdef INCLUDE_TVOS
 TARGETS +=	\
-	$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/usr/lib/Xamarin.TVOS.registrar.a       \
+	$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/lib/Xamarin.TVOS.registrar.a       \
 
 ifdef INCLUDE_DEVICE
-TARGETS += $(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/usr/lib/Xamarin.TVOS.registrar.a
+TARGETS += $(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/lib/Xamarin.TVOS.registrar.a
 endif
 endif
 
@@ -305,12 +277,12 @@ TARGET_DIRS = \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib                        \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mtouch                 \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/etc/mono/assemblies/System \
-	$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/usr/lib             \
-	$(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/usr/lib                \
-	$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/usr/lib          \
-	$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/usr/lib                 \
-	$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/usr/lib             \
-	$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/usr/lib                    \
+	$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/lib                 \
+	$(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/lib                    \
+	$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/lib              \
+	$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/lib                     \
+	$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/lib                 \
+	$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/lib                        \
 
 $(TARGET_DIRS):
 	$(Q) mkdir -p $@
@@ -320,9 +292,8 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mtouch/mtouch.exe: $(MTOUCH_DIR)/mtouch.ex
 	$(Q) $(CP) $(dir $<)/*.dll $(dir $@)
 	$(Q) $(CP) $(dir $<)/*.pdb $(dir $@)
 
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/mtouch: mtouch.in | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin
-	$(Q_GEN) sed 's!@MONOTOUCH_PREFIX@!$(abspath $(IOS_TARGETDIR)$(MONOTOUCH_PREFIX))!g' $< > $@
-	$(Q) chmod +x $@
+$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/mtouch: mtouch | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin
+	$(Q) $(CP) $< $@
 
 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/%: % | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin
 	$(Q) $(CP) $< $@
@@ -330,22 +301,22 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/%: % | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/b
 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/%: % | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/usr/lib/%.registrar.a: %.registrar.ios.simulator.a | $(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/usr/lib
+$(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/lib/%.registrar.a: %.registrar.ios.simulator.a | $(IOS_DESTDIR)$(MONOTOUCH_SIMULATOR_SDK)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/usr/lib/%.registrar.a: %.registrar.watchos.i386.a | $(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/usr/lib
+$(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/lib/%.registrar.a: %.registrar.watchos.i386.a | $(IOS_DESTDIR)$(XAMARIN_WATCHSIMULATOR_SDK)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/usr/lib/%.registrar.a: %.registrar.tvos.x86_64.a | $(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/usr/lib
+$(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/lib/%.registrar.a: %.registrar.tvos.x86_64.a | $(IOS_DESTDIR)$(XAMARIN_TVSIMULATOR_SDK)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/usr/lib/%.registrar.a: %.registrar.ios.device.a | $(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/usr/lib
+$(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/lib/%.registrar.a: %.registrar.ios.device.a | $(IOS_DESTDIR)$(MONOTOUCH_DEVICE_SDK)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/usr/lib/%.registrar.a: %.registrar.watchos.armv7k.a | $(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/usr/lib
+$(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/lib/%.registrar.a: %.registrar.watchos.device.a | $(IOS_DESTDIR)$(XAMARIN_WATCHOS_SDK)/lib
 	$(Q) $(CP) $< $@
 
-$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/usr/lib/%.registrar.a: %.registrar.tvos.arm64.a | $(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/usr/lib
+$(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/lib/%.registrar.a: %.registrar.tvos.arm64.a | $(IOS_DESTDIR)$(XAMARIN_TVOS_SDK)/lib
 	$(Q) $(CP) $< $@
 
 ifdef INCLUDE_IOS
@@ -353,7 +324,7 @@ install-local:: $(TARGETS)
 all-local:: $(TARGETS)
 endif
 
-mtouch: \
+install-mtouch: \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/mtouch                                          \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mtouch/mtouch.exe                               \
 
@@ -367,6 +338,4 @@ include ../common/Make.common
 
 # make will automatically consider files created in chained implicit rules as temporary files, and delete them afterwards
 # marking those files as .SECONDARY will prevent that deletion.
-.SECONDARY: $(foreach ext,a h m,Xamarin.iOS.registrar.ios.i386.$(ext) Xamarin.iOS.registrar.ios.x86_64.$(ext))
-.SECONDARY: $(foreach ext,a h m,Xamarin.WatchOS.registrar.watchos.$(ext))
-.SECONDARY: $(foreach ext,a h m,Xamarin.TVOS.registrar.tvos.$(ext))
+.SECONDARY: Xamarin.iOS.registrar.ios.simulator.a Xamarin.iOS.registrar.ios.device.a Xamarin.WatchOS.registrar.watchos.device.a

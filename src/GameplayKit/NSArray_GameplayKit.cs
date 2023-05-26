@@ -7,13 +7,12 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
 using System;
 using Foundation;
 using ObjCRuntime;
 
 namespace GameplayKit {
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	[iOS (10,0), TV (10,0), Mac (10,12)]
 	public static class NSArray_GameplayKit {
 
 		[Export ("shuffledArrayWithRandomSource:")]
@@ -31,4 +30,3 @@ namespace GameplayKit {
 		}
 	}
 }
-#endif

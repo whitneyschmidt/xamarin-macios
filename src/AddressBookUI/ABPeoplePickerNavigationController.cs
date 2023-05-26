@@ -101,67 +101,34 @@ namespace AddressBookUI {
 			peoplePicker.OnSelectPerson2 (e);
 		}
 
-		#if XAMCORE_2_0
 		[Preserve (Conditional = true)]
 		public override bool ShouldContinue (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson)
 		{
-		var e = new ABPeoplePickerSelectPersonEventArgs (selectedPerson);
-		peoplePicker.OnSelectPerson (e);
-		return e.Continue;
-		}
-
-		[Preserve (Conditional = true)]
-		public override bool ShouldContinue (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson, int propertyId, int identifier)
-		{
-		ABPersonProperty property = ABPersonPropertyId.ToPersonProperty (propertyId);
-		int? id = identifier == ABRecord.InvalidPropertyId ? null : (int?) identifier;
-
-		var e = new ABPeoplePickerPerformActionEventArgs (selectedPerson, property, id);
-		peoplePicker.OnPerformAction (e);
-		return e.Continue;
-		}
-
-		[Preserve (Conditional = true)]
-		public override void DidSelectPerson (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson, int propertyId, int identifier)
-		{
-		ABPersonProperty property = ABPersonPropertyId.ToPersonProperty (propertyId);
-		int? id = identifier == ABRecord.InvalidPropertyId ? null : (int?) identifier;
-
-		var e = new ABPeoplePickerPerformAction2EventArgs (selectedPerson, property, id);
-		peoplePicker.OnPerformAction2 (e);
-		}
-		#else
-		[Preserve (Conditional = true)]
-		public override bool ShouldContinue (ABPeoplePickerNavigationController peoplePicker, IntPtr selectedPerson)
-		{
-			var e = new ABPeoplePickerSelectPersonEventArgs (selectedPerson == IntPtr.Zero ? null : new ABPerson (selectedPerson, peoplePicker.AddressBook));
+			var e = new ABPeoplePickerSelectPersonEventArgs (selectedPerson);
 			peoplePicker.OnSelectPerson (e);
 			return e.Continue;
 		}
 
 		[Preserve (Conditional = true)]
-		public override bool ShouldContinue (ABPeoplePickerNavigationController peoplePicker, IntPtr selectedPerson, int propertyId, int identifier)
+		public override bool ShouldContinue (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson, int propertyId, int identifier)
 		{
-			ABPerson person = selectedPerson == IntPtr.Zero ? null : new ABPerson (selectedPerson, peoplePicker.AddressBook);
 			ABPersonProperty property = ABPersonPropertyId.ToPersonProperty (propertyId);
 			int? id = identifier == ABRecord.InvalidPropertyId ? null : (int?) identifier;
 
-			var e = new ABPeoplePickerPerformActionEventArgs (person, property, id);
+			var e = new ABPeoplePickerPerformActionEventArgs (selectedPerson, property, id);
 			peoplePicker.OnPerformAction (e);
 			return e.Continue;
 		}
 
 		[Preserve (Conditional = true)]
-		public override void DidSelectPerson (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson, int propertyId, IntPtr abMultiValueIdentifier)
+		public override void DidSelectPerson (ABPeoplePickerNavigationController peoplePicker, ABPerson selectedPerson, int propertyId, int identifier)
 		{
-			int identifier = abMultiValueIdentifier.ToInt32 ();
 			ABPersonProperty property = ABPersonPropertyId.ToPersonProperty (propertyId);
 			int? id = identifier == ABRecord.InvalidPropertyId ? null : (int?) identifier;
 
 			var e = new ABPeoplePickerPerformAction2EventArgs (selectedPerson, property, id);
 			peoplePicker.OnPerformAction2 (e);
 		}
-		#endif
 
 		[Preserve (Conditional = true)]
 		public override void Cancelled (ABPeoplePickerNavigationController peoplePicker)

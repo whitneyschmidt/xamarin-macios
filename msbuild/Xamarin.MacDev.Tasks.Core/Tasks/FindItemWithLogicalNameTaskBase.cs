@@ -2,14 +2,13 @@ using System;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class FindItemWithLogicalNameTaskBase : Task
+	public abstract class FindItemWithLogicalNameTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string ProjectDir { get; set; }
@@ -40,7 +39,7 @@ namespace Xamarin.MacDev.Tasks
 					var logical = BundleResource.GetLogicalName (ProjectDir, prefixes, item, !string.IsNullOrEmpty(SessionId));
 
 					if (logical == LogicalName) {
-						Log.LogMessage (MessageImportance.Low, "  {0} found at: {1}", LogicalName, item.ItemSpec);
+						Log.LogMessage (MessageImportance.Low, MSBStrings.M0149, LogicalName, item.ItemSpec);
 						Item = item;
 						break;
 					}

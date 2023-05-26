@@ -1,4 +1,3 @@
-#if XAMCORE_2_0
 using System;
 using NUnit.Framework;
 
@@ -12,7 +11,7 @@ namespace Introspection
 	[TestFixture]
 	public class MacApiTypoTest : ApiTypoTest
 	{
-		NSSpellChecker checker = new NSSpellChecker ();
+		NSSpellChecker checker;
 
 		[SetUp]
 		public void SetUp ()
@@ -20,6 +19,7 @@ namespace Introspection
 			var sdk = new Version (Constants.SdkVersion);
 			if (!PlatformHelper.CheckSystemVersion (sdk.Major, sdk.Minor))
 				Assert.Ignore ("Typos only verified using the latest SDK");
+			checker = new NSSpellChecker ();
 		}
 
 		public override string GetTypo (string txt)
@@ -41,4 +41,3 @@ namespace Introspection
 		}
 	}
 }
-#endif

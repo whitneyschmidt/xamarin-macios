@@ -11,15 +11,12 @@ using System;
 using System.IO;
 using System.Resources;
 using System.Globalization;
+using System.Reflection;
+using System.Reflection.Emit;
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace EmbeddedResources {
 
@@ -30,6 +27,13 @@ namespace EmbeddedResources {
 		[Test]
 		public void Embedded ()
 		{
+
+#if __TVOS__
+			if (TestRuntime.CheckExecutingWithInterpreter ())
+				Assert.Ignore ("This test is disabled on TVOS."); // Randomly crashed on tvOS -> https://github.com/xamarin/maccore/issues/1909
+
+#endif
+
 #if MONOMAC
 			var manager = new ResourceManager ("xammac_tests.EmbeddedResources.Welcome", typeof (ResourcesTest).Assembly);
 #else

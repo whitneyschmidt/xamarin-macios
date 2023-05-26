@@ -1,4 +1,3 @@
-#if XAMCORE_2_0 || !MONOMAC
 using System;
 using System.Runtime.InteropServices;
 
@@ -11,7 +10,7 @@ using OpenTK;
 
 namespace MetalPerformanceShaders {
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	[iOS (9,0)][Mac (10, 13)]
 	[Native] // NSUInteger
 	[Flags]	// NS_OPTIONS
 	public enum MPSKernelOptions : ulong {
@@ -30,20 +29,20 @@ namespace MetalPerformanceShaders {
 #endif
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	[iOS (9,0)][Mac (10, 13)]
 	[Native] // NSUInteger
 	public enum MPSImageEdgeMode : ulong {
 		Zero,
 		Clamp = 1,
-		[iOS (12,1), TV (12,1), Mac (10,14,1, onlyOn64: true)]
+		[iOS (12,1), TV (12,1), Mac (10,14,1)]
 		Mirror,
-		[iOS (12,1), TV (12,1), Mac (10,14,1, onlyOn64: true)]
+		[iOS (12,1), TV (12,1), Mac (10,14,1)]
 		MirrorWithEdge,
-		[iOS (12,1), TV (12,1), Mac (10,14,1, onlyOn64: true)]
+		[iOS (12,1), TV (12,1), Mac (10,14,1)]
 		Constant,
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	[iOS (10,0)][TV (10,0)][Mac (10, 13)]
 	[Native]
 	public enum MPSAlphaType : ulong {
 		NonPremultiplied = 0,
@@ -51,7 +50,7 @@ namespace MetalPerformanceShaders {
 		Premultiplied = 2,
 	}
 	 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	[iOS (10,0)][TV (10,0)][Mac (10, 13)]
 	public enum MPSDataType : uint { // uint32_t
 		Invalid = 0,
 
@@ -75,7 +74,7 @@ namespace MetalPerformanceShaders {
 		Unorm8 = NormalizedBit | 8,
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	[iOS (10,0)][TV (10,0)][Mac (10, 13)]
 	[Native]
 	public enum MPSImageFeatureChannelFormat : ulong {
 		Invalid = 0,
@@ -83,12 +82,12 @@ namespace MetalPerformanceShaders {
 		Unorm16 = 2,
 		Float16 = 3,
 		Float32 = 4,
-		//[iOS (12,0), TV (12,0), Mac (10,14, onlyOn64: true)]
+		//[iOS (12,0), TV (12,0), Mac (10,14)]
 		//Count, // must always be last, and because of this it will cause breaking changes.
 	}
 
 	// uses NSInteger
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	public struct MPSOffset {
 		public nint X;
 		public nint Y;
@@ -96,7 +95,7 @@ namespace MetalPerformanceShaders {
 	}
 
 	// really use double, not CGFloat
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	public struct MPSOrigin {
 		public double X;
 		public double Y;
@@ -104,21 +103,21 @@ namespace MetalPerformanceShaders {
 	}
 
 	// really use double, not CGFloat
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	public struct MPSSize {
 		public double Width;
 		public double Height;
 		public double Depth;
 	}
 
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	public struct MPSRegion {
 		public MPSOrigin Origin;
 		public MPSSize Size;
 	}
 
 	// really use double, not CGFloat
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	public struct MPSScaleTransform {
 		public double ScaleX;
 		public double ScaleY;
@@ -126,21 +125,21 @@ namespace MetalPerformanceShaders {
 		public double TranslateY;
 	}
 
-	[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+	[iOS (11,3), TV (11,3), Mac (10,13,4)]
 	public struct MPSImageCoordinate {
 		public nuint X;
 		public nuint Y;
 		public nuint Channel;
 	}
 
-	[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+	[iOS (11,3), TV (11,3), Mac (10,13,4)]
 	public struct MPSImageRegion {
 		public MPSImageCoordinate Offset;
 		public MPSImageCoordinate Size;
 	}
 
 	// MPSImageHistogram.h
-	[Mac (10, 13, onlyOn64: true)]
+	[Mac (10, 13)]
 	[StructLayout (LayoutKind.Explicit)]
 	public struct MPSImageHistogramInfo {
 		[FieldOffset (0)]
@@ -157,7 +156,7 @@ namespace MetalPerformanceShaders {
 		public Vector4 MaxPixelValue;
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	public enum MPSMatrixDecompositionStatus {
 		Success = 0,
 		Failure = -1,
@@ -170,14 +169,14 @@ namespace MetalPerformanceShaders {
 	public delegate NSObject MPSCopyAllocator (MPSKernel filter, NSObject commandBuffer, NSObject sourceTexture);
 	// https://trello.com/c/GqtNId1C/517-generator-our-block-delegates-needs-to-use-wrapper-for-protocols
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSRnnSequenceDirection : ulong {
 		Forward = 0,
 		Backward,
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSRnnBidirectionalCombineMode : ulong {
 		None = 0,
@@ -185,7 +184,7 @@ namespace MetalPerformanceShaders {
 		Concatenate,
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	public enum MPSCnnNeuronType {
 		None = 0,
 		ReLU,
@@ -199,11 +198,11 @@ namespace MetalPerformanceShaders {
 		Elu,
 		PReLU,
 		ReLun,
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[TV (11,3), Mac (10,13,4), iOS (11,3)]
 		Power,
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[TV (11,3), Mac (10,13,4), iOS (11,3)]
 		Exponential,
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[TV (11,3), Mac (10,13,4), iOS (11,3)]
 		Logarithm,
 #if !XAMCORE_4_0
 		[Obsolete ("The value changes when newer versions are released. It will be removed in the future.")]
@@ -211,14 +210,14 @@ namespace MetalPerformanceShaders {
 #endif
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSCnnBinaryConvolutionFlags : ulong {
 		None = 0,
 		UseBetaScaling = 1 << 0,
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSCnnBinaryConvolutionType : ulong {
 		BinaryWeights = 0,
@@ -226,7 +225,7 @@ namespace MetalPerformanceShaders {
 		And,
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSNNPaddingMethod : ulong {
 		AlignCentered = 0,
@@ -247,14 +246,14 @@ namespace MetalPerformanceShaders {
 		ExcludeEdges = (1 << 15),
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	[Native]
 	public enum MPSDataLayout : ulong {
 		HeightPerWidthPerFeatureChannels = 0,
 		FeatureChannelsPerHeightPerWidth = 1,
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	public struct MPSMatrixCopyOffsets {
 		public uint SourceRowOffset;
 		public uint SourceColumnOffset;
@@ -262,19 +261,19 @@ namespace MetalPerformanceShaders {
 		public uint DestinationColumnOffset;
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	public struct MPSImageReadWriteParams {
 		public nuint FeatureChannelOffset;
 		public nuint NumberOfFeatureChannelsToReadWrite;
 	}
 
-	[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+	[TV (11, 0), Mac (10, 13), iOS (11, 0)]
 	public struct MPSImageKeypointRangeInfo {
 		public nuint MaximumKeypoints;
 		public float MinimumThresholdValue;
 	}
 
-	[TV (11, 3), iOS (11, 3), Mac (10, 13, 4, onlyOn64: true)]
+	[TV (11, 3), iOS (11, 3), Mac (10, 13, 4)]
 	public struct MPSStateTextureInfo {
 		public nuint Width;
 		public nuint Height;
@@ -309,7 +308,7 @@ namespace MetalPerformanceShaders {
 		}
 #endif
 	}
-	[TV (11, 3), iOS (11, 3), Mac (10, 13, 4, onlyOn64: true)]
+	[TV (11, 3), iOS (11, 3), Mac (10, 13, 4)]
 	[Native]
 	public enum MPSStateResourceType : ulong {
 		None = 0,
@@ -317,28 +316,28 @@ namespace MetalPerformanceShaders {
 		Texture = 2,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSIntersectionType : ulong {
 		Nearest = 0,
 		Any = 1,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSTriangleIntersectionTestType : ulong {
 		Default = 0,
 		Watertight = 1,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSBoundingBoxIntersectionTestType : ulong {
 		Default = 0,
 		AxisAligned = 1,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Flags]
 	[Native]
 	public enum MPSRayMaskOptions : ulong {
@@ -347,7 +346,7 @@ namespace MetalPerformanceShaders {
 		Instance = 2,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSRayDataType : ulong {
 		OriginDirection = 0,
@@ -355,7 +354,7 @@ namespace MetalPerformanceShaders {
 		OriginMaskDirectionMaxDistance = 2,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSIntersectionDataType : ulong {
 		Distance = 0,
@@ -365,14 +364,14 @@ namespace MetalPerformanceShaders {
 		PrimitiveIndexInstanceIndexCoordinates = 4,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSTransformType : ulong {
 		Float4x4 = 0,
 		Identity = 1,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Flags]
 	[Native]
 	public enum MPSAccelerationStructureUsage : ulong {
@@ -381,21 +380,21 @@ namespace MetalPerformanceShaders {
 		FrequentRebuild = 2,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSAccelerationStructureStatus : ulong {
 		Unbuilt = 0,
 		Built = 1,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct MPSAxisAlignedBoundingBox {
 		public Vector3 Min;
 		public Vector3 Max;
 	}
 
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSCnnWeightsQuantizationType : uint {
 		None = 0,
 		Linear = 1,
@@ -404,7 +403,7 @@ namespace MetalPerformanceShaders {
 
 	[Flags]
 	[Native]
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSCnnConvolutionGradientOption : ulong {
 		GradientWithData = 0x1,
 		GradientWithWeightsAndBias = 0x2,
@@ -413,7 +412,7 @@ namespace MetalPerformanceShaders {
 
 	[Flags]
 	[Native]
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSNNComparisonType : ulong {
 		Equal,
 		NotEqual,
@@ -423,7 +422,7 @@ namespace MetalPerformanceShaders {
 		GreaterOrEqual,
 	}
 
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSCnnLossType : uint {
 		MeanAbsoluteError = 0,
 		MeanSquaredError,
@@ -438,7 +437,7 @@ namespace MetalPerformanceShaders {
 		//Count, // must always be last, and because of this it will cause breaking changes.
 	}
 
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSCnnReductionType {
 		None = 0,
 		Sum,
@@ -449,7 +448,7 @@ namespace MetalPerformanceShaders {
 
 	[Flags]
 	[Native]
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[TV (12,0), Mac (10,14), iOS (12,0)]
 	public enum MPSNNConvolutionAccumulatorPrecisionOption : ulong {
 		Half = 0x0,
 		Float = 1uL << 0,
@@ -457,7 +456,7 @@ namespace MetalPerformanceShaders {
 
 	[Flags]
 	[Native]
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	public enum MPSCnnBatchNormalizationFlags : ulong {
 		Default = 0x0,
 		CalculateStatisticsAutomatic = Default,
@@ -466,7 +465,7 @@ namespace MetalPerformanceShaders {
 		CalculateStatisticsMask = 0x3,
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[TV (12, 0), Mac (10, 14), iOS (12, 0)]
 	[Native]
 	public enum MPSNNRegularizationType : ulong {
 		None = 0,
@@ -474,7 +473,7 @@ namespace MetalPerformanceShaders {
 		L2 = 2,
 	}
 
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[TV (11, 3), Mac (10, 13, 4), iOS (11, 3)]
 	[Flags]
 	[Native]
 	public enum MPSNNTrainingStyle : ulong {
@@ -484,7 +483,7 @@ namespace MetalPerformanceShaders {
 	}
 
 	[Native]
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[TV (12,0), Mac (10,14), iOS (12,0)]
 	public enum MPSRnnMatrixId : ulong {
 		SingleGateInputWeights = 0,
 		SingleGateRecurrentWeights,
@@ -518,4 +517,3 @@ namespace MetalPerformanceShaders {
 		//Count, // must always be last, and because of this it will cause breaking changes.
 	}
 }
-#endif

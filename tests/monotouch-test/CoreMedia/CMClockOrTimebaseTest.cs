@@ -1,14 +1,7 @@
-﻿#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
+﻿using System;
 using Foundation;
 using CoreMedia;
 using ObjCRuntime;
-#else
-using MonoTouch.CoreMedia;
-using MonoTouch.Foundation;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreMedia
@@ -34,5 +27,3 @@ namespace MonoTouchFixtures.CoreMedia
 
 	}
 }
-
-#endif // !__WATCHOS__

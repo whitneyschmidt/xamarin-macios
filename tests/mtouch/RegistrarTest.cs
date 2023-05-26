@@ -93,7 +93,7 @@ class C { static void Main () {} }
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (code: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (code: code, extraArgs: new [] { "-debug" });
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				mtouch.AssertError (4138, "The registrar cannot marshal the property type 'System.Object' of the property 'Foo.Bar10'.", "testApp.cs", 54);
 				mtouch.AssertError (4136, "The registrar cannot marshal the parameter type 'System.Object[]' of the parameter 'arg' in the method 'Foo.Bar1(System.Object[])'", "testApp.cs", 7);
@@ -132,7 +132,7 @@ class DateMembers : NSObject {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -169,7 +169,7 @@ class DateMembers : NSObject {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -202,7 +202,7 @@ class ArgCount : NSObject {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -232,7 +232,7 @@ class ArgCount : NSObject {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -272,12 +272,14 @@ class MyObjectErr : NSObject, IFoo1, IFoo2
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: str1, usings: "using Foundation; using System;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: str1, usings: "using Foundation; using System;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
-				mtouch.AssertError (4127, "Cannot register more than one interface method for the method 'MyObjectErr.GetFoo' (which is implementing 'IFoo1.GetFoo' and 'IFoo2.GetFoo').");
-				mtouch.AssertErrorCount (1);
+				mtouch.AssertError (4127, "Cannot register more than one interface method for the method 'MyObjectErr.GetFoo'.");
+				mtouch.AssertError (4137, "The method 'MyObjectErr.GetFoo' is implementing 'IFoo1.GetFoo'.");
+				mtouch.AssertError (4137, "The method 'MyObjectErr.GetFoo' is implementing 'IFoo2.GetFoo'.");
+				mtouch.AssertErrorCount (3);
 				mtouch.AssertNoWarnings ();
 			}
 		}
@@ -314,10 +316,11 @@ class MyObjectErr : NSObject, IFoo1, IFoo2
 					sb.AppendLine ($"System.Console.WriteLine (typeof ({t.Namespace}.{t.Name}));");
 				sb.AppendLine ("}}");
 
-				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), usings: "using System; using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), usings: "using System; using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.LinkSdk;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure (MTouchAction.BuildDev);
+				// the above MUST be kept in sync with new frameworks or it will fail.
 				var invalidFrameworks = new [] {
 					new { Framework = "IdentityLookup", Version = "11.0" },
 					new { Framework = "FileProviderUI", Version = "11.0" },
@@ -334,6 +337,15 @@ class MyObjectErr : NSObject, IFoo1, IFoo2
 					new { Framework = "CarPlay", Version = "12.0" },
 					new { Framework = "IdentityLookupUI", Version = "12.0" },
 					new { Framework = "NaturalLanguage", Version = "12.0" },
+					new { Framework = "VisionKit", Version = "13.0" },
+					new { Framework = "SoundAnalysis", Version = "13.0" },
+					new { Framework = "PencilKit", Version = "13.0" },
+					new { Framework = "MetricKit", Version = "13.0" },
+					new { Framework = "LinkPresentation", Version = "13.0" },
+					new { Framework = "CoreHaptics", Version = "13.0" },
+					new { Framework = "BackgroundTasks", Version = "13.0" },
+					new { Framework = "QuickLookThumbnailing", Version = "13.0" },
+					new { Framework = "AutomaticAssessmentConfiguration", Version = "13.4" },
 				};
 				foreach (var framework in invalidFrameworks)
 					mtouch.AssertError (4134, $"Your application is using the '{framework.Framework}' framework, which isn't included in the iOS SDK you're using to build your app (this framework was introduced in iOS {framework.Version}, while you're building with the iOS {mtouch.Sdk} SDK.) Please select a newer SDK in your app's iOS Build options.");
@@ -358,7 +370,7 @@ class C : NSObject {
 }";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -380,7 +392,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -404,7 +416,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -432,7 +444,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -458,7 +470,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -478,7 +490,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecute ();
@@ -498,7 +510,7 @@ class C : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -522,7 +534,7 @@ interface IProtocol2 {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -546,7 +558,7 @@ public static class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -567,7 +579,7 @@ public static class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -588,7 +600,7 @@ public static class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -614,7 +626,7 @@ public class Category2 : INativeObject
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -636,7 +648,7 @@ public class Category<T>
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -659,7 +671,7 @@ public class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -686,7 +698,7 @@ public class Category2
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -712,7 +724,7 @@ public class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -735,7 +747,7 @@ public class Category
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -768,7 +780,7 @@ public class Category
 					sb.AppendLine ($"\tpublic void X{i} () {{}}");
 				}
 				sb.AppendLine ("}");
-				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArgs: new [] { "-debug" });
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
@@ -812,7 +824,7 @@ public struct FooF { public NSObject Obj; }
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -887,7 +899,7 @@ public struct FooF { public NSObject Obj; }
 				mtouch.Profile = profile;
 				mtouch.Linker = linker;
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug", usings: "using System;\nusing Foundation;\nusing ObjCRuntime;\n");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" }, usings: "using System;\nusing Foundation;\nusing ObjCRuntime;\n");
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				mtouch.AssertErrorPattern (4162, $"The type 'FutureType' (used as a base type of CurrentType) is not available in {name} .* (it was introduced in {name} 99.0.0): 'use Z instead'. Please build with a newer {name} SDK (usually done by using the most recent version of Xcode).", custom_pattern_syntax: true);
 				mtouch.AssertErrorPattern (4162, $"The type 'FutureType' (used as a base type of CurrentType) is not available in {name} .* (it was introduced in {name} 89.0.0). Please build with a newer {name} SDK (usually done by using the most recent version of Xcode).", custom_pattern_syntax: true);
@@ -931,7 +943,7 @@ public struct FooF { public NSObject Obj; }
 				sb.AppendLine ("}");
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArgs: new [] { "-debug" });
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				foreach (var kw in objective_c_keywords)
 					mtouch.AssertError (4164, $"Cannot export the property 'X{kw}' because its selector '{kw}' is an Objective-C keyword. Please use a different name.", "testApp.cs");
@@ -952,7 +964,7 @@ class X : ReplayKit.RPBroadcastControllerDelegate
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using System; using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using System; using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecute ();
@@ -994,7 +1006,7 @@ class X : ReplayKit.RPBroadcastControllerDelegate
 				mtouch.CustomArguments = new string [] { "--marshal-objectivec-exceptions=throwmanaged" };
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArg: "-debug:full");
+				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArgs: new [] { "-debug:full" });
 				mtouch.AssertExecuteFailure (MTouchAction.BuildDev, "build");
 				mtouch.AssertError (4169, $"Failed to generate a P/Invoke wrapper for objc_msgSend(System.Object): The registrar cannot get the ObjectiveC type for managed type `System.Object`.");
 			}
@@ -1020,7 +1032,7 @@ class X : ReplayKit.RPBroadcastControllerDelegate
 				}";
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" });
 				mtouch.CreateTemporaryCacheDirectory ();
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				mtouch.AssertError (4170, "The registrar can't convert from 'System.DateTime' to 'Foundation.NSNumber' for the return value in the method NS.X.A.", "testApp.cs", 9);
@@ -1064,7 +1076,7 @@ class X : ReplayKit.RPBroadcastControllerDelegate
 				}";
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" });
 				mtouch.CreateTemporaryCacheDirectory ();
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				mtouch.AssertError (4138, "The registrar cannot marshal the property type 'System.ConsoleColor' of the property 'NS.X.E'.", "testApp.cs", 23);
@@ -1114,7 +1126,7 @@ class X : ReplayKit.RPBroadcastControllerDelegate
 				}";
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" });
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
 				mtouch.AssertError (4172, "The registrar can't convert from 'System.DateTime' to 'Foundation.NSNumber' for the parameter 'value' in the method NS.X.A.", "testApp.cs", 8);
 				mtouch.AssertError (4172, "The registrar can't convert from 'System.Nullable`1<System.DateTime>' to 'Foundation.NSNumber' for the parameter 'value' in the method NS.X.B.", "testApp.cs", 10);
@@ -1218,7 +1230,7 @@ namespace NS {
 ";
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" });
 				mtouch.WarnAsError = new int [] { 4174 };
 				mtouch.AssertExecuteFailure ("build");
 				mtouch.AssertError (4174, "Unable to locate the block to delegate conversion method for the method NS.Consumer.ResolveRecipients's parameter #2.", "testApp.cs", 11);
@@ -1256,7 +1268,7 @@ namespace NS {
 ";
 				mtouch.Linker = MTouchLinker.DontLink; // faster
 				mtouch.Registrar = MTouchRegistrar.Static;
-				mtouch.CreateTemporaryApp (extraCode: code, extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: code, extraArgs: new [] { "-debug" });
 				mtouch.WarnAsError = new int [] { 4176 };
 				mtouch.AssertExecuteFailure ("build");
 				mtouch.AssertError (4176, "Unable to locate the delegate to block conversion type for the return value of the method NS.Consumer.GetFunction.", "testApp.cs", 11);
@@ -1334,7 +1346,7 @@ class H : G {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecute ();
@@ -1355,7 +1367,7 @@ class Generic3<T> : NSObject where T: System.IConvertible {}
 			// and the lack of warnings/errors in the new static registrar.
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using UIKit;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using UIKit;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecute ();
@@ -1380,7 +1392,7 @@ class Generic3<T> : NSObject where T: System.IConvertible {}
 		}";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1411,7 +1423,7 @@ class Open<U> : NSObject
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1438,7 +1450,7 @@ class Open<U> : NSObject
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1467,7 +1479,7 @@ class Open<U> : NSObject
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using UIKit;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using UIKit;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1493,7 +1505,7 @@ class Open<U> : NSObject
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (code: code, extraArg: "-debug:full");
+				mtouch.CreateTemporaryApp (code: code, extraArgs: new [] { "-debug:full" });
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.Linker = MTouchLinker.DontLink; // faster test
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
@@ -1545,7 +1557,7 @@ class Open<U> : NSObject
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System; using System.Collections.Generic; using ObjCRuntime;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using System; using System.Collections.Generic; using ObjCRuntime;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1581,7 +1593,7 @@ class Open<U> : NSObject
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArg: "/debug:full /unsafe");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation; using ObjCRuntime;", extraArgs: new [] { "/debug:full", "/unsafe" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1607,7 +1619,7 @@ class GenericMethodClass : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: str1, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: str1, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecuteFailure ();
@@ -1629,7 +1641,7 @@ class GenericMethodClass : NSObject {
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "/debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "/debug:full" });
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.AssertExecute ();
@@ -1686,7 +1698,7 @@ class C { static void Main () {} }
 ";
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (code: str1, extraArg: "-debug:full");
+				mtouch.CreateTemporaryApp (code: str1, extraArgs: new [] { "-debug:full" });
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.Linker = MTouchLinker.DontLink; // faster test
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
@@ -1720,7 +1732,7 @@ class G : NSObject {
 
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.CreateTemporaryCacheDirectory ();
-				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArg: "-debug:full");
+				mtouch.CreateTemporaryApp (extraCode: code, usings: "using Foundation;", extraArgs: new [] { "-debug:full" });
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.Linker = MTouchLinker.DontLink; // faster test
 				mtouch.AssertExecuteFailure ();
@@ -1781,7 +1793,7 @@ class CTP4 : CTP3 {
 					sb.AppendLine ("}");
 				}
 
-				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArg: "-debug");
+				mtouch.CreateTemporaryApp (extraCode: sb.ToString (), extraArgs: new [] { "-debug" });
 				mtouch.Registrar = MTouchRegistrar.Static;
 				mtouch.Linker = MTouchLinker.DontLink;
 				mtouch.AssertExecuteFailure (MTouchAction.BuildSim, "build");
@@ -1792,6 +1804,55 @@ class CTP4 : CTP3 {
 						str = "\"";
 					mtouch.AssertError (4177, $"The 'ProtocolType' parameter of the 'Adopts' attribute used in class 'TestInvalidChar{i}' contains an invalid character. Value used: 'Foo{str}' Invalid Char: '{c}'");
 				}
+			}
+		}
+
+		[Test]
+		public void MT4179 ()
+		{
+			using (var mtouch = new MTouchTool ()) {
+				var code = @"
+using System;
+
+using Foundation;
+using ObjCRuntime;
+
+abstract class SomeNativeObject : INativeObject
+{
+	public IntPtr Handle { get; set; }
+	SomeNativeObject (IntPtr handle, bool owns) { }
+}
+
+class C : NSObject {
+	[Export (""M1:"")]
+	public void M1 (SomeNativeObject obj)
+	{
+	}
+
+	[Export (""M2"")]
+	public SomeNativeObject M2 ()
+	{
+		return null;
+	}
+
+	[Export (""M3"")]
+	public SomeNativeObject M3 {
+		get;
+		set;
+	}
+	static void Main () {}
+}
+";
+
+				mtouch.CreateTemporaryApp (code: code, extraArgs: new [] { "-debug" });
+				mtouch.Registrar = MTouchRegistrar.Static;
+				mtouch.Linker = MTouchLinker.DontLink;
+				mtouch.AssertExecute (MTouchAction.BuildSim, "build");
+				mtouch.AssertWarningCount (4);
+				mtouch.AssertWarning (4179, $"The registrar found the abstract type 'SomeNativeObject' in the signature for 'C.get_M3'. Abstract types should not be used in the signature for a member exported to Objective-C.", "testApp.cs", 27);
+				mtouch.AssertWarning (4179, $"The registrar found the abstract type 'SomeNativeObject' in the signature for 'C.set_M3'. Abstract types should not be used in the signature for a member exported to Objective-C.", "testApp.cs", 28);
+				mtouch.AssertWarning (4179, $"The registrar found the abstract type 'SomeNativeObject' in the signature for 'C.M1'. Abstract types should not be used in the signature for a member exported to Objective-C.", "testApp.cs", 16);
+				mtouch.AssertWarning (4179, $"The registrar found the abstract type 'SomeNativeObject' in the signature for 'C.M2'. Abstract types should not be used in the signature for a member exported to Objective-C.", "testApp.cs", 21);
 			}
 		}
 	}

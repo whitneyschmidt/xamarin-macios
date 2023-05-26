@@ -6,18 +6,9 @@
 //
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
-
-#if !__WATCHOS__
-
 using System;
-#if XAMCORE_2_0
 using Foundation;
 using CoreMedia;
-#else
-using MonoTouch.CoreMedia;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreMedia {
@@ -45,9 +36,6 @@ namespace MonoTouchFixtures.CoreMedia {
 			Assert.That (FourCC ((int) CMMediaType.Subtitle), Is.EqualTo ("sbtl"), "Subtitle");
 			Assert.That (FourCC ((int) CMMediaType.Text), Is.EqualTo ("text"), "Text");
 			Assert.That (FourCC ((int) CMMediaType.TimeCode), Is.EqualTo ("tmcd"), "TimeCode");
-#if !XAMCORE_2_0
-			Assert.That (FourCC ((int) CMMediaType.TimedMetadata), Is.EqualTo ("tmet"), "TimedMetadata");
-#endif
 			Assert.That (FourCC ((int) CMMediaType.Video), Is.EqualTo ("vide"), "Video");
 		}
 
@@ -148,5 +136,3 @@ namespace MonoTouchFixtures.CoreMedia {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

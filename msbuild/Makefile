@@ -22,6 +22,7 @@ MSBUILD_TASK_ASSEMBLIES      =
 
 ALL_SOURCES:= $(shell git ls-files | sed 's/ /\\ /g') $(wildcard $(XAMARIN_MACDEV_PATH)/Xamarin.MacDev/*.cs) $(wildcard $(XAMARIN_MACDEV_PATH)/Xamarin.MacDev/*.csproj)
 CONFIG      = Debug
+TARGETFRAMEWORK = netstandard2.0
 
 ##
 ## XI definitions
@@ -31,11 +32,13 @@ IOS_TARGETS =                                                      \
 	$(wildcard Xamarin.iOS.Tasks.Core/Xamarin.MonoTouch.*.targets) \
 	$(wildcard Xamarin.iOS.Tasks.Core/Xamarin.iOS.*.props)         \
 	$(wildcard Xamarin.iOS.Tasks.Core/Xamarin.iOS.*.targets)       \
+	$(wildcard Xamarin.Shared/Xamarin.*.props)       \
 	$(wildcard Xamarin.Shared/Xamarin.*.targets)       \
 
 IOS_BINDING_TARGETS = $(wildcard Xamarin.ObjcBinding.Tasks/*.targets)
 
-IOS_TASK_ASSEMBLIES = Xamarin.iOS.Tasks
+LOCALIZATION_ASSEMBLIES = Xamarin.Localization.MSBuild
+IOS_TASK_ASSEMBLIES = Xamarin.iOS.Tasks $(LOCALIZATION_ASSEMBLIES)
 
 IOS_DIRECTORIES =                                                                                           \
 	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS                                                  \
@@ -58,6 +61,7 @@ IOS_PRODUCTS =                                                                  
 	$(foreach target,$(IOS_TARGETS)               ,$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/$(notdir $(target)))     \
 	$(foreach target,$(IOS_BINDING_TARGETS)       ,$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/$(notdir $(target)))     \
 	$(foreach dll,$(IOS_TASK_ASSEMBLIES)          ,$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/$(dll).dll)              \
+	$(foreach dll,$(IOS_TASK_ASSEMBLIES)          ,$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/$(dll).pdb)              \
 	$(IOS_SYMLINKS)
 
 all-ios: $(IOS_PRODUCTS)
@@ -143,15 +147,18 @@ endif
 ## XM definitions
 ##
 
-MAC_TARGETS = $(wildcard Xamarin.Mac.Tasks/*.props) $(wildcard Xamarin.Mac.Tasks/*.targets) $(wildcard Xamarin.Shared/Xamarin.*.targets)
+MAC_TARGETS = \
+	$(wildcard Xamarin.Mac.Tasks/*.props) \
+	$(wildcard Xamarin.Mac.Tasks/*.targets) \
+	$(wildcard Xamarin.Shared/Xamarin.*.props) \
+	$(wildcard Xamarin.Shared/Xamarin.*.targets) \
+
 MAC_BINDING_TARGETS =
 
-MAC_TASK_ASSEMBLIES = Xamarin.Mac.Tasks
-
-MAC_BINDING_TASK_ASSEMBLIES = 
+MAC_TASK_ASSEMBLIES = Xamarin.Mac.Tasks $(LOCALIZATION_ASSEMBLIES)
 
 MAC_DIRECTORIES =                                                                                           \
-	$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac                            \
+	$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin                                \
 	$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild-frameworks/Xamarin.Mac/v2.0/RedistList \
 	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild                                                  \
 	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5/RedistList                                      \
@@ -159,10 +166,7 @@ MAC_DIRECTORIES =                                                               
 
 MAC_SYMLINKS =                                                                                                                                       \
 	$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild-frameworks/Xamarin.Mac/v2.0/RedistList/FrameworkList.xml                        \
-	$(foreach target,$(MAC_TARGETS)               ,$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac/$(notdir $(target))) \
-	$(foreach target,$(MAC_BINDING_TARGETS)       ,$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac/$(notdir $(target))) \
-	$(foreach dll,$(MAC_TASK_ASSEMBLIES)          ,$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac/$(dll).dll)          \
-	$(foreach dll,$(MAC_BINDING_TASK_ASSEMBLIES)  ,$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac/$(dll).dll)          \
+	$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac                                                                     \
 
 MAC_PRODUCTS =                                                                                                                 \
 	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/FrameworkList.xml                                                   \
@@ -171,7 +175,7 @@ MAC_PRODUCTS =                                                                  
 	$(foreach target,$(MAC_TARGETS)               ,$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/$(notdir $(target))) \
 	$(foreach target,$(MAC_BINDING_TARGETS)       ,$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/$(notdir $(target))) \
 	$(foreach dll,$(MAC_TASK_ASSEMBLIES)          ,$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/$(dll).dll)          \
-	$(foreach dll,$(MAC_BINDING_TASK_ASSEMBLIES)  ,$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/$(dll).dll)          \
+	$(foreach dll,$(MAC_TASK_ASSEMBLIES)          ,$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/$(dll).pdb)          \
 	$(MAC_SYMLINKS)                                                                                                            \
 
 all-mac: $(MAC_PRODUCTS)
@@ -181,7 +185,7 @@ ifdef INCLUDE_MAC
 MSBUILD_PRODUCTS += all-mac
 MSBUILD_DIRECTORIES += $(MAC_DIRECTORIES)
 MSBUILD_SYMLINKS += symlinks-mac
-MSBUILD_TASK_ASSEMBLIES += $(MAC_TASK_ASSEMBLIES) $(MAC_BINDING_TASK_ASSEMBLIES)
+MSBUILD_TASK_ASSEMBLIES += $(MAC_TASK_ASSEMBLIES)
 endif
 
 ##
@@ -220,7 +224,10 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/%: Xamarin.iOS.Tasks.Core/% | 
 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/%: Xamarin.Shared/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS
 	$(Q) install -m 644 $< $@
 
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/%.dll: build/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS
+$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/%: Xamarin.iOS.Tasks/bin/$(CONFIG)/$(TARGETFRAMEWORK)/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS
+	$(Q) install -m 644 $< $@
+
+$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS/%: Xamarin.Localization.MSBuild/bin/$(CONFIG)/$(TARGETFRAMEWORK)/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/iOS
 	$(Q) install -m 644 $< $@
 
 ##
@@ -239,9 +246,6 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS/FrameworkList.xml: Xamarin
 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS/%: Xamarin.iOS.Tasks.Core/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS
 	$(Q) install -m 644 $< $@
 
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS/%.dll: build/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS
-	$(Q) install -m 644 $< $@
-
 ##
 ## Xamarin.TVOS
 ##
@@ -258,9 +262,6 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS/FrameworkList.xml: Xamarin.iO
 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS/%: Xamarin.iOS.Tasks.Core/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS
 	$(Q) install -m 644 $< $@
 
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS/%.dll: build/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS
-	$(Q) install -m 644 $< $@
-
 ##
 ## XM ##
 ##
@@ -270,7 +271,10 @@ $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS/%.dll: build/%.dll | $(IOS_DE
 # Everything in /Library/Frameworks/Mono.framework/External are links into /Library/Frameworks/Xamarin.Mac.framework/Versions/Current
 # This makes it easy to switch XM, by just pointing /Library/Frameworks/Xamarin.Mac.framework/Versions/Current somewhere else
 
-$(MAC_SYMLINKS): | $(MAC_DIRECTORIES)
+$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac: $(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild/Xamarin
+	$(Q) ln -Fhs $(MAC_TARGETDIR)/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/msbuild $@
+
+$(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild-frameworks/Xamarin.Mac/v2.0/RedistList/FrameworkList.xml: | $(MAC_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild-frameworks/Xamarin.Mac/v2.0/RedistList
 	$(Q) ln -fs $(MAC_TARGETDIR)/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/msbuild/$(notdir $@) $@
 
 # The actual content goes into /Library/Frameworks/Xamarin.Mac.framework/Versions/Current
@@ -290,9 +294,71 @@ $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/%: Xamarin.Mac.Tasks/% | 
 $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/%: Xamarin.Shared/% | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild
 	$(Q) install -m 644 $< $@
 
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/%.dll: build/%.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild
+$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/%: Xamarin.Mac.Tasks/bin/$(CONFIG)/$(TARGETFRAMEWORK)/% | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild
 	$(Q) install -m 644 $< $@
 
+$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/%: Xamarin.Localization.MSBuild/bin/$(CONFIG)/$(TARGETFRAMEWORK)/% | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild
+	$(Q) install -m 644 $< $@
+##
+## net5 targets ##
+##
+
+# tvOS and watchOS ships most of the iOS targets as well  (for now, we don't need all of these, so this is optimizable)
+DOTNET_SHARED_FILES = $(IOS_TARGETS) $(IOS_BINDING_TARGETS) $(foreach dll,$(IOS_TASK_ASSEMBLIES),$(dll).dll $(dll).pdb)
+DOTNET_IOS_FILES = $(DOTNET_SHARED_FILES) FrameworkList.xml
+DOTNET_TVOS_FILES = $(TVOS_TARGETS) FrameworkList.xml
+DOTNET_WATCHOS_FILES = $(WATCH_TARGETS) FrameworkList.xml
+DOTNET_MACOS_FILES = $(MAC_TARGETS) $(MAC_BINDING_TARGETS) $(foreach dll,$(MAC_TASK_ASSEMBLIES),$(dll).dll $(dll).pdb) FrameworkList.xml
+
+# iOS
+DOTNET_TARGETS += \
+	$(foreach target,$(DOTNET_IOS_FILES)          ,$(DOTNET_DESTDIR)/$(IOS_NUGET).Sdk/tools/msbuild/iOS/$(notdir $(target)))               \
+
+# tvOS: contains all of the files for iOS as well (for now, we don't need all of them, so this is optimizable)
+DOTNET_TARGETS += \
+	$(foreach target,$(DOTNET_SHARED_FILES)       ,$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/iOS/$(notdir $(target)))              \
+	$(foreach target,$(DOTNET_TVOS_FILES)         ,$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/tvOS/$(notdir $(target)))             \
+
+# watchOS: contains all of the files for iOS as well (for now, we don't need all of them, so this is optimizable)
+DOTNET_TARGETS += \
+	$(foreach target,$(DOTNET_SHARED_FILES)       ,$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/iOS/$(notdir $(target)))           \
+	$(foreach target,$(DOTNET_WATCHOS_FILES)      ,$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/watchOS/$(notdir $(target)))       \
+
+# macOS
+DOTNET_TARGETS += \
+	$(foreach target,$(DOTNET_MACOS_FILES)        ,$(DOTNET_DESTDIR)/$(MACOS_NUGET).Sdk/tools/msbuild/macOS/$(notdir $(target)))           \
+
+DOTNET_DIRECTORIES += \
+	$(DOTNET_DESTDIR)/$(IOS_NUGET).Sdk/tools/msbuild/iOS \
+	$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/iOS \
+	$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/tvOS \
+	$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/iOS \
+	$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/watchOS \
+	$(DOTNET_DESTDIR)/$(MACOS_NUGET).Sdk/tools/msbuild/macOS \
+
+$(DOTNET_DESTDIR)/$(MACOS_NUGET).Sdk/tools/msbuild/macOS/%: $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/msbuild/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+$(DOTNET_DESTDIR)/$(IOS_NUGET).Sdk/tools/msbuild/%: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/%: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+$(DOTNET_DESTDIR)/$(TVOS_NUGET).Sdk/tools/msbuild/tvOS/%: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/TVOS/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/%: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+$(DOTNET_DESTDIR)/$(WATCHOS_NUGET).Sdk/tools/msbuild/watchOS/%: $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/msbuild/WatchOS/% | $(DOTNET_DIRECTORIES)
+	$(Q) $(CP) $< $@
+
+MSBUILD_DIRECTORIES += $(DOTNET_DIRECTORIES)
+
+ifdef ENABLE_DOTNET
+MSBUILD_PRODUCTS += $(DOTNET_TARGETS)
+endif
 ##
 ## Common targets ##
 ##
@@ -306,21 +372,14 @@ all-local:: $(MSBUILD_PRODUCTS) .stamp-test-xml
 	$(Q) touch $@
 
 # make all the target assemblies build when any of the sources have changed
-$(foreach dll,$(MSBUILD_TASK_ASSEMBLIES),$(dll)/bin/$(CONFIG)/$(dll).dll): .build-stamp
+$(foreach dll,$(MSBUILD_TASK_ASSEMBLIES),$(dll)/bin/$(CONFIG)/$(TARGETFRAMEWORK)/$(dll).dll $(dll)/bin/$(CONFIG)/$(TARGETFRAMEWORK)/$(dll).pdb): .build-stamp
 
 # Always remake the symlinks
 .PHONY: $(MSBUILD_SYMLINKS)
 
-define copyToBuild
-build/$(1).dll: $(1)/bin/$(CONFIG)/$(1).dll | build
-	$$(Q) $(CP) $$< $$@
-endef
-
-# Create the rules to copy all the dlls into the 'build' directory. 
-$(foreach dll,$(sort $(MSBUILD_TASK_ASSEMBLIES)),$(eval $(call copyToBuild,$(dll))))
-
 # this is a directory-creating target.
-$(MSBUILD_DIRECTORIES) build:
+# we sort to remove duplicates, which can happen if MAC_DESTDIR and IOS_DESTDIR are the same (both create a '/Library/Frameworks/Mono.framework/External/xbuild/Xamarin' target)
+$(sort $(MSBUILD_DIRECTORIES)) build:
 	$(Q) mkdir -p $@
 
 install-symlinks: $(MSBUILD_SYMLINKS)
@@ -331,6 +390,20 @@ install-local:: $(MSBUILD_PRODUCTS)
 	$(Q) xmllint --noout $^
 	@echo Targets files are valid XML
 	@touch $@
+
+test run-test: run-test-ios run-test-mac
+
+run-test-ios:
+	$(MAKE) -C $(TOP)/tests test-ios-tasks
+
+run-test-mac:
+	$(MAKE) -C $(TOP)/tests run-mac-msbuild
+
+clean-local::
+	git clean -xfdq
+	cd $(XAMARIN_MACDEV_PATH) && git clean -xfdq
+
+dotnet: $(DOTNET_TARGETS)
 
 # make will automatically consider files created in chained implicit rules as temporary files, and delete them afterwards
 # marking those files as .SECONDARY will prevent that deletion.

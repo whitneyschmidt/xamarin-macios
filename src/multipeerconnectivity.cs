@@ -5,7 +5,7 @@
 //   Aaron Bockover (abock@xamarin.com)
 //
 // Copyright 2013 Xamarin, Inc.
-#if XAMCORE_2_0 || !MONOMAC // MultipeerConnectivity is 64-bit only on OS X
+
 using System;
 
 using Foundation;
@@ -20,7 +20,7 @@ using UIKit;
 namespace MultipeerConnectivity {
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSInvalidArgumentException Reason: -[MCPeerID init]: unrecognized selector sent to instance 0x7d721090
 	partial interface MCPeerID : NSCopying, NSSecureCoding {
@@ -36,7 +36,7 @@ namespace MultipeerConnectivity {
 	delegate void MCSessionNearbyConnectionDataForPeerCompletionHandler (NSData connectionData, NSError error);
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // crash when calling `description` selector
 	partial interface MCSession {
@@ -60,9 +60,11 @@ namespace MultipeerConnectivity {
 		MCPeerID [] ConnectedPeers { get; }
 
 		[Async]
+		[return: NullAllowed]
 		[Export ("sendResourceAtURL:withName:toPeer:withCompletionHandler:")]
 		NSProgress SendResource (NSUrl resourceUrl, string resourceName, MCPeerID peerID, [NullAllowed] Action<NSError> completionHandler);
 
+		[return: NullAllowed]
 		[Export ("startStreamWithName:toPeer:error:")]
 		NSOutputStream StartStream (string streamName, MCPeerID peerID, out NSError error);
 
@@ -77,6 +79,7 @@ namespace MultipeerConnectivity {
 		MCPeerID MyPeerID { get; }
 
 		// we use NSArray because, when non-null, it contains a SecIdentity followed by 0..n SecCertificate - none are NSObject
+		[NullAllowed]
 		[Export ("securityIdentity")]
 		NSArray SecurityIdentity { get; }
 
@@ -105,7 +108,7 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
@@ -135,7 +138,7 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSInvalidArgumentException -[MCNearbyServiceAdvertiser init]: unrecognized selector sent to instance 0x19195e50
 	partial interface MCNearbyServiceAdvertiser {
@@ -160,6 +163,7 @@ namespace MultipeerConnectivity {
 		[Export ("myPeerID")]
 		MCPeerID MyPeerID { get; }
 
+		[NullAllowed]
 		[Export ("discoveryInfo")]
 		NSDictionary DiscoveryInfo { get; }
 
@@ -170,15 +174,13 @@ namespace MultipeerConnectivity {
 	delegate void MCNearbyServiceAdvertiserInvitationHandler (bool accept, [NullAllowed] MCSession session);
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	partial interface MCNearbyServiceAdvertiserDelegate {
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("advertiser:didReceiveInvitationFromPeer:withContext:invitationHandler:")]
 		void DidReceiveInvitationFromPeer (MCNearbyServiceAdvertiser advertiser, MCPeerID peerID, [NullAllowed] NSData context, MCNearbyServiceAdvertiserInvitationHandler invitationHandler);
 
@@ -187,7 +189,7 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSInvalidArgumentException -[MCNearbyServiceBrowser init]: unrecognized selector sent to instance 0x15519a70
 	partial interface MCNearbyServiceBrowser {
@@ -220,22 +222,18 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	partial interface MCNearbyServiceBrowserDelegate {
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Mac (10,9)]
 		[Export ("browser:foundPeer:withDiscoveryInfo:")]
 		void FoundPeer (MCNearbyServiceBrowser browser, MCPeerID peerID, [NullAllowed] NSDictionary info);
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Mac (10,9)]
 		[Export ("browser:lostPeer:")]
 		void LostPeer (MCNearbyServiceBrowser browser, MCPeerID peerID);
@@ -248,7 +246,7 @@ namespace MultipeerConnectivity {
 	interface IMCNearbyServiceBrowserDelegate {}
 
 #if MONOMAC
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[BaseType (typeof (NSViewController))]
 #else
 	[TV (10,0)]
@@ -281,6 +279,9 @@ namespace MultipeerConnectivity {
 		[Export ("maximumNumberOfPeers", ArgumentSemantic.Assign)]
 		nuint MaximumNumberOfPeers { get; set; }
 
+#if !MONOMAC
+		[NullAllowed]
+#endif
 		[Export ("browser")]
 		MCNearbyServiceBrowser Browser { get; }
 
@@ -289,21 +290,17 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	partial interface MCBrowserViewControllerDelegate {
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("browserViewControllerWasCancelled:")]
 		void WasCancelled (MCBrowserViewController browserViewController);
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("browserViewControllerDidFinish:")]
 		void DidFinish (MCBrowserViewController browserViewController);
 
@@ -314,7 +311,7 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSInvalidArgumentException Reason: -[MCAdvertiserAssistant init]: unrecognized selector sent to instance 0x7ea7fa40
 	interface MCAdvertiserAssistant {
@@ -323,6 +320,7 @@ namespace MultipeerConnectivity {
 		[Export ("initWithServiceType:discoveryInfo:session:")]
 		IntPtr Constructor (string serviceType, [NullAllowed] NSDictionary info, MCSession session);
 
+		[NullAllowed]
 		[Export ("discoveryInfo")]
 		NSDictionary DiscoveryInfo { get; }
 
@@ -347,7 +345,7 @@ namespace MultipeerConnectivity {
 	}
 
 	[TV (10,0)]
-	[iOS (7,0)][Mac (10,10, onlyOn64 : true)]
+	[iOS (7,0)][Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
@@ -360,4 +358,3 @@ namespace MultipeerConnectivity {
 		void WillPresentInvitation (MCAdvertiserAssistant advertiserAssistant);
 	}
 }
-#endif

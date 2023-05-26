@@ -11,7 +11,6 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
 #if MONOMAC
@@ -19,21 +18,9 @@ using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using MonoTests.System.Net.Http;
 
 namespace MonoTouchFixtures.Foundation {
 	
@@ -156,17 +143,9 @@ namespace MonoTouchFixtures.Foundation {
 			}
 #endif
 			// we have network issues, try several urls, if one works, be happy, else fail
-			var urls = new string [] {
-				"https://www.microsoft.com/robots.txt",
-				"https://www.xamarin.com/robots.txt",
-				"http://www.bing.com/robots.txt",
-				"https://www.xbox.com/robots.txt",
-				"https://www.msn.com/robots.txt",
-				"https://visualstudio.microsoft.com/robots.txt",
-			};
-			for (var i = 0; i < urls.Length; i++) {
+			for (var i = 0; i < NetworkResources.RobotsUrls.Length; i++) {
 				NSError error;
-				using (var nsUrl = new NSUrl (urls [i]))
+				using (var nsUrl = new NSUrl (NetworkResources.RobotsUrls [i]))
 				using (var x = NSData.FromUrl (nsUrl, NSDataReadingOptions.Uncached, out error)) {
 					if (error != null)
 						continue;

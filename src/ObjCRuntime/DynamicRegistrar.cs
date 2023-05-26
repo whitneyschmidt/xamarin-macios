@@ -109,11 +109,11 @@ namespace Registrar {
 		{
 			var aname = assembly.GetName ().Name;
 
-			if (aname == CompatAssemblyName || aname == DualAssemblyName)
+			if (aname == AssemblyName)
 				return true;
 
 			foreach (var ar in assembly.GetReferencedAssemblies ()) {
-				if (ar.Name == CompatAssemblyName || ar.Name == DualAssemblyName)
+				if (ar.Name == AssemblyName)
 					return true;
 			}
 			return false;
@@ -141,24 +141,6 @@ namespace Registrar {
 		protected override bool Is64Bits {
 			get {
 				return IntPtr.Size == 8;
-			}
-		}
-
-		protected override bool IsDualBuildImpl {
-			get {
-				return NSObject.PlatformAssembly.GetName ().Name == 
-#if MONOMAC
-					"Xamarin.Mac";
-#elif TVOS
-					"Xamarin.TVOS";
-#elif WATCH
-					"Xamarin.WatchOS";
-#elif IOS
-					"Xamarin.iOS";
-#else
-	#error unknown platform
-					"unknown platform";
-#endif
 			}
 		}
 
@@ -209,11 +191,6 @@ namespace Registrar {
 		protected override int GetValueTypeSize (Type type)
 		{
 			return Marshal.SizeOf (type);
-		}
-
-		protected override bool IsCorlibType (Type type)
-		{
-			return type.Assembly == typeof(object).Assembly;
 		}
 
 		protected override IEnumerable<MethodBase> CollectConstructors (Type type)
@@ -518,24 +495,28 @@ namespace Registrar {
 					constrs [i] = constr;
 				}
 				constrained_type = type.MakeGenericType (constrs);
-				return true;
+				return rv;
 			}
 
-			return false;
+			return true;
 		}
 
-		protected override Exception CreateException (int code, Exception innerException, MethodBase method, string message, params object[] args)
+		protected override Exception CreateExceptionImpl (int code, bool error, Exception innerException, MethodBase method, string message, params object[] args)
 		{
 			// There doesn't seem to be a way to find the source code location
 			// for the method using System.Reflection.
-			return ErrorHelper.CreateError (code, innerException, message, args);
+			if (error)
+				return ErrorHelper.CreateError (code, innerException, message, args);
+			return ErrorHelper.CreateWarning (code, innerException, message, args);
 		}
 
-		protected override Exception CreateException (int code, Exception innerException, Type type, string message, params object [] args)
+		protected override Exception CreateExceptionImpl (int code, bool error, Exception innerException, Type type, string message, params object [] args)
 		{
 			// There doesn't seem to be a way to find the source code location
 			// for the method using System.Reflection.
-			return ErrorHelper.CreateError (code, innerException, message, args);
+			if (error)
+				return ErrorHelper.CreateError (code, innerException, message, args);
+			return ErrorHelper.CreateWarning (code, innerException, message, args);
 		}
 
 		protected override string GetAssemblyQualifiedName (Type type)
@@ -626,13 +607,18 @@ namespace Registrar {
 		{
 			isNativeEnum = false;
 			if (type.IsEnum)
-				isNativeEnum = IsDualBuildImpl && type.IsDefined (typeof (NativeAttribute), false);
+				isNativeEnum = type.IsDefined (typeof (NativeAttribute), false);
 			return type.IsEnum;
 		}
 
 		protected override bool IsInterface (Type type)
 		{
 			return type.IsInterface;
+		}
+
+		protected override bool IsAbstract (Type type)
+		{
+			return type.IsAbstract;
 		}
 
 		protected override bool IsINativeObject (Type type)
@@ -698,7 +684,7 @@ namespace Registrar {
 
 		protected override void ReportError (int code, string message, params object[] args)
 		{
-			Console.WriteLine (message, args);
+			Runtime.NSLog (String.Format (message, args));
 		}
 
 		Class.objc_attribute_prop [] GetPropertyAttributes (ObjCProperty property, out int count, bool isProtocol)
@@ -747,7 +733,7 @@ namespace Registrar {
 #else
 						const string msg = "Detected a protocol ({0}) inheriting from the JSExport protocol while using the dynamic registrar. It is not possible to export protocols to JavaScriptCore dynamically; the static registrar must be used (add '--registrar:static' to the additional mtouch arguments in the project's iOS Build options to select the static registrar).";
 #endif
-						ErrorHelper.Warning (4147, msg, GetTypeFullName (type.Type));
+						ErrorHelper.Show (ErrorHelper.CreateWarning (4147, msg, GetTypeFullName (type.Type)));
 					}
 					Protocol.protocol_addProtocol (protocol, proto.Handle);
 				}
@@ -874,7 +860,7 @@ namespace Registrar {
 			} else {
 				try {
 					var nsobj = Runtime.GetNSObject (obj, Runtime.MissingCtorResolution.ThrowConstructor1NotFound, true);
-					mthis = ObjectWrapper.Convert (nsobj);
+					mthis = Runtime.AllocGCHandle (nsobj);
 					if (res.Method.ContainsGenericParameters) {
 						res.WriteUnmanagedDescription (desc, Runtime.FindClosedMethod (nsobj.GetType (), res.Method));
 						return;

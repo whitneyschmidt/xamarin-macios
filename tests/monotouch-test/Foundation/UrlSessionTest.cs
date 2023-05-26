@@ -10,7 +10,6 @@
 using System;
 using System.IO;
 
-#if XAMCORE_2_0
 using Foundation;
 #if MONOMAC
 using AppKit;
@@ -18,12 +17,8 @@ using AppKit;
 using UIKit;
 #endif
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
+using MonoTests.System.Net.Http;
 
 namespace MonoTouchFixtures.Foundation {
 
@@ -42,7 +37,7 @@ namespace MonoTouchFixtures.Foundation {
 			TestRuntime.AssertXcodeVersion (5, 0);
 			
 			NSUrlSession session = NSUrlSession.SharedSession;
-			var url = new NSUrl ("https://www.xamarin.com");
+			var url = new NSUrl ("https://www.microsoft.com");
 			var tmpfile = Path.GetTempFileName ();
 			File.WriteAllText (tmpfile, "TMPFILE");
 			var file_url = NSUrl.FromFilename (tmpfile);
@@ -122,7 +117,7 @@ namespace MonoTouchFixtures.Foundation {
 						// Use the default configuration so we can make use of the shared cookie storage.
 						var session = NSUrlSession.FromConfiguration (NSUrlSessionConfiguration.DefaultSessionConfiguration);
 
-						var downloadUri = new Uri ("https://google.com");
+						var downloadUri = NetworkResources.MicrosoftUri;
 						var downloadResponse = await session.CreateDownloadTaskAsync (downloadUri);
 
 						var tempLocation = downloadResponse.Location;

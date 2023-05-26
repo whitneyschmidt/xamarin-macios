@@ -7,11 +7,13 @@ using ObjCRuntime;
 
 namespace CoreMedia {
 
+	[Watch (6,0)]
 	public enum CMAttachmentMode : uint {
 		ShouldNotPropagate    = 0,
 		ShouldPropagate       = 1
 	};
 
+	[Watch (6,0)]
 	public static class CMAttachmentBearer {
 
 		[DllImport(Constants.CoreMediaLibrary)]
@@ -28,7 +30,6 @@ namespace CoreMedia {
 			return Runtime.GetNSObject<NSDictionary> (attachments, true);
 		}
 
-#if XAMCORE_2_0
 		// There is some API that needs a more strongly typed version of a NSDictionary
 		// and there is no easy way to downcast from NSDictionary to NSDictionary<TKey, TValue>
 		public static NSDictionary<TKey, TValue> GetAttachments<TKey, TValue> (this ICMAttachmentBearer target, CMAttachmentMode attachmentMode)
@@ -43,7 +44,6 @@ namespace CoreMedia {
 
 			return Runtime.GetNSObject<NSDictionary<TKey, TValue>> (attachments, true);
 		}
-#endif
 
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* CFTypeRef */ IntPtr CMGetAttachment (/* CMAttachmentBearerRef */ IntPtr target, /* CFStringRef */ IntPtr key,
@@ -61,11 +61,12 @@ namespace CoreMedia {
 				return Runtime.GetINativeObject<T> (attchm, false);
 			return default (T);
 		}
-
+#if !WATCH
 		public static T GetAttachment<T> (this ICMAttachmentBearer target, CMSampleBufferAttachmentKey key, out CMAttachmentMode attachmentModeOut) where T: class, INativeObject
 		{
 			return GetAttachment<T> (target, key.GetConstant (), out attachmentModeOut);
 		}
+#endif
 
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static void CMPropagateAttachments (/* CMAttachmentBearerRef */ IntPtr source, /* CMAttachmentBearerRef */ IntPtr destination);

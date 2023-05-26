@@ -69,10 +69,10 @@ namespace EventKitUI {
 		[Export ("eventStore")]
 		EKEventStore EventStore { get; set;  }
 
+		[NullAllowed]
 		[Export ("event")]
 		EKEvent Event { get; set;  }
 
-		[iOS (6,0)]
 		[Export ("cancelEditing")]
 		void CancelEditing ();
 	}
@@ -100,7 +100,6 @@ namespace EventKitUI {
 		[Export ("initWithSelectionStyle:displayStyle:eventStore:")]
 		IntPtr Constructor (EKCalendarChooserSelectionStyle selectionStyle, EKCalendarChooserDisplayStyle displayStyle, EKEventStore eventStore);
 
-		[iOS (6,0)]
 		[Export ("initWithSelectionStyle:displayStyle:entityType:eventStore:")]
 		IntPtr Constructor (EKCalendarChooserSelectionStyle selectionStyle, EKCalendarChooserDisplayStyle displayStyle, EKEntityType entityType, EKEventStore eventStore);
 

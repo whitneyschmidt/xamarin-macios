@@ -75,6 +75,11 @@ namespace EventKit {
 		ProcedureAlarmsNotMutable,
 		EventStoreNotAuthorized,
 		OSNotSupported,
+		InvalidInviteReplyCalendar,
+		NotificationsCollectionFlagNotSet,
+		SourceMismatch,
+		NotificationCollectionMismatch,
+		NotificationSavedWithoutCollection,
 	}
 
 	// untyped enum -> EKTypes.h
@@ -113,19 +118,6 @@ namespace EventKit {
 	public enum EKSpan : long {
 		ThisEvent, FutureEvents
 	}
-
-	// note: old binding mistakes - they should have been in EventKitUI (not EventKit)
-#if !XAMCORE_2_0
-	// untyped enum -> EKEventViewController.h
-	public enum EKEventViewAction {
-		Done, Responded, Deleted
-	}
-
-	// untyped enum -> EKEventEditViewController.h
-	public enum EKEventEditViewAction {
-		Canceled, Saved, Deleted
-	}
-#endif
 
 	// NSUInteger -> EKTypes.h
 	[Native]

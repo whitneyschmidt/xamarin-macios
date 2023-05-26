@@ -8,23 +8,11 @@
 // Copyright 2012-2014 Xamarin Inc All rights reserved.
 //
 
-#if !__WATCHOS__
-
 using System;
 using System.Runtime.InteropServices;
-#if XAMCORE_2_0
 using CoreMedia;
 using Foundation;
 using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.CoreMedia;
-using MonoTouch.UIKit;
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreMedia {
@@ -60,5 +48,3 @@ namespace MonoTouchFixtures.CoreMedia {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

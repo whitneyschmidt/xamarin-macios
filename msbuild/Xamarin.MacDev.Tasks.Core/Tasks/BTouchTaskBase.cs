@@ -7,10 +7,11 @@ using System.Collections.Generic;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-namespace Xamarin.MacDev.Tasks {
-	public abstract class BTouchTaskBase : ToolTask {
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
-		public string SessionId { get; set; }
+namespace Xamarin.MacDev.Tasks {
+	public abstract class BTouchTaskBase : XamarinToolTask {
 
 		public string OutputPath { get; set; }
 
@@ -40,6 +41,8 @@ namespace Xamarin.MacDev.Tasks {
 
 		public string ExtraArgs { get; set; }
 
+		public int Verbosity { get; set; }
+
 		public string GeneratedSourcesDir { get; set; }
 
 		public string GeneratedSourcesFileList { get; set; }
@@ -60,9 +63,6 @@ namespace Xamarin.MacDev.Tasks {
 		public ITaskItem[] Resources { get; set; }
 
 		public ITaskItem[] Sources { get; set; }
-
-		[Required]
-		public string TargetFrameworkIdentifier { get; set; }
 
 		protected override string ToolName {
 			get { return Path.GetFileNameWithoutExtension (ToolExe); }
@@ -181,7 +181,7 @@ namespace Xamarin.MacDev.Tasks {
 			if (GeneratedSourcesFileList != null)
 				cmd.AppendSwitchIfNotNull ("/sourceonly:", Path.GetFullPath (GeneratedSourcesFileList));
 
-			cmd.AppendSwitch (GetTargetFrameworkArgument ());
+			cmd.AppendSwitch ($"/target-framework={TargetFrameworkMoniker}");
 
 			if (!string.IsNullOrEmpty (ExtraArgs)) {
 				var extraArgs = CommandLineArgumentBuilder.Parse (ExtraArgs);
@@ -220,21 +220,15 @@ namespace Xamarin.MacDev.Tasks {
 				}
 			}
 
-			return cmd.ToString ();
-		}
-
-		protected virtual string GetTargetFrameworkArgument ()
-		{
-			switch (TargetFrameworkIdentifier) {
-				case "MonoTouch":
-				case "Xamarin.iOS":
-				case "Xamarin.TVOS":
-				case "Xamarin.WatchOS":
-					return $"/target-framework={TargetFrameworkIdentifier},v1.0";
-				default:
-					Log.LogError ($"Unknown target framework identifier: {TargetFrameworkIdentifier}.");
-					return string.Empty;
+			var v = VerbosityUtils.Merge (ExtraArgs, (LoggerVerbosity) Verbosity);
+			if (v.Length > 0) {
+				foreach (var arg in v) {
+					cmd.AppendTextUnquoted (" ");
+					cmd.AppendTextUnquoted (arg);
+				}
 			}
+
+			return cmd.ToString ();
 		}
 
 		public override bool Execute ()
@@ -249,7 +243,7 @@ namespace Xamarin.MacDev.Tasks {
 			}
 
 			if (ApiDefinitions.Length == 0) {
-				Log.LogError ("No API definition file specified.");
+				Log.LogError (MSBStrings.E0097);
 				return false;
 			}
 

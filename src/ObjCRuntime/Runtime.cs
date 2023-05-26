@@ -26,19 +26,13 @@ namespace ObjCRuntime {
 	
 	public partial class Runtime {
 #if !COREBUILD
-#if XAMCORE_2_0
-		internal const bool IsUnifiedBuild = true;
-#else
-		internal const bool IsUnifiedBuild = false;
-#endif
-
 		static Dictionary<IntPtrTypeValueTuple,Delegate> block_to_delegate_cache;
 		static Dictionary<Type, ConstructorInfo> intptr_ctor_cache;
 		static Dictionary<Type, ConstructorInfo> intptr_bool_ctor_cache;
 
 		static List <object> delegates;
 		static List <Assembly> assemblies;
-		static Dictionary <IntPtr, WeakReference> object_map;
+		static Dictionary <IntPtr, GCHandle> object_map;
 		static object lock_obj;
 		static IntPtr NSObjectClass;
 		static bool initialized;
@@ -192,16 +186,16 @@ namespace ObjCRuntime {
 #endif
 			if (options->Size != Marshal.SizeOf (typeof (InitializationOptions))) {
 				string msg = "Version mismatch between the native " + ProductName + " runtime and " + AssemblyName + ". Please reinstall " + ProductName + ".";
-				Console.Error.WriteLine (msg);
+				NSLog (msg);
 #if MONOMAC
 				try {
 					// Print out where Xamarin.Mac.dll and the native runtime was loaded from.
-					Console.Error.WriteLine (AssemblyName + " was loaded from {0}", typeof (nint).Assembly.Location);
+					NSLog (AssemblyName + " was loaded from {0}", typeof (nint).Assembly.Location);
 
 					var sym2 = Dlfcn.dlsym (Dlfcn.RTLD.Default, "xamarin_initialize");
 					Dlfcn.Dl_info info2;
 					if (Dlfcn.dladdr (sym2, out info2) == 0) {
-						Console.Error.WriteLine ("The native runtime was loaded from {0}", Marshal.PtrToStringAuto (info2.dli_fname));
+						NSLog ("The native runtime was loaded from {0}", Marshal.PtrToStringAuto (info2.dli_fname));
 					} else if (Dlfcn.dlsym (Dlfcn.RTLD.MainOnly, "xamarin_initialize") != IntPtr.Zero) {
 						byte[] buf = new byte [128];
 						int length = buf.Length;
@@ -209,7 +203,7 @@ namespace ObjCRuntime {
 							Array.Resize (ref buf, length);
 							length = buf.Length;
 							if (_NSGetExecutablePath (buf, ref length) != 0) {
-								Console.Error.WriteLine ("Could not find out where the native runtime was loaded from.");
+								NSLog ("Could not find out where the native runtime was loaded from.");
 								buf = null;
 							}
 						}
@@ -217,10 +211,10 @@ namespace ObjCRuntime {
 							var strlength = 0;
 							for (int i = 0; i < buf.Length && buf [i] != 0; i++)
 								strlength++;
-							Console.Error.WriteLine ("The native runtime was loaded from {0}", System.Text.Encoding.UTF8.GetString (buf, 0, strlength));
+							NSLog ("The native runtime was loaded from {0}", System.Text.Encoding.UTF8.GetString (buf, 0, strlength));
 						}
 					} else {
-						Console.Error.WriteLine ("Could not find out where the native runtime was loaded from.");
+						NSLog ("Could not find out where the native runtime was loaded from.");
 					}
 				} catch {
 					// Just ignore any exceptions, the above code is just a debug help, and if it fails,
@@ -233,7 +227,7 @@ namespace ObjCRuntime {
 			if (IntPtr.Size != sizeof (nint)) {
 				string msg = string.Format ("Native type size mismatch between " + AssemblyName + " and the executing architecture. " + AssemblyName + " was built for {0}-bit, while the current process is {1}-bit.", 
 					IntPtr.Size == 4 ? "64" : "32", IntPtr.Size == 4 ? "32" : "64");
-				Console.Error.WriteLine (msg);
+				NSLog (msg);
 				throw ErrorHelper.CreateError (8010, msg);
 			}
 
@@ -242,7 +236,7 @@ namespace ObjCRuntime {
 
 			Runtime.options = options;
 			delegates = new List<object> ();
-			object_map = new Dictionary <IntPtr, WeakReference> (IntPtrEqualityComparer);
+			object_map = new Dictionary <IntPtr, GCHandle> (IntPtrEqualityComparer);
 			intptr_ctor_cache = new Dictionary<Type, ConstructorInfo> (TypeEqualityComparer);
 			intptr_bool_ctor_cache = new Dictionary<Type, ConstructorInfo> (TypeEqualityComparer);
 			lock_obj = new object ();
@@ -253,10 +247,16 @@ namespace ObjCRuntime {
 				Registrar = new DynamicRegistrar ();
 			RegisterDelegates (options);
 			Class.Initialize (options);
+#if !NET
+			// This is not needed for .NET 5:
+			// * https://github.com/xamarin/xamarin-macios/issues/7924#issuecomment-588331822
+			// * https://github.com/xamarin/xamarin-macios/issues/7924#issuecomment-589356481
 			Mono.SystemDependencyProvider.Initialize ();
+#endif
 			InitializePlatform (options);
 
-#if !XAMMAC_SYSTEM_MONO
+#if !XAMMAC_SYSTEM_MONO && !NET_TODO
+			// NET_TODO: https://github.com/dotnet/runtime/issues/32543
 			UseAutoreleasePoolInThreadPool = true;
 #endif
 			IsARM64CallingConvention = GetIsARM64CallingConvention (); // Can only be done after Runtime.Arch is set (i.e. InitializePlatform has been called).
@@ -270,7 +270,8 @@ namespace ObjCRuntime {
 #endif
 		}
 
-#if !XAMMAC_SYSTEM_MONO
+#if !XAMMAC_SYSTEM_MONO && !NET_TODO
+		// NET_TODO: https://github.com/dotnet/runtime/issues/32543
 		static bool has_autoreleasepool_in_thread_pool;
 		public static bool UseAutoreleasePoolInThreadPool {
 			get {
@@ -356,7 +357,7 @@ namespace ObjCRuntime {
 		// returns: a handle to a native NSString *
 		static IntPtr ConvertSmartEnumToNSString (IntPtr value_handle)
 		{
-			var value = GCHandle.FromIntPtr (value_handle).Target;
+			var value = GetGCHandleTarget (value_handle);
 			var smart_type = value.GetType ();
 			MethodBase getConstantMethod, getValueMethod;
 			if (!Registrar.IsSmartEnum (smart_type, out getConstantMethod, out getValueMethod))
@@ -373,29 +374,29 @@ namespace ObjCRuntime {
 		// returns: GCHandle to a (smart) enum value. Caller must free the GCHandle.
 		static IntPtr ConvertNSStringToSmartEnum (IntPtr value, IntPtr type)
 		{
-			var smart_type = (Type) ObjectWrapper.Convert (type);
+			var smart_type = (Type) GetGCHandleTarget (type);
 			var str = GetNSObject<NSString> (value);
 			MethodBase getConstantMethod, getValueMethod;
 			if (!Registrar.IsSmartEnum (smart_type, out getConstantMethod, out getValueMethod))
 				throw ErrorHelper.CreateError (8024, $"Could not find a valid extension type for the smart enum '{smart_type.FullName}'. Please file a bug at https://github.com/xamarin/xamarin-macios/issues/new.");
 			var rv = ((MethodInfo) getValueMethod).Invoke (null, new object [] { str });
-			return GCHandle.ToIntPtr (GCHandle.Alloc (rv));
+			return AllocGCHandle (rv);
 		}
 
 #region Wrappers for delegate callbacks
 		static void RegisterNSObject (IntPtr managed_obj, IntPtr native_obj)
 		{
-			RegisterNSObject ((NSObject) ObjectWrapper.Convert (managed_obj), native_obj);
+			RegisterNSObject (GCHandle.FromIntPtr (managed_obj), native_obj, null);
 		}
 
 		static void RegisterAssembly (IntPtr a)
 		{
-			RegisterAssembly ((Assembly) ObjectWrapper.Convert (a));
+			RegisterAssembly ((Assembly) GetGCHandleTarget (a));
 		}
 
 		static void RegisterEntryAssembly (IntPtr a)
 		{
-			RegisterEntryAssembly ((Assembly) ObjectWrapper.Convert (a));
+			RegisterEntryAssembly ((Assembly) GetGCHandleTarget (a));
 		}
 
 		static void ThrowNSException (IntPtr ns_exception)
@@ -430,7 +431,7 @@ namespace ObjCRuntime {
 			return GCHandle.ToIntPtr (GCHandle.Alloc (ex)).ToInt32 ();
 		}
 
-		static IntPtr UnwrapNSException (int exc_handle)
+		static IntPtr UnwrapNSException (uint exc_handle)
 		{
 			var obj = GCHandle.FromIntPtr (new IntPtr (exc_handle)).Target;
 #if MONOMAC
@@ -447,17 +448,17 @@ namespace ObjCRuntime {
 
 		static IntPtr GetBlockWrapperCreator (IntPtr method, int parameter)
 		{
-			return ObjectWrapper.Convert (GetBlockWrapperCreator ((MethodInfo) ObjectWrapper.Convert (method), parameter));
+			return AllocGCHandle (GetBlockWrapperCreator ((MethodInfo) GetGCHandleTarget (method), parameter));
 		}
 
 		static IntPtr CreateBlockProxy (IntPtr method, IntPtr block)
 		{
-			return ObjectWrapper.Convert (CreateBlockProxy ((MethodInfo) ObjectWrapper.Convert (method), block));
+			return AllocGCHandle (CreateBlockProxy ((MethodInfo) GetGCHandleTarget (method), block));
 		}
 			
 		static IntPtr CreateDelegateProxy (IntPtr method, IntPtr @delegate, IntPtr signature, uint token_ref)
 		{
-			return BlockLiteral.GetBlockForDelegate ((MethodInfo) ObjectWrapper.Convert (method), ObjectWrapper.Convert (@delegate), token_ref, Marshal.PtrToStringAuto (signature));
+			return BlockLiteral.GetBlockForDelegate ((MethodInfo) GetGCHandleTarget (method), GetGCHandleTarget (@delegate), token_ref, Marshal.PtrToStringAuto (signature));
 		}
 
 		static unsafe Assembly GetEntryAssembly ()
@@ -504,7 +505,7 @@ namespace ObjCRuntime {
 				if (register_entry_assembly)
 					CollectReferencedAssemblies (assemblies, entry_assembly);
 			} else {
-				Console.WriteLine ("Could not find the entry assembly.");
+				NSLog ("Could not find the entry assembly.");
 			}
 
 #if MONOMAC
@@ -621,23 +622,18 @@ namespace ObjCRuntime {
 
 		static IntPtr GetClass (IntPtr klass)
 		{
-			return ObjectWrapper.Convert (new Class (klass));
+			return AllocGCHandle (new Class (klass));
 		}
 
 		static IntPtr GetSelector (IntPtr sel)
 		{
-			return ObjectWrapper.Convert (new Selector (sel));
+			return AllocGCHandle (new Selector (sel));
 		}
 
 		static void GetMethodForSelector (IntPtr cls, IntPtr sel, bool is_static, IntPtr desc)
 		{
 			// This is called by the old registrar code.
 			Registrar.GetMethodDescription (Class.Lookup (cls), sel, is_static, desc);
-		}
-
-		static IntPtr GetNSObjectWrapped (IntPtr ptr)
-		{
-			return ObjectWrapper.Convert (TryGetNSObject (ptr, true));
 		}
 
 		static bool HasNSObject (IntPtr ptr)
@@ -647,19 +643,19 @@ namespace ObjCRuntime {
 
 		static IntPtr GetHandleForINativeObject (IntPtr ptr)
 		{
-			return ((INativeObject) ObjectWrapper.Convert (ptr)).Handle;
+			return ((INativeObject) GetGCHandleTarget (ptr)).Handle;
 		}
 
 		static void UnregisterNSObject (IntPtr native_obj, IntPtr managed_obj) 
 		{
-			NativeObjectHasDied (native_obj, ObjectWrapper.Convert (managed_obj) as NSObject);
+			NativeObjectHasDied (native_obj, GetGCHandleTarget (managed_obj) as NSObject);
 		}
 
 		static unsafe IntPtr GetMethodFromToken (uint token_ref)
 		{
 			var method = Class.ResolveMethodTokenReference (token_ref);
 			if (method != null)
-				return ObjectWrapper.Convert (method);
+				return AllocGCHandle (method);
 
 			return IntPtr.Zero;
 		}
@@ -670,16 +666,16 @@ namespace ObjCRuntime {
 			if (method == null)
 				return IntPtr.Zero;
 
-			var nsobj = ObjectWrapper.Convert (obj) as NSObject;
+			var nsobj = GetGCHandleTarget (obj) as NSObject;
 			if (nsobj == null)
 				throw ErrorHelper.CreateError (8023, $"An instance object is required to construct a closed generic method for the open generic method: {method.DeclaringType.FullName}.{method.Name} (token reference: 0x{token_ref:X}). Please file a bug report at https://github.com/xamarin/xamarin-macios/issues/new.");
 
-			return ObjectWrapper.Convert (FindClosedMethod (nsobj.GetType (), method));
+			return AllocGCHandle (FindClosedMethod (nsobj.GetType (), method));
 		}
 
 		static IntPtr TryGetOrConstructNSObjectWrapped (IntPtr ptr)
 		{
-			return ObjectWrapper.Convert (GetNSObject (ptr, MissingCtorResolution.Ignore, true));
+			return AllocGCHandle (GetNSObject (ptr, MissingCtorResolution.Ignore, true));
 		}
 
 		static IntPtr GetINativeObject_Dynamic (IntPtr ptr, bool owns, IntPtr type_ptr)
@@ -687,9 +683,8 @@ namespace ObjCRuntime {
 			/*
 			 * This method is called from marshalling bridge (dynamic mode).
 			 */
-			// It doesn't work to use System.Type in the signature, we get garbage.
-			var type = (System.Type) ObjectWrapper.Convert (type_ptr);
-			return ObjectWrapper.Convert (GetINativeObject (ptr, owns, type));
+			var type = (System.Type) GetGCHandleTarget (type_ptr);
+			return AllocGCHandle (GetINativeObject (ptr, owns, type));
 		}
 			
 		static IntPtr GetINativeObject_Static (IntPtr ptr, bool owns, uint iface_token, uint implementation_token)
@@ -700,41 +695,40 @@ namespace ObjCRuntime {
 
 			var iface = Class.ResolveTypeTokenReference (iface_token);
 			var type = Class.ResolveTypeTokenReference (implementation_token);
-			return ObjectWrapper.Convert (GetINativeObject (ptr, owns, iface, type));
+			return AllocGCHandle (GetINativeObject (ptr, owns, iface, type));
 		}
 
 		static IntPtr GetNSObjectWithType (IntPtr ptr, IntPtr type_ptr, out bool created)
 		{
-			// It doesn't work to use System.Type in the signature, we get garbage.
-			var type = (System.Type) ObjectWrapper.Convert (type_ptr);
-			return ObjectWrapper.Convert (GetNSObject (ptr, type, MissingCtorResolution.ThrowConstructor1NotFound, true, out created));
+			var type = (System.Type) GetGCHandleTarget (type_ptr);
+			return AllocGCHandle (GetNSObject (ptr, type, MissingCtorResolution.ThrowConstructor1NotFound, true, out created));
 		}
 
-		static void Dispose (IntPtr mobj)
+		static void Dispose (IntPtr gchandle)
 		{
-			((IDisposable) ObjectWrapper.Convert (mobj)).Dispose ();
+			((IDisposable) GetGCHandleTarget (gchandle)).Dispose ();
 		}
 
 		static bool IsParameterTransient (IntPtr info, int parameter)
 		{
-			var minfo = ObjectWrapper.Convert (info) as MethodInfo;
+			var minfo = GetGCHandleTarget (info) as MethodInfo;
 			if (minfo == null)
 				return false; // might be a ConstructorInfo (bug #15583), but we don't care about that (yet at least).
 			minfo = minfo.GetBaseDefinition ();
 			var parameters = minfo.GetParameters ();
-			if (parameters == null || parameters.Length <= parameter)
+			if (parameters.Length <= parameter)
 				return false;
 			return parameters [parameter].IsDefined (typeof(TransientAttribute), false);
 		}
 
 		static bool IsParameterOut (IntPtr info, int parameter)
 		{
-			var minfo = ObjectWrapper.Convert (info) as MethodInfo;
+			var minfo = GetGCHandleTarget (info) as MethodInfo;
 			if (minfo == null)
 				return false; // might be a ConstructorInfo (bug #15583), but we don't care about that (yet at least).
 			minfo = minfo.GetBaseDefinition ();
 			var parameters = minfo.GetParameters ();
-			if (parameters == null || parameters.Length <= parameter)
+			if (parameters.Length <= parameter)
 				return false;
 			return parameters [parameter].IsOut;
 		}
@@ -764,7 +758,7 @@ namespace ObjCRuntime {
 
 		static IntPtr TypeGetFullName (IntPtr type) 
 		{	
-			return Marshal.StringToHGlobalAuto (((Type) ObjectWrapper.Convert (type)).FullName);
+			return Marshal.StringToHGlobalAuto (((Type) GetGCHandleTarget (type)).FullName);
 		}
 
 		static IntPtr LookupManagedTypeName (IntPtr klass)
@@ -835,11 +829,6 @@ namespace ObjCRuntime {
 		// delegate
 		//
 		[EditorBrowsable (EditorBrowsableState.Never)]
-#if XAMCORE_2_0
-		internal
-#else
-		public 
-#endif
 		static MethodInfo GetBlockWrapperCreator (MethodInfo method, int parameter)
 		{
 			// A mirror of this method is also implemented in StaticRegistrar:FindBlockProxyCreatorMethod
@@ -920,39 +909,29 @@ namespace ObjCRuntime {
 		// objective c blocks into strongly typed delegates.
 		//
 		[EditorBrowsable (EditorBrowsableState.Never)]
-#if XAMCORE_2_0
-		internal
-#else
-		public 
-#endif
 		static Delegate CreateBlockProxy (MethodInfo method, IntPtr block)
 		{
 			return (Delegate) method.Invoke (null, new object [] { block } );
 		}
 
-#if XAMCORE_2_0
-		internal
-#else
-		public
-#endif
-		static Delegate GetDelegateForBlock (IntPtr methodPtr, Type type)
+		internal static Delegate GetDelegateForBlock (IntPtr methodPtr, Type type)
 		{
-			if (block_to_delegate_cache == null)
-				block_to_delegate_cache = new Dictionary<IntPtrTypeValueTuple, Delegate> ();
-
 			// We do not care if there is a race condition and we initialize two caches
 			// since the worst that can happen is that we end up with an extra
 			// delegate->function pointer.
 			Delegate val;
 			var pair = new IntPtrTypeValueTuple (methodPtr, type);
-			lock (block_to_delegate_cache) {
+			lock (lock_obj) {
+				if (block_to_delegate_cache == null)
+					block_to_delegate_cache = new Dictionary<IntPtrTypeValueTuple, Delegate> ();
+
 				if (block_to_delegate_cache.TryGetValue (pair, out val))
 					return val;
 			}
 
 			val = Marshal.GetDelegateForFunctionPointer (methodPtr, type);
 
-			lock (block_to_delegate_cache){
+			lock (lock_obj) {
 				block_to_delegate_cache [pair] = val;
 			}
 			return val;
@@ -1009,15 +988,15 @@ namespace ObjCRuntime {
 
 		internal static void UnregisterNSObject (IntPtr ptr) {
 			lock (lock_obj) {
-				object_map.Remove (ptr);
+				if (object_map.Remove (ptr, out var value))
+					value.Free ();
 			}
 		}
 					
 		static void NativeObjectHasDied (IntPtr ptr, NSObject managed_obj)
 		{
 			lock (lock_obj) {
-				WeakReference wr;
-				if (object_map.TryGetValue (ptr, out wr)) {
+				if (object_map.TryGetValue (ptr, out var wr)) {
 					if (managed_obj == null || wr.Target == (object) managed_obj)
 						object_map.Remove (ptr);
 
@@ -1029,8 +1008,17 @@ namespace ObjCRuntime {
 		}
 		
 		internal static void RegisterNSObject (NSObject obj, IntPtr ptr) {
+			RegisterNSObject (GCHandle.Alloc (obj, GCHandleType.WeakTrackResurrection), ptr, obj);
+		}
+
+		// 'obj' can be provided if the caller has it, otherwise we'll fetch it from the GCHandle
+		// The GCHandle must be a WeakTracResurrection GCHandle, and the caller must not free it
+		internal static void RegisterNSObject (GCHandle handle, IntPtr ptr, NSObject obj)
+		{
+			if (obj == null)
+				obj = (NSObject) handle.Target;
 			lock (lock_obj) {
-				object_map [ptr] = new WeakReference (obj, true);
+				object_map [ptr] = handle;
 				obj.Handle = ptr;
 			}
 		}
@@ -1194,8 +1182,7 @@ namespace ObjCRuntime {
 		internal static NSObject TryGetNSObject (IntPtr ptr, bool evenInFinalizerQueue = false)
 		{
 			lock (lock_obj) {
-				WeakReference reference;
-				if (object_map.TryGetValue (ptr, out reference)) {
+				if (object_map.TryGetValue (ptr, out var reference)) {
 					var target = (NSObject) reference.Target;
 					if (target == null)
 						return null;
@@ -1423,6 +1410,11 @@ namespace ObjCRuntime {
 		// this method is identical in behavior to the non-generic one.
 		public static T GetINativeObject<T> (IntPtr ptr, bool owns) where T : class, INativeObject
 		{
+			return GetINativeObject<T> (ptr, false, owns);
+		}
+
+		public static T GetINativeObject<T> (IntPtr ptr, bool forced_type, bool owns) where T : class, INativeObject
+		{
 			if (ptr == IntPtr.Zero)
 				return null;
 
@@ -1433,7 +1425,10 @@ namespace ObjCRuntime {
 				return t;
 			}
 
-			if (o != null) {
+			// If forced type is true, we ignore any existing instances if the managed type of the existing instance isn't compatible with T.
+			// This may end up creating multiple managed wrapper instances for the same native handle,
+			// which is not optimal, but sometimes the alternative can be worse :/
+			if (o != null && !forced_type) {
 				// found an existing object, but with an incompatible type.
 				if (!typeof (T).IsInterface && typeof(NSObject).IsAssignableFrom (typeof (T))) {
 					// if the target type is another NSObject subclass, there's nothing we can do.
@@ -1445,7 +1440,7 @@ namespace ObjCRuntime {
 			var implementation = LookupINativeObjectImplementation (ptr, typeof (T));
 
 			if (implementation.IsSubclassOf (typeof (NSObject))) {
-				if (o != null) {
+				if (o != null && !forced_type) {
 					// We already have an instance of an NSObject-subclass for this ptr.
 					// Creating another will break the one-to-one assumption we have between
 					// native objects and NSObject instances.
@@ -1573,6 +1568,22 @@ namespace ObjCRuntime {
 		extern static void NSLog (IntPtr format, [MarshalAs (UnmanagedType.LPStr)] string s);
 #endif
 
+#if MONOMAC
+		[DllImport ("__Internal")]
+		extern static void xamarin_log (string s);
+		internal static void NSLog (string s)
+		{
+			if (PlatformHelper.CheckSystemVersion (10, 12)) {
+				Console.WriteLine (s);
+			} else {
+				xamarin_log (s);
+			}
+		}
+#else
+		[DllImport ("__Internal", EntryPoint="xamarin_log", CharSet=CharSet.Unicode)]
+		internal extern static void NSLog (string s);
+#endif
+
 #if !MONOMAC
 		[DllImport (Constants.FoundationLibrary, EntryPoint = "NSLog")]
 		extern static void NSLog_arm64 (IntPtr format, IntPtr p2, IntPtr p3, IntPtr p4, IntPtr p5, IntPtr p6, IntPtr p7, IntPtr p8, [MarshalAs (UnmanagedType.LPStr)] string s);
@@ -1595,8 +1606,14 @@ namespace ObjCRuntime {
 
 		static int MajorVersion = -1;
 		static int MinorVersion = -1;
+		static int BuildVersion = -1;
 
 		internal static bool CheckSystemVersion (int major, int minor, string systemVersion)
+		{
+			return CheckSystemVersion (major, minor, 0, systemVersion);
+		}
+
+		internal static bool CheckSystemVersion (int major, int minor, int build, string systemVersion)
 		{
 			if (MajorVersion == -1) {
 				string[] version = systemVersion.Split (new char[] { '.' });
@@ -1606,9 +1623,25 @@ namespace ObjCRuntime {
 				
 				if (version.Length < 2 || !int.TryParse (version[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out MinorVersion))
 					MinorVersion = 0;
+
+				if (version.Length < 3 || !int.TryParse (version[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out BuildVersion))
+					BuildVersion = 0;
 			}
 			
-			return MajorVersion > major || (MajorVersion == major && MinorVersion >= minor);
+			if (MajorVersion > major)
+				return true;
+			else if (MajorVersion < major)
+				return false;
+
+			if (MinorVersion > minor)
+				return true;
+			else if (MinorVersion < minor)
+				return false;
+
+			if (BuildVersion < build)
+				return false;
+
+			return true;
 		}
 
 		internal static IntPtr CloneMemory (IntPtr source, nint length)
@@ -1696,13 +1729,7 @@ namespace ObjCRuntime {
 		//
 		internal static T ThrowOnNull<T> (T obj, string name, string message = null) where T : class
 		{
-			if (obj == null) {
-				if (message == null)
-					throw new ArgumentNullException (name);
-				else
-					throw new ArgumentNullException (name, message);
-			}
-			return obj;
+			return obj ?? throw new ArgumentNullException (name, message);
 		}
 
 
@@ -1751,6 +1778,20 @@ namespace ObjCRuntime {
 #else
 #error Unknown platform
 #endif
+		}
+
+		// Get the GCHandle from the IntPtr value and get the wrapped object.
+		internal static object GetGCHandleTarget (IntPtr ptr)
+		{
+			if (ptr == IntPtr.Zero)
+				return null;
+			return GCHandle.FromIntPtr (ptr).Target;
+		}
+
+		// Allocate a GCHandle and return the IntPtr to it.
+		internal static IntPtr AllocGCHandle (object value)
+		{
+			return GCHandle.ToIntPtr (GCHandle.Alloc (value));
 		}
 	}
 	

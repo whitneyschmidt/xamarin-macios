@@ -11,15 +11,9 @@
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
 using HealthKit;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.HealthKit;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.HealthKit {
@@ -65,6 +59,12 @@ namespace MonoTouchFixtures.HealthKit {
 					break;
 				case HKQuantityTypeIdentifier.DistanceDownhillSnowSports:
 					if (!TestRuntime.CheckXcodeVersion (9, 2))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.AppleStandTime:
+				case HKQuantityTypeIdentifier.EnvironmentalAudioExposure:
+				case HKQuantityTypeIdentifier.HeadphoneAudioExposure:
+					if (!TestRuntime.CheckXcodeVersion(11, 0))
 						continue;
 					break;
 				}

@@ -7,14 +7,12 @@
 // Copyright 2011, Xamarin Inc
 //
 
-#if XAMCORE_2_0 || !MONOMAC
-
 using Foundation;
 using ObjCRuntime;
 
 namespace MediaPlayer {
 
-	[Mac (10,12,2, onlyOn64: true)]
+	[Mac (10,12,2)]
 	public class MPNowPlayingInfo {
 		public MPNowPlayingInfo ()
 		{
@@ -53,7 +51,7 @@ namespace MediaPlayer {
 		public bool? IsLiveStream { get; set; }
 		[iOS (10,3)]
 		public NSUrl AssetUrl { get; set; }
-		[iOS (11,1), TV (11,1), Mac (10,13,1, onlyOn64: true)]
+		[iOS (11,1), TV (11,1), Mac (10,13,1)]
 		public NSDate CurrentPlaybackDate { get; set; }
 
 		public string AlbumTitle;
@@ -229,5 +227,3 @@ namespace MediaPlayer {
 		}
 	}
 }
-
-#endif

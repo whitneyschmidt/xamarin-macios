@@ -213,7 +213,7 @@ namespace CoreText {
 				if (!value.HasValue)
 					Adapter.SetValue (Dictionary, CTFontDescriptorAttributeKey.Matrix, (NSObject) null);
 				else {
-					byte[] data = new byte [Marshal.SizeOf (typeof (CGAffineTransform))];
+					byte[] data = new byte [sizeof (CGAffineTransform)];
 					fixed (byte* p = data) {
 						Marshal.StructureToPtr (value.Value, (IntPtr) p, false);
 					}
@@ -312,7 +312,6 @@ namespace CoreText {
 			}
 		}
 
-#if XAMCORE_2_0
 		public CTFontManagerScope? RegistrationScope {
 			get {
 				var value = Adapter.GetUnsignedIntegerValue (Dictionary, CTFontDescriptorAttributeKey.RegistrationScope);
@@ -323,13 +322,6 @@ namespace CoreText {
 				value.HasValue ? (nuint?) (ulong) value.Value : null);
 			}
 		}
-#else
-		// TODO: docs mention CTFontManagerScope values, but I don't see any such enumeration.
-		public NSNumber RegistrationScope {
-			get {return (NSNumber) Dictionary [CTFontDescriptorAttributeKey.RegistrationScope];}
-			set {Adapter.SetValue (Dictionary, CTFontDescriptorAttributeKey.RegistrationScope, value);}
-		}
-#endif
 
 		public CTFontPriority? Priority {
 			get {
@@ -457,18 +449,6 @@ namespace CoreText {
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTFontDescriptorCreateCopyWithFeature (IntPtr original, IntPtr featureTypeIdentifier, IntPtr featureSelectorIdentifier);
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'WithFeature' with specific selector.")]
-		public CTFontDescriptor WithFeature (NSNumber featureTypeIdentifier, NSNumber featureSelectorIdentifier)
-		{
-			if (featureTypeIdentifier == null)
-				throw new ArgumentNullException ("featureTypeIdentifier");
-			if (featureSelectorIdentifier == null)
-				throw new ArgumentNullException ("featureSelectorIdentifier");
-			return CreateDescriptor (CTFontDescriptorCreateCopyWithFeature (handle, featureTypeIdentifier.Handle, featureSelectorIdentifier.Handle));
-		}
-#endif
-
 		public CTFontDescriptor WithFeature (CTFontFeatureAllTypographicFeatures.Selector featureSelector)
 		{
 			return WithFeature (FontFeatureGroup.AllTypographicFeatures, (int) featureSelector);
@@ -483,14 +463,6 @@ namespace CoreText {
 		{
 			return WithFeature (FontFeatureGroup.CursiveConnection, (int) featureSelector);
 		}
-
-#if !XAMCORE_2_0
-		[Obsolete]
-		public CTFontDescriptor WithFeature (CTFontFeatureLetterCase.Selector featureSelector)
-		{
-			return WithFeature (FontFeatureGroup.LetterCase, (int) featureSelector);
-		}
-#endif
 
 		public CTFontDescriptor WithFeature (CTFontFeatureVerticalSubstitutionConnection.Selector featureSelector)
 		{
@@ -762,12 +734,12 @@ namespace CoreText {
 			return o;
 		}
 #endregion
-		[Mac (10,9)][iOS (6,0)]
+		[Mac (10,9)]
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern bool CTFontDescriptorMatchFontDescriptorsWithProgressHandler (IntPtr descriptors, IntPtr mandatoryAttributes,
 			Func<CTFontDescriptorMatchingState, IntPtr, bool> progressHandler);
 
-		[Mac (10,9)][iOS (6,0)]
+		[Mac (10,9)]
 		public static bool MatchFontDescriptors (CTFontDescriptor[] descriptors, NSSet mandatoryAttributes, Func<CTFontDescriptorMatchingState, IntPtr, bool> progressHandler)
 		{
 			// FIXME: the P/Invoke used below is wrong, it expects a block, not a function pointer.

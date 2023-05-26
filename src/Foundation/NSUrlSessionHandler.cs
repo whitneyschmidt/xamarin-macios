@@ -38,18 +38,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
 
-#if XAMCORE_2_0
 using CoreFoundation;
 using Foundation;
 using Security;
-#else
-using MonoTouch.CoreFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-using System.Globalization;
-using nint = System.Int32;
-using nuint = System.UInt32;
-#endif
 
 #if !MONOMAC
 using UIKit;
@@ -62,6 +53,7 @@ namespace Foundation {
 #endif
 
 	public delegate bool NSUrlSessionHandlerTrustOverrideCallback (NSUrlSessionHandler sender, SecTrust trust);
+	public delegate bool NSUrlSessionHandlerTrustOverrideForUrlCallback (NSUrlSessionHandler sender, string url, SecTrust trust);
 
 	// useful extensions for the class in order to set it in a header
 	static class NSHttpCookieExtensions
@@ -118,17 +110,20 @@ namespace Foundation {
 	public partial class NSUrlSessionHandler : HttpMessageHandler
 	{
 		private const string SetCookie = "Set-Cookie";
+		private const string Cookie = "Cookie";
+		private CookieContainer cookieContainer;
 		readonly Dictionary<string, string> headerSeparators = new Dictionary<string, string> {
 			["User-Agent"] = " ",
 			["Server"] = " "
 		};
 
-		readonly NSUrlSession session;
+		NSUrlSession session;
 		readonly Dictionary<NSUrlSessionTask, InflightData> inflightRequests;
 		readonly object inflightRequestsLock = new object ();
+		readonly NSUrlSessionConfiguration.SessionConfigurationType sessionType;
 #if !MONOMAC && !__WATCHOS__
-		readonly bool isBackgroundSession = false;
 		NSObject notificationToken;  // needed to make sure we do not hang if not using a background session
+		readonly object notificationTokenLock = new object (); // need to make sure that threads do no step on each other with a dispose and a remove  inflight data
 #endif
 
 		static NSUrlSessionConfiguration CreateConfig ()
@@ -152,15 +147,11 @@ namespace Foundation {
 			if (configuration == null)
 				throw new ArgumentNullException (nameof (configuration));
 
-#if !MONOMAC  && !__WATCHOS__ 
-			// if the configuration has an identifier, we are dealing with a background session, 
-			// therefore, we do not have to listen to the notifications.
-			isBackgroundSession = !string.IsNullOrEmpty (configuration.Identifier);
-#endif
-
+			// HACK: we need to store the following because session.Configuration gets a copy of the object and the value gets lost
+			sessionType = configuration.SessionType;
+			allowsCellularAccess = configuration.AllowsCellularAccess;
 			AllowAutoRedirect = true;
 
-			// we cannot do a bitmask but we can set the minimum based on ServicePointManager.SecurityProtocol minimum
 			var sp = ServicePointManager.SecurityProtocol;
 			if ((sp & SecurityProtocolType.Ssl3) != 0)
 				configuration.TLSMinimumSupportedProtocol = SslProtocol.Ssl_3_0;
@@ -172,7 +163,7 @@ namespace Foundation {
 				configuration.TLSMinimumSupportedProtocol = SslProtocol.Tls_1_2;
 			else if ((sp & (SecurityProtocolType) 12288) != 0) // Tls13 value not yet in monno
 				configuration.TLSMinimumSupportedProtocol = SslProtocol.Tls_1_3;
-				
+
 			session = NSUrlSession.FromConfiguration (configuration, (INSUrlSessionDelegate) new NSUrlSessionHandlerDelegate (this), null);
 			inflightRequests = new Dictionary<NSUrlSessionTask, InflightData> ();
 		}
@@ -181,25 +172,38 @@ namespace Foundation {
 
 		void AddNotification ()
 		{
-			if (!isBackgroundSession && notificationToken == null)
-				notificationToken = NSNotificationCenter.DefaultCenter.AddObserver (UIApplication.WillResignActiveNotification, BackgroundNotificationCb);
+			lock (notificationTokenLock) {
+				if (!bypassBackgroundCheck && sessionType != NSUrlSessionConfiguration.SessionConfigurationType.Background && notificationToken == null)
+					notificationToken = NSNotificationCenter.DefaultCenter.AddObserver (UIApplication.WillResignActiveNotification, BackgroundNotificationCb);
+			} // lock
 		}
 
 		void RemoveNotification ()
 		{
-			if (notificationToken != null) {
-				NSNotificationCenter.DefaultCenter.RemoveObserver (notificationToken);
+			NSObject localNotificationToken;
+			lock (notificationTokenLock) {
+				localNotificationToken = notificationToken;
 				notificationToken = null;
 			}
+			if (localNotificationToken != null)
+				NSNotificationCenter.DefaultCenter.RemoveObserver (localNotificationToken);
 		}
 
 		void BackgroundNotificationCb (NSNotification obj)
 		{
-			// we do not need to call the lock, we call cancel on the source, that will trigger all the needed code to 
-			// clean the resources and such
-			foreach (var r in inflightRequests.Values) {
-				r.CompletionSource.TrySetCanceled ();
+			// the cancelation task of each of the sources will clean the different resources. Each removal is done
+			// inside a lock, but of course, the .Values collection will not like that because it is modified during the
+			// iteration. We split the operation in two, get all the diff cancelation sources, then try to cancel each of them
+			// which will do the correct lock dance. Note that we could be tempted to do a RemoveAll, that will yield the same
+			// runtime issue, this is dull but safe. 
+			List <TaskCompletionSource<HttpResponseMessage>> sources = null; 
+			lock (inflightRequestsLock) { // just lock when we iterate
+				sources = new List <TaskCompletionSource<HttpResponseMessage>> (inflightRequests.Count);
+				foreach (var r in inflightRequests.Values) {
+					sources.Add (r.CompletionSource);
+				}
 			}
+			sources.ForEach (source => { source.TrySetCanceled (); });
 		}
 #endif
 
@@ -229,11 +233,11 @@ namespace Foundation {
 
 		protected override void Dispose (bool disposing)
 		{
+			lock (inflightRequestsLock) {
 #if !MONOMAC  && !__WATCHOS__
 			// remove the notification if present, method checks against null
 			RemoveNotification ();
 #endif
-			lock (inflightRequestsLock) {
 				foreach (var pair in inflightRequests) {
 					pair.Key?.Cancel ();
 					pair.Key?.Dispose ();
@@ -269,7 +273,7 @@ namespace Foundation {
 			}
 		}
 
-		bool allowsCellularAccess;
+		bool allowsCellularAccess = true;
 
 		public bool AllowsCellularAccess {
 			get {
@@ -295,6 +299,7 @@ namespace Foundation {
 
 		NSUrlSessionHandlerTrustOverrideCallback trustOverride;
 
+		[Obsolete ("Use the 'TrustOverrideForUrl' property instead.")]
 		public NSUrlSessionHandlerTrustOverrideCallback TrustOverride {
 			get {
 				return trustOverride;
@@ -302,6 +307,75 @@ namespace Foundation {
 			set {
 				EnsureModifiability ();
 				trustOverride = value;
+			}
+		}
+
+		NSUrlSessionHandlerTrustOverrideForUrlCallback trustOverrideForUrl;
+
+		public NSUrlSessionHandlerTrustOverrideForUrlCallback TrustOverrideForUrl {
+			get {
+				return trustOverrideForUrl;
+			}
+			set {
+				EnsureModifiability ();
+				trustOverrideForUrl = value;
+			}
+		}
+		// we do check if a user does a request and the application goes to the background, but
+		// in certain cases the user does that on purpose (BeingBackgroundTask) and wants to be able
+		// to use the network. In those cases, which are few, we want the developer to explicitly 
+		// bypass the check when there are not request in flight 
+		bool bypassBackgroundCheck = true;
+
+		public bool BypassBackgroundSessionCheck {
+			get {
+				return bypassBackgroundCheck;
+			}
+			set {
+				EnsureModifiability ();
+				bypassBackgroundCheck = value;
+			}
+		}
+
+		public CookieContainer CookieContainer {
+			get {
+				return cookieContainer;
+			}
+			set {
+				EnsureModifiability ();
+				cookieContainer = value;
+			}
+		}
+
+		public bool UseCookies {
+			get {
+				return session.Configuration.HttpCookieStorage != null;
+			}
+			set {
+				EnsureModifiability ();
+				if (sessionType == NSUrlSessionConfiguration.SessionConfigurationType.Ephemeral)
+					throw new InvalidOperationException ("Cannot set the use of cookies in Ephemeral sessions.");
+				// we have to consider the following table of cases:
+				// 1. Value is set to true and cookie storage is not null -> we do nothing
+				// 2. Value is set to true and cookie storage is null -> we create/set the storage.
+				// 3. Value is false and cookie container is not null -> we clear the cookie storage
+				// 4. Value is false and cookie container is null -> we do nothing
+				var oldSession = session;
+				var configuration = session.Configuration;
+				if (value && configuration.HttpCookieStorage == null) {
+					// create storage because the user wants to use it. Things are not that easy, we have to 
+					// consider the following:
+					// 1. Default Session -> uses sharedHTTPCookieStorage
+					// 2. Background Session -> uses sharedHTTPCookieStorage
+					// 3. Ephemeral Session -> no allowed. apple does not provide a way to access to the private implementation of the storage class :/
+					configuration.HttpCookieStorage = NSHttpCookieStorage.SharedStorage;
+				}
+				if (!value && configuration.HttpCookieStorage != null) {
+					// remove storage so that it is not used in any of the requests
+					configuration.HttpCookieStorage = null;
+				}
+				session = NSUrlSession.FromConfiguration (configuration, (INSUrlSessionDelegate) new NSUrlSessionHandlerDelegate (this), null);
+				oldSession.Dispose ();
 			}
 		}
 
@@ -315,11 +389,8 @@ namespace Foundation {
 					"Properties can only be modified before sending the first request.");
 		}
 
-		// almost identical to ModernHttpClient version but it uses the constants from monotouch.dll | Xamarin.[iOS|WatchOS|TVOS].dll
 		static Exception createExceptionForNSError(NSError error)
 		{
-			// var webExceptionStatus = WebExceptionStatus.UnknownError;
-
 			var innerException = new NSErrorException(error);
 
 			// errors that exists in both share the same error code, so we can use a single switch/case
@@ -330,11 +401,6 @@ namespace Foundation {
 #else
 			if ((error.Domain == NSError.NSUrlErrorDomain) || (error.Domain == NSError.CFNetworkErrorDomain)) {
 #endif
-				// Parse the enum into a web exception status or exception. Some
-				// of these values don't necessarily translate completely to
-				// what WebExceptionStatus supports, so made some best guesses
-				// here.  For your reading pleasure, compare these:
-				//
 				// Apple docs: https://developer.apple.com/library/mac/documentation/Cocoa/Reference/Foundation/Miscellaneous/Foundation_Constants/index.html#//apple_ref/doc/constant_group/URL_Loading_System_Error_Codes
 				// .NET docs: http://msdn.microsoft.com/en-us/library/system.net.webexceptionstatus(v=vs.110).aspx
 				switch ((NSUrlError) (long) error.Code) {
@@ -345,124 +411,11 @@ namespace Foundation {
 #endif
 					// No more processing is required so just return.
 					return new OperationCanceledException(error.LocalizedDescription, innerException);
-// 				case NSUrlError.BadURL:
-// 				case NSUrlError.UnsupportedURL:
-// 				case NSUrlError.CannotConnectToHost:
-// 				case NSUrlError.ResourceUnavailable:
-// 				case NSUrlError.NotConnectedToInternet:
-// 				case NSUrlError.UserAuthenticationRequired:
-// 				case NSUrlError.InternationalRoamingOff:
-// 				case NSUrlError.CallIsActive:
-// 				case NSUrlError.DataNotAllowed:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.Socks5BadCredentials:
-// 				case (NSUrlError) CFNetworkErrors.Socks5UnsupportedNegotiationMethod:
-// 				case (NSUrlError) CFNetworkErrors.Socks5NoAcceptableMethod:
-// 				case (NSUrlError) CFNetworkErrors.HttpAuthenticationTypeUnsupported:
-// 				case (NSUrlError) CFNetworkErrors.HttpBadCredentials:
-// 				case (NSUrlError) CFNetworkErrors.HttpBadURL:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.ConnectFailure;
-// 					break;
-// 				case NSUrlError.TimedOut:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.NetServiceTimeout:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.Timeout;
-// 					break;
-// 				case NSUrlError.CannotFindHost:
-// 				case NSUrlError.DNSLookupFailed:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.HostNotFound:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceDnsServiceFailure:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.NameResolutionFailure;
-// 					break;
-// 				case NSUrlError.DataLengthExceedsMaximum:
-// 					webExceptionStatus = WebExceptionStatus.MessageLengthLimitExceeded;
-// 					break;
-// 				case NSUrlError.NetworkConnectionLost:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.HttpConnectionLost:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.ConnectionClosed;
-// 					break;
-// 				case NSUrlError.HTTPTooManyRedirects:
-// 				case NSUrlError.RedirectToNonExistentLocation:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.HttpRedirectionLoopDetected:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.ProtocolError;
-// 					break;
-// 				case NSUrlError.RequestBodyStreamExhausted:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.SocksUnknownClientVersion:
-// 				case (NSUrlError) CFNetworkErrors.SocksUnsupportedServerVersion:
-// 				case (NSUrlError) CFNetworkErrors.HttpParseFailure:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.SendFailure;
-// 					break;
-// 				case NSUrlError.BadServerResponse:
-// 				case NSUrlError.ZeroByteResource:
-// 				case NSUrlError.CannotDecodeRawData:
-// 				case NSUrlError.CannotDecodeContentData:
-// 				case NSUrlError.CannotParseResponse:
-// 				case NSUrlError.FileDoesNotExist:
-// 				case NSUrlError.FileIsDirectory:
-// 				case NSUrlError.NoPermissionsToReadFile:
-// 				case NSUrlError.CannotLoadFromNetwork:
-// 				case NSUrlError.CannotCreateFile:
-// 				case NSUrlError.CannotOpenFile:
-// 				case NSUrlError.CannotCloseFile:
-// 				case NSUrlError.CannotWriteToFile:
-// 				case NSUrlError.CannotRemoveFile:
-// 				case NSUrlError.CannotMoveFile:
-// 				case NSUrlError.DownloadDecodingFailedMidStream:
-// 				case NSUrlError.DownloadDecodingFailedToComplete:
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.Socks4RequestFailed:
-// 				case (NSUrlError) CFNetworkErrors.Socks4IdentdFailed:
-// 				case (NSUrlError) CFNetworkErrors.Socks4IdConflict:
-// 				case (NSUrlError) CFNetworkErrors.Socks4UnknownStatusCode:
-// 				case (NSUrlError) CFNetworkErrors.Socks5BadState:
-// 				case (NSUrlError) CFNetworkErrors.Socks5BadResponseAddr:
-// 				case (NSUrlError) CFNetworkErrors.CannotParseCookieFile:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceUnknown:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceCollision:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceNotFound:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceInProgress:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceBadArgument:
-// 				case (NSUrlError) CFNetworkErrors.NetServiceInvalid:
-// #endif
-// 					webExceptionStatus = WebExceptionStatus.ReceiveFailure;
-// 					break;
-// 				case NSUrlError.SecureConnectionFailed:
-// 					webExceptionStatus = WebExceptionStatus.SecureChannelFailure;
-// 					break;
-// 				case NSUrlError.ServerCertificateHasBadDate:
-// 				case NSUrlError.ServerCertificateHasUnknownRoot:
-// 				case NSUrlError.ServerCertificateNotYetValid:
-// 				case NSUrlError.ServerCertificateUntrusted:
-// 				case NSUrlError.ClientCertificateRejected:
-// 				case NSUrlError.ClientCertificateRequired:
-// 					webExceptionStatus = WebExceptionStatus.TrustFailure;
-// 					break;
-// #if !__WATCHOS__
-// 				case (NSUrlError) CFNetworkErrors.HttpProxyConnectionFailure:
-// 				case (NSUrlError) CFNetworkErrors.HttpBadProxyCredentials:
-// 				case (NSUrlError) CFNetworkErrors.PacFileError:
-// 				case (NSUrlError) CFNetworkErrors.PacFileAuth:
-// 				case (NSUrlError) CFNetworkErrors.HttpsProxyConnectionFailure:
-// 				case (NSUrlError) CFNetworkErrors.HttpsProxyFailureUnexpectedResponseToConnectMethod:
-// 					webExceptionStatus = WebExceptionStatus.RequestProhibitedByProxy;
-// 					break;
-// #endif
 				}
-			} 
+			}
 
-			// Always create a WebException so that it can be handled by the client.
-			return new WebException(error.LocalizedDescription, innerException); //, webExceptionStatus, response: null);
-		}
+			return new HttpRequestException (error.LocalizedDescription, innerException);
+ 		}
 
 		string GetHeaderSeparator (string name)
 		{
@@ -475,6 +428,13 @@ namespace Foundation {
 		async Task<NSUrlRequest> CreateRequest (HttpRequestMessage request)
 		{
 			var stream = Stream.Null;
+			// set header cookies if needed from the managed cookie container if we do use Cookies
+			if (session.Configuration.HttpCookieStorage != null) {
+				var cookies = cookieContainer?.GetCookieHeader (request.RequestUri); // as per docs: An HTTP cookie header, with strings representing Cookie instances delimited by semicolons.
+				if (!string.IsNullOrEmpty (cookies))
+					request.Headers.TryAddWithoutValidation (Cookie, cookies); 
+			}
+
 			var headers = request.Headers as IEnumerable<KeyValuePair<string, IEnumerable<string>>>;
 
 			if (request.Content != null) {
@@ -492,6 +452,7 @@ namespace Foundation {
 					return acc;
 				})
 			};
+
 			if (stream != Stream.Null) {
 				// HttpContent.TryComputeLength is `protected internal` :-( but it's indirectly called by headers
 				var length = request.Content.Headers.ContentLength;
@@ -503,7 +464,7 @@ namespace Foundation {
 			return nsrequest;
 		}
 
-#if SYSTEM_NET_HTTP || MONOMAC
+#if (SYSTEM_NET_HTTP || MONOMAC) && !NET
 		internal
 #endif
 		protected override async Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
@@ -553,8 +514,6 @@ namespace Foundation {
 			return await tcs.Task.ConfigureAwait (false);
 		}
 
-		// Needed since we strip during linking since we're inside a product assembly.
-		[Preserve (AllMembers = true)]
 		partial class NSUrlSessionHandlerDelegate : NSUrlSessionDataDelegate
 		{
 			readonly NSUrlSessionHandler sessionHandler;
@@ -581,6 +540,19 @@ namespace Foundation {
 				return null;
 			}
 
+			void UpdateManagedCookieContainer (NSUrl url, NSHttpCookie[] cookies)
+			{
+				var uri = new Uri (url.AbsoluteString);
+				if (sessionHandler.cookieContainer != null && cookies.Length > 0)
+					lock (sessionHandler.inflightRequestsLock) { // ensure we lock when writing to the collection
+						var cookiesContents = new string [cookies.Length];
+						for (var index = 0; index < cookies.Length; index++)
+							cookiesContents [index] = cookies [index].GetHeaderValue ();
+						sessionHandler.cookieContainer.SetCookies (uri, string.Join (',', cookiesContents)); //  as per docs: The contents of an HTTP set-cookie header as returned by a HTTP server, with Cookie instances delimited by commas.
+					}
+			}
+
+			[Preserve (Conditional = true)]
 			public override void DidReceiveResponse (NSUrlSession session, NSUrlSessionDataTask dataTask, NSUrlResponse response, Action<NSUrlSessionResponseDisposition> completionHandler)
 			{
 				var inflight = GetInflightData (dataTask);
@@ -620,9 +592,15 @@ namespace Foundation {
 						httpResponse.Content.Headers.TryAddWithoutValidation (v.Key.ToString (), v.Value.ToString ());
 					}
 
-					var cookies = session.Configuration.HttpCookieStorage.CookiesForUrl (response.Url);
-					for (var index = 0; index < cookies.Length; index++) {
-						httpResponse.Headers.TryAddWithoutValidation (SetCookie, cookies [index].GetHeaderValue ());
+					// it might be confusing that we are not using the managed CookieStore here, this is ONLY for those cookies that have been retrieved from
+					// the server via a Set-Cookie header, the managed container does not know a thing about this and apple is storing them in the native
+					// cookie container. Once we have the cookies from the response, we need to update the managed cookie container
+					if (session.Configuration.HttpCookieStorage != null) {
+						var cookies = session.Configuration.HttpCookieStorage.CookiesForUrl (response.Url);
+						UpdateManagedCookieContainer (response.Url, cookies);
+						for (var index = 0; index < cookies.Length; index++) {
+							httpResponse.Headers.TryAddWithoutValidation (SetCookie, cookies [index].GetHeaderValue ());
+						}
 					}
 
 					inflight.Response = httpResponse;
@@ -643,6 +621,7 @@ namespace Foundation {
 				completionHandler (NSUrlSessionResponseDisposition.Allow);
 			}
 
+			[Preserve (Conditional = true)]
 			public override void DidReceiveData (NSUrlSession session, NSUrlSessionDataTask dataTask, NSData data)
 			{
 				var inflight = GetInflightData (dataTask);
@@ -654,6 +633,7 @@ namespace Foundation {
 				SetResponse (inflight);
 			}
 
+			[Preserve (Conditional = true)]
 			public override void DidCompleteWithError (NSUrlSession session, NSUrlSessionTask task, NSError error)
 			{
 				var inflight = GetInflightData (task);
@@ -702,16 +682,19 @@ namespace Foundation {
 				}
 			}
 
+			[Preserve (Conditional = true)]
 			public override void WillCacheResponse (NSUrlSession session, NSUrlSessionDataTask dataTask, NSCachedUrlResponse proposedResponse, Action<NSCachedUrlResponse> completionHandler)
 			{
 				completionHandler (sessionHandler.DisableCaching ? null : proposedResponse);
 			}
 
+			[Preserve (Conditional = true)]
 			public override void WillPerformHttpRedirection (NSUrlSession session, NSUrlSessionTask task, NSHttpUrlResponse response, NSUrlRequest newRequest, Action<NSUrlRequest> completionHandler)
 			{
 				completionHandler (sessionHandler.AllowAutoRedirect ? newRequest : null);
 			}
 
+			[Preserve (Conditional = true)]
 			public override void DidReceiveChallenge (NSUrlSession session, NSUrlSessionTask task, NSUrlAuthenticationChallenge challenge, Action<NSUrlSessionAuthChallengeDisposition, NSUrlCredential> completionHandler)
 			{
 				var inflight = GetInflightData (task);
@@ -721,8 +704,15 @@ namespace Foundation {
 
 				// ToCToU for the callback
 				var trustCallback = sessionHandler.TrustOverride;
-				if (trustCallback != null && challenge.ProtectionSpace.AuthenticationMethod == NSUrlProtectionSpace.AuthenticationMethodServerTrust) {
-					if (trustCallback (sessionHandler, challenge.ProtectionSpace.ServerSecTrust)) {
+				var trustCallbackForUrl = sessionHandler.TrustOverrideForUrl;
+				var hasCallBack = trustCallback != null || trustCallbackForUrl != null; 
+				if (hasCallBack && challenge.ProtectionSpace.AuthenticationMethod == NSUrlProtectionSpace.AuthenticationMethodServerTrust) {
+					// if one of the delegates allows to ignore the cert, do it. We check first the one that takes the url because is more precisse, later the
+					// more general one. Since we are using nullables, if the delegate is not present, by default is false
+					var trustSec = (trustCallbackForUrl?.Invoke (sessionHandler, inflight.RequestUrl, challenge.ProtectionSpace.ServerSecTrust) ?? false) || 
+						(trustCallback?.Invoke (sessionHandler, challenge.ProtectionSpace.ServerSecTrust) ?? false);
+
+					if (trustSec) {
 						var credential = new NSUrlCredential (challenge.ProtectionSpace.ServerSecTrust);
 						completionHandler (NSUrlSessionAuthChallengeDisposition.UseCredential, credential);
 					} else {
@@ -759,8 +749,26 @@ namespace Foundation {
 				if (sessionHandler.Credentials != null && TryGetAuthenticationType (challenge.ProtectionSpace, out string authType)) {
 					NetworkCredential credentialsToUse = null;
 					if (authType != RejectProtectionSpaceAuthType) {
-						var uri = inflight.Request.RequestUri;
-						credentialsToUse = sessionHandler.Credentials.GetCredential (uri, authType);
+						// interesting situation, when we use a credential that we created that is empty, we are not getting the RejectProtectionSpaceAuthType,
+						// nevertheless, we need to check is not the first challenge we will continue trusting the 
+						// TryGetAuthenticationType method, but we will also check that the status response in not a 401
+						// look like we do get an exception from the credentials db:
+						//  TestiOSHttpClient[28769:26371051] CredStore - performQuery - Error copying matching creds.  Error=-25300, query={
+						// class = inet;
+						// "m_Limit" = "m_LimitAll";
+						// ptcl = htps;
+						// "r_Attributes" = 1;
+						// sdmn = test;
+						// srvr = "jigsaw.w3.org";
+						// sync = syna;
+						// }
+						// do remember that we ALWAYS get a challenge, so the failure count has to be 1 or more for this check, 1 would be the first time
+						var nsurlRespose = challenge.FailureResponse as NSHttpUrlResponse;
+						var responseIsUnauthorized = (nsurlRespose == null) ? false : nsurlRespose.StatusCode == (int) HttpStatusCode.Unauthorized && challenge.PreviousFailureCount > 0;
+						if (!responseIsUnauthorized) {
+							var uri = inflight.Request.RequestUri;
+							credentialsToUse = sessionHandler.Credentials.GetCredential (uri, authType);
+						}
 					}
 
 					if (credentialsToUse != null) {
@@ -799,8 +807,6 @@ namespace Foundation {
 			}
 		}
 
-		// Needed since we strip during linking since we're inside a product assembly.
-		[Preserve (AllMembers = true)]
 		class InflightData : IDisposable
 		{
 			public readonly object Lock = new object ();
@@ -839,8 +845,6 @@ namespace Foundation {
 
 		}
 
-		// Needed since we strip during linking since we're inside a product assembly.
-		[Preserve (AllMembers = true)]
 		class NSUrlSessionDataTaskStreamContent : MonoStreamContent
 		{
 			Action disposed;
@@ -925,7 +929,7 @@ namespace Foundation {
 				base.Dispose (disposing);
 			}
 
-			protected internal override Task SerializeToStreamAsync (Stream stream, TransportContext context)
+			protected override Task SerializeToStreamAsync (Stream stream, TransportContext context)
 			{
 				if (contentCopied) {
 					if (!content.CanSeek) {
@@ -940,7 +944,10 @@ namespace Foundation {
 				return content.CopyToAsync (stream, bufferSize, cancellationToken);
 			}
 
-			protected internal override bool TryComputeLength (out long length)
+#if !NET
+			internal
+#endif
+			protected override bool TryComputeLength (out long length)
 			{
 				if (!content.CanSeek) {
 					length = 0;
@@ -951,8 +958,6 @@ namespace Foundation {
 			}
 		}
 
-		// Needed since we strip during linking since we're inside a product assembly.
-		[Preserve (AllMembers = true)]
 		class NSUrlSessionDataTaskStream : Stream
 		{
 			readonly Queue<NSData> data;
@@ -1098,8 +1103,6 @@ namespace Foundation {
 			}
 		}
 
-		// Needed since we strip during linking since we're inside a product assembly.
-		[Preserve (AllMembers = true)]
 		class WrappedNSInputStream : NSInputStream
 		{
 			NSStreamStatus status;

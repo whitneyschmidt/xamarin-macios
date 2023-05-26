@@ -2,15 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-#if XAMCORE_2_0
 using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 using MonoTouch.NUnit.UI;
 using NUnit.Framework.Internal;
+using MonoTouchFixtures.BackgroundTasks;
 
 namespace MonoTouchFixtures {
 	
@@ -57,7 +53,10 @@ namespace MonoTouchFixtures {
 			window.RootViewController = new UINavigationController (runner.GetViewController ());
 			// make the window visible
 			window.MakeKeyAndVisible ();
-			
+
+
+			// required for the background tasks tests, we can only register the tasks in this method
+			BGTaskSchedulerTest.RegisterTestTasks ();
 			return true;
 		}
 
@@ -121,11 +120,7 @@ namespace MonoTouchFixtures {
 				imgView.ContentMode = UIViewContentMode.Center;
 				View.AddSubview (imgView);
 			}
-#if XAMCORE_2_0
 			NSTimer.CreateScheduledTimer (0.01, (v) => action ());
-#else
-			NSTimer.CreateScheduledTimer (0.01, () => action ());
-#endif
 		}
 	}
 }

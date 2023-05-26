@@ -29,11 +29,10 @@ Copyright (C) 2013-2016 Xamarin Inc. All rights reserved.
 		<MonoTouchSdkRoot Condition="'$(MonoTouchSdkRoot)' == '' And '$(MD_MTOUCH_SDK_ROOT)' != '' And Exists('$(MD_MTOUCH_SDK_ROOT)/bin')">$(MD_MTOUCH_SDK_ROOT)</MonoTouchSdkRoot>
 		<MonoTouchSdkRoot Condition="'$(MonoTouchSdkRoot)' == '' And '$(MD_MTOUCH_SDK_ROOT)' != '' And Exists('$(MD_MTOUCH_SDK_ROOT)/usr/bin')">$(MD_MTOUCH_SDK_ROOT)/usr</MonoTouchSdkRoot>
 		<MonoTouchSdkRoot Condition="'$(MonoTouchSdkRoot)' == '' And Exists('/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/bin')">/Library/Frameworks/Xamarin.iOS.framework/Versions/Current</MonoTouchSdkRoot>
-		<MonoTouchSdkRoot Condition="'$(MonoTouchSdkRoot)' == ''">/Developer/MonoTouch/usr</MonoTouchSdkRoot>
 	</PropertyGroup>
 
 	<!-- Add our own pre-build steps -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(_UsingXamarinSdk)' != 'true'">
 		<BuildDependsOn>
 			BuildOnlySettings;
 			_CreateGeneratedSourcesDir;
@@ -43,7 +42,7 @@ Copyright (C) 2013-2016 Xamarin Inc. All rights reserved.
 	</PropertyGroup>
 
 	<!-- Add our own Clean steps -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(_UsingXamarinSdk)' != 'true'">
 		<CleanDependsOn>
 			_CleanGeneratedSources;
 			$(CleanDependsOn)
@@ -61,7 +60,7 @@ Copyright (C) 2013-2016 Xamarin Inc. All rights reserved.
 	</Target>
 
 	<Target Name="_AssignBundleResourceNames">
-		<AssignBundleResourceNames BundleResources="@(BundleResource)" ResourceDirectoryPrefixes="$(IPhoneResourcePrefix)">
+		<AssignBundleResourceNames BundleResources="@(BundleResource)" ResourceDirectoryPrefixes="$(_ResourcePrefix)">
 			<Output ItemName="_BundleResourceWithName" TaskParameter="BundleResourcesWithNames" />
 		</AssignBundleResourceNames>
 	</Target>
@@ -72,7 +71,7 @@ Copyright (C) 2013-2016 Xamarin Inc. All rights reserved.
 				OptimizePNGs="False"
 				BundleResources="@(Content);@(BundleResource)"
 				ProjectDir="$(MSBuildProjectDirectory)"
-				ResourcePrefix="$(IPhoneResourcePrefix)"
+				ResourcePrefix="$(_ResourcePrefix)"
 			>
 
 			<Output TaskParameter="BundleResourcesWithLogicalNames" ItemName="_BundleResourceWithLogicalName"/>
@@ -84,6 +83,8 @@ Copyright (C) 2013-2016 Xamarin Inc. All rights reserved.
 			<Output ItemName="EmbeddedResource" TaskParameter="EmbeddedResources" />
 		</CreateEmbeddedResources>
 	</Target>
+
+	<Import Project="$(MSBuildThisFileDirectory)Xamarin.iOS.NativeReference.Stubs.targets" />
 
 	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.targets"
 			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.targets')"/>

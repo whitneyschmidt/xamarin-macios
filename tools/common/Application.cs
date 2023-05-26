@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Linker;
 
 using Xamarin.Linker;
 using Xamarin.Utils;
@@ -13,10 +14,8 @@ using Xamarin.Utils;
 using ObjCRuntime;
 
 #if MONOTOUCH
-using PlatformException = Xamarin.Bundler.MonoTouchException;
 using PlatformResolver = MonoTouch.Tuner.MonoTouchResolver;
 #else
-using PlatformException = Xamarin.Bundler.MonoMacException;
 using PlatformResolver = Xamarin.Bundler.MonoMacResolver;
 #endif
 
@@ -34,13 +33,11 @@ namespace Xamarin.Bundler {
 		Trace = 1,
 	}
 
-	public enum LinkMode {
-		None,
-		SDKOnly,
-		All,
-#if !MONOTOUCH
-		Platform,
-#endif
+	public enum RegistrarMode {
+		Default,
+		Dynamic,
+		PartialStatic,
+		Static,
 	}
 
 	public partial class Application
@@ -49,6 +46,9 @@ namespace Xamarin.Bundler {
 		public string AppDirectory = ".";
 		public bool DeadStrip = true;
 		public bool EnableDebug;
+		// The list of assemblies that we do generate debugging info for.
+		public bool DebugAll;
+		public List<string> DebugAssemblies = new List<string> ();
 		internal RuntimeOptions RuntimeOptions;
 		public Optimizations Optimizations = new Optimizations ();
 		public RegistrarMode Registrar = RegistrarMode.Default;
@@ -65,10 +65,16 @@ namespace Xamarin.Bundler {
 		public LinkMode LinkMode = LinkMode.All;
 		public List<string> LinkSkipped = new List<string> ();
 		public List<string> Definitions = new List<string> ();
-		public Mono.Linker.I18nAssemblies I18n;
+		public I18nAssemblies I18n;
+		public List<string> WarnOnTypeRef = new List<string> ();
 
 		public bool? EnableCoopGC;
 		public bool EnableSGenConc;
+		public bool EnableProfiling;
+		public bool? DebugTrack;
+
+		public Dictionary<string, string> EnvironmentVariables = new Dictionary<string, string> ();
+
 		public MarshalObjectiveCExceptionMode MarshalObjectiveCExceptions;
 		public MarshalManagedExceptionMode MarshalManagedExceptions;
 
@@ -78,6 +84,7 @@ namespace Xamarin.Bundler {
 			set { is_default_marshal_managed_exception_mode = value; }
 		}
 		public List<string> RootAssemblies = new List<string> ();
+		public List<string> References = new List<string> ();
 		public List<Application> SharedCodeApps = new List<Application> (); // List of appexes we're sharing code with.
 		public string RegistrarOutputLibrary;
 
@@ -85,9 +92,43 @@ namespace Xamarin.Bundler {
 		public Version DeploymentTarget;
 		public Version SdkVersion;
 	
+		public MonoNativeMode MonoNativeMode { get; set; }
+		List<Abi> abis;
+		public bool IsLLVM { get { return IsArchEnabled (Abi.LLVM); } }
+
 		public bool Embeddinator { get; set; }
 
 		public List<Target> Targets = new List<Target> ();
+
+		bool? package_managed_debug_symbols;
+		public bool PackageManagedDebugSymbols {
+			get { return package_managed_debug_symbols.Value; }
+			set { package_managed_debug_symbols = value; }
+		}
+
+		public string TlsProvider;
+		public string HttpMessageHandler;
+		// If we're targetting a 32 bit arch.
+		bool? is32bits;
+		public bool Is32Build {
+			get {
+				if (!is32bits.HasValue)
+					is32bits = IsArchEnabled (Abi.Arch32Mask);
+				return is32bits.Value;
+			}
+		}
+
+		// If we're targetting a 64 bit arch.
+		bool? is64bits;
+		public bool Is64Build {
+			get {
+				if (!is64bits.HasValue)
+					is64bits = IsArchEnabled (Abi.Arch64Mask);
+				return is64bits.Value;
+			}
+		}
+
+		public bool IsDualBuild { get { return Is32Build && Is64Build; } } // if we're building both a 32 and a 64 bit version.
 
 		public Application (string[] arguments)
 		{
@@ -100,6 +141,25 @@ namespace Xamarin.Bundler {
 			}
 		}
 
+		public void ParseI18nAssemblies (string i18n)
+		{
+			var assemblies = I18nAssemblies.None;
+
+			foreach (var part in i18n.Split (',')) {
+				var assembly = part.Trim ();
+				if (string.IsNullOrEmpty (assembly))
+					continue;
+
+				try {
+					assemblies |= (I18nAssemblies) Enum.Parse (typeof (I18nAssemblies), assembly, true);
+				} catch {
+					throw new FormatException ("Unknown value for i18n: " + assembly);
+				}
+			}
+
+			I18n = assemblies;
+		}
+
 		// This is just a name for this app to show in log/error messages, etc.
 		public string Name {
 			get { return Path.GetFileNameWithoutExtension (AppDirectory); }
@@ -110,11 +170,10 @@ namespace Xamarin.Bundler {
 #if MTOUCH
 				if (IsSimulatorBuild)
 					return false;
-#else
-				if (Driver.Is64Bit)
-					return false;
-#endif
 				return MarshalObjectiveCExceptions == MarshalObjectiveCExceptionMode.ThrowManagedException || MarshalObjectiveCExceptions == MarshalObjectiveCExceptionMode.Abort;
+#else
+				return false;
+#endif
 			}
 		}
 
@@ -230,7 +289,7 @@ namespace Xamarin.Bundler {
 			string max_s = null;
 
 			if (sources.Count () == 0 || targets.Count () == 0)
-				ErrorHelper.Error (1013, "Dependency tracking error: no files to compare. Please file a bug report at https://github.com/xamarin/xamarin-macios/issues/new with a test case.");
+				throw ErrorHelper.CreateError (1013, Errors.MT1013);
 
 			foreach (var s in sources) {
 				var sfi = new FileInfo (s);
@@ -319,24 +378,24 @@ namespace Xamarin.Bundler {
 
 		public void InitializeCommon ()
 		{
-			Namespaces.Initialize ();
 			SelectRegistrar ();
-			foreach (var target in Targets)
-				target.SelectMonoNative ();
+			SelectMonoNative ();
+
+			RuntimeOptions = RuntimeOptions.Create (this, HttpMessageHandler, TlsProvider);
 
 			if (RequiresXcodeHeaders && SdkVersion < SdkVersions.GetVersion (Platform)) {
-				throw ErrorHelper.CreateError (91, "This version of {0} requires the {1} {2} SDK (shipped with Xcode {3}). Either upgrade Xcode to get the required header files or {4} (to try to avoid the new APIs).", ProductName, PlatformName, SdkVersions.GetVersion (Platform), SdkVersions.Xcode, Error91LinkerSuggestion);
+				throw ErrorHelper.CreateError (91, Errors.MX0091, ProductName, PlatformName, SdkVersions.GetVersion (Platform), SdkVersions.Xcode, Error91LinkerSuggestion);
 			}
 
 			if (DeploymentTarget != null) {
 				if (DeploymentTarget < Xamarin.SdkVersions.GetMinVersion (Platform))
-					throw new PlatformException (73, true, "{4} {0} does not support a deployment target of {1} for {3} (the minimum is {2}). Please select a newer deployment target in your project's Info.plist.", Constants.Version, DeploymentTarget, Xamarin.SdkVersions.GetMinVersion (Platform), PlatformName, ProductName);
+					throw new ProductException (73, true, Errors.MT0073, Constants.Version, DeploymentTarget, Xamarin.SdkVersions.GetMinVersion (Platform), PlatformName, ProductName);
 				if (DeploymentTarget > Xamarin.SdkVersions.GetVersion (Platform))
-					throw new PlatformException (74, true, "{4} {0} does not support a deployment target of {1} for {3} (the maximum is {2}). Please select an older deployment target in your project's Info.plist or upgrade to a newer version of {4}.", Constants.Version, DeploymentTarget, Xamarin.SdkVersions.GetVersion (Platform), PlatformName, ProductName);
+					throw new ProductException (74, true, Errors.MX0074, Constants.Version, DeploymentTarget, Xamarin.SdkVersions.GetVersion (Platform), PlatformName, ProductName);
 			}
 
 			if (Platform == ApplePlatform.WatchOS && EnableCoopGC.HasValue && !EnableCoopGC.Value)
-				throw ErrorHelper.CreateError (88, "The GC must be in cooperative mode for watchOS apps. Please remove the --coop:false argument to mtouch.");
+				throw ErrorHelper.CreateError (88, Errors.MT0088);
 
 			if (!EnableCoopGC.HasValue)
 				EnableCoopGC = Platform == ApplePlatform.WatchOS;
@@ -345,12 +404,12 @@ namespace Xamarin.Bundler {
 				switch (MarshalObjectiveCExceptions) {
 				case MarshalObjectiveCExceptionMode.UnwindManagedCode:
 				case MarshalObjectiveCExceptionMode.Disable:
-					throw ErrorHelper.CreateError (89, "The option '{0}' cannot take the value '{1}' when cooperative mode is enabled for the GC.", "--marshal-objectivec-exceptions", MarshalObjectiveCExceptions.ToString ().ToLowerInvariant ());
+					throw ErrorHelper.CreateError (89, Errors.MT0089, "--marshal-objectivec-exceptions", MarshalObjectiveCExceptions.ToString ().ToLowerInvariant ());
 				}
 				switch (MarshalManagedExceptions) {
 				case MarshalManagedExceptionMode.UnwindNativeCode:
 				case MarshalManagedExceptionMode.Disable:
-					throw ErrorHelper.CreateError (89, "The option '{0}' cannot take the value '{1}' when cooperative mode is enabled for the GC.", "--marshal-managed-exceptions", MarshalManagedExceptions.ToString ().ToLowerInvariant ());
+					throw ErrorHelper.CreateError (89, Errors.MT0089, "--marshal-managed-exceptions", MarshalManagedExceptions.ToString ().ToLowerInvariant ());
 				}
 			}
 
@@ -361,7 +420,7 @@ namespace Xamarin.Bundler {
 #endif
 
 			if (MarshalObjectiveCExceptions == MarshalObjectiveCExceptionMode.Default) {
-				if (EnableCoopGC.Value) {
+				if (EnableCoopGC.Value || (Platform == ApplePlatform.MacOSX && EnableDebug)) {
 					MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.ThrowManagedException;
 				} else {
 					MarshalObjectiveCExceptions = isSimulatorOrDesktopDebug ? MarshalObjectiveCExceptionMode.UnwindManagedCode : MarshalObjectiveCExceptionMode.Disable;
@@ -391,34 +450,82 @@ namespace Xamarin.Bundler {
 				// * The user will get a linker error anyway if they do this.
 				// * I see it as quite unlikely that anybody will in fact try this (it must be manually set in the additional mtouch arguments).
 				// * I find it more probable that Apple will remove the -u restriction, in which case someone might actually want to try this, and if it's a warning, we won't prevent it.
-				ErrorHelper.Warning (115, "It is recommended to reference dynamic symbols using code (--dynamic-symbol-mode=code) when bitcode is enabled.");
+				ErrorHelper.Warning (115, Errors.MT0115);
 			}
 #endif
 
+			if (!DebugTrack.HasValue) {
+				DebugTrack = false;
+			} else if (DebugTrack.Value && !EnableDebug) {
+				ErrorHelper.Warning (32, Errors.MT0032);
+			}
+
+			if (!package_managed_debug_symbols.HasValue) {
+				package_managed_debug_symbols = EnableDebug;
+			} else if (package_managed_debug_symbols.Value && IsLLVM) {
+				ErrorHelper.Warning (3007, Errors.MX3007);
+			}
+
 			Optimizations.Initialize (this);
+		}
+
+		void SelectMonoNative ()
+		{
+			switch (Platform) {
+			case ApplePlatform.iOS:
+			case ApplePlatform.TVOS:
+				MonoNativeMode = DeploymentTarget.Major >= 10 ? MonoNativeMode.Unified : MonoNativeMode.Compat;
+				break;
+			case ApplePlatform.WatchOS:
+				if (IsArchEnabled (Abis, Abi.ARM64_32)) {
+					MonoNativeMode = MonoNativeMode.Unified;
+				} else {
+					MonoNativeMode = DeploymentTarget.Major >= 3 ? MonoNativeMode.Unified : MonoNativeMode.Compat;
+				}
+				break;
+			case ApplePlatform.MacOSX:
+				if (DeploymentTarget >= new Version (10, 12))
+					MonoNativeMode = MonoNativeMode.Unified;
+				else
+					MonoNativeMode = MonoNativeMode.Compat;
+				break;
+			default:
+				throw ErrorHelper.CreateError (71, Errors.MX0071, Platform, ProductName);
+			}
+		}
+
+		public string GetLibNativeName ()
+		{
+			switch (MonoNativeMode) {
+			case MonoNativeMode.Unified:
+				return "libmono-native-unified";
+			case MonoNativeMode.Compat:
+				return "libmono-native-compat";
+			default:
+				throw ErrorHelper.CreateError (99, Errors.MX0099, $"Invalid mono native type: '{MonoNativeMode}'");
+			}
 		}
 
 		public void RunRegistrar ()
 		{
 			// The static registrar.
 			if (Registrar != RegistrarMode.Static)
-				throw new PlatformException (67, "Invalid registrar: {0}", Registrar); // this is only called during our own build
+				throw new ProductException (67, Errors.MT0067, Registrar); // this is only called during our own build
 
 			if (RootAssemblies.Count < 1)
-				throw ErrorHelper.CreateError (130, "No root assemblies found. You should provide at least one root assembly.");
+				throw ErrorHelper.CreateError (130, Errors.MX0130);
 
 			var registrar_m = RegistrarOutputLibrary;
 			var RootAssembly = RootAssemblies [0];
 			var resolvedAssemblies = new Dictionary<string, AssemblyDefinition> ();
 			var resolver = new PlatformResolver () {
-				FrameworkDirectory = Driver.GetPlatformFrameworkDirectory (this),
 				RootDirectory = Path.GetDirectoryName (RootAssembly),
 #if MMP
 				CommandLineAssemblies = RootAssemblies,
 #endif
 			};
 
-			if (Platform == ApplePlatform.iOS || Platform == ApplePlatform.MacOSX) {
+			if (Platform == ApplePlatform.iOS) {
 				if (Is32Build) {
 					resolver.ArchDirectory = Driver.GetArch32Directory (this);
 				} else {
@@ -428,7 +535,11 @@ namespace Xamarin.Bundler {
 
 			var ps = new ReaderParameters ();
 			ps.AssemblyResolver = resolver;
-			resolvedAssemblies.Add ("mscorlib", ps.AssemblyResolver.Resolve (AssemblyNameReference.Parse ("mscorlib"), new ReaderParameters ()));
+			foreach (var reference in References) {
+				var r = resolver.Load (reference);
+				if (r == null)
+					throw ErrorHelper.CreateError (2002, Errors.MT2002, reference);
+			}
 
 			var productAssembly = Driver.GetProductAssembly (this);
 			bool foundProductAssembly = false;
@@ -440,7 +551,7 @@ namespace Xamarin.Bundler {
 				try {
 					AssemblyDefinition lastAssembly = ps.AssemblyResolver.Resolve (AssemblyNameReference.Parse (rootName), new ReaderParameters ());
 					if (lastAssembly == null) {
-						ErrorHelper.CreateWarning (7, "The root assembly '{0}' does not exist", rootName);
+						ErrorHelper.CreateWarning (7, Errors.MX0007, rootName);
 						continue;
 					}
 					
@@ -454,31 +565,261 @@ namespace Xamarin.Bundler {
 					resolvedAssemblies.Add (rootName, lastAssembly);
 					Driver.Log (3, "Loaded {0}", lastAssembly.MainModule.FileName);
 				} catch (Exception ex) {
-					ErrorHelper.Warning (9, ex, "Error while loading assemblies: {0}: {1}", rootName, ex.Message);
+					ErrorHelper.Warning (9, ex, Errors.MX0009, $"{rootName}: {ex.Message}");
 					continue;
 				}
 			}
 
 			if (!foundProductAssembly)
-				throw ErrorHelper.CreateError (131, "Product assembly '{0}' not found in assembly list: '{1}'", productAssembly, string.Join ("', '", RootAssemblies.ToArray ()));
+				throw ErrorHelper.CreateError (131, Errors.MX0131, productAssembly, string.Join ("', '", RootAssemblies.ToArray ()));
 
 #if MONOTOUCH
-			BuildTarget = BuildTarget.Simulator;
-#endif
-			Registrar.IStaticRegistrar registrar;
-#if MMP
-			if (Driver.IsClassic) {
-				registrar = new Registrar.ClassicStaticRegistrar (this);
+			if (SelectAbis (Abis, Abi.SimulatorArchMask).Count > 0) {
+				BuildTarget = BuildTarget.Simulator;
+			} else if (SelectAbis (Abis, Abi.DeviceArchMask).Count > 0) {
+				BuildTarget = BuildTarget.Device;
 			} else {
-				registrar = new Registrar.StaticRegistrar (this);
+				throw ErrorHelper.CreateError (99, Errors.MX0099, "No valid ABI");
 			}
-#else
-			registrar = new Registrar.StaticRegistrar (this);
 #endif
+			var registrar = new Registrar.StaticRegistrar (this);
 			if (RootAssemblies.Count == 1)
 				registrar.GenerateSingleAssembly (resolvedAssemblies.Values, Path.ChangeExtension (registrar_m, "h"), registrar_m, Path.GetFileNameWithoutExtension (RootAssembly));
 			else
 				registrar.Generate (resolvedAssemblies.Values, Path.ChangeExtension (registrar_m, "h"), registrar_m);
+		}
+
+		public IEnumerable<Abi> Abis {
+			get { return abis; }
+		}
+
+		public bool IsArchEnabled (Abi arch)
+		{
+			return IsArchEnabled (abis, arch);
+		}
+
+		public static bool IsArchEnabled (IEnumerable<Abi> abis, Abi arch)
+		{
+			foreach (var abi in abis) {
+				if ((abi & arch) != 0)
+					return true;
+			}
+			return false;
+		}
+
+		public void SetDefaultAbi ()
+		{
+			if (abis == null)
+				abis = new List<Abi> ();
+
+			switch (Platform) {
+			case ApplePlatform.iOS:
+				if (abis.Count == 0) {
+					if (DeploymentTarget == null || DeploymentTarget.Major >= 11) {
+						abis.Add (IsDeviceBuild ? Abi.ARM64 : Abi.x86_64);
+					} else {
+						abis.Add (IsDeviceBuild ? Abi.ARMv7 : Abi.i386);
+					}
+				}
+				break;
+			case ApplePlatform.WatchOS:
+				if (abis.Count == 0)
+					throw ErrorHelper.CreateError (76, Errors.MT0076, "Xamarin.WatchOS");
+				break;
+			case ApplePlatform.TVOS:
+				if (abis.Count == 0)
+					throw ErrorHelper.CreateError (76, Errors.MT0076, "Xamarin.TVOS");
+				break;
+			case ApplePlatform.MacOSX:
+				if (abis.Count == 0)
+					abis.Add (Abi.x86_64);
+				break;
+			default:
+				throw ErrorHelper.CreateError (71, Errors.MX0071, Platform, ProductName);
+			}
+		}
+
+		public void ValidateAbi ()
+		{
+			var validAbis = new List<Abi> ();
+			switch (Platform) {
+			case ApplePlatform.iOS:
+				if (IsDeviceBuild) {
+					validAbis.Add (Abi.ARMv7);
+					validAbis.Add (Abi.ARMv7 | Abi.Thumb);
+					validAbis.Add (Abi.ARMv7 | Abi.LLVM);
+					validAbis.Add (Abi.ARMv7 | Abi.LLVM | Abi.Thumb);
+					validAbis.Add (Abi.ARMv7s);
+					validAbis.Add (Abi.ARMv7s | Abi.Thumb);
+					validAbis.Add (Abi.ARMv7s | Abi.LLVM);
+					validAbis.Add (Abi.ARMv7s | Abi.LLVM | Abi.Thumb);
+				} else {
+					validAbis.Add (Abi.i386);
+				}
+				if (IsDeviceBuild) {
+					validAbis.Add (Abi.ARM64);
+					validAbis.Add (Abi.ARM64 | Abi.LLVM);
+				} else {
+					validAbis.Add (Abi.x86_64);
+				}
+				break;
+			case ApplePlatform.WatchOS:
+				if (IsDeviceBuild) {
+					validAbis.Add (Abi.ARMv7k);
+					validAbis.Add (Abi.ARMv7k | Abi.LLVM);
+					validAbis.Add (Abi.ARM64_32);
+					validAbis.Add (Abi.ARM64_32 | Abi.LLVM);
+				} else {
+					validAbis.Add (Abi.i386);
+				}
+				break;
+			case ApplePlatform.TVOS:
+				if (IsDeviceBuild) {
+					validAbis.Add (Abi.ARM64);
+					validAbis.Add (Abi.ARM64 | Abi.LLVM);
+				} else {
+					validAbis.Add (Abi.x86_64);
+				}
+				break;
+			case ApplePlatform.MacOSX:
+				validAbis.Add (Abi.x86_64);
+				break;
+			default:
+				throw ErrorHelper.CreateError (71, Errors.MX0071, Platform, ProductName);
+			}
+
+#if MMP
+			// This is technically not needed, because we'll fail the validation just below, but this handles
+			// a common case (existing 32-bit projects) and shows a better error message.
+			if (abis.Count == 1 && abis [0] == Abi.i386)
+				throw ErrorHelper.CreateError (144, Errors.MM0144);
+#endif
+
+			foreach (var abi in abis) {
+				if (!validAbis.Contains (abi))
+					throw ErrorHelper.CreateError (75, Errors.MT0075, abi, Platform, string.Join (", ", validAbis.Select ((v) => v.AsString ()).ToArray ()));
+			}
+		}
+
+		public void ClearAbi ()
+		{
+			abis = null;
+		}
+
+		public void ParseAbi (string abi)
+		{
+			var res = new List<Abi> ();
+			foreach (var str in abi.Split (new char [] { ',' }, StringSplitOptions.RemoveEmptyEntries)) {
+				Abi value;
+				switch (str) {
+				case "i386":
+					value = Abi.i386;
+					break;
+				case "x86_64":
+					value = Abi.x86_64;
+					break;
+				case "armv7":
+					value = Abi.ARMv7;
+					break;
+				case "armv7+llvm":
+					value = Abi.ARMv7 | Abi.LLVM;
+					break;
+				case "armv7+llvm+thumb2":
+					value = Abi.ARMv7 | Abi.LLVM | Abi.Thumb;
+					break;
+				case "armv7s":
+					value = Abi.ARMv7s;
+					break;
+				case "armv7s+llvm":
+					value = Abi.ARMv7s | Abi.LLVM;
+					break;
+				case "armv7s+llvm+thumb2":
+					value = Abi.ARMv7s | Abi.LLVM | Abi.Thumb;
+					break;
+				case "arm64":
+					value = Abi.ARM64;
+					break;
+				case "arm64+llvm":
+					value = Abi.ARM64 | Abi.LLVM;
+					break;
+				case "arm64_32":
+					value = Abi.ARM64_32;
+					break;
+				case "arm64_32+llvm":
+					value = Abi.ARM64_32 | Abi.LLVM;
+					break;
+				case "armv7k":
+					value = Abi.ARMv7k;
+					break;
+				case "armv7k+llvm":
+					value = Abi.ARMv7k | Abi.LLVM;
+					break;
+				default:
+					throw ErrorHelper.CreateError (15, Errors.MT0015, str);
+				}
+
+				// merge this value with any existing ARMv? already specified.
+				// this is so that things like '--armv7 --thumb' work correctly.
+				if (abis != null) {
+					for (int i = 0; i < abis.Count; i++) {
+						if ((abis [i] & Abi.ArchMask) == (value & Abi.ArchMask)) {
+							value |= abis [i];
+							break;
+						}
+					}
+				}
+
+				res.Add (value);
+			}
+
+			// We replace any existing abis, to keep the old behavior where '--armv6 --armv7' would 
+			// enable only the last abi specified and disable the rest.
+			abis = res;
+		}
+
+		public static string GetArchitectures (IEnumerable<Abi> abis)
+		{
+			var res = new List<string> ();
+
+			foreach (var abi in abis)
+				res.Add (abi.AsArchString ());
+
+			return string.Join (", ", res.ToArray ());
+		}
+
+		public string MonoGCParams {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					// Configure sgen to use a small nursery
+					string ret = "nursery-size=512k";
+					if (IsTodayExtension || Platform == ApplePlatform.WatchOS) {
+						// A bit test shows different behavior
+						// Sometimes apps are killed with ~100mb allocated,
+						// but I've seen apps allocate up to 240+mb as well
+						ret += ",soft-heap-limit=8m";
+					}
+					if (EnableSGenConc)
+						ret += ",major=marksweep-conc";
+					else
+						ret += ",major=marksweep";
+					return ret;
+				case ApplePlatform.MacOSX:
+					return EnableSGenConc ? "major=marksweep-conc" : "major=marksweep";
+				default:
+					throw ErrorHelper.CreateError (71, Errors.MX0071, Platform, ProductName);
+				}
+			}
+		}
+
+		// This is to load the symbols for all assemblies, so that we can give better error messages
+		// (with file name / line number information).
+		public void LoadSymbols ()
+		{
+			foreach (var t in Targets)
+				t.LoadSymbols ();
 		}
 	}
 }

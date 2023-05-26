@@ -9,7 +9,6 @@ namespace PassKit {
 	// untyped enum -> PKError.h
 	// This never seemed to be deprecatd, yet in iOS8 it's obsoleted
 	[Obsoleted (PlatformName.iOS, 8, 0)]
-	[iOS (6,0)]
 	public enum PKErrorCode {
 		None = 0,
 		Unknown = 1,
@@ -18,7 +17,6 @@ namespace PassKit {
 	}
 
 	// NSInteger -> PKPass.h
-	[iOS (6,0)]
 	[ErrorDomain ("PKPassKitErrorDomain")]
 	[Native]
 	public enum PKPassKitErrorCode : long {
@@ -27,10 +25,6 @@ namespace PassKit {
 		InvalidData = 1,
 		UnsupportedVersion,
 		InvalidSignature,
-#if !XAMCORE_2_0
-		[Obsolete ("renamed to InvalidSignature")] // after betas?
-		CertificateRevoked = InvalidSignature,
-#endif
 		[iOS (8,0)]
 		NotEntitled
 	}
@@ -46,8 +40,12 @@ namespace PassKit {
 
 	[Native]
 	public enum PKPassType : ulong {
-		Barcode, Payment,
-		// Any = ~0
+		Barcode,
+		SecureElement,
+		[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'SecureElement' instead.")]
+		[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'SecureElement' instead.")]
+		Payment = SecureElement,
+		Any = ulong.MaxValue,
 	}
 
 	[Watch (3,0)]
@@ -76,9 +74,21 @@ namespace PassKit {
 		PinLockout
 	}
 
+	[Deprecated (PlatformName.iOS, 13, 4, message: "Use 'PKSecureElementPassActivationState' instead.")]
+	[Deprecated (PlatformName.WatchOS, 6, 2, message: "Use 'PKSecureElementPassActivationState' instead.")]
 	[Native]
 	public enum PKPaymentPassActivationState : ulong {
 		Activated, RequiresActivation, Activating, Suspended, Deactivated
+	}
+
+	[Watch (6,2), iOS (13,4)]
+	[Native]
+	public enum PKSecureElementPassActivationState : long {
+		Activated,
+		RequiresActivation,
+		Activating,
+		Suspended,
+		Deactivated,
 	}
 
 	[Watch (3,0)]
@@ -138,7 +148,7 @@ namespace PassKit {
 		ServicePickup,
 	}
 
-	[NoWatch]
+	[Watch (6,0)]
 	[iOS (9,0)]
 	[Native]
 	public enum PKAddPaymentPassError : long
@@ -200,10 +210,22 @@ namespace PassKit {
 	}
 
 	[iOS (12,0)]
-	[NoWatch]
+	[NoWatch] // https://feedbackassistant.apple.com/feedback/6301809 https://github.com/xamarin/maccore/issues/1819
 	[Native]
 	public enum PKAddPaymentPassStyle : ulong {
 		Payment,
 		Access,
+	}
+
+	[Watch (6,2), iOS (13,4)]
+	[ErrorDomain ("PKAddSecureElementPassErrorDomain")]
+	[Native]
+	public enum PKAddSecureElementPassErrorCode : long {
+		UnknownError,
+		UserCanceledError,
+		UnavailableError,
+		InvalidConfigurationError,
+		DeviceNotSupportedError,
+		DeviceNotReadyError
 	}
 }

@@ -59,16 +59,15 @@ namespace WebKit
 		WebContentProcessTerminated,
 		WebViewInvalidated,
 		JavaScriptExceptionOccurred,
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
 		JavaScriptResultTypeIsUnsupported,
-		[iOS (11,0)][Mac (10,13, onlyOn64 : true)]
+		// Xcode 9
 		ContentRuleListStoreCompileFailed,
-		[iOS (11,0)][Mac (10,13, onlyOn64 : true)]
 		ContentRuleListStoreLookUpFailed,
-		[iOS (11,0)][Mac (10,13, onlyOn64 : true)]
 		ContentRuleListStoreRemoveFailed,
-		[iOS (11,0)][Mac (10,13, onlyOn64 : true)]
-		ContentRuleListStoreVersionMismatch
+		ContentRuleListStoreVersionMismatch,
+		// Xcode 11
+		AttributedStringContentFailedToLoad,
+		AttributedStringContentLoadTimedOut,
 	}
 
 #if !MONOMAC || !XAMCORE_4_0
@@ -92,24 +91,16 @@ namespace WebKit
 		FlightNumber = 1 << 5,
 		LookupSuggestion = 1 << 6,
 		SpotlightSuggestion = LookupSuggestion,
-#if XAMCORE_2_0
 		All = UInt64.MaxValue
-#else
-		All = UInt32.MaxValue
-#endif
 	}
 
-	[iOS (10,0)][Mac (10,12, onlyOn64: true)]
+	[iOS (10,0)][Mac (10,12)]
 	[Native]
 	[Flags]
 	public enum WKAudiovisualMediaTypes : ulong	{
 		None = 0,
 		Audio = 1 << 0,
 		Video = 1 << 1,
-#if XAMCORE_2_0
 		All = UInt64.MaxValue
-#else
-		All = UInt32.MaxValue
-#endif
 	}
 }

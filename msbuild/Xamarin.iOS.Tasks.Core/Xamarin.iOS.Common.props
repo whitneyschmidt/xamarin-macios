@@ -24,6 +24,8 @@ Copyright (C) 2013-2016 Xamarin. All rights reserved.
 		<_XamarinCommonPropsHasBeenImported>true</_XamarinCommonPropsHasBeenImported>
 	</PropertyGroup>
 
+	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Shared.props" />
+
 	<!-- When looking for related files to copy, look for Mono debugging files as well -->
 	<PropertyGroup>
 		<AllowedReferenceRelatedFileExtensions>
@@ -35,15 +37,11 @@ Copyright (C) 2013-2016 Xamarin. All rights reserved.
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<IPhoneResourcePrefix Condition="'$(IPhoneResourcePrefix)' == ''">Resources</IPhoneResourcePrefix>
-
 		<MtouchDebug Condition="'$(MtouchDebug)' == ''">False</MtouchDebug>
-		<MtouchEnableGenericValueTypeSharing Condition="'$(MtouchEnableGenericValueTypeSharing)' == ''">True</MtouchEnableGenericValueTypeSharing>
 		<MtouchFastDev Condition="'$(MtouchFastDev)' == ''">False</MtouchFastDev>
 		<MtouchHttpClientHandler Condition="'$(MtouchHttpClientHandler)' == ''">NSUrlSessionHandler</MtouchHttpClientHandler>
 		<MtouchProfiling Condition="'$(MtouchProfiling)' == ''">False</MtouchProfiling>
 		<MtouchLinkerDumpDependencies Condition="'$(MtouchLinkerDumpDependencies)' == ''">False</MtouchLinkerDumpDependencies>
-		<MtouchLink Condition="'$(MtouchLink)' == ''">SdkOnly</MtouchLink>
 		<MtouchUseLlvm Condition="'$(MtouchUseLlvm)' == ''">False</MtouchUseLlvm>
 		<MtouchNoSymbolStrip Condition="'$(MtouchNoSymbolStrip)' == ''">False</MtouchNoSymbolStrip>
 		<MtouchFloat32 Condition="'$(MtouchFloat32)' == ''">False</MtouchFloat32>
@@ -73,17 +71,6 @@ Copyright (C) 2013-2016 Xamarin. All rights reserved.
 		<IOSDebugOverWiFi Condition="'$(IOSDebugOverWiFi)' == '' And '$(IOSDebuggerConnectOverUsb)' == 'False'">True</IOSDebugOverWiFi>
 		<!--<IOSDebuggerHosts Condition="'$(IOSDebuggerHosts)' == ''">127.0.0.1</IOSDebuggerHosts>-->
 		<IOSDebuggerPort Condition="'$(IOSDebuggerPort)' == ''">10000</IOSDebuggerPort>
-		
-		<!-- We cannot use $(Platform) in conditions on props, because VS interprets them as valid platforms 
-			 for the current project and makes them available for solution configurations, which fails miserably 
-			 for iOS class library projects. By using another property name, we "opt out" of this "smart" behavior -->
-		<_Platform>$(Platform)</_Platform>
-
-		<!-- There should always be an MtouchArg value in newer projects, for older projects default to old values -->
-		<MtouchArch Condition="'$(MtouchArch)' == '' And '$(_Platform)' == 'iPhoneSimulator'">i386</MtouchArch>
-		<MtouchArch Condition="'$(MtouchArch)' == '' And '$(_Platform)' == 'iPhone' And '$(TargetFrameworkIdentifier)' == 'Xamarin.WatchOS'">ARMv7k</MtouchArch>
-		<MtouchArch Condition="'$(MtouchArch)' == '' And '$(_Platform)' == 'iPhone' And '$(TargetFrameworkIdentifier)' == 'Xamarin.TVOS'">ARM64</MtouchArch>
-		<MtouchArch Condition="'$(MtouchArch)' == '' And '$(_Platform)' == 'iPhone'">ARMv7</MtouchArch>
 
 		<!-- On-Demand Resources -->
 		<EnableOnDemandResources Condition="'$(EnableOnDemandResources)' == ''">true</EnableOnDemandResources>
@@ -94,12 +81,17 @@ Copyright (C) 2013-2016 Xamarin. All rights reserved.
 		<!-- Device-Specific Builds -->
 		<DeviceSpecificBuild Condition="'$(DeviceSpecificBuild)' == ''">$(MtouchDebug)</DeviceSpecificBuild>
 		<DeviceSpecificBuild Condition="'$(MtouchDebug)' != 'true'">False</DeviceSpecificBuild>
-		<TargetArchitectures>$(MtouchArch)</TargetArchitectures>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<AvailableItemName Include="BundleResource" />
 	</ItemGroup>
+
+	<!-- Do not resolve from the GAC under any circumstances in Mobile -->
+	<PropertyGroup Condition="'$(_UsingXamarinSdk)' != 'true'">
+		<AssemblySearchPaths>$([System.String]::Copy('$(AssemblySearchPaths)').Replace('{GAC}',''))</AssemblySearchPaths>
+		<AssemblySearchPaths Condition="'$(MSBuildRuntimeVersion)' != ''">$(AssemblySearchPaths.Split(';'))</AssemblySearchPaths>
+	</PropertyGroup>
 
 	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.props"
 			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.props')"/>

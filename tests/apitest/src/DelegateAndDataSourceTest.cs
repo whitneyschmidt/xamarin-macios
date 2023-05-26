@@ -5,16 +5,9 @@ using System.Reflection;
 using NUnit.Framework;
 using System.Runtime.CompilerServices;
 
-
-#if !XAMCORE_2_0
-using MonoMac.Foundation;
-using MonoMac.AppKit;
-using MonoMac.ObjCRuntime;
-#else
 using Foundation;
 using AppKit;
 using ObjCRuntime;
-#endif
 
 namespace Xamarin.Mac.Tests
 {
@@ -132,6 +125,14 @@ namespace Xamarin.Mac.Tests
 				break;
 			case "QTMovie":
 				return TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 14, 4); // Broke in macOS 10.14.4.
+			case "AVCaptureView":
+				// Deallocating a AVCaptureView makes it trigger a permission dialog, which we don't want, so just skip this type.
+				return true;
+			}
+
+			switch (t.Namespace) {
+			case "QTKit":
+				return TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 15); // QTKit is gone in 10.15.
 			}
 
 			return false;

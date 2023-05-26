@@ -5,14 +5,13 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CompileAppManifestTaskBase : Task
+	public abstract class CompileAppManifestTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleName { get; set; }
@@ -61,7 +60,7 @@ namespace Xamarin.MacDev.Tasks
 				return;
 
 			if (string.IsNullOrEmpty (value))
-				LogAppManifestWarning ("Could not determine value for manifest key '{0}'", key);
+				LogAppManifestWarning (MSBStrings.W0106, key);
 			else
 				dict[key] = value;
 		}
@@ -94,7 +93,7 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					partial = PDictionary.FromFile (template.ItemSpec);
 				} catch (Exception ex) {
-					Log.LogError ("Error loading partial Info.plist template file '{0}': {1}", template.ItemSpec, ex.Message);
+					Log.LogError (MSBStrings.E0107, template.ItemSpec, ex.Message);
 					continue;
 				}
 

@@ -1,4 +1,3 @@
-﻿#if XAMCORE_2_0 || !MONOMAC
 using System;
 using System.Runtime.InteropServices;
 
@@ -22,12 +21,12 @@ namespace Metal {
 			return Runtime.GetNSObject<MTLVertexDescriptor> (MTKMetalVertexDescriptorFromModelIO (descriptor.Handle));
 		}
 
-		[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+		[iOS (10,0)][Mac (10,12)]
 		[TV (10,0)]
 		[DllImport (Constants.MetalKitLibrary)]
 		static extern /* MTLVertexDescriptor __nonnull */ IntPtr MTKMetalVertexDescriptorFromModelIOWithError (/* MDLVertexDescriptor __nonnull */ IntPtr modelIODescriptor, out IntPtr error);
 
-		[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+		[iOS (10,0)][Mac (10,12)]
 		[TV (10,0)]
 		public static MTLVertexDescriptor FromModelIO (MDLVertexDescriptor descriptor, out NSError error)
 		{
@@ -40,4 +39,4 @@ namespace Metal {
 		}
 	}
 }
-#endif
+

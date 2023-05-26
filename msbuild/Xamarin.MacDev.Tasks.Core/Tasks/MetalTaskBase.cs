@@ -6,14 +6,15 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.MacDev.Tasks;
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class MetalTaskBase : ToolTask
+	public abstract class MetalTaskBase : XamarinToolTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		public ITaskItem AppManifest { get; set; }
 
@@ -33,6 +34,12 @@ namespace Xamarin.MacDev.Tasks
 		public string SdkVersion { get; set; }
 
 		[Required]
+		public bool SdkIsSimulator { get; set; }
+
+		[Required]
+		public string SdkRoot { get; set; }
+
+		[Required]
 		public ITaskItem SourceFile { get; set; }
 
 		#endregion
@@ -44,8 +51,22 @@ namespace Xamarin.MacDev.Tasks
 			get;
 		}
 
-		protected abstract string OperatingSystem {
-			get;
+		protected virtual string OperatingSystem {
+			get {
+				switch (Platform) {
+				case ApplePlatform.WatchOS:
+					return SdkIsSimulator ? "watchos-simulator" : "watchos";
+				case ApplePlatform.TVOS:
+					return SdkIsSimulator ? "tvos-simulator" : "tvos";
+				case ApplePlatform.MacOSX:
+					return "macosx";
+				case ApplePlatform.iOS:
+					return SdkIsSimulator ? "iphonesimulator" : "ios";
+				default:
+					Log.LogError (MSBStrings.E0169, TargetFrameworkMoniker);
+					return string.Empty;
+				}
+			}
 		}
 
 		protected abstract string DevicePlatformBinDir {
@@ -64,6 +85,13 @@ namespace Xamarin.MacDev.Tasks
 			var path = Path.Combine (DevicePlatformBinDir, ToolExe);
 
 			return File.Exists (path) ? path : ToolExe;
+		}
+
+		public override bool Execute ()
+		{
+			if (AppleSdkSettings.XcodeVersion.Major >= 11)
+				EnvironmentVariables = EnvironmentVariables.CopyAndAdd ($"SDKROOT={SdkRoot}");
+			return base.Execute ();
 		}
 
 		protected override string GenerateCommandLineCommands ()

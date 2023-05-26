@@ -7,15 +7,14 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CreateAssetPackManifestTaskBase : Task
+	public abstract class CreateAssetPackManifestTaskBase : XamarinTask
 	{
 		const double DownloadPriorityInterval = 0.90;
 		const double TopDownloadPriority = 0.95;
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem AppBundleDir { get; set; }
@@ -154,7 +153,7 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					onDemandResources.Save (onDemandResourcesPath, true, true);
 				} catch (Exception ex) {
-					Log.LogError ("Error saving `{0}': {1}", onDemandResourcesPath, ex.Message);
+					Log.LogError (MSBStrings.E0120, onDemandResourcesPath, ex.Message);
 				}
 			}
 
@@ -162,7 +161,7 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					manifest.Save (manifestPath, true, true);
 				} catch (Exception ex) {
-					Log.LogError ("Error saving `{0}': {1}", manifestPath, ex.Message);
+					Log.LogError (MSBStrings.E0120, manifestPath, ex.Message);
 				}
 			}
 

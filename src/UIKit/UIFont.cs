@@ -15,12 +15,6 @@ using Foundation;
 
 namespace UIKit {
 	public partial class UIFont {
-#if !XAMCORE_2_0
-		[Obsolete ("This constructor does not return a valid, default, instance", true)]
-		public UIFont ()
-		{
-		}
-#endif
 		public override string ToString ()
 		{
 			return String.Format ("{0} {1}", Name, PointSize);
@@ -140,6 +134,16 @@ namespace UIKit {
 		{
 			return MonospacedDigitSystemFontOfSize (fontSize, GetFontWeight (weight));
 		}
+
+		[iOS (13,0), TV (13,0)]
+		public static UIFont GetMonospacedSystemFont (nfloat size, nfloat weight)
+		{
+			var ptr = _MonospacedSystemFontOfSize (size, weight);
+			return ptr == IntPtr.Zero ? null : new UIFont (ptr);
+		}
+
+		[iOS(13,0), TV(13,0)]
+		public static UIFont GetMonospacedSystemFont (nfloat size, UIFontWeight weight) => GetMonospacedSystemFont (size, GetFontWeight (weight));
 
 		// In this case we want to _always_ return a different managed instance
 		// so one can be disposed without affecting others

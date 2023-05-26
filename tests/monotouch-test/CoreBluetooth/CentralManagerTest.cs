@@ -11,19 +11,12 @@
 
 using System;
 using System.Threading;
-#if XAMCORE_2_0
 using Foundation;
 using CoreBluetooth;
 using CoreFoundation;
 using ObjCRuntime;
 #if !MONOMAC
 using UIKit;
-#endif
-#else
-using MonoTouch.CoreBluetooth;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-using MonoTouch.CoreFoundation;
 #endif
 using NUnit.Framework;
 
@@ -77,10 +70,16 @@ namespace MonoTouchFixtures.CoreBluetooth {
 
 		CBCentralManager mgr;
 		ManagerDelegate mgrDelegate;
+		CBUUID heartRateMonitorUUID; 
 
 		[SetUp]
 		public void SetUp ()
 		{
+			// iOS 13 and friends require bluetooth permission
+			if (TestRuntime.CheckXcodeVersion (11, 0))
+				TestRuntime.CheckBluetoothPermission ();
+			//known UUID for a heart monitor, more common, we want to find something and make sure we do not crash
+			heartRateMonitorUUID = CBUUID.FromPartial (0x180D);
 			// Required API is available in macOS 10.8, but it doesn't work (hangs in 10.8-10.9, randomly crashes in 10.10) on the bots.
 			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 11, throwIfOtherPlatform: false);
 			var e = new AutoResetEvent (false);
@@ -91,7 +90,8 @@ namespace MonoTouchFixtures.CoreBluetooth {
 		[TearDown]
 		public void TearDown ()
 		{
-			// should dispose the delegate
+			heartRateMonitorUUID?.Dispose ();
+			mgrDelegate?.Dispose ();  // make sure that our delegate does not get messages after the mgr was disposed
 			mgr?.Dispose ();
 		}
 			
@@ -131,12 +131,12 @@ namespace MonoTouchFixtures.CoreBluetooth {
 				Assert.Inconclusive ("Bluetooth is off and therefore the test cannot be ran. State == {0}.", mgr.State);
 
 			if (TestRuntime.CheckXcodeVersion (7, 0)) {
-				using (var uuid = new NSUuid ("B9401000-F5F8-466E-AFF9-25556B57FE6D"))
+				// ToString in a CBUUID with true returns the full uuid which can be used to create a NSUuid
+				using (var uuid = new NSUuid (heartRateMonitorUUID.ToString (true)))
 					mgr.RetrievePeripheralsWithIdentifiers (uuid);
 			} else {
 				// that API was deprecated in 7.0 and removed from 9.0
-				using (var uuid = CBUUID.FromString ("B9401000-F5F8-466E-AFF9-25556B57FE6D"))
-					mgr.RetrievePeripherals (uuid);
+				mgr.RetrievePeripherals (heartRateMonitorUUID);
 			}
 		}
 #endif // !XAMCORE_3_0

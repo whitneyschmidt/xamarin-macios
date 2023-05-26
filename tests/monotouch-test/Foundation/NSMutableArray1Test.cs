@@ -1,6 +1,3 @@
-﻿
-#if XAMCORE_2_0
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -87,6 +84,10 @@ namespace MonoTouchFixtures.Foundation {
 				Assert.AreSame (v1, arr [0], "[0]");
 				Assert.AreSame (v2, arr [1], "[1]");
 				Assert.AreSame (v3, arr [2], "[2]");
+			}
+
+			using (var arr = new NSMutableArray<NSString>()) {
+				Assert.DoesNotThrow (() => arr.Insert (v1, 0), "Insert into empty array");
 			}
 		}
 
@@ -233,5 +234,3 @@ namespace MonoTouchFixtures.Foundation {
 		}
 	}
 }
-
-#endif // XAMCORE_2_0

@@ -69,17 +69,6 @@ namespace CoreData {
 		NSCountResultType = 0x04
 	}
 
-#if !XAMCORE_2_0
-	// NUInteger -> NSKeyValueObserving.h in Foundation.framework (and it already exists there)
-	[Native]
-	public enum NSKeyValueSetMutationKind : ulong {
-		Union = 1,
-		Minus = 2,
-		Intersect = 3,
-		NSKeyValueSet = 4 // misnamed
-	}
-#endif
-
 	// NUInteger -> NSRelationshipDescription.h
 	[Native]
 	public enum NSDeleteRule : ulong {
@@ -219,5 +208,22 @@ namespace CoreData {
 		TransactionsOnly = 3,
 		ChangesOnly = 4,
 		TransactionsAndChanges = 5
+	}
+
+	[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+	[Native]
+	public enum NSBatchInsertRequestResultType : ulong {
+		StatusOnly = 0,
+		ObjectIds = 1,
+		Count = 2,
+	}
+
+	[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+	[Flags]
+	[Native]
+	public enum NSPersistentCloudKitContainerSchemaInitializationOptions : ulong {
+		None = 0x0,
+		DryRun = 1 << 1,
+		PrintSchema = 1 << 2,
 	}
 }

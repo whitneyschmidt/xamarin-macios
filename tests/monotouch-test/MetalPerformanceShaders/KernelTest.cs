@@ -4,14 +4,10 @@
 
 using System;
 using Foundation;
+using ObjCRuntime;
 
-#if XAMCORE_2_0
 using Metal;
 using MetalPerformanceShaders;
-#else
-using MonoTouch.Metal;
-using MonoTouch.MetalPerformanceShaders;
-#endif
 
 using NUnit.Framework;
 
@@ -27,6 +23,9 @@ namespace MonoTouchFixtures.MetalPerformanceShaders {
 		{
 #if !MONOMAC
 			TestRuntime.AssertXcodeVersion (7, 0);
+
+			if (Runtime.Arch == Arch.SIMULATOR && Environment.OSVersion.Version.Major >= 15)
+				Assert.Inconclusive ("Metal is not supported in the simulator on macOS 10.15");
 #else
 			TestRuntime.AssertXcodeVersion (9, 0);
 #endif

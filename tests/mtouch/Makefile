@@ -1,6 +1,7 @@
 TOP=../..
 
 include $(TOP)/Make.config
+include $(TOP)/mk/rules.mk
 
 export MD_MTOUCH_SDK_ROOT=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX)
 export TargetFrameworkFallbackSearchPaths=$(IOS_DESTDIR)/Library/Frameworks/Mono.framework/External/xbuild-frameworks
@@ -29,8 +30,6 @@ run-tests: bin/Debug/mtouch.dll test.config
 	@[[ ! -e .failed-stamp ]] 
 
 # mtouch.csproj.inc contains the mtouch_dependencies variable used to determine if mtouch.dll needs to be rebuilt or not.
-mtouch.csproj.inc: $(TOP)/tools/common/create-makefile-fragment.sh Makefile $(TOP)/Make.config
-	$(Q_GEN) $< $(CURDIR)/mtouch.csproj
 -include mtouch.csproj.inc
 
 bin/Debug/mtouch.dll: $(mtouch_dependencies)

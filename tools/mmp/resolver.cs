@@ -23,26 +23,21 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 using Mono.Cecil;
+using Mono.Linker;
 
 namespace Xamarin.Bundler {
 	public partial class MonoMacResolver : CoreResolver {
-		public static bool IsClassic { get { return Driver.IsClassic; } }
-		public static bool IsUnified { get { return Driver.IsUnified; } }
-
 		public List <string> CommandLineAssemblies { get; set; }
 		public List<Exception> Exceptions = new List<Exception> ();
-
+		public string GlobalAssemblyCache;
+		public string[] SystemFrameworkDirectories;
 
 		public AssemblyDefinition GetAssembly (string fileName)
 		{
-			return Resolve (Path.GetFileNameWithoutExtension (fileName));
-		}
-
-		public AssemblyDefinition Resolve (string fullName)
-		{
-			return Resolve (AssemblyNameReference.Parse (fullName), new ReaderParameters { AssemblyResolver = this });
+			return Resolve (new AssemblyNameReference (Path.GetFileNameWithoutExtension (fileName), null), new ReaderParameters { AssemblyResolver = this });
 		}
 
 		public override AssemblyDefinition Resolve (AssemblyNameReference reference, ReaderParameters parameters)
@@ -74,8 +69,8 @@ namespace Xamarin.Bundler {
 			if (assembly != null)
 				return assembly;
 
-			var pclPath = Path.Combine (FrameworkDirectory, "Facades");
-			if (Directory.Exists (pclPath)) {
+			if (FrameworkDirectory != null) {
+				var pclPath = Path.Combine (FrameworkDirectory, "Facades");
 				assembly = SearchDirectory (name, pclPath);
 				if (assembly != null)
 					return assembly;
@@ -85,7 +80,50 @@ namespace Xamarin.Bundler {
 			if (assembly != null)
 				return assembly;
 
+			if (!string.IsNullOrEmpty (GlobalAssemblyCache)) {
+				var gac_folder = new StringBuilder ()
+					.Append (reference.Version)
+					.Append ("__");
+
+				for (int i = 0; i < reference.PublicKeyToken.Length; i++)
+					gac_folder.Append (reference.PublicKeyToken [i].ToString ("x2"));
+
+				var gac_path = Path.Combine (GlobalAssemblyCache, reference.Name, gac_folder.ToString (), reference.Name + ".dll");
+				if (File.Exists (gac_path)) {
+					if (Driver.IsUnifiedFullXamMacFramework)
+						ErrorHelper.Warning (176, Errors.MX0176, reference.ToString (), gac_path);
+					return Load (gac_path);
+				}
+			}
+
+			if (SystemFrameworkDirectories?.Length > 0) {
+				foreach (var dir in SystemFrameworkDirectories) {
+					assembly = SearchDirectory (reference.Name, dir);
+					if (assembly != null) {
+						if (Driver.IsUnifiedFullXamMacFramework)
+							ErrorHelper.Warning (176, Errors.MX0176, reference.ToString (), assembly.MainModule.FileName);
+						return assembly;
+					}
+				}
+			}
+
 			return null;
+		}
+
+	}
+
+	public class MonoMacAssemblyResolver : AssemblyResolver {
+		public MonoMacResolver Resolver;
+
+		public MonoMacAssemblyResolver (MonoMacResolver resolver)
+			: base (resolver.cache ?? new Dictionary<string, AssemblyDefinition> ())
+		{
+			this.Resolver = resolver;
+		}
+
+		public override AssemblyDefinition Resolve (AssemblyNameReference name, ReaderParameters parameters)
+		{
+			return Resolver.Resolve (name, parameters);
 		}
 	}
 }

@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 using System.Text;
-using Xamarin;
+using Microsoft.DotNet.XHarness.iOS.Shared.Utilities;
+using Xharness.Targets;
 
-namespace xharness
+namespace Xharness
 {
 	public static class SolutionGenerator
 	{

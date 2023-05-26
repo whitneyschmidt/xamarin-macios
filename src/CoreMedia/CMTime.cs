@@ -13,6 +13,7 @@ using ObjCRuntime;
 
 namespace CoreMedia {
 
+	[Watch (6,0)]
 	[StructLayout(LayoutKind.Sequential)]
 	public partial struct CMTime {
 		// CMTimeFlags -> uint32_t -> CMTime.h
@@ -27,33 +28,18 @@ namespace CoreMedia {
 		}
 #if !COREBUILD
 
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CMTime Invalid = new CMTime (0);
+		public readonly static CMTime Invalid = new CMTime (0);
 
 		const Flags kIndefinite = Flags.Valid | Flags.Indefinite;
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CMTime Indefinite = new CMTime (kIndefinite);
+		public readonly static CMTime Indefinite = new CMTime (kIndefinite);
 
 		const Flags kPositive = Flags.Valid | Flags.PositiveInfinity;
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CMTime PositiveInfinity = new CMTime (kPositive);
+		public readonly static CMTime PositiveInfinity = new CMTime (kPositive);
 
 		const Flags kNegative = Flags.Valid | Flags.NegativeInfinity;
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CMTime NegativeInfinity = new CMTime (kNegative);
+		public readonly static CMTime NegativeInfinity = new CMTime (kNegative);
 
-#if XAMCORE_2_0
-		readonly
-#endif
-		public static CMTime Zero = new CMTime (Flags.Valid, 1);
+		public readonly static CMTime Zero = new CMTime (Flags.Valid, 1);
 		
 		public const int MaxTimeScale = 0x7fffffff;
 
@@ -308,11 +294,11 @@ namespace CoreMedia {
 			return CMTimeMinimum (time1, time2);
 		}
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[TV (12,0), Mac (10,14), iOS (12,0)]
 		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMTimeFoldIntoRange (CMTime time, CMTimeRange foldRange);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[TV (12,0), Mac (10,14), iOS (12,0)]
 		public static CMTime Fold (CMTime time, CMTimeRange foldRange)
 		{
 			return CMTimeFoldIntoRange (time, foldRange);
@@ -340,15 +326,6 @@ namespace CoreMedia {
 		{
 			return new NSDictionary (CMTimeCopyAsDictionary (this, IntPtr.Zero), true);
 		}
-			
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'ToDictionary' instead.")]
-		public IntPtr AsDictionary {
-			get {
-				return CMTimeCopyAsDictionary (this, IntPtr.Zero);
-			}
-		}
-#endif
 		
 		[DllImport(Constants.CoreMediaLibrary)]
 		extern static /* CFStringRef */ IntPtr CMTimeCopyDescription (/* CFAllocatorRef */ IntPtr allocator, CMTime time);
@@ -373,14 +350,6 @@ namespace CoreMedia {
 				throw new ArgumentNullException ("dict");
 			return CMTimeMakeFromDictionary (dict.Handle);
 		}
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'FromDictionary (NSDictionary)' instead.")]
-		public static CMTime FromDictionary (IntPtr dict)
-		{
-			return CMTimeMakeFromDictionary (dict);
-		}
-#endif		
 #endif // !COREBUILD
 	}
 }

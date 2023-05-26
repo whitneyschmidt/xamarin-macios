@@ -10,14 +10,8 @@
 #if !__WATCHOS__
 
 using System;
-#if XAMCORE_2_0
 using Foundation;
 using JavaScriptCore;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.JavaScriptCore;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.JavascriptCore {
@@ -80,6 +74,23 @@ namespace MonoTouchFixtures.JavascriptCore {
 				Assert.True (d.IsEqualWithTypeCoercionTo ((NSNumber) 1.0d), "== NSNumber");
 				Assert.False (d.IsEqualWithTypeCoercionTo ((NSNumber) 2.0d), "== NSNumber-2");
 			}
+		}
+
+		[Test]
+		public void CreatePromise ()
+		{
+			TestRuntime.AssertXcodeVersion (11,0);
+
+			using (var c = new JSContext ()) {
+				bool called = false;
+				var p = JSValue.CreatePromise (c, (resolve, reject) => {
+					Assert.NotNull (resolve, "resolve");
+					Assert.NotNull (reject, "reject");
+					called = true;
+				});
+				Assert.True (called, "called");
+			}
+
 		}
 	}
 }

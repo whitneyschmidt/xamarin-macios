@@ -10,6 +10,7 @@
 
 using System;
 
+using Foundation;
 using ObjCRuntime;
 
 using Vector3 = global::OpenTK.Vector3;
@@ -292,11 +293,7 @@ namespace SceneKit {
 		None	= 0,
 		Default	= 1 << 0,
 		Static	= 1 << 1,
-#if XAMCORE_2_0
 		All		= UInt64.MaxValue
-#else
-		All		= UInt32.MaxValue
-#endif
 	}
 
 	[Watch (3,0)]
@@ -364,6 +361,7 @@ namespace SceneKit {
 	{
 		Metal,
 #if !MONOMAC
+		[Unavailable (PlatformName.MacCatalyst)][Advice ("This API is not available when using UIKit on macOS.")]
 		OpenGLES2,
 #else
 		OpenGLLegacy,
@@ -457,5 +455,29 @@ namespace SceneKit {
 		None = 0,
 		Occluding,
 		Focusable,
+	}
+
+	[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+	[Native]
+	public enum SCNLightProbeType : long
+	{
+		Irradiance = 0,
+		Radiance = 1,
+	}
+
+	[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+	[Native]
+	public enum SCNLightProbeUpdateType : long
+	{
+		Never = 0,
+		Realtime = 1,
+	}
+
+	[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+	[Native]
+	public enum SCNLightAreaType : long
+	{
+		Rectangle = 1,
+		Polygon = 4,
 	}
 }

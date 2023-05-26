@@ -9,7 +9,6 @@
 
 using System;
 using System.IO;
-#if XAMCORE_2_0
 using Foundation;
 #if MONOMAC
 using AppKit;
@@ -17,22 +16,7 @@ using AppKit;
 using UIKit;
 #endif
 using CoreGraphics;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreGraphics {
 	
@@ -397,6 +381,16 @@ namespace MonoTouchFixtures.CoreGraphics {
 			using (var space = CGColorSpace.CreateLab (whitepoint, null, null)) {
 				Assert.IsNotNull (space, "all null");
 			}
+		}
+
+		[Test]
+		public void IsHdr ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using (var cs = CGColorSpace.CreateWithName (CGColorSpaceNames.GenericRgb))
+				Assert.False (cs.IsHdr, "GenericRgb");
+			using (var cs = CGColorSpace.CreateWithName (CGColorSpaceNames.DisplayP3_Hlg))
+				Assert.True (cs.IsHdr, "DisplayP3_Hlg");
 		}
 	}
 }

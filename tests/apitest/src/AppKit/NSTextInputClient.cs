@@ -1,16 +1,9 @@
 ﻿using System;
 using NUnit.Framework;
 
-#if !XAMCORE_2_0
-using MonoMac.AppKit;
-using MonoMac.Foundation;
-using CGPoint = System.Drawing.PointF;
-using CGRect = System.Drawing.RectangleF;
-#else
 using AppKit;
 using CoreGraphics;
 using Foundation;
-#endif
 
 namespace apitest
 {
@@ -25,6 +18,12 @@ namespace apitest
 			textView = new NSTextView (new CGRect (0, 0, 37, 120));
 			textView.Value = "This is a new string";
 			Assert.AreEqual (textView.Value, "This is a new string", "NSTextInputClientSetup - Failed to set value");
+		}
+
+		[TearDown]
+		public void TearDown ()
+		{
+			textView.Dispose ();
 		}
 
 		[Test]
@@ -42,6 +41,8 @@ namespace apitest
 
 			Assert.IsTrue (textView.HasMarkedText, "NSTextInputClient_ShouldMarkText - Failed to mark text");
 			Assert.AreEqual (textView.MarkedRange, new NSRange (5, 7));
+
+			textView.UnmarkText ();
 		}
 
 		[Test]

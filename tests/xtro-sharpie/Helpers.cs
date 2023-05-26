@@ -21,6 +21,7 @@ namespace Extrospection {
 
 		// the original name can be lost and, if not registered (e.g. enums), might not be available
 		static Dictionary<string,string> map = new Dictionary<string, string> () {
+			{ "AudioChannelBitmap", "AudioChannelBit" },
 			{ "EABluetoothAccessoryPickerErrorCode", "EABluetoothAccessoryPickerError" },
 			{ "EKCalendarEventAvailabilityMask", "EKCalendarEventAvailability" },
 			{ "GKErrorCode", "GKError" },
@@ -43,8 +44,12 @@ namespace Extrospection {
 			{ "SecTrustResultType", "SecTrustResult" },
 			{ "SKErrorCode", "SKError" },
 			{ "SSReadingListErrorCode", "SSReadingListError" },
+			{ "tls_ciphersuite_group_t", "TlsCipherSuiteGroup" },
+			{ "tls_ciphersuite_t", "TlsCipherSuite" },
+			{ "tls_protocol_version_t", "TlsProtocolVersion" },
 			{ "UIDataDetectorTypes", "UIDataDetectorType" },
 			{ "UIControlEvents", "UIControlEvent" },
+			{ "UIKeyboardHIDUsage", "UIKeyboardHidUsage" },
 			{ "UITableViewCellAccessoryType", "UITableViewCellAccessory" },
 			{ "UITableViewCellStateMask", "UITableViewCellState" },
 			{ "WatchKitErrorCode", "WKErrorCode" }, // WebKit already had that name
@@ -373,6 +378,7 @@ namespace Extrospection {
 			case "MPSCore":
 			case "MPSImage":
 			case "MPSMatrix":
+			case "MPSNDArray":
 			case "MPSNeuralNetwork":
 			case "MPSRayIntersector":
 				return "MetalPerformanceShaders";

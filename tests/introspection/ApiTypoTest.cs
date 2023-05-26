@@ -27,7 +27,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-#if XAMCORE_2_0
 using ObjCRuntime;
 #if MONOMAC
 using AppKit;
@@ -35,17 +34,6 @@ using AppKit;
 using UIKit;
 #endif
 using Foundation;
-#else
-#if MONOMAC
-using MonoMac;
-using MonoMac.AppKit;
-using MonoMac.ObjCRuntime;
-using MonoMac.Foundation;
-#else
-using MonoTouch.UIKit;
-#endif
-using MonoTouch.Foundation;
-#endif
 
 namespace Introspection
 {
@@ -88,25 +76,30 @@ namespace Introspection
 			"Addl",
 			"Addr",
 			"Adjustmentfor",
+			"Aes", // Advanced Encryption Standard
 			"Aifc",
 			"Aiff",
+			"Agc",
 			"Aio",
 			"Alg", // short for Algorithm
 			"Alpn", // Application-Layer Protocol Negotiation RFC7301
 			"Amete",
 			"Amr",
 			"Anglet",
+			"Apng", // Animated Portable Network Graphics
 			"Aps",
 			"Arraycollation",
 			"Argb",
 			"Asin",
 			"Atan",
+			"Atmos", // Dolby Atmos
 			"Ats",	// App Transport Security
 			"Attrib",
 			"Attributevalue",
 			"Attrs", // Attributes (used by Apple for keys)
 			"Audiofile",
 			"Automapping",
+			"Automatch",
 			"Automounted",
 			"Autoredirect",
 			"Autospace",
@@ -115,6 +108,7 @@ namespace Introspection
 			"Avb", // acronym: Audio Video Bridging
 			"Aliasable",
 			"Arcball",
+			"Atm",
 			"Avg",
 			"Backface",
 			"Bancaire", // french
@@ -139,11 +133,13 @@ namespace Introspection
 			"Cartes", // french
 			"Cavlc",
 			"Cda", // acronym: Clinical Document Architecture
+			"Cdrom",
 			"Cfa", // acronym: Color Filter Array
 			"Celp", // MPEG4ObjectID
 			"Characterteristic",
 			"Chapv",
 			"Cholesky",
+			"Chacha",
 			"Chromaticities",
 			"Ciexyz",
 			"Ciff",
@@ -172,6 +168,7 @@ namespace Introspection
 			"Descendents",
 			"Descrete",
 			"Dhe", // Diffie–Hellman key exchange
+			"Diffable", // that you can diff it.. made up word from apple
 			"Differental",
 			"Diffie",
 			"Directionfor",
@@ -200,11 +197,13 @@ namespace Introspection
 			"Ebu",
 			"Ecc",   // Elliptic Curve Cryptography
 			"Ecdh",  // Elliptic Curve Diffie–Hellman
+			"Ecdhe", // Elliptic Curve Diffie-Hellman Ephemeral
 			"Ecdsa", // Elliptic Curve Digital Signature Algorithm
 			"Ecies", // Elliptic Curve Integrated Encryption Scheme
 			"Ecn",   // Explicit Congestion Notification
 			"Ect",   // ECN Capable Transport
-			"Editability", 
+			"Editability",
+			"Edr",
 			"Eof", // acronym End-Of-File
 			"Elu",
 			"Emagic",
@@ -214,6 +213,10 @@ namespace Introspection
 			"Enc",
 			"Eppc",
 			"Eftpos", // Electronic funds transfer at point of sale
+			"Eotf", // DisplayP3_PQ_Eotf
+			"Exabits",
+			"Exbibits",
+			"Exbibytes",
 			"Exhange",
 			"Exp",
 			"Expr",
@@ -234,6 +237,8 @@ namespace Introspection
 			"Gbrg",	// acronym for Green-Blue-Reg-Green
 			"Geocoder",
 			"Gigapascals",
+			"Gibibits",
+			"Gibibytes",
 			"Gop", // acronym for Group Of Pictures
 			"Gpp",
 			"Gps",
@@ -243,6 +248,7 @@ namespace Introspection
 			"Greeking",
 			"Gtin",
 			"Hardlink",
+			"Heics", // High Efficiency Image File Format (Sequence)
 			"Hdmi",
 			"Hdr",
 			"Hectopascals",
@@ -291,6 +297,7 @@ namespace Introspection
 			"Iso",
 			"Itf",
 			"Itu",
+			"Itur", // Itur_2020_Hlg
 			"Jcb", // Japanese credit card company
 			"Jfif",
 			"Jis",
@@ -301,6 +308,8 @@ namespace Introspection
 			"Keypoints",
 			"Keyspace",
 			"ks",
+			"Kibibits",
+			"Kibibytes",
 			"Kiloampere",
 			"Kiloamperes",
 			"Kiloohms",
@@ -308,12 +317,14 @@ namespace Introspection
 			"Kullback", // Kullback-Leibler Divergence
 			"Langauges",
 			"Lacunarity",
+			"Latm", //  Low Overhead Audio Transport Multiplex
 			"Ldaps",
 			"Lerp",
 			"Linecap",
 			"Lingustic",
 			"libcompression",
 			"libdispatch",
+			"Loas", // Low Overhead Audio Stream 
 			"Lod",
 			"Lopass",
 			"Lowlevel",
@@ -325,6 +336,8 @@ namespace Introspection
 			"Mada", // payment system
 			"Mapbuffer",
 			"Matchingcoalesce",
+			"Mebibits",
+			"Mebibytes",
 			"Megaampere",
 			"Megaamperes",
 			"Megaliters",
@@ -345,6 +358,7 @@ namespace Introspection
 			"Mncs",
 			"Mobike", // acronym
 			"Morpher",
+			"mtouch",
 			"Mpe", // acronym
 			"Mps",
 			"Mtu", // acronym
@@ -363,6 +377,7 @@ namespace Introspection
 			"nint",
 			"Nntps",
 			"Ntlm",
+			"Nsl", // InternetLocationNslNeighborhoodIcon
 			"Ntsc",
 			"nuint",
 			"Ndef",
@@ -372,6 +387,7 @@ namespace Introspection
 			"Nyquist",
 			"Oaep", // Optimal asymmetric encryption padding
 			"Objectfor",
+			"Objectness",
 			"Occlussion",
 			"Ocurrences",
 			"Ocsp", // Online Certificate Status Protocol
@@ -383,8 +399,12 @@ namespace Introspection
 			"Orth",
 			"ove",
 			"Paeth", // PNG filter
+			"Palettize",
 			"Parms", // short for Parameters
 			"Peap",
+			"Pebibits",
+			"Pebibytes",
+			"Petabits",
 			"Perlin",
 			"Persistable",
 			"Pausable",
@@ -402,11 +422,13 @@ namespace Introspection
 			"Pnorm",
 			"Pointillize",
 			"Polyline",
+			"Polylines",
 			"Popularimeter",
 			"Preds", // short for Predicates
 			"Prerolls",
 			"Preseti",
 			"Prev",
+			"Privs", // SharingPrivsNotApplicableIcon
 			"Propogate",
 			"Psec",
 			"Psm", // Protocol/Service Multiplexer
@@ -449,6 +471,7 @@ namespace Introspection
 			"Seekable",
 			"Shadable",
 			"Sharegroup",
+			"Sha", //  Secure Hash Algorithm
 			"Siemen",
 			"simd",
 			"Sinh",
@@ -460,6 +483,7 @@ namespace Introspection
 			"Snapshotter",
 			"Snorm",
 			"Sobel",
+			"Softmax", // get_SoftmaxNormalization
 			"Spacei",
 			"Sqrt",
 			"Srgb",
@@ -487,6 +511,8 @@ namespace Introspection
 			"Synchronizable",
 			"Symbologies",
 			"Tanh",
+			"Tebibits",
+			"Tebibytes",
 			"Tensorflow",
 			"Tessellator",
 			"Texcoord",
@@ -494,12 +520,17 @@ namespace Introspection
 			"th",
 			"Threadgroup",
 			"Threadgroups",
+			"Thumbnailing",
 			"Thumbstick",
+			"Thumbsticks",
+			"Timecodes",
 			"Timelapse",
 			"Timelapses",
 			"Tls",
 			"Ttls",
 			"Tlv",
+			"Toc",
+			"Toci",
 			"Toi",
 			"Transceive",
 			"Trc",
@@ -528,22 +559,28 @@ namespace Introspection
 			"Utf",
 			"Upce",
 			"Uri",
+			"Usac", // Unified Speech and Audio Coding
 			"Uti",
 			"Varispeed",
 			"Vergence",
 			"Voronoi",
 			"Vnode",
 			"Vpn",
+			"Warichu",
 			"Wep",
 			"Wpa",
 			"Warpable",
 			"Whitespaces",
+			"Wifes",
 			"Writeability",
 			"Xnor",
 			"Xpc",
 			"xy",
 			"Xyz",
 			"Xzy",
+			"Yobibits",
+			"Yobibytes",
+			"Yottabits",
 			"Yxz",
 			"Yzx",
 			"Zxy",
@@ -554,38 +591,10 @@ namespace Introspection
 			"yx",
 			"yy",
 			"Yyy",
+			"Zebibits",
+			"Zebibytes",
+			"Zettabits",
 			"Zlib",
-#if !XAMCORE_2_0
-			// classic only mistakes - that should not change anymore
-			"Timetime",
-			"Rectfrom",
-			"Distancefrom",
-			"Calendarc",
-			"Negotiat",
-			"Trus",
-			"Placemarks",
-			"Chage",
-			"Elipse",
-			"intptr",
-			"rbool",
-			"rint",
-			"rfloat",
-			"rdouble",
-			"rintptr",
-			"cgsize",
-			"cgpoint",
-			"cgrect",
-			"nsrange",
-			"stret",
-			"monotouch",
-			"xamarin",
-			"Dimiss",
-			"Owneroptions",
-			"Delegat",
-			"Nibfor",
-			"Delegatequeue",
-			"Sispatch",
-#endif
 #if MONOMAC
 			"Abbr",
 			"Accum",
@@ -679,138 +688,6 @@ namespace Introspection
 			"Wme",
 			"Writeln",
 			"Xattr",
-#if !XAMCORE_2_0
-			// classic only mistakes - that should not change anymore
-			"Oml",
-			"Abgr",
-			"Alc",
-			"Alignmentrange",
-			"Amd",
-			"Argb",
-			"Arrayrestricted",
-			"Arrowhighlight",
-			"Atc",
-			"Atrrib",
-			"Attribs",
-			"Backgrounn",
-			"Bgr",
-			"Bgra",
-			"Blittable",
-			"Bptc",
-			"Bufferi",
-			"Ccw",
-			"Chn",
-			"Classand",
-			"Clipmap",
-			"Cnd",
-			"Coeff",
-			"Columnto",
-			"Columnwith",
-			"Completionfor",
-			"Compressionfactor",
-			"Coumn",
-			"Decr",
-			"Depthfunc",
-			"Dfx",
-			"Directionrange",
-			"Dsize",
-			"Dsdt",
-			"Dst",
-			"Dudv",
-			"Edgeflag",
-			"Efx",
-			"Envmap",
-			"Ffd",
-			"Framebuffers",
-			"Framezoom",
-			"Frg",
-			"Froom",
-			"Funcs",
-			"Gainsboro",
-			"Gequal",
-			"Gremedy",
-			"Minmax",
-			"Ibm",
-			"ImgProgramBinary",
-			"Incr",
-			"Indexvalue",
-			"Ingr",
-			"Itemat",
-			"Iui",
-			"Latc",
-			"Layeredge",
-			"Lequal",
-			"Listenerfv",
-			"Lsb",
-			"Markerto",
-			"Meminfo",
-			"Minmax",
-			"monomac",
-			"Mousein",
-			"Multisampled",
-			"Multitexture",
-			"Mux",
-			"Mvp",
-			"Nand",
-			"Nodechild",
-			"Oes",
-			"Opacityin",
-			"Ortho",
-			"Paletted",
-			"Panelfor",
-			"Pasteboardtype",
-			"Pasteboardtypes",
-			"Perfmon",
-			"Pgi",
-			"Phasein",
-			"Preclip",
-			"Pointerv",
-			"Positionof",
-			"Priorityfor",
-			"Qcom",
-			"Rangeaffinitystill",
-			"Rangesaffinitystill",
-			"Rangereplacement",
-			"Rangesreplacement",
-			"Recip",
-			"Rectby",
-			"Rectcolorturned",
-			"Rectto",
-			"Rectwith",
-			"Rgtc",
-			"Rowcolumn",
-			"Rowin",
-			"Scalebias",
-			"Sgi",
-			"Sgis",
-			"Sgix",
-			"SgixYcrcba",
-			"Sgx",
-			"Sluminance",
-			"Sourceb",
-			"Sourcef",
-			"Staterange",
-			"Stq",
-			"Strq",
-			"Subtexture",
-			"Sunx",
-			"Tesselation",
-			"Texgen",
-			"Tipfor",
-			"Unmap",
-			"Unqueue",
-			"Unsignaled",
-			"Vdpau",
-			"Vec",
-			"Vtc",
-			"Writemask",
-			"Writeonly",
-			"Ycbaycr",
-			"Ycbycr",
-			"Ycrcb",
-			"Ycbcr",
-			"Ycrcba",
-#endif
 #endif
 #if !XAMCORE_4_0
 			"Actionfrom",
@@ -819,6 +696,7 @@ namespace Introspection
 			"Attributest",
 			"Failwith",
 			"Imageimage",
+			"Libary",
 			"Musthold",
 			"Olus", // Typo, should be 'Bolus', fixed in 'HKInsulinDeliveryReason'
 			"Ostprandial", // Typo, should be 'Postprandial', fixed in 'HKBloodGlucoseMealTime'
@@ -1116,6 +994,11 @@ namespace Introspection
 #if __IOS__
 						// NFC is currently not available on iPad
 						if (fi.Name == "CoreNFCLibrary" && UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Pad)
+							continue;
+#endif
+#if __MACOS__
+						// Only available in macOS 10.15.4+
+						if (fi.Name == "AutomaticAssessmentConfigurationLibrary" && !TestRuntime.CheckXcodeVersion (11, 4))
 							continue;
 #endif
 

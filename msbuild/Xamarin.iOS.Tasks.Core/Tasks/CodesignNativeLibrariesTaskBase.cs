@@ -12,17 +12,16 @@ using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
 using Xamarin.MacDev.Tasks;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class CodesignNativeLibrariesTaskBase : Task
+	public abstract class CodesignNativeLibrariesTaskBase : XamarinTask
 	{
 		const string ToolName = "codesign";
 		string toolExe;
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -107,7 +106,7 @@ namespace Xamarin.iOS.Tasks
 			int exitCode;
 
 			try {
-				Log.LogMessage (MessageImportance.Normal, "Tool {0} execution started with arguments: {1}", startInfo.FileName, startInfo.Arguments);
+				Log.LogMessage (MessageImportance.Normal, MSBStrings.M0001, startInfo.FileName, startInfo.Arguments);
 
 				using (var stdout = new StringWriter (messages)) {
 					using (var stderr = new StringWriter (errors)) {
@@ -118,10 +117,10 @@ namespace Xamarin.iOS.Tasks
 						exitCode = process.Result;
 					}
 
-					Log.LogMessage (MessageImportance.Low, "Tool {0} execution finished (exit code = {1}).", startInfo.FileName, exitCode);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0002, startInfo.FileName, exitCode);
 				}
 			} catch (Exception ex) {
-				Log.LogError ("Error executing tool '{0}': {1}", startInfo.FileName, ex.Message);
+				Log.LogError (MSBStrings.E0003, startInfo.FileName, ex.Message);
 				return;
 			}
 
@@ -130,9 +129,9 @@ namespace Xamarin.iOS.Tasks
 
 			if (exitCode != 0) {
 				if (errors.Length > 0)
-					Log.LogError ("Failed to codesign '{0}': {1}", dylib, errors);
+					Log.LogError (MSBStrings.E0004, dylib, errors);
 				else
-					Log.LogError ("Failed to codesign '{0}'", dylib);
+					Log.LogError (MSBStrings.E0005, dylib);
 			} else {
 				var output = GetOutputPath (dylib);
 				var dir = Path.GetDirectoryName (output);

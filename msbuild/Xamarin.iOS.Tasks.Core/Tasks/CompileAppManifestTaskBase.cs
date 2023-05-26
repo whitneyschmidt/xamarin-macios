@@ -8,6 +8,8 @@ using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
 using Xamarin.MacDev;
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.iOS.Tasks
 {
@@ -31,20 +33,11 @@ namespace Xamarin.iOS.Tasks
 		public string TargetArchitectures { get; set; }
 
 		[Required]
-		public string TargetFrameworkIdentifier { get; set; }
-
-		[Required]
 		public bool Debug { get; set; }
-
-		public bool UseFakeWatchOS4_3Sdk { get; set; }
 
 		public string DebugIPAddresses { get; set; }
 
 		public string ResourceRules { get; set; }
-
-		public PlatformFramework Framework {
-			get { return PlatformFrameworkHelper.GetFramework (TargetFrameworkIdentifier); }
-		}
 
 		TargetArchitecture architectures;
 		IPhoneDeviceType supportedDevices;
@@ -60,7 +53,7 @@ namespace Xamarin.iOS.Tasks
 			try {
 				plist = PDictionary.FromFile (AppManifest);
 			} catch (Exception ex) {
-				LogAppManifestError ("Error loading '{0}': {1}", AppManifest, ex.Message);
+				LogAppManifestError (MSBStrings.E0010, AppManifest, ex.Message);
 				return false;
 			}
 
@@ -69,24 +62,24 @@ namespace Xamarin.iOS.Tasks
 			if (string.IsNullOrEmpty (text)) {
 				minimumOSVersion = sdkVersion;
 			} else if (!IPhoneSdkVersion.TryParse (text, out minimumOSVersion)) {
-				LogAppManifestError ("Could not parse MinimumOSVersion value '{0}'", text);
+				LogAppManifestError (MSBStrings.E0011, text);
 				return false;
 			}
 
-			switch (Framework) {
-			case PlatformFramework.iOS:
+			switch (Platform) {
+			case ApplePlatform.iOS:
 				IsIOS = true;
 				break;
-			case PlatformFramework.WatchOS:
+			case ApplePlatform.WatchOS:
 				break;
-			case PlatformFramework.TVOS:
+			case ApplePlatform.TVOS:
 				break;
 			default:
-				throw new InvalidOperationException (string.Format ("Invalid framework: {0}", Framework));
+				throw new InvalidOperationException (string.Format ("Invalid platform: {0}", Platform));
 			}
 
 			if (!string.IsNullOrEmpty (TargetArchitectures) && !Enum.TryParse (TargetArchitectures, out architectures)) {
-				LogAppManifestError ("Could not parse TargetArchitectures '{0}'", TargetArchitectures);
+				LogAppManifestError (MSBStrings.E0012, TargetArchitectures);
 				return false;
 			}
 
@@ -95,10 +88,10 @@ namespace Xamarin.iOS.Tasks
 
 		bool Compile (PDictionary plist)
 		{
-			var currentSDK = IPhoneSdks.GetSdk (Framework);
+			var currentSDK = IPhoneSdks.GetSdk (Platform);
 
 			if (!currentSDK.SdkIsInstalled (sdkVersion, SdkIsSimulator)) {
-				Log.LogError (null, null, null, null, 0, 0, 0, 0, "The {0} SDK for '{1}' is not installed.", Framework, sdkVersion);
+				Log.LogError (null, null, null, null, 0, 0, 0, 0, MSBStrings.E0013, Platform, sdkVersion);
 				return false;
 			}
 
@@ -132,13 +125,10 @@ namespace Xamarin.iOS.Tasks
 			if (IsIOS) {
 				var executable = plist.GetCFBundleExecutable ();
 				if (executable.EndsWith (".app", StringComparison.Ordinal))
-					LogAppManifestError ("The executable (CFBundleExecutable) name ({0}) cannot end with '.app', because iOS may fail to launch the app.", executable);
+					LogAppManifestError (MSBStrings.E0014, executable);
 			}
 
 			if (IsIOS) {
-				if (minimumOSVersion < IPhoneSdkVersion.V5_0 && plist.GetUIMainStoryboardFile (true) != null)
-					LogAppManifestError ("Applications using a storyboard as the Main Interface must have a deployment target greater than 5.0");
-
 				if (!plist.ContainsKey (ManifestKeys.CFBundleName))
 					plist [ManifestKeys.CFBundleName] = plist.ContainsKey (ManifestKeys.CFBundleDisplayName) ? plist.GetString (ManifestKeys.CFBundleDisplayName).Clone () : new PString (AppBundleName);
 			} else {
@@ -186,26 +176,6 @@ namespace Xamarin.iOS.Tasks
 				dtXcodeBuild = dtSettings.DTXcodeBuild;
 			}
 
-			if (UseFakeWatchOS4_3Sdk) {
-				// This is a workaround for https://github.com/xamarin/xamarin-macios/issues/4810
-				if (Framework == PlatformFramework.WatchOS) {
-					if (dtPlatformBuild != null)
-						dtPlatformBuild = "15T212";
-					if (dtPlatformVersion != null)
-						dtPlatformVersion = "4.3";
-					if (dtSDKBuild != null)
-						dtSDKBuild = "15T212";
-					if (dtSDKName != null)
-						dtSDKName = "watchos4.3";
-					if (dtXcode != null)
-						dtXcode = "0940";
-					if (dtXcodeBuild != null)
-						dtXcodeBuild = "9F1027a";
-				} else {
-					Log.LogWarning ("Can only fake the watchOS 4.3 SDK when building for watchOS.");
-				}
-			}
-
 			SetValueIfNotNull (plist, "DTCompiler", dtCompiler);
 			SetValueIfNotNull (plist, "DTPlatformBuild", dtPlatformBuild);
 			SetValueIfNotNull (plist, "DTSDKBuild", dtSDKBuild);
@@ -221,7 +191,7 @@ namespace Xamarin.iOS.Tasks
 
 			if (IsWatchExtension) {
 				// Note: Only watchOS1 Extensions target Xamarin.iOS
-				if (Framework == PlatformFramework.iOS) {
+				if (Platform == ApplePlatform.iOS) {
 					PObject value;
 
 					if (!plist.TryGetValue (ManifestKeys.UIRequiredDeviceCapabilities, out value)) {
@@ -349,14 +319,14 @@ namespace Xamarin.iOS.Tasks
 
 		void SetDeviceFamily (PDictionary plist)
 		{
-			switch (Framework) {
-			case PlatformFramework.iOS:
+			switch (Platform) {
+			case ApplePlatform.iOS:
 				SetIOSDeviceFamily (plist);
 				break;
-			case PlatformFramework.WatchOS:
+			case ApplePlatform.WatchOS:
 				plist.SetUIDeviceFamily (IPhoneDeviceType.Watch);
 				break;
-			case PlatformFramework.TVOS:
+			case ApplePlatform.TVOS:
 				plist.SetUIDeviceFamily (IPhoneDeviceType.TV);
 				break;
 			}
@@ -374,7 +344,7 @@ namespace Xamarin.iOS.Tasks
 				if (!IsAppExtension)
 					plist.SetIfNotPresent (ManifestKeys.LSRequiresIPhoneOS, true);
 
-				if (minimumOSVersion >= IPhoneSdkVersion.V3_2 && supportedDevices == IPhoneDeviceType.NotSet)
+				if (supportedDevices == IPhoneDeviceType.NotSet)
 					plist.SetUIDeviceFamily (IPhoneDeviceType.IPhone);
 			}
 		}
@@ -399,9 +369,9 @@ namespace Xamarin.iOS.Tasks
 				plist.Add (ManifestKeys.NSAppTransportSecurity, ats = new PDictionary ());
 
 			if (ats.GetBoolean (ManifestKeys.NSAllowsArbitraryLoads)) {
-				Log.LogMessage (MessageImportance.Low, "All http loads are already allowed.");
+				Log.LogMessage (MessageImportance.Low, MSBStrings.M0017);
 			} else {
-				Log.LogMessage (MessageImportance.Low, "Allowed arbitrary HTTP loads to support debugging.");
+				Log.LogMessage (MessageImportance.Low, MSBStrings.M0018);
 				ats.SetBooleanOrRemove (ManifestKeys.NSAllowsArbitraryLoads, true);
 			}
 		}
@@ -419,18 +389,18 @@ namespace Xamarin.iOS.Tasks
 				if (supportsIPhone) {
 					orientation = plist.GetUISupportedInterfaceOrientations (false);
 					if (orientation == IPhoneOrientation.None) {
-						LogAppManifestWarning ("Supported iPhone orientations have not been set");
+						LogAppManifestWarning (MSBStrings.W0019);
 					} else if (!orientation.IsValidPair ()) {
-						LogAppManifestWarning ("Supported iPhone orientations are not matched pairs");
+						LogAppManifestWarning (MSBStrings.W0020);
 					}
 				}
 
 				if (supportsIPad) {
 					orientation = plist.GetUISupportedInterfaceOrientations (true);
 					if (orientation == IPhoneOrientation.None) {
-						LogAppManifestWarning ("Supported iPad orientations have not been set");
+						LogAppManifestWarning (MSBStrings.W0021);
 					} else if (!orientation.IsValidPair ()) {
-						LogAppManifestWarning ("Supported iPad orientations are not matched pairs");
+						LogAppManifestWarning (MSBStrings.W0022);
 					}
 				}
 			}

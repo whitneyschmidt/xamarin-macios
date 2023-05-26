@@ -7,6 +7,7 @@
 //
 // Copyright 2009, Novell, Inc.
 // Copyright 2012 Xamarin Inc
+// Copyright 2019 Microsoft Corporation
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -65,6 +66,7 @@ namespace QuickLook {
 
 		[Export ("currentPreviewItem")]
 		[Protocolize]
+		[NullAllowed]
 		QLPreviewItem CurrentPreviewItem { get;  }
 
 		[Static]
@@ -90,6 +92,14 @@ namespace QuickLook {
 		[Export ("previewController:previewItemAtIndex:")]
 		[return:Protocolize]
 		QLPreviewItem GetPreviewItem (QLPreviewController controller, nint index);
+	}
+
+	[iOS (13,0)]
+	[Native]
+	public enum QLPreviewItemEditingMode : long {
+		Disabled = 0,
+		UpdateContents,
+		CreateCopy,
 	}
 
 	[BaseType (typeof (NSObject))]
@@ -119,6 +129,19 @@ namespace QuickLook {
 		[Export ("previewController:transitionViewForPreviewItem:"), DelegateName ("QLTransitionView"), DefaultValue (null)]
 		[return: NullAllowed]
 		UIView TransitionViewForPreviewItem (QLPreviewController controller, IQLPreviewItem item);
+
+		[iOS (13,0)]
+		[Export ("previewController:editingModeForPreviewItem:"), DelegateName("QLEditingMode"), DefaultValue ("QLPreviewItemEditingMode.Disabled")]
+		QLPreviewItemEditingMode GetEditingMode (QLPreviewController controller, IQLPreviewItem previewItem);
+
+		[iOS (13,0)]
+		[Export ("previewController:didUpdateContentsOfPreviewItem:"), EventArgs ("QLPreviewControllerDelegateDidUpdate")]
+		void DidUpdateContents (QLPreviewController controller, IQLPreviewItem previewItem);
+
+		[iOS (13,0)]
+		[Export ("previewController:didSaveEditedCopyOfPreviewItem:atURL:"), EventArgs ("QLPreviewControllerDelegateDidSave")]
+		void DidSaveEditedCopy (QLPreviewController controller, IQLPreviewItem previewItem, NSUrl modifiedContentsUrl);
+
 #endif
 	}
 
@@ -129,6 +152,7 @@ namespace QuickLook {
 	[Protocol]
 	interface QLPreviewItem {
 		[Abstract]
+		[NullAllowed]
 		[Export ("previewItemURL")]
 #if XAMCORE_4_0
 		NSUrl PreviewItemUrl { get; }
@@ -137,6 +161,7 @@ namespace QuickLook {
 #endif
 
 		[Export ("previewItemTitle")]
+		[NullAllowed]
 #if !XAMCORE_4_0
 		[Abstract]
 		string ItemTitle { get; }
@@ -153,48 +178,6 @@ namespace QuickLook {
 
 		[Export ("preparePreviewOfFileAtURL:completionHandler:")]
 		void PreparePreviewOfFile (NSUrl url, Action<NSError> handler);
-	}
-
-	[iOS (11,0)]
-	[BaseType (typeof (NSObject))]
-	interface QLThumbnailProvider {
-		[Export ("provideThumbnailForFileRequest:completionHandler:")]
-		void ProvideThumbnail (QLFileThumbnailRequest request, Action<QLThumbnailReply, NSError> handler);
-	}
-
-	[ThreadSafe] // Members get called inside 'QLThumbnailProvider.ProvideThumbnail' which runs on a background thread.
-	[iOS (11,0)]
-	[BaseType (typeof (NSObject))]
-	[DisableDefaultCtor]
-	interface QLThumbnailReply {
-		[Static]
-		[Export ("replyWithContextSize:drawingBlock:")]
-		QLThumbnailReply CreateReply (CGSize contextSize, Func<CGContext, bool> drawingBlock);
-
-		[Static]
-		[Export ("replyWithContextSize:currentContextDrawingBlock:")]
-		QLThumbnailReply CreateReply (CGSize contextSize, Func<bool> drawingBlock);
-
-		[Static]
-		[Export ("replyWithImageFileURL:")]
-		QLThumbnailReply CreateReply (NSUrl fileUrl);
-	}
-
-	[ThreadSafe]
-	[iOS (11,0)]
-	[BaseType (typeof (NSObject))]
-	interface QLFileThumbnailRequest {
-		[Export ("maximumSize")]
-		CGSize MaximumSize { get; }
-
-		[Export ("minimumSize")]
-		CGSize MinimumSize { get; }
-
-		[Export ("scale")]
-		nfloat Scale { get; }
-
-		[Export ("fileURL", ArgumentSemantic.Copy)]
-		NSUrl FileUrl { get; }
 	}
 #else
 	[Static]

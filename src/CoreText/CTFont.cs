@@ -227,14 +227,6 @@ namespace CoreText {
 
 		public NSDictionary Dictionary {get; private set;}
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'FeatureGroup' property instead.")]
-		public NSNumber Identifier {
-			get {return (NSNumber) Dictionary [CTFontFeatureKey.Identifier];}
-			set {Adapter.SetValue (Dictionary, CTFontFeatureKey.Identifier, value);}
-		}
-#endif
-
 		public string Name {
 			get {return Adapter.GetStringValue (Dictionary, CTFontFeatureKey.Name);}
 			set {Adapter.SetValue (Dictionary, CTFontFeatureKey.Name, value);}
@@ -376,14 +368,6 @@ namespace CoreText {
 		}
 
 		public NSDictionary Dictionary {get; private set;}
-
-#if !XAMCORE_2_0
-		[Advice ("Use one of descendant classes")]
-		public NSNumber Identifier {
-			get {return (NSNumber) Dictionary [CTFontFeatureSelectorKey.Identifier];}
-			set {Adapter.SetValue (Dictionary, CTFontFeatureSelectorKey.Identifier, value);}
-		}
-#endif
 
 		protected int FeatureWeak {
 			get {
@@ -1367,13 +1351,7 @@ namespace CoreText {
 
 	public class CTFontFeatureSettings {
 
-#if XAMCORE_2_0
-		internal
-#else
-		// It should be internal
-		public
-#endif
-		CTFontFeatureSettings (NSDictionary dictionary)
+		internal CTFontFeatureSettings (NSDictionary dictionary)
 		{
 			if (dictionary == null)
 				throw new ArgumentNullException ("dictionary");
@@ -1382,27 +1360,11 @@ namespace CoreText {
 
 		public NSDictionary Dictionary {get; private set;}
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'FeatureGroup' property instead.")]
-		public NSNumber TypeIdentifier {
-			get {return (NSNumber) Dictionary [CTFontFeatureKey.Identifier];}
-			set {Adapter.SetValue (Dictionary, CTFontFeatureKey.Identifier, value);}
-		}
-#endif
-
 		public FontFeatureGroup FeatureGroup {
 			get {
 				return (FontFeatureGroup) (int) (NSNumber) Dictionary [CTFontFeatureKey.Identifier];
 			}
 		}
-
-#if !XAMCORE_2_0
-		[Advice ("Use 'FeatureWeak' or 'FeatureGroup' instead.")]
-		public NSNumber SelectorIdentifier {
-			get {return (NSNumber) Dictionary [CTFontFeatureSelectorKey.Identifier];}
-			set {Adapter.SetValue (Dictionary, CTFontFeatureSelectorKey.Identifier, value);}
-		}
-#endif
 
 		public int FeatureWeak {
 			get {
@@ -1712,6 +1674,31 @@ namespace CoreText {
 				return CreateFont (CTFontCreateForString (handle, v.Handle, range));
 		}
 
+		[iOS (13,0), Mac (10,15), TV (13,0), Watch (6,0)]
+		[DllImport (Constants.CoreTextLibrary)]
+		static extern /* CTFontRef */ IntPtr CTFontCreateForStringWithLanguage (
+			/* CTFontRef */ IntPtr currentFont,
+			/* CFStringRef */ IntPtr @string,
+			NSRange range,
+			/* CFStringRef _Nullable */ IntPtr language);
+
+		[iOS (13,0), Mac (10,15), TV (13,0), Watch (6,0)]
+		public CTFont ForString (string value, NSRange range, string language)
+		{
+			if (value == null)
+				throw new ArgumentNullException (nameof (value));
+
+			var v = NSString.CreateNative (value);
+			var l = NSString.CreateNative (language);
+			try {
+				return CreateFont (CTFontCreateForStringWithLanguage (handle, v, range, l));
+			}
+			finally {
+				NSString.ReleaseNative (l);
+				NSString.ReleaseNative (v);
+			}
+		}
+
 #endregion
 
 #region Font Accessors
@@ -1850,7 +1837,7 @@ namespace CoreText {
 		{
 			var cfArrayRef = CTFontCopySupportedLanguages (handle);
 			if (cfArrayRef == IntPtr.Zero)
-				return new string [0];
+				return Array.Empty<string> ();
 			var languages = NSArray.ArrayFromHandle<string> (cfArrayRef, CFString.FetchString);
 			CFObject.CFRelease (cfArrayRef);
 			return languages;
@@ -1993,11 +1980,9 @@ namespace CoreText {
 			return CTFontGetBoundingRectsForGlyphs (handle, orientation, glyphs, boundingRects, count);
 		}
 
-		[iOS (6,0)]
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern CGRect CTFontGetOpticalBoundsForGlyphs (IntPtr font, [In] CGGlyph[] glyphs, [Out] CGRect[] boundingRects, nint count, nuint options);
 
-		[iOS (6,0)]
 		public CGRect GetOpticalBounds (CGGlyph[] glyphs, CGRect[] boundingRects, nint count, CTFontOptions options = 0)
 		{
 			AssertCount (count);
@@ -2199,12 +2184,10 @@ namespace CoreText {
 #endregion
 
 #region
-		[iOS (6,0)]
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static /* CFArrayRef __nullable */ IntPtr CTFontCopyDefaultCascadeListForLanguages (
 			/* CTFontRef __nonnull */ IntPtr font, /* CFArrayRef __nullable */ IntPtr languagePrefList);
 
-		[iOS (6,0)]
 		public CTFontDescriptor [] GetDefaultCascadeList (string [] languages)
 		{
 			using (var arr = languages == null ? null : NSArray.FromStrings (languages)) {

@@ -5,13 +5,15 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 
 using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
+
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
 using SecKeychain = Xamarin.MacDev.Keychain;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class DetectSigningIdentityTaskBase : Task
+	public abstract class DetectSigningIdentityTaskBase : XamarinTask
 	{
 		const string AutomaticProvision = "Automatic";
 		const string AutomaticAdHocProvision = "Automatic:AdHoc";
@@ -22,16 +24,12 @@ namespace Xamarin.MacDev.Tasks
 		protected abstract string[] DevelopmentPrefixes { get; }
 		protected abstract string[] DirectDistributionPrefixes { get; }
 		protected abstract string[] AppStoreDistributionPrefixes { get; }
-		protected abstract PlatformFramework Framework { get; }
-		protected abstract string PlatformName { get ; }
 		protected abstract string ApplicationIdentifierKey { get; }
 
 		string provisioningProfileName;
 		string codesignCommonName;
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleName { get; set; }
@@ -67,6 +65,7 @@ namespace Xamarin.MacDev.Tasks
 		[Output]
 		public string DetectedBundleVersion { get; set; }
 
+		// This is input too
 		[Output]
 		public string DetectedCodeSigningKey { get; set; }
 
@@ -165,7 +164,7 @@ namespace Xamarin.MacDev.Tasks
 
 		void ReportDetectedCodesignInfo ()
 		{
-			Log.LogMessage (MessageImportance.High, "Detected signing identity:");
+			Log.LogMessage (MessageImportance.High, MSBStrings.M0125);
 			if (codesignCommonName != null)
 				Log.LogMessage (MessageImportance.High, "  Code Signing Key: \"{0}\" ({1})", codesignCommonName, DetectedCodeSigningKey);
 			if (provisioningProfileName != null)
@@ -203,12 +202,12 @@ namespace Xamarin.MacDev.Tasks
 				var cname = SecKeychain.GetCertificateCommonName (certificate);
 
 				if (!StartsWithAny (cname, prefixes)) {
-					Log.LogMessage (MessageImportance.Low, "The certificate '{0}' does not match any of the prefixes '{1}'.", cname, string.Join ("', '", prefixes));
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0126, cname, string.Join ("', '", prefixes));
 					continue;
 				}
 
 				if (now >= certificate.NotAfter) {
-					Log.LogMessage (MessageImportance.Low, "The certificate '{0}' has expired ({1})", cname, certificate.NotAfter);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0127, cname, certificate.NotAfter);
 					continue;
 				}
 
@@ -216,7 +215,7 @@ namespace Xamarin.MacDev.Tasks
 			}
 
 			if (certs.Count == 0 && !allowZeroCerts) {
-				var message = "No valid " + PlatformName + " code signing keys found in keychain. You need to request a codesigning certificate from https://developer.apple.com.";
+				var message = String.Format (MSBStrings.E0128, PlatformName);
 
 				Log.LogError (message);
 				return false;
@@ -234,12 +233,12 @@ namespace Xamarin.MacDev.Tasks
 				var cname = SecKeychain.GetCertificateCommonName (certificate);
 
 				if (!name.Equals (certificate.Thumbprint, StringComparison.OrdinalIgnoreCase) && name != cname) {
-					Log.LogMessage (MessageImportance.Low, "The certificate '{0}' does not match '{1}'.", cname, name);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0129, cname, name);
 					continue;
 				}
 
 				if (now >= certificate.NotAfter) {
-					Log.LogMessage (MessageImportance.Low, "The certificate '{0}' has expired ({1})", cname, certificate.NotAfter);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0127, cname, certificate.NotAfter);
 					continue;
 				}
 
@@ -247,7 +246,7 @@ namespace Xamarin.MacDev.Tasks
 			}
 
 			if (certs.Count == 0) {
-				Log.LogError (PlatformName + " code signing key '{0}' not found in keychain.", SigningKey);
+				Log.LogError (MSBStrings.E0130, PlatformName, SigningKey);
 				return false;
 			}
 
@@ -312,7 +311,7 @@ namespace Xamarin.MacDev.Tasks
 				foreach (var f in failures)
 					Log.LogMessage (MessageImportance.Low, "{0}", f);
 				
-				Log.LogError ($"Could not find any available provisioning profiles for {AppBundleName} on {PlatformName}.");
+				Log.LogError (MSBStrings.E0131, AppBundleName, PlatformName);
 				return null;
 			}
 
@@ -331,12 +330,12 @@ namespace Xamarin.MacDev.Tasks
 				pairs = (from p in profiles from c in certs where p.DeveloperCertificates.Any (d => {
 					var rv = d.Thumbprint == c.Thumbprint;
 					if (!rv)
-						Log.LogMessage (MessageImportance.Low, "'{0}' doesn't match '{1}'.", d.Thumbprint, c.Thumbprint);
+						Log.LogMessage (MessageImportance.Low, MSBStrings.M0132, d.Thumbprint, c.Thumbprint);
 					return rv;
 				}) select new CodeSignIdentity { SigningKey = c, Profile = p }).ToList ();
 
 				if (pairs.Count == 0) {
-					Log.LogError ($"No installed provisioning profiles match the installed {PlatformName} {AppBundleName} signing identities.");
+					Log.LogError (MSBStrings.E0133, PlatformName, AppBundleName);
 					return null;
 				}
 			} else {
@@ -353,7 +352,7 @@ namespace Xamarin.MacDev.Tasks
 			int matchLength;
 
 			// find matching provisioning profiles with compatible appid, keeping only those with the longest matching (wildcard) ids
-			Log.LogMessage (MessageImportance.Low, "Finding matching provisioning profiles with compatible AppID, keeping only those with the longest matching (wildcard) IDs.");
+			Log.LogMessage (MessageImportance.Low, MSBStrings.M0134);
 			foreach (var pair in pairs) {
 				var appid = ConstructValidAppId (pair.Profile, identity.BundleId, out matchLength);
 				if (appid != null) {
@@ -361,7 +360,7 @@ namespace Xamarin.MacDev.Tasks
 						if (matchLength > bestMatchLength) {
 							bestMatchLength = matchLength;
 							foreach (var previousMatch in matches)
-								Log.LogMessage (MessageImportance.Low, "AppID: {0} was ruled out because we found a better match: {1}.", previousMatch.AppId, appid);
+								Log.LogMessage (MessageImportance.Low, MSBStrings.M0135, previousMatch.AppId, appid);
 							matches.Clear ();
 						}
 
@@ -375,20 +374,20 @@ namespace Xamarin.MacDev.Tasks
 						string currentMatches = "";
 						foreach (var match in matches)
 							currentMatches += $"{match}; ";
-						Log.LogMessage (MessageImportance.Low, "AppID: {0} was ruled out because we already found better matches: {1}.", appid, currentMatches);
+						Log.LogMessage (MessageImportance.Low, MSBStrings.M0136, appid, currentMatches);
 					}
 				}
 			}
 
 			if (matches.Count == 0) {
-				Log.LogWarning (null, null, null, AppManifest, 0, 0, 0, 0, "No installed provisioning profiles match the bundle identifier.");
+				Log.LogWarning (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.W0137);
 				return identity;
 			}
 
 			if (matches.Count > 1) {
 				var spaces = new string (' ', 3);
 
-				Log.LogMessage (MessageImportance.Normal, "Multiple provisioning profiles match the bundle identifier; using the first match.");
+				Log.LogMessage (MessageImportance.Normal, MSBStrings.M0138);
 
 				matches.Sort (new SigningIdentityComparer ());
 
@@ -442,7 +441,7 @@ namespace Xamarin.MacDev.Tasks
 			try {
 				plist = PDictionary.FromFile (AppManifest);
 			} catch (Exception ex) {
-				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "Error loading '{0}': {1}", AppManifest, ex.Message);
+				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0010, AppManifest, ex.Message);
 				return false;
 			}
 
@@ -452,12 +451,12 @@ namespace Xamarin.MacDev.Tasks
 
 			identity.BundleId = plist.GetCFBundleIdentifier ();
 			if (string.IsNullOrEmpty (identity.BundleId)) {
-				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "{0} does not define CFBundleIdentifier", AppManifest);
+				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0139, AppManifest);
 				return false;
 			}
 
-			if (Framework == PlatformFramework.MacOS) {
-				if (!RequireCodeSigning) {
+			if (Platform == ApplePlatform.MacOSX) {
+				if (!RequireCodeSigning || !string.IsNullOrEmpty (DetectedCodeSigningKey)) {
 					DetectedBundleId = identity.BundleId;
 					DetectedAppId = DetectedBundleId;
 
@@ -478,13 +477,13 @@ namespace Xamarin.MacDev.Tasks
 							identity.Profile = MobileProvisionIndex.GetMobileProvision (platform, ProvisioningProfile);
 
 							if (identity.Profile == null) {
-								Log.LogError ("The specified " + PlatformName + " provisioning profile '{0}' could not be found", ProvisioningProfile);
+								Log.LogError (MSBStrings.E0140, PlatformName, ProvisioningProfile);
 								return false;
 							}
 
 							identity.AppId = ConstructValidAppId (identity.Profile, identity.BundleId);
 							if (identity.AppId == null) {
-								Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "Project bundle identifier '{0}' does not match specified provisioning profile '{1}'", identity.BundleId, ProvisioningProfile);
+								Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0141, identity.BundleId, ProvisioningProfile);
 								return false;
 							}
 
@@ -541,9 +540,9 @@ namespace Xamarin.MacDev.Tasks
 			if (!RequireProvisioningProfile) {
 				if (certs.Count > 1) {
 					if (!string.IsNullOrEmpty (SigningKey))
-						Log.LogMessage (MessageImportance.Normal, "Multiple signing identities match '{0}'; using the first match.", SigningKey);
+						Log.LogMessage (MessageImportance.Normal, MSBStrings.M0142, SigningKey);
 					else
-						Log.LogMessage (MessageImportance.Normal, "Multiple signing identities found; using the first identity.");
+						Log.LogMessage (MessageImportance.Normal, MSBStrings.M0143);
 
 					for (int i = 0; i < certs.Count; i++) {
 						Log.LogMessage (MessageImportance.Normal, "{0,3}. Signing Identity: {1} ({2})", i + 1,
@@ -565,7 +564,7 @@ namespace Xamarin.MacDev.Tasks
 				identity.Profile = MobileProvisionIndex.GetMobileProvision (platform, ProvisioningProfile);
 
 				if (identity.Profile == null) {
-					Log.LogError ("The specified " + PlatformName + " provisioning profile '{0}' could not be found", ProvisioningProfile);
+					Log.LogError (MSBStrings.E0144, PlatformName, ProvisioningProfile);
 					return false;
 				}
 
@@ -574,14 +573,14 @@ namespace Xamarin.MacDev.Tasks
 				if (certs.Count > 0) {
 					identity.SigningKey = certs.FirstOrDefault (c => profile.DeveloperCertificates.Any (p => p.Thumbprint == c.Thumbprint));
 					if (identity.SigningKey == null) {
-						Log.LogError ("No " + PlatformName + " signing identities match the specified provisioning profile '{0}'.", ProvisioningProfile);
+						Log.LogError (MSBStrings.E0145, PlatformName, ProvisioningProfile);
 						return false;
 					}
 				}
 
 				identity.AppId = ConstructValidAppId (identity.Profile, identity.BundleId);
 				if (identity.AppId == null) {
-					Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "Project bundle identifier '{0}' does not match specified provisioning profile '{1}'", identity.BundleId, ProvisioningProfile);
+					Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0141, identity.BundleId, ProvisioningProfile);
 					return false;
 				}
 
@@ -622,9 +621,9 @@ namespace Xamarin.MacDev.Tasks
 				ReportDetectedCodesignInfo ();
 			} else {
 				if (identity.SigningKey != null) {
-					Log.LogError ("Bundle identifier '{0}' does not match any installed provisioning profile for selected signing identity '{0}'.", identity.BundleId, identity.SigningKey);
+					Log.LogError (MSBStrings.E0146, identity.BundleId, identity.SigningKey);
 				} else {
-					Log.LogError ("Bundle identifier '{0}' does not match any installed provisioning profile.", identity.BundleId);
+					Log.LogError (MSBStrings.E0148, identity.BundleId);
 				}
 			}
 

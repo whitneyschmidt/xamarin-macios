@@ -25,14 +25,10 @@ Copyright (C) 2014 Xamarin Inc. All rights reserved.
 	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.targets" 
 			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.targets')"/>
 
-	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Mac.xbuild.targets"
-		Condition="'$(IsXBuild)' == 'true' "/>
-	
-	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Mac.msbuild.targets"
-		Condition="'$(IsXBuild)' != 'true' "/>
+	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Mac.msbuild.targets"/>
 
 	<!-- Add our own pre-build steps -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(_UsingXamarinSdk)' != 'true'">
 		<BuildDependsOn>
 			BuildOnlySettings;
 			_CreateGeneratedSourcesDir;
@@ -42,7 +38,7 @@ Copyright (C) 2014 Xamarin Inc. All rights reserved.
 	</PropertyGroup>
 
 	<!-- Add our own Clean steps -->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(_UsingXamarinSdk)' != 'true'">
 		<CleanDependsOn>
 			_CleanGeneratedSources;
 			$(CleanDependsOn)
@@ -60,7 +56,7 @@ Copyright (C) 2014 Xamarin Inc. All rights reserved.
 	</Target>
 
 	<Target Name="_AssignBundleResourceNames">
-		<AssignBundleResourceNames BundleResources="@(BundleResource)" ResourceDirectoryPrefixes="$(XamMacResourcePrefix)">
+		<AssignBundleResourceNames BundleResources="@(BundleResource)" ResourceDirectoryPrefixes="$(_ResourcePrefix)">
 			<Output ItemName="_BundleResourceWithName" TaskParameter="BundleResourcesWithNames" />
 		</AssignBundleResourceNames>
 	</Target>
@@ -72,7 +68,7 @@ Copyright (C) 2014 Xamarin Inc. All rights reserved.
 			OptimizePNGs="False"
 			BundleResources="@(Content);@(BundleResource)"
 			ProjectDir="$(MSBuildProjectDirectory)"
-			ResourcePrefix="$(XamMacResourcePrefix)"
+			ResourcePrefix="$(_ResourcePrefix)"
 			>
 
 			<Output TaskParameter="BundleResourcesWithLogicalNames" ItemName="_BundleResourceWithLogicalName"/>

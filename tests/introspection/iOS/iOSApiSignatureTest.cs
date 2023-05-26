@@ -12,15 +12,9 @@ using System.Reflection;
 
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using ObjCRuntime;
 using Foundation;
 using UIKit;
-#else
-using MonoTouch.ObjCRuntime;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 
 namespace Introspection {
 	
@@ -115,15 +109,6 @@ namespace Introspection {
 
 			switch (encodedType) {
 			case 'c': // char, used for C# bool
-#if !XAMCORE_2_0
-				switch (type.FullName) {
-				// looks like it returns a bool even if documented as a void
-				// UIPrintInteractionController 'instance Void Present(Boolean, MonoTouch.UIKit.UIPrintInteractionCompletionHandler)' selector: presentAnimated:completionHandler:
-				// update: documentation (and header) mistake that Apple corrected (IIRC I filled that issue)
-				case "System.Void":
-					return CurrentType.Name == "UIPrintInteractionController";
-				}
-#endif
 				break;
 			// float (32 bits)
 			case 'f':
@@ -229,6 +214,8 @@ namespace Introspection {
 			case "AccommodatePresentedSubitemDeletion":
 			case "SavePresentedItemChanges":
 				return m.DeclaringType.Name == "UIDocument";
+			case "PostNotification": // completion handler is not always called
+				return m.DeclaringType.Name == "ICNotificationManager";
 			}
 			return base.IgnoreAsync (m);
 		}

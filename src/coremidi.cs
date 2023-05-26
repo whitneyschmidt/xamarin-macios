@@ -46,9 +46,11 @@ namespace CoreMidi {
 		[Export ("port")]
 		nint Port { get;  }
 
+		[NullAllowed]
 		[Export ("netServiceName", ArgumentSemantic.Retain)]
 		string NetServiceName { get;  }
 
+		[NullAllowed]
 		[Export ("netServiceDomain", ArgumentSemantic.Retain)]
 		string NetServiceDomain { get;  }
 
@@ -149,7 +151,7 @@ namespace CoreMidi {
 	}
 #endif
 
-	[NoWatch, NoTV, Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[NoWatch, NoTV, Mac (10,14), iOS (12,0)]
 	[BaseType (typeof(NSObject), Name="MIDICIProfile")]
 	[DisableDefaultCtor]
 	interface MidiCIProfile : NSSecureCoding
@@ -164,7 +166,7 @@ namespace CoreMidi {
 		IntPtr Constructor (NSData data, string inName);
 	}
 
-	[NoWatch, NoTV, Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[NoWatch, NoTV, Mac (10,14), iOS (12,0)]
 	[BaseType (typeof(NSObject), Name="MIDICIProfileState")]
 	[DisableDefaultCtor]
 	interface MidiCIProfileState : NSSecureCoding
@@ -183,7 +185,7 @@ namespace CoreMidi {
 	delegate void MidiCIPropertyResponseHandler (MidiCISession session, byte channel, NSData response, NSError error);
 	delegate void MidiCIPropertyChangedHandler (MidiCISession session, byte channel, NSData data);
 
-	[NoWatch, NoTV, Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[NoWatch, NoTV, Mac (10,14), iOS (12,0)]
 	[BaseType (typeof(NSObject), Name="MIDICISession")]
 	[DisableDefaultCtor]
 	interface MidiCISession

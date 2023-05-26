@@ -186,7 +186,6 @@ namespace ObjCRuntime {
 			return Messaging.IntPtr_objc_msgSend (obj, Selector.GetHandle (Selector.Class));
 		}
 
-		// note: PreserveCode.cs keep this around only for debug builds (see: monotouch-glue.m)
 		internal static string LookupFullName (IntPtr klass)
 		{
 			Type type = Lookup (klass);
@@ -257,12 +256,13 @@ namespace ObjCRuntime {
 			var mod_token = type.Module.MetadataToken;
 			var type_token = type.MetadataToken & ~0x02000000;
 			for (int i = 0; i < map->map_count; i++) {
-				var token_reference = map->map [i].type_reference;
+				var class_map = map->map [i];
+				var token_reference = class_map.type_reference;
 				if (!CompareTokenReference (asm_name, mod_token, type_token, token_reference))
 					continue;
 
-				var rv = map->map [i].handle;
-				is_custom_type = (map->map [i].flags & Runtime.MTTypeFlags.CustomType) == Runtime.MTTypeFlags.CustomType;
+				var rv = class_map.handle;
+				is_custom_type = (class_map.flags & Runtime.MTTypeFlags.CustomType) == Runtime.MTTypeFlags.CustomType;
 #if LOG_TYPELOAD
 				Console.WriteLine ($"FindClass ({type.FullName}, {is_custom_type}): 0x{rv.ToString ("x")} = {class_getName (rv)}.");
 #endif
@@ -272,16 +272,18 @@ namespace ObjCRuntime {
 			// The type we're looking for might be a type the registrar skipped, in which case we must
 			// find it in the table of skipped types
 			for (int i = 0; i < map->skipped_map_count; i++) {
-				var token_reference = map->skipped_map [i].skipped_reference;
+				var skipped_map = map->skipped_map [i];
+				var token_reference = skipped_map.skipped_reference;
 				if (!CompareTokenReference (asm_name, mod_token, type_token, token_reference))
 					continue;
 
 				// This is a skipped type, we now got the actual type reference of the type we're looking for,
 				// so go look for it in the type map.
-				var actual_reference = map->skipped_map [i].actual_reference;  
+				var actual_reference = skipped_map.actual_reference;
 				for (int k = 0; k < map->map_count; k++) {
-					if (map->map [k].type_reference == actual_reference)
-						return map->map [k].handle;
+					var class_map = map->map [k];
+					if (class_map.type_reference == actual_reference)
+						return class_map.handle;
 				}
 			}
 
@@ -325,11 +327,12 @@ namespace ObjCRuntime {
 		{
 			if (hi >= lo) {
 				int mid = lo + (hi - lo) / 2;
+				IntPtr handle = array [mid].handle;
 
-				if (array [mid].handle == @class)
+				if (handle == @class)
 					return mid;
 
-				if (array [mid].handle.ToInt64 () > @class.ToInt64 ())
+				if (handle.ToInt64 () > @class.ToInt64 ())
 					return FindMapIndex (array, lo, mid - 1, @class);
 
 				return FindMapIndex (array, mid + 1, hi, @class);
@@ -544,7 +547,7 @@ namespace ObjCRuntime {
 		{
 			var map = Runtime.options->RegistrationMap;
 			for (int i = 0; i < map->full_token_reference_count; i++) {
-				var ptr = map->full_token_references + (i * IntPtr.Size + 8);
+				var ptr = map->full_token_references + (i * (IntPtr.Size + 8));
 				var asm_ptr = Marshal.ReadIntPtr (ptr);
 				var token = Marshal.ReadInt32 (ptr + IntPtr.Size + 4);
 				if (token != metadata_token)
@@ -555,7 +558,7 @@ namespace ObjCRuntime {
 				if (!Runtime.StringEquals (asm_ptr, assembly_name))
 					continue;
 
-				return (uint) i;
+				return ((uint) i << 1) + 1;
 			}
 
 			return uint.MaxValue;
@@ -565,12 +568,7 @@ namespace ObjCRuntime {
 		Type must have been previously registered.
 		*/
 		[BindingImpl (BindingImplOptions.Optimizable)] // To inline the Runtime.DynamicRegistrationSupported code if possible.
-#if !XAMCORE_2_0 && !MONOTOUCH // Accidently exposed this to public, can't break API
-		public
-#else
-		internal
-#endif
-		static bool IsCustomType (Type type)
+		internal static bool IsCustomType (Type type)
 		{
 			bool is_custom_type;
 			var @class = GetClassHandle (type, false, out is_custom_type);

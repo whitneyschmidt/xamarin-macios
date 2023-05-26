@@ -7,11 +7,9 @@ using Microsoft.Build.Utilities;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class DSymUtilTaskBase : ToolTask
+	public abstract class DSymUtilTaskBase : XamarinToolTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -21,8 +19,9 @@ namespace Xamarin.MacDev.Tasks
 		[Required]
 		public string DSymDir { get; set; }
 
+		[Output]
 		[Required]
-		public string Executable { get; set; }
+		public ITaskItem Executable { get; set; }
 
 		#endregion
 
@@ -62,12 +61,12 @@ namespace Xamarin.MacDev.Tasks
 		{
 			var args = new CommandLineBuilder ();
 
-			args.AppendSwitch ("-t");
+			args.AppendSwitch ("-num-threads");
 			args.AppendSwitch ("4");
 			args.AppendSwitch ("-z");
 			args.AppendSwitch ("-o");
 			args.AppendFileNameIfNotNull (DSymDir);
-			args.AppendFileNameIfNotNull (Executable);
+			args.AppendFileNameIfNotNull (Executable.ItemSpec);
 
 			return args.ToString ();
 		}

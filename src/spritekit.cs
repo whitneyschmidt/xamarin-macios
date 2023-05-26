@@ -5,7 +5,7 @@
 //   Aaron Bockover (abock@xamarin.com)
 //
 // Copyright 2013-2015 Xamarin Inc
-#if XAMCORE_2_0 || !MONOMAC
+
 using System;
 using System.ComponentModel;
 
@@ -71,7 +71,7 @@ namespace SpriteKit {
 	delegate float SKActionTimingFunction2 (float /* float, not CGFloat */ time);
 
 	[Watch (3,0)]
-	[iOS (8,0), Mac (10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac (10,10)]
 	[BaseType (typeof (SKNode))]
 	interface SK3DNode {
 		[DesignatedInitializer]
@@ -108,7 +108,7 @@ namespace SpriteKit {
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		SCNHitTestResult [] HitTest (CGPoint thePoint, [NullAllowed] NSDictionary options);
 
-		[Wrap ("HitTest (thePoint, options == null ? null : options.Dictionary)")]
+		[Wrap ("HitTest (thePoint, options.GetDictionary ())")]
 		SCNHitTestResult [] HitTest (CGPoint thePoint, SCNHitTestOptions options);
 
 		[Export ("projectPoint:")]
@@ -125,7 +125,7 @@ namespace SpriteKit {
 
 	[DisableDefaultCtor] // DesignatedInitializer below
 #if MONOMAC
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[BaseType (typeof (NSResponder))]
 	partial interface SKNode : NSSecureCoding, NSCopying {
 #elif IOS || TVOS
@@ -151,7 +151,7 @@ namespace SpriteKit {
 		[return: NullAllowed]
 		SKNode Create (string filename);
 
-		[Watch (5,0), TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Watch (5,0), TV (12,0), Mac (10,14), iOS (12,0)]
 		[Internal]
 		[Static]
 		[Export ("nodeWithFileNamed:securelyWithClasses:andError:")]
@@ -224,13 +224,8 @@ namespace SpriteKit {
 		[Export ("userData", ArgumentSemantic.Retain)]
 		NSMutableDictionary UserData { get; set; }
 
-#if XAMCORE_2_0
 		[Export ("setScale:")]
 		void SetScale (nfloat scale);
-#else
-		[Export ("scale")]
-		nfloat Scale { set; }
-#endif
 
 		[Export ("addChild:")]
 		[PostGet ("Children")]
@@ -366,17 +361,17 @@ namespace SpriteKit {
 
 #if !WATCH
 		// Extensions from GameplayKit, inlined to avoid ugly static extension syntax
-		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12)]
 		[Static]
 		[Export ("obstaclesFromSpriteTextures:accuracy:")]
 		GKPolygonObstacle [] GetObstaclesFromSpriteTextures (SKNode [] sprites, float accuracy);
 
-		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12)]
 		[Static]
 		[Export ("obstaclesFromNodeBounds:")]
 		GKPolygonObstacle [] GetObstaclesFromNodeBounds (SKNode [] nodes);
 
-		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12)]
 		[Static]
 		[Export ("obstaclesFromNodePhysicsBodies:")]
 		GKPolygonObstacle [] GetObstaclesFromNodePhysicsBodies (SKNode [] nodes);
@@ -384,7 +379,7 @@ namespace SpriteKit {
 	}
 
 #if MONOMAC
-	[Mac(10,9, onlyOn64 : true)]
+	[Mac(10,9)]
 	[Category, BaseType (typeof (NSEvent))]
 	partial interface SKNodeEvent_NSEvent {
 
@@ -406,7 +401,7 @@ namespace SpriteKit {
 #endif
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKEffectNode : SKWarpable {
@@ -450,7 +445,7 @@ namespace SpriteKit {
 	delegate Vector3 SKFieldForceEvaluator (/* vector_float3 */ Vector4 position, /* vector_float3 */ Vector4 velocity, float /* float, not CGFloat */ mass, float /* float, not CGFloat */ charge, double time);
 		
 	[Watch (3,0)]
-	[iOS (8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac(10,10)]
 	[BaseType (typeof (SKNode))]
 	interface SKFieldNode {
 		[Export ("region", ArgumentSemantic.Retain)]
@@ -531,11 +526,11 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKEffectNode))]
 	interface SKScene
-#if (XAMCORE_2_0 || !MONOMAC) && !WATCH
+#if !WATCH
 		: GKSceneRootNodeType
 #endif
 	{
@@ -628,7 +623,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac(10,10)]
 	[Protocol, Model]
 	[BaseType (typeof (NSObject))]
 	interface SKSceneDelegate {
@@ -649,7 +644,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[iOS (8,0)]
 	[BaseType (typeof (NSObject))]
 	interface SKShader : NSCopying, NSSecureCoding {
@@ -695,7 +690,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKSpriteNode : SKWarpable {
@@ -803,7 +798,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	partial interface SKKeyframeSequence : NSSecureCoding, NSCopying {
@@ -854,7 +849,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKEmitterNode {
@@ -1026,7 +1021,7 @@ namespace SpriteKit {
 		[Export ("shader", ArgumentSemantic.Retain)]
 		SKShader Shader { get; set; }
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Export ("particleRenderOrder", ArgumentSemantic.Assign)]
 		SKParticleRenderOrder ParticleRenderOrder { get; set; }
 
@@ -1045,7 +1040,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKShapeNode {
@@ -1176,7 +1171,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac(10,10)]
 	[BaseType (typeof (NSObject))]
 	interface SKReachConstraints : NSSecureCoding {
 		[DesignatedInitializer]
@@ -1191,7 +1186,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS(8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS(8,0), Mac(10,10)]
 	[BaseType (typeof (NSObject))]
 	interface SKRegion : NSCopying, NSSecureCoding {
 		[Export ("initWithRadius:")]
@@ -1227,7 +1222,7 @@ namespace SpriteKit {
 
 	[Watch (3,0)]
 	[iOS (7,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKLabelNode {
 
@@ -1293,7 +1288,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac(10,10)]
 	[BaseType (typeof (SKNode))]
 	interface SKLightNode {
 		[Export ("enabled")]
@@ -1316,7 +1311,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (4,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKVideoNode {
@@ -1383,7 +1378,7 @@ namespace SpriteKit {
 
 	[Watch (3,0)]
 	[iOS (8,0)]
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[BaseType (typeof (NSObject))]
 	interface SKConstraint : NSSecureCoding, NSCopying {
 		[Export ("enabled")]
@@ -1425,7 +1420,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKNode))]
 	partial interface SKCropNode {
@@ -1436,7 +1431,7 @@ namespace SpriteKit {
 	}
 
 	[NoWatch]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (UIView))]
 #if XAMCORE_3_0
@@ -1543,7 +1538,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
@@ -1600,7 +1595,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
@@ -1677,7 +1672,7 @@ namespace SpriteKit {
 
 #if !WATCH
 		// Static Category from GameplayKit
-		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12)]
 		[Static]
 		[Export ("textureWithNoiseMap:")]
 		SKTexture FromNoiseMap (GKNoiseMap noiseMap);
@@ -1687,7 +1682,7 @@ namespace SpriteKit {
 	delegate void SKTextureModify (IntPtr pixelData, nuint lengthInBytes);
 		
 	[Watch (3,0)]
-	[iOS (8,0), Mac(10,10, onlyOn64 : true)]
+	[iOS (8,0), Mac(10,10)]
 	[BaseType (typeof (SKTexture))]
 	[DisableDefaultCtor] // cannot be created (like SKTexture) by calling `init`
 	interface SKMutableTexture {
@@ -1707,7 +1702,7 @@ namespace SpriteKit {
 	delegate void SKTextureAtlasLoadCallback (NSError error, SKTextureAtlas foundAtlases);
 		
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	partial interface SKTextureAtlas : NSSecureCoding {
@@ -1744,7 +1739,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[iOS (8,0)]
 	[BaseType (typeof (NSObject))]
 	interface SKUniform : NSCopying, NSSecureCoding {
@@ -2149,7 +2144,7 @@ namespace SpriteKit {
 	delegate void SKActionDurationHandler (SKNode node, nfloat elapsedTime);
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // <quote>To create an action, call the class method for the action you are interested in. </quote>
@@ -2368,173 +2363,173 @@ namespace SpriteKit {
 		SKAction FalloffTo (float falloff, double sec);
 
 		// iOS 9 cluster
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("actionNamed:")]
 		[return: NullAllowed]
 		SKAction Create (string name);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("actionNamed:duration:")]
 		[return: NullAllowed]
 		SKAction Create (string name, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("actionNamed:fromURL:")]
 		[return: NullAllowed]
 		SKAction Create (string name, NSUrl url);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("actionNamed:fromURL:duration:")]
 		[return: NullAllowed]
 		SKAction Create (string name, NSUrl url, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("setNormalTexture:")]
 		SKAction SetNormalTexture (SKTexture texture);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("setNormalTexture:resize:")]
 		SKAction SetNormalTexture (SKTexture texture, bool resize);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("animateWithNormalTextures:timePerFrame:")]
 		SKAction AnimateWithNormalTextures (SKTexture[] textures, double secondsPerFrame);
 		
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("animateWithNormalTextures:timePerFrame:resize:restore:")]
 		SKAction AnimateWithNormalTextures (SKTexture[] textures, double secondsPerFrame, bool resize, bool restore);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("play")]
 		SKAction CreatePlay ();
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("pause")]
 		SKAction CreatePause ();
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("stop")]
 		SKAction CreateStop ();
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changePlaybackRateTo:duration:")]
 		SKAction CreateChangePlaybackRate (float playbackRate, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changePlaybackRateBy:duration:")]
 		SKAction CreateChangePlaybackRateBy (float playbackRate, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeVolumeTo:duration:")]
 		SKAction CreateChangeVolume (float newVolume, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeVolumeBy:duration:")]
 		SKAction CreateChangeVolumeBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeChargeTo:duration:")]
 		SKAction CreateChangeChargeTo (float newCharge, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeChargeBy:duration:")]
 		SKAction CreateChangeChargeBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeMassTo:duration:")]
 		SKAction CreateChangeMassTo (float newMass, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeMassBy:duration:")]
 		SKAction CreateChangeMassBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyForce:duration:")]
 		SKAction CreateApplyForce (CGVector force, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyForce:atPoint:duration:")]
 		SKAction CreateApplyForce (CGVector force, CGPoint point, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyTorque:duration:")]
 		SKAction CreateApplyTorque (nfloat torque, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyImpulse:duration:")]
 		SKAction CreateApplyImpulse (CGVector impulse, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyImpulse:atPoint:duration:")]
 		SKAction CreateApplyImpulse (CGVector impulse, CGPoint point, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("applyAngularImpulse:duration:")]
 		SKAction CreateApplyAngularImpulse (nfloat impulse, double duration);
 
 		// SKAction_SKAudioNode inlined
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("stereoPanTo:duration:")]
 		SKAction CreateStereoPanTo (float target, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("stereoPanBy:duration:")]
 		SKAction CreateStereoPanBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeReverbTo:duration:")]
 		SKAction CreateChangeReverbTo (float target, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeReverbBy:duration:")]
 		SKAction CreateChangeReverbBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeObstructionTo:duration:")]
 		SKAction CreateChangeObstructionTo (float target, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeObstructionBy:duration:")]
 		SKAction CreateChangeObstructionBy (float by, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeOcclusionTo:duration:")]
 		SKAction CreateChangeOcclusionTo (float target, double duration);
 
-		[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+		[iOS (9,0)][Mac (10,11)]
 		[Static]
 		[Export ("changeOcclusionBy:duration:")]
 		SKAction CreateChangeOcclusionBy (float by, double duration);
@@ -2564,7 +2559,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[DisableDefaultCtor] // see https://bugzilla.xamarin.com/show_bug.cgi?id=14502
 	[BaseType (typeof (NSObject))]
@@ -2706,7 +2701,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // <quote>An SKPhysicsContact object is created automatically by Scene Kit</quote>
@@ -2731,7 +2726,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[Model]
@@ -2749,7 +2744,7 @@ namespace SpriteKit {
 	delegate void SKPhysicsWorldBodiesAlongRayStartEnumeratorHandler (SKPhysicsBody body, CGPoint point, CGVector normal, out bool stop);
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject),
 		   Delegates=new string [] {"WeakContactDelegate"},
@@ -2807,7 +2802,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (NSObject))]
 	[Abstract] // <quote>You never instantiate objects of this class directly</quote>
@@ -2829,7 +2824,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKPhysicsJoint))]
 	[DisableDefaultCtor] // impossible to set the `anchor` using the default ctor (see #14511) 
@@ -2856,7 +2851,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKPhysicsJoint))]
 	[DisableDefaultCtor] // impossible to set the `anchorA` and `anchorB` using the default ctor (see #14511) 
@@ -2873,7 +2868,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKPhysicsJoint))]
 	[DisableDefaultCtor] // https://bugzilla.xamarin.com/show_bug.cgi?id=14511
@@ -2884,7 +2879,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKPhysicsJoint))]
 	[DisableDefaultCtor] // impossible to set the `anchor` and `axis` using the default ctor (see #14511) 
@@ -2904,7 +2899,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,9, onlyOn64 : true)]
+	[Mac (10,9)]
 	[iOS (7,0)]
 	[BaseType (typeof (SKPhysicsJoint))]
 	[DisableDefaultCtor] // impossible to set the `anchorA` and `anchorB` using the default ctor (see #14511) 
@@ -2918,7 +2913,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[iOS (8,0)]
 	[BaseType (typeof (NSObject))]
 	interface SKRange : NSSecureCoding, NSCopying {
@@ -2953,7 +2948,7 @@ namespace SpriteKit {
 
 	[Watch (3,0)]
 	[iOS (9,0)]
-	[Mac (10,11, onlyOn64 : true)]
+	[Mac (10,11)]
 	[BaseType (typeof (SKNode))]
 	[DisableDefaultCtor]
 	interface SKAudioNode : NSSecureCoding {
@@ -2979,7 +2974,7 @@ namespace SpriteKit {
 
 	[Watch (3,0)]
 	[iOS (9,0)]
-	[Mac (10,11, onlyOn64 : true)]
+	[Mac (10,11)]
 	[BaseType (typeof (SKNode))]
 	interface SKCameraNode {
 		[Export ("containsNode:")]
@@ -2991,7 +2986,7 @@ namespace SpriteKit {
 
 	[Watch (3,0)]
 	[iOS (9,0)]
-	[Mac (10,11, onlyOn64 : true)]
+	[Mac (10,11)]
 	[BaseType (typeof (SKNode))]
 	[DisableDefaultCtor]
 	interface SKReferenceNode {
@@ -3018,7 +3013,7 @@ namespace SpriteKit {
 		void Resolve ();
 	}
 
-	[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+	[iOS (9,0)][Mac (10,11)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
 	interface SKAttribute : NSSecureCoding
@@ -3038,7 +3033,7 @@ namespace SpriteKit {
 		SKAttributeType Type { get; }
 	}
 
-	[iOS (9,0)][Mac (10,11, onlyOn64 : true)]
+	[iOS (9,0)][Mac (10,11)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor] // DesignatedInitializer below
 	interface SKAttributeValue : NSSecureCoding
@@ -3089,7 +3084,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
@@ -3162,7 +3157,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(SKNode))]
 	interface SKTileMapNode : NSCopying, NSSecureCoding
@@ -3252,7 +3247,7 @@ namespace SpriteKit {
 
 #if !WATCH
 		// Static Category from GameplayKit
-		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), NoWatch, Mac (10,12)]
 		[Static]
 		[Export ("tileMapNodesWithTileSet:columns:rows:tileSize:fromNoiseMap:tileTypeNoiseMapThresholds:")]
 		SKTileMapNode[] FromTileSet (SKTileSet tileSet, nuint columns, nuint rows, CGSize tileSize, GKNoiseMap noiseMap, NSNumber[] thresholds);
@@ -3273,7 +3268,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(NSObject))]
 	interface SKTileSet : NSCopying, NSSecureCoding
@@ -3319,7 +3314,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(NSObject))]
 	interface SKTileGroup : NSCopying, NSSecureCoding
@@ -3350,7 +3345,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(NSObject))]
 	interface SKTileGroupRule : NSCopying, NSSecureCoding
@@ -3373,13 +3368,13 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(NSObject))]
 	interface SKWarpGeometry : NSCopying, NSSecureCoding {}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[Protocol]
 	interface SKWarpable
@@ -3394,7 +3389,7 @@ namespace SpriteKit {
 	}
 
 	[Watch (3,0)]
-	[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
+	[iOS (10,0)][Mac (10,12)]
 	[TV (10,0)]
 	[BaseType (typeof(SKWarpGeometry))]
 	[DisableDefaultCtor]
@@ -3446,7 +3441,7 @@ namespace SpriteKit {
 
 	// SKRenderer is not available for WatchKit apps and the iOS simulator
 	[NoWatch]
-	[TV (11,0), Mac (10,13, onlyOn64 : true), iOS (11,0)]
+	[TV (11,0), Mac (10,13), iOS (11,0)]
 	[BaseType (typeof(NSObject))]
 	[DisableDefaultCtor]
 	interface SKRenderer {
@@ -3516,4 +3511,3 @@ namespace SpriteKit {
 		}
 	}
 }
-#endif

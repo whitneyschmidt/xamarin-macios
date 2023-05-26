@@ -15,6 +15,7 @@ using ObjCRuntime;
 namespace CoreMedia {
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMMediaType : uint
 	{
 		Video         = 1986618469, // 'vide'
@@ -24,16 +25,12 @@ namespace CoreMedia {
 		ClosedCaption = 1668047728, // 'clcp'
 		Subtitle      = 1935832172, // 'sbtl'
 		TimeCode      = 1953325924, // 'tmcd'
-#if !XAMCORE_2_0
-		// not part of the header file anymore
-		[Obsolete ("Use 'Metadata' instead.")]
-		TimedMetadata = 1953326452, // 'tmet'
-#endif
 		// note: the 4CC was obsoleted, i.e. Metadata is a new 4CC
 		Metadata      = 0x6D657461, // 'meta'
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMClosedCaptionFormatType : uint
 	{
 		CEA608	= 0x63363038, // 'c608',
@@ -42,6 +39,7 @@ namespace CoreMedia {
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMMuxedStreamType : uint
 	{
 		MPEG1System		= 0x6D703173, // 'mp1s',
@@ -51,6 +49,7 @@ namespace CoreMedia {
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMSubtitleFormatType : uint
 	{
 		Text3G  = 0x74783367, // 'tx3g'
@@ -58,6 +57,7 @@ namespace CoreMedia {
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMMetadataFormatType : uint
 	{
 		ICY   = 0x69637920, // 'icy '
@@ -67,6 +67,7 @@ namespace CoreMedia {
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMTimeCodeFormatType : uint
 	{
 		TimeCode32	= 0x746D6364, // 'tmcd',
@@ -76,6 +77,7 @@ namespace CoreMedia {
 	}
 
 	// uint32_t -> CMTime.h
+	[Watch (6,0)]
 	public enum CMTimeRoundingMethod : uint
 	{
 		RoundHalfAwayFromZero = 1,
@@ -88,6 +90,7 @@ namespace CoreMedia {
 	}
 
 	// CMSampleBuffer.h
+	[Watch (6,0)]
 	[StructLayout(LayoutKind.Sequential)]
 	public struct CMSampleTimingInfo
 	{
@@ -97,6 +100,7 @@ namespace CoreMedia {
 	}
 
 	// CMTimeRange.h
+	[Watch (6,0)]
 	[StructLayout(LayoutKind.Sequential)]
 	public struct CMTimeRange {
 		public CMTime Start;
@@ -105,9 +109,11 @@ namespace CoreMedia {
 		public static readonly CMTimeRange Zero;
 
 #if !XAMCORE_3_0
+#if !WATCH
 		[Obsolete ("Use 'InvalidRange'.")]
 		public static readonly CMTimeRange Invalid;
-#endif
+#endif // !WATCH
+#endif // !XAMCORE_3_0
 		public static readonly CMTimeRange InvalidRange;
 
 		[iOS (9,0)][Mac (10,11)]
@@ -141,6 +147,7 @@ namespace CoreMedia {
 	}
 
 	// CMTimeRange.h
+	[Watch (6,0)]
 	[StructLayout(LayoutKind.Sequential)]
 	public struct CMTimeMapping {
 		public CMTimeRange Source;
@@ -202,6 +209,7 @@ namespace CoreMedia {
 #endif // !COREBUILD
 	}
 
+	[Watch (6,0)]
 	[StructLayout(LayoutKind.Sequential)]
 	public struct CMTimeScale
 	{
@@ -221,6 +229,7 @@ namespace CoreMedia {
 	}
 
 	// FourCharCode -> CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMVideoCodecType : uint
 	{
 		YUV422YpCbCr8    = 0x32767579,
@@ -254,8 +263,8 @@ namespace CoreMedia {
 		Hevc             = 0x68766331
 	}
 
-#if XAMCORE_2_0
 	// CMVideoDimensions => int32_t width + int32_t height
+	[Watch (6,0)]
 	public struct CMVideoDimensions {
 		public int Width;
 		public int Height;
@@ -266,9 +275,9 @@ namespace CoreMedia {
 			Height = height;
 		}
 	}
-#endif
 
 	// UInt32 enum => CMFormatDescription.h
+	[Watch (6,0)]
 	public enum CMPixelFormat : uint
 	{
 		AlphaRedGreenBlue32bits = 32,

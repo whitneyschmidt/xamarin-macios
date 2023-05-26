@@ -6,7 +6,7 @@
 //
 // Copyright 2012-2013 Xamarin Inc
 //
-#if XAMCORE_2_0 || !MONOMAC
+
 using System;
 using ObjCRuntime;
 using Foundation;
@@ -20,8 +20,6 @@ using AppKit;
 #endif
 
 namespace Social {
-	[iOS (6,0)]
-	[Mac (10,8, onlyOn64 : true)]
 	[Static]
 	interface SLServiceType {
 		[Deprecated (PlatformName.iOS, 11, 0, message: "Use Facebook SDK instead.")]
@@ -54,11 +52,9 @@ namespace Social {
 #endif
 	}
 	
-	[iOS (6,0)]
 	[BaseType (typeof (NSObject))]
 	// init -> Objective-C exception thrown.  Name: NSInternalInconsistencyException Reason: SLRequestMultiPart must be obtained through!
 	[DisableDefaultCtor]
-	[Mac (10,8, onlyOn64 : true)]
 	interface SLRequest {
 		[Static]
 		[Export ("requestForServiceType:requestMethod:URL:parameters:")]
@@ -93,7 +89,6 @@ namespace Social {
 	}
 
 #if !MONOMAC
-	[iOS (6,0)]
 	[BaseType (typeof (UIViewController))]
 	[DisableDefaultCtor] // see note on 'composeViewControllerForServiceType:'
 	interface SLComposeViewController {
@@ -133,22 +128,18 @@ namespace Social {
 	}
 #endif
 
-	[Mac (10,10, onlyOn64 : true)]
+	[Mac (10,10)]
 	[iOS (8,0)]
 #if MONOMAC
 	[BaseType (typeof (NSViewController))]
 #else
 	[BaseType (typeof (UIViewController))]
 #endif
-#if XAMCORE_2_0
 	#if MONOMAC
 	interface SLComposeServiceViewController : NSTextViewDelegate {
 	#else
 	interface SLComposeServiceViewController : UITextViewDelegate {
 	#endif
-#else
-	interface SLComposeServiceViewController {
-#endif
 		[Export ("initWithNibName:bundle:")]
 		[PostGet ("NibBundle")]
 		IntPtr Constructor ([NullAllowed] string nibName, [NullAllowed] NSBundle bundle);
@@ -239,4 +230,3 @@ namespace Social {
 	}
 #endif
 }
-#endif

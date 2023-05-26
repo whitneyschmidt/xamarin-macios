@@ -11,26 +11,10 @@ using System;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-#if XAMCORE_2_0
 using Foundation;
 using Security;
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-using MonoTouch;
-#endif
 using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.Security {
 	
@@ -516,7 +500,7 @@ namespace MonoTouchFixtures.Security {
 			Assert.That ((nuint) (uint) mail_google_com.Length, Is.EqualTo (cert.DerData.Length), "DerData");
 			if (TestRuntime.CheckXcodeVersion (8, 3)) {
 				Assert.That (cert.GetCommonName (), Is.EqualTo ("mail.google.com"), "GetCommonName");
-				Assert.That (cert.GetSerialNumber ().Description, Is.EqualTo ("<2b9f7ee5 ca25a625 14204782 753a9bb9>"), "GetSerialNumber");
+				Assert.That (cert.GetSerialNumber ().ToStableString (), Is.EqualTo ("<2b9f7ee5 ca25a625 14204782 753a9bb9>"), "GetSerialNumber");
 
 				var emailAddresses = cert.GetEmailAddresses ();
 				Assert.IsTrue (emailAddresses == null || emailAddresses.Length == 0, "GetEmailAddresses");
@@ -527,7 +511,7 @@ namespace MonoTouchFixtures.Security {
 			}
 			if (TestRuntime.CheckXcodeVersion (9,0)) {
 				NSError err;
-				Assert.That (cert.GetSerialNumber (out err).Description, Is.EqualTo ("<2b9f7ee5 ca25a625 14204782 753a9bb9>"), "GetSerialNumber/NSError");
+				Assert.That (cert.GetSerialNumber (out err).ToStableString (), Is.EqualTo ("<2b9f7ee5 ca25a625 14204782 753a9bb9>"), "GetSerialNumber/NSError");
 				Assert.Null (err, "err") ;
 			}
 			if (TestRuntime.CheckXcodeVersion (10,0)) {

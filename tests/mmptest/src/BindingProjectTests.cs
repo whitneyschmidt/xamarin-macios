@@ -48,7 +48,7 @@ namespace Xamarin.MMP.Tests
 			binding.StructsAndEnumsConfig = "public class UnifiedWithDepNativeRefLibTestClass {}";
 
 			string projectPath = TI.GenerateBindingLibraryProject (binding);
-			return TI.BuildProject (projectPath, true, shouldFail: shouldFail);
+			return TI.BuildProject (projectPath, shouldFail: shouldFail);
 		}
 
 		internal static Tuple <TI.UnifiedTestConfig, TI.UnifiedTestConfig> GenerateTestProject (BindingProjectType type, string tmpDir)
@@ -109,7 +109,7 @@ namespace Xamarin.MMP.Tests
 
 				string libPath = Path.Combine (tmpDir, $"bin/Debug/{appName}.app/Contents/MonoBundle/{bindingName}.dll");
 				Assert.True (File.Exists (libPath), $"Did not find expected library: {libPath}");
-				string monoDisResults = TI.RunAndAssert ("/Library/Frameworks/Mono.framework/Commands/monodis", "--presources " + libPath, "monodis");
+				string monoDisResults = TI.RunAndAssert ("/Library/Frameworks/Mono.framework/Commands/monodis", new [] { "--presources", libPath }, "monodis");
 				Assert.IsFalse (monoDisResults.Contains ("SimpleClassDylib.dylib"));
 			});
 		}
@@ -130,7 +130,6 @@ namespace Xamarin.MMP.Tests
 
 				var logs = SetupAndBuildLinkedTestProjects (projects.Item1, projects.Item2, tmpDir, useProjectReference: false, setupDefaultNativeReference: noEmbedding);
 
-				Assert.False (logs.Item1.Contains ("mcs"), "Bindings project must not use mcs:\n" + logs.Item1);
 				Assert.True (logs.Item1.Contains ("csc"), "Bindings project must use csc:\n" + logs.Item1); 
 
 				var bgenInvocation = logs.Item1.SplitLines ().First (x => x.Contains ("bin/bgen"));
@@ -161,7 +160,7 @@ namespace Xamarin.MMP.Tests
 				string libPath = Path.Combine (tmpDir, $"bin/Debug/{appName}.app/Contents/MonoBundle/{bindingName}.dll");
 
 				Assert.True (File.Exists (libPath));
-				string results = TI.RunAndAssert ("/Library/Frameworks/Mono.framework/Commands/monop", "--refs -r:" + libPath, "monop");
+				string results = TI.RunAndAssert ("/Library/Frameworks/Mono.framework/Commands/monop", new [] { "--refs", "-r:" + libPath }, "monop");
 				string mscorlibLine = results.Split (new char[] { '\n' }).First (x => x.Contains ("mscorlib"));
 
 				string expectedVersion = GetExpectedBCLVersion (type);

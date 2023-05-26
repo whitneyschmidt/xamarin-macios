@@ -6,7 +6,7 @@
 //
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
-#if XAMCORE_2_0 || !MONOMAC
+
 using System;
 using Foundation;
 using ObjCRuntime;
@@ -50,7 +50,7 @@ namespace GameplayKit {
 			}
 		}
 
-		[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), Mac (10,12)]
 		public static GKPath FromPoints (Vector3 [] points, float radius, bool cyclical)
 		{
 			if (points == null)
@@ -68,7 +68,7 @@ namespace GameplayKit {
 			}
 		}
 
-		[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+		[iOS (10,0), TV (10,0), Mac (10,12)]
 		public GKPath (Vector3 [] points, float radius, bool cyclical)
 		{
 			if (points == null)
@@ -99,4 +99,3 @@ namespace GameplayKit {
 		}
 	}
 }
-#endif

@@ -11,13 +11,14 @@
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <TargetFrameworkIdentifier>Xamarin.Mac</TargetFrameworkIdentifier>
     <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\$(Platform)\Debug</OutputPath>
-    <DefineConstants>__UNIFIED__;__MACOS__;DEBUG</DefineConstants>
+    <DefineConstants>__MACOS__;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>false</EnableCodeSigning>
@@ -32,13 +33,13 @@
     <XamMacArch></XamMacArch>
     <AOTMode>None</AOTMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <MonoBundlingExtraArgs>--optimize=all</MonoBundlingExtraArgs>
+    <MonoBundlingExtraArgs>--optimize=all,-remove-uithread-checks</MonoBundlingExtraArgs>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType></DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\$(Platform)\Release</OutputPath>
-    <DefineConstants>__UNIFIED__;__MACOS__</DefineConstants>
+    <DefineConstants>__MACOS__</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <EnableCodeSigning>false</EnableCodeSigning>
@@ -58,6 +59,9 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Xamarin.Mac" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -68,6 +72,9 @@
     </Compile>
     <Compile Include="..\..\..\common\mac\Mac.cs">
       <Link>Mac.cs</Link>
+    </Compile>
+    <Compile Include="..\..\ios\link all\DataContractTest.cs">
+      <Link>DataContractTest.cs</Link>
     </Compile>
     <Compile Include="..\..\BaseOptimizeGeneratedCodeTest.cs" />
     <Compile Include="LinkAllTest.cs" />
@@ -83,6 +90,15 @@
     </Compile>
     <Compile Include="..\..\ILReader.cs">
       <Link>ILReader.cs</Link>
+    </Compile>
+    <Compile Include="..\LinkAnyTest.cs">
+      <Link>LinkAnyTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\CommonLinkAnyTest.cs">
+      <Link>CommonLinkAnyTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\monotouch-test\System.Net.Http\NetworkResources.cs">
+      <Link>NetworkResources.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>

@@ -22,8 +22,6 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if XAMCORE_2_0
-
 using System;
 using System.Collections.Generic;
 
@@ -166,7 +164,7 @@ namespace Foundation {
 			if (index < 0)
 				throw new IndexOutOfRangeException (nameof (index));
 
-			if ((nuint) index >= Count)
+			if ((nuint) index > Count)
 				throw new IndexOutOfRangeException (nameof (index));
 		}
 
@@ -191,5 +189,3 @@ namespace Foundation {
 #endregion
 	}
 }
-
-#endif // XAMCORE_2_0

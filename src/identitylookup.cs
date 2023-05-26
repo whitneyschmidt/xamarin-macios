@@ -5,9 +5,9 @@
 //	Alex Soto  <alexsoto@microsoft.com>
 //
 // Copyright 2017 Xamarin Inc. All rights reserved.
+// Copyright 2019 Microsoft Corporation.
 //
 
-#if XAMCORE_2_0
 using System;
 using Foundation;
 using ObjCRuntime;
@@ -15,6 +15,8 @@ using ObjCRuntime;
 namespace IdentityLookup {
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[Native]
 	public enum ILMessageFilterAction : long {
 		None = 0,
@@ -23,6 +25,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[ErrorDomain ("ILMessageFilterErrorDomain")]
 	[Native]
 	public enum ILMessageFilterError : long {
@@ -34,6 +38,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12, 0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[Native]
 	enum ILClassificationAction : long {
 		None = 0,
@@ -43,12 +49,16 @@ namespace IdentityLookup {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[DisableDefaultCtor]
 	[BaseType (typeof (NSObject))]
 	interface ILMessageFilterExtension {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[DisableDefaultCtor]
 	[BaseType (typeof (NSExtensionContext))]
 	interface ILMessageFilterExtensionContext {
@@ -61,6 +71,8 @@ namespace IdentityLookup {
 	interface IILMessageFilterQueryHandling { }
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[Protocol]
 	interface ILMessageFilterQueryHandling {
 
@@ -70,6 +82,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ILMessageFilterQueryRequest : NSSecureCoding {
@@ -82,6 +96,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[DisableDefaultCtor]
 	[BaseType (typeof (NSObject))]
 	interface ILMessageFilterQueryResponse : NSSecureCoding {
@@ -91,6 +107,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (11,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ILNetworkResponse : NSSecureCoding {
@@ -103,6 +121,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (ILClassificationRequest))]
 	[DisableDefaultCtor]
 	interface ILCallClassificationRequest : NSSecureCoding {
@@ -112,6 +132,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (ILCommunication))]
 	[DisableDefaultCtor]
 	interface ILCallCommunication {
@@ -122,6 +144,8 @@ namespace IdentityLookup {
 
 	[Abstract]
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ILClassificationRequest : NSSecureCoding {
@@ -129,6 +153,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ILClassificationResponse : NSSecureCoding {
@@ -151,6 +177,8 @@ namespace IdentityLookup {
 
 	[Abstract]
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ILCommunication : NSSecureCoding {
@@ -166,6 +194,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (ILClassificationRequest))]
 	[DisableDefaultCtor]
 	interface ILMessageClassificationRequest : NSSecureCoding {
@@ -175,6 +205,8 @@ namespace IdentityLookup {
 	}
 
 	[iOS (12,0)]
+	[Introduced (PlatformName.UIKitForMac, 13,0)]
+	[NoMac][NoWatch][NoTV]
 	[BaseType (typeof (ILCommunication))]
 	[DisableDefaultCtor]
 	interface ILMessageCommunication {
@@ -186,4 +218,3 @@ namespace IdentityLookup {
 		bool IsEqualTo (ILMessageCommunication communication);
 	}
 }
-#endif

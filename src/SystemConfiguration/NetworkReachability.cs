@@ -30,9 +30,8 @@ namespace SystemConfiguration {
 		ConnectionOnDemand = 1<<5,
 		IsLocalAddress = 1<<16,
 		IsDirect = 1<<17,
-#if !MONOMAC
+		[Unavailable (PlatformName.MacOSX)]
 		IsWWAN = 1<<18,
-#endif
 		ConnectionAutomatic = ConnectionOnTraffic
 	}
 	
@@ -184,11 +183,7 @@ namespace SystemConfiguration {
 			GC.SuppressFinalize (this);
 		}
 
-#if XAMCORE_2_0
 		protected virtual void Dispose (bool disposing)
-#else
-		public virtual void Dispose (bool disposing)
-#endif
 		{
 			if (handle != IntPtr.Zero){
 				CFObject.CFRelease (handle);
@@ -241,14 +236,6 @@ namespace SystemConfiguration {
 			r.notification (flags);
 		}
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'SetNotification' instead.")]
-		public bool SetCallback (Notification callback)
-		{
-			return SetNotification (callback) == StatusCode.OK;
-		}
-#endif
-		
 		public StatusCode SetNotification (Notification callback)
 		{
 			if (notification == null){

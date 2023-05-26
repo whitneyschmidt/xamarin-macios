@@ -1,7 +1,7 @@
 ## no generator support for FastEnumeration - https://bugzilla.xamarin.com/show_bug.cgi?id=4391
 !missing-protocol-conformance! AUAudioUnitBusArray should conform to NSFastEnumeration
 
-## deprecated (even removed in tvOS) and not publicly exposed in XAMCORE_2_0
+## deprecated (even removed in tvOS)
 !missing-pinvoke! AudioFileReadPackets is not bound
 
 ## unsorted
@@ -58,3 +58,13 @@
 !missing-selector! AUAudioUnit::setMusicalContextBlock: not bound
 !missing-selector! AUAudioUnit::tokenByAddingRenderObserver: not bound
 !missing-type! AUAudioUnitV2Bridge not bound
+!missing-pinvoke! AudioCodecAppendInputBufferList is not bound
+!missing-pinvoke! AudioCodecAppendInputData is not bound
+!missing-pinvoke! AudioCodecGetProperty is not bound
+!missing-pinvoke! AudioCodecGetPropertyInfo is not bound
+!missing-pinvoke! AudioCodecInitialize is not bound
+!missing-pinvoke! AudioCodecProduceOutputBufferList is not bound
+!missing-pinvoke! AudioCodecProduceOutputPackets is not bound
+!missing-pinvoke! AudioCodecReset is not bound
+!missing-pinvoke! AudioCodecSetProperty is not bound
+!missing-pinvoke! AudioCodecUninitialize is not bound

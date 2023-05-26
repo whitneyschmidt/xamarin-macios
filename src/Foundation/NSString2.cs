@@ -29,47 +29,14 @@ using ObjCRuntime;
 
 namespace Foundation {
 
-	public partial class NSString {
+	public partial class NSString : IComparable<NSString> {
 		const string selDataUsingEncodingAllow = "dataUsingEncoding:allowLossyConversion:";
 
 #if MONOMAC
 		static IntPtr selDataUsingEncodingAllowHandle = Selector.GetHandle (selDataUsingEncodingAllow);
 #endif
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'Encode' instead.")]
-		public NSData DataUsingEncoding (NSStringEncoding enc)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, 0));
-#endif
-		}
-
-		[Advice ("Use 'Encode' instead.")]
-		public NSData DataUsingEncoding (NSStringEncoding enc, bool allowLossyConversion)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, allowLossyConversion ? 1 : 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, allowLossyConversion ? 1 : 0));
-#endif
-		}
-
-		public NSData Encode (NSStringEncoding enc)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, 0));
-#endif
-		}
-
-		public NSData Encode (NSStringEncoding enc, bool allowLossyConversion)
-#else
 		public NSData Encode (NSStringEncoding enc, bool allowLossyConversion = false)
-#endif // XAMCORE_2_0
 		{
 #if MONOMAC
 			return new NSData (Messaging.IntPtr_objc_msgSend_IntPtr_bool (Handle, selDataUsingEncodingAllowHandle, (IntPtr) (int) enc, allowLossyConversion));
@@ -89,6 +56,11 @@ namespace Foundation {
 			
 			}
 			return ret;
+		}
+
+		public int CompareTo (NSString other)
+		{
+			return (int)Compare (other);
 		}
 
 		// [Export ("initWithContentsOfURL:encoding:error")]

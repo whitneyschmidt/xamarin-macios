@@ -13,11 +13,7 @@ using ObjCRuntime;
 
 namespace CoreText {
 
-#if XAMCORE_2_0
 	[Static]
-#else
-	[Partial]
-#endif
 	interface CTFontFeatureKey {
 		[Field ("kCTFontFeatureTypeIdentifierKey")]
 		NSString Identifier { get; }
@@ -32,11 +28,7 @@ namespace CoreText {
 		NSString Selectors { get; }
 	}
 
-#if XAMCORE_2_0
 	[Static]
-#else
-	[Partial]
-#endif
 	interface CTFontFeatureSelectorKey {
 		[Field ("kCTFontFeatureSelectorIdentifierKey")]
 		NSString Identifier { get; }
@@ -49,6 +41,14 @@ namespace CoreText {
 
 		[Field ("kCTFontFeatureSelectorSettingKey")]
 		NSString Setting { get; }
+
+		[iOS (13,0), Mac (10,15), TV (13,0), Watch (6,0)]
+		[Field ("kCTFontFeatureSampleTextKey")]
+		NSString SampleText { get; }
+
+		[iOS (13,0), Mac (10,15), TV (13,0), Watch (6,0)]
+		[Field ("kCTFontFeatureTooltipTextKey")]
+		NSString TooltipText { get; }
 	}
 
 	[Static]
@@ -94,8 +94,29 @@ namespace CoreText {
 		NSString ForceEmbeddingLevel { get; }
 #endif
 
-		[Watch (5,0), TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		[Watch (5,0), TV (12,0), Mac (10,14), iOS (12,0)]
 		[Field ("kCTTypesetterOptionAllowUnboundedLayout")]
 		NSString AllowUnboundedLayout { get; }
+	}
+
+	[Static]
+	interface CTFontManagerErrorKeys {
+		[Field ("kCTFontManagerErrorFontURLsKey")]
+		NSString FontUrlsKey { get; }
+
+		[NoWatch, NoTV, NoMac, iOS (13, 0)]
+		[Field ("kCTFontManagerErrorFontDescriptorsKey")]
+		NSString FontDescriptorsKey { get; }
+
+		[NoWatch, NoTV, NoMac, iOS (13, 0)]
+		[Field ("kCTFontManagerErrorFontAssetNameKey")]
+		NSString FontAssetNameKey { get; }
+	}
+
+	[Static][Partial]
+	interface CTStringAttributeKey {
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+		[Field ("kCTTrackingAttributeName")]
+		NSString TrackingAttributeName { get; }
 	}
 }

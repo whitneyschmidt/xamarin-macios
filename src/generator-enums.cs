@@ -80,14 +80,14 @@ public partial class Generator {
 			if (fa.SymbolName == null)
 				null_field = new Tuple<FieldInfo, FieldAttribute> (f, fa);
 			else if (unique_constants.Contains (fa.SymbolName))
-				throw new BindingException (1046, true, $"The [Field] constant {fa.SymbolName} cannot only be used once inside enum {type.Name}.");
+				throw new BindingException (1046, true, fa.SymbolName, type.Name);
 			else {
 				fields.Add (f, fa);
 				unique_constants.Add (fa.SymbolName);
 			}
 			if (AttributeManager.GetCustomAttribute<DefaultEnumValueAttribute> (f) != null) {
 				if (default_symbol != null)
-					throw new BindingException (1045, true, $"Only a single [DefaultEnumValue] attribute can be used inside enum {type.Name}.");
+					throw new BindingException (1045, true, type.Name);
 				default_symbol = new Tuple<FieldInfo, FieldAttribute> (f, fa);
 			}
 		}
@@ -97,7 +97,7 @@ public partial class Generator {
 
 		var library_name = type.Namespace;
 		var error = AttributeManager.GetCustomAttribute<ErrorDomainAttribute> (type);
-		if ((fields.Count > 0) || (error != null)) {
+		if ((fields.Count > 0) || (error != null) || (null_field != null)) {
 			print ("");
 			// the *Extensions has the same version requirement as the enum itself
 			PrintPlatformAttributes (type);
@@ -114,9 +114,9 @@ public partial class Generator {
 		if (error != null) {
 			// this attribute is important for our tests
 			print ("[Field (\"{0}\", \"{1}\")]", error.ErrorDomain, library_name);
-			print ("static NSString _domain;");
+			print ("static NSString? _domain;");
 			print ("");
-			print ("public static NSString GetDomain (this {0} self)", type.Name);
+			print ("public static NSString? GetDomain (this {0} self)", type.Name);
 			print ("{");
 			indent++;
 			print ("if (_domain == null)");
@@ -128,7 +128,7 @@ public partial class Generator {
 			print ("}");
 		}
 
-		if (fields.Count > 0) {
+		if ((fields.Count > 0) || (null_field != null)) {
 			print ("static IntPtr[] values = new IntPtr [{0}];", fields.Count);
 			print ("");
 
@@ -161,37 +161,41 @@ public partial class Generator {
 				print ("");
 			}
 			
-			print ("public static NSString GetConstant (this {0} self)", type.Name);
+			print ("public static NSString? GetConstant (this {0} self)", type.Name);
 			print ("{");
 			indent++;
 			print ("IntPtr ptr = IntPtr.Zero;");
-			print ("switch (({0}) self) {{", underlying_type);
-			var default_symbol_name = default_symbol?.Item2.SymbolName;
-			// more than one enum member can share the same numeric value - ref: #46285
-			foreach (var kvp in fields) {
-				print ("case {0}: // {1}.{2}", Convert.ToInt64 (kvp.Key.GetRawConstantValue ()), type.Name, kvp.Key.Name);
-				var sn = kvp.Value.SymbolName;
-				if (sn == default_symbol_name)
-					print ("default:");
-				indent++;
-				print ("ptr = {0};", sn);
-				print ("break;");
-				indent--;
+			// can be empty - and the C# compiler emit `warning CS1522: Empty switch block`
+			if (fields.Count > 0) {
+				print ("switch (({0}) self) {{", underlying_type);
+				var default_symbol_name = default_symbol?.Item2.SymbolName;
+				// more than one enum member can share the same numeric value - ref: #46285
+				foreach (var kvp in fields) {
+					print ("case {0}: // {1}.{2}", Convert.ToInt64 (kvp.Key.GetRawConstantValue ()), type.Name, kvp.Key.Name);
+					var sn = kvp.Value.SymbolName;
+					if (sn == default_symbol_name)
+						print ("default:");
+					indent++;
+					print ("ptr = {0};", sn);
+					print ("break;");
+					indent--;
+				}
+				print ("}");
 			}
-			print ("}");
 			print ("return (NSString) Runtime.GetNSObject (ptr);");
 			indent--;
 			print ("}");
 			
 			print ("");
-			
-			print ("public static {0} GetValue (NSString constant)", type.Name);
+
+			var nullable = null_field != null;
+			print ("public static {0} GetValue (NSString{1} constant)", type.Name, nullable ? "?" : "");
 			print ("{");
 			indent++;
 			print ("if (constant == null)");
 			indent++;
 			// if we do not have a enum value that maps to a null field then we throw
-			if (null_field == null)
+			if (!nullable)
 				print ("throw new ArgumentNullException (nameof (constant));");
 			else
 				print ("return {0}.{1};", type.Name, null_field.Item1.Name);
@@ -204,14 +208,14 @@ public partial class Generator {
 			}
 			// if there's no default then we throw on unknown constants
 			if (default_symbol == null)
-				print ("throw new NotSupportedException (constant + \" has no associated enum value in \" + nameof ({0}) + \" on this platform.\");", type.Name);
+				print ("throw new NotSupportedException ($\"{constant} has no associated enum value on this platform.\");");
 			else
 				print ("return {0}.{1};", type.Name, default_symbol.Item1.Name);
 			indent--;
 			print ("}");
 		}
 			
-		if ((fields.Count > 0) || (error != null)) {
+		if ((fields.Count > 0) || (error != null) || (null_field != null)) {
 			indent--;
 			print ("}");
 		}

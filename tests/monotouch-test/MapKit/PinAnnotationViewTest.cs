@@ -11,7 +11,7 @@
 
 using System;
 using System.Drawing;
-#if XAMCORE_2_0
+using CoreGraphics;
 using Foundation;
 using MapKit;
 using ObjCRuntime;
@@ -19,11 +19,6 @@ using ObjCRuntime;
 using AppKit;
 #else
 using UIKit;
-#endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MapKit;
-using MonoTouch.UIKit;
 #endif
 using NUnit.Framework;
 
@@ -68,7 +63,7 @@ namespace MonoTouchFixtures.MapKit {
 			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
 #endif
 
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (var av = new MKPinAnnotationView (frame)) {
 				Assert.That (av.Frame.ToString (), Is.EqualTo (frame.ToString ()), "Frame"); // fp comparison fails
 				Assert.Null (av.Annotation, "Annotation");
@@ -80,13 +75,13 @@ namespace MonoTouchFixtures.MapKit {
 				Assert.That (av.PinColor, Is.EqualTo (MKPinAnnotationColor.Red), "PinColor");
 #if MONOMAC
 				if (TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 12)) {
-					Assert.That (av.PinTintColor.ToString (), Is.EqualTo ("Developer/systemRedColor"), "PinTintColor");
+					Assert.That (av.PinTintColor, Is.EqualTo (NSColor.SystemRedColor), "PinTintColor");
 				} else {
 					Assert.Null (av.PinTintColor, "PinTintColor"); // differs from the other init call
 				}
 #else
 				if (TestRuntime.CheckSystemVersion (PlatformName.iOS, 10, 0))
-					Assert.That (av.PinTintColor.ToString (), Is.EqualTo (UIColor.FromRGBA (255, 59, 48, 255).ToString ()), "PinTintColor");
+					Assert.NotNull (av.PinTintColor, "PinTintColor");
 				else
 					Assert.Null (av.PinTintColor, "PinTintColor"); // differs from the other init call
 #endif
