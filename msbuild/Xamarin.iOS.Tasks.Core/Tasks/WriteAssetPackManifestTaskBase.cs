@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Build.Utilities;
 using Microsoft.Build.Framework;
 using Xamarin.MacDev;
@@ -7,11 +7,9 @@ using Xamarin.MacDev.Tasks;
 
 namespace Xamarin.iOS.Tasks
 {
-	public class WriteAssetPackManifestTaskBase : Task
+	public abstract class WriteAssetPackManifestTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem OutputFile { get; set; }
@@ -56,4 +54,3 @@ namespace Xamarin.iOS.Tasks
 		}
 	}
 }
-

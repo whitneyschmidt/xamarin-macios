@@ -3,14 +3,17 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-namespace Xamarin.MacDev.Tasks {
-	public abstract class BTouchTaskBase : ToolTask {
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
-		public string SessionId { get; set; }
+namespace Xamarin.MacDev.Tasks {
+	public abstract class BTouchTaskBase : XamarinToolTask {
 
 		public string OutputPath { get; set; }
 
@@ -19,6 +22,8 @@ namespace Xamarin.MacDev.Tasks {
 
 		[Required]
 		public string BTouchToolExe { get; set; }
+
+		public string DotNetCscCompiler { get; set; }
 
 		public ITaskItem[] ObjectiveCLibraries { get; set; }
 
@@ -32,6 +37,8 @@ namespace Xamarin.MacDev.Tasks {
 		[Required]
 		public ITaskItem[] ApiDefinitions { get; set; }
 
+		public string AttributeAssembly { get; set; }
+
 		public ITaskItem[] CoreSources { get; set; }
 
 		public string DefineConstants { get; set; }
@@ -40,11 +47,15 @@ namespace Xamarin.MacDev.Tasks {
 
 		public string ExtraArgs { get; set; }
 
+		public int Verbosity { get; set; }
+
 		public string GeneratedSourcesDir { get; set; }
 
 		public string GeneratedSourcesFileList { get; set; }
 
 		public string Namespace { get; set; }
+
+		public bool NoNFloatUsing { get; set; }
 
 		public ITaskItem[] NativeLibraries { get; set; }
 
@@ -62,126 +73,147 @@ namespace Xamarin.MacDev.Tasks {
 		public ITaskItem[] Sources { get; set; }
 
 		[Required]
-		public string TargetFrameworkIdentifier { get; set; }
+		public string ResponseFilePath { get; set; }
+
+		string DotNetPath {
+			get {
+				// Return the dotnet executable we're executing with.
+				var dotnet_path = Environment.GetEnvironmentVariable ("DOTNET_HOST_PATH");
+				if (string.IsNullOrEmpty (dotnet_path))
+					throw new InvalidOperationException ($"DOTNET_HOST_PATH is not set");
+				return dotnet_path;
+			}
+		}
 
 		protected override string ToolName {
-			get { return Path.GetFileNameWithoutExtension (ToolExe); }
+			get {
+				if (IsDotNet)
+					return Path.GetFileName (DotNetPath);
+
+				return Path.GetFileNameWithoutExtension (ToolExe);
+			}
 		}
 
 		protected override string GenerateFullPathToTool ()
 		{
+			// If we're building a .NET app, executing bgen using the same
+			// dotnet binary as we're executed with, instead of using the
+			// wrapper bgen script, because that script will try to use the
+			// system dotnet, which might not exist or not have the version we
+			// need.
+			if (IsDotNet)
+				return DotNetPath;
+
 			return Path.Combine (ToolPath, ToolExe);
 		}
 
-		protected virtual void HandleReferences (CommandLineBuilder cmd)
+		protected virtual void HandleReferences (CommandLineArgumentBuilder cmd)
 		{
 			if (References != null) {
 				foreach (var item in References)
-					cmd.AppendSwitchIfNotNull ("-r ", Path.GetFullPath (item.ItemSpec));
+					cmd.AddQuoted ("-r:" + Path.GetFullPath (item.ItemSpec));
 			}
 		}
 
 		protected override string GenerateCommandLineCommands ()
 		{
-			var cmd = new CommandLineBuilder ();
+			var cmd = new CommandLineArgumentBuilder ();
 
 			#if DEBUG
-			cmd.AppendSwitch ("/v");
+			cmd.Add ("/v");
 			#endif
 
-			cmd.AppendSwitch ("/nostdlib");
-			cmd.AppendSwitchIfNotNull ("/baselib:", BaseLibDll);
-			cmd.AppendSwitchIfNotNull ("/out:", OutputAssembly);
+			cmd.Add ("/nostdlib");
+			cmd.AddQuotedSwitchIfNotNull ("/baselib:", BaseLibDll);
+			cmd.AddQuotedSwitchIfNotNull ("/out:", OutputAssembly);
+
+			cmd.AddQuotedSwitchIfNotNull ("/attributelib:", AttributeAssembly);
 
 			string dir;
 			if (!string.IsNullOrEmpty (BaseLibDll)) {
 				dir = Path.GetDirectoryName (BaseLibDll);
-				cmd.AppendSwitchIfNotNull ("/lib:", dir);
-				cmd.AppendSwitchIfNotNull ("/r:", Path.Combine (dir, "mscorlib.dll"));
+				cmd.AddQuotedSwitchIfNotNull ("/lib:", dir);
 			}
 
 			if (ProcessEnums)
-				cmd.AppendSwitch ("/process-enums");
+				cmd.Add ("/process-enums");
 
 			if (EmitDebugInformation)
-				cmd.AppendSwitch ("/debug");
+				cmd.Add ("/debug");
 
 			if (AllowUnsafeBlocks)
-				cmd.AppendSwitch ("/unsafe");
+				cmd.Add ("/unsafe");
 
-			cmd.AppendSwitchIfNotNull ("/ns:", Namespace);
+			if (!string.IsNullOrEmpty (DotNetCscCompiler)) {
+				var compileCommand = new string [] {
+					DotNetPath,
+					DotNetCscCompiler,
+				};
+				cmd.AddQuoted ("/compile-command:" + string.Join (" ", StringUtils.QuoteForProcess (compileCommand)));
+			}
+
+			cmd.AddQuotedSwitchIfNotNull ("/ns:", Namespace);
+
+			if (NoNFloatUsing)
+				cmd.Add ("/no-nfloat-using:true");
 
 			if (!string.IsNullOrEmpty (DefineConstants)) {
-				var strv = DefineConstants.Split (new [] { ';' });
-				var sanitized = new List<string> ();
-
-				foreach (var str in strv) {
-					if (str != string.Empty)
-						sanitized.Add (str);
-				}
-
-				if (sanitized.Count > 0)
-					cmd.AppendSwitchIfNotNull ("/d:", string.Join (";", sanitized.ToArray ()));
+				var strv = DefineConstants.Split (new [] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var str in strv)
+					cmd.AddQuoted ("/d:" + str);
 			}
 
 			//cmd.AppendSwitch ("/e");
 
 			foreach (var item in ApiDefinitions)
-				cmd.AppendFileNameIfNotNull (Path.GetFullPath (item.ItemSpec));
+				cmd.AddQuoted (Path.GetFullPath (item.ItemSpec));
 
 			if (CoreSources != null) {
 				foreach (var item in CoreSources)
-					cmd.AppendSwitchIfNotNull ("/s:", Path.GetFullPath (item.ItemSpec));
+					cmd.AddQuoted ("/s:" + Path.GetFullPath (item.ItemSpec));
 			}
 
 			if (Sources != null) {
 				foreach (var item in Sources)
-					cmd.AppendSwitchIfNotNull ("/x:", Path.GetFullPath (item.ItemSpec));
+					cmd.AddQuoted ("/x:" + Path.GetFullPath (item.ItemSpec));
 			}
 
 			if (AdditionalLibPaths != null) {
 				foreach (var item in AdditionalLibPaths)
-					cmd.AppendSwitchIfNotNull ("/lib:", Path.GetFullPath (item.ItemSpec));
+					cmd.AddQuoted ("/lib:" + Path.GetFullPath (item.ItemSpec));
 			}
 
 			HandleReferences (cmd);
 
 			if (Resources != null) {
 				foreach (var item in Resources) {
-					var args = new List<string> ();
-					string id;
-
-					args.Add (item.ToString ());
-					id = item.GetMetadata ("LogicalName");
+					var argument = item.ToString ();
+					var id = item.GetMetadata ("LogicalName");
 					if (!string.IsNullOrEmpty (id))
-						args.Add (id);
+						argument += "," + id;
 
-					cmd.AppendSwitchIfNotNull ("/res:", args.ToArray (), ",");
+					cmd.AddQuoted ("/res:" + argument);
 				}
 			}
 
 			if (NativeLibraries != null) {
 				foreach (var item in NativeLibraries) {
-					var args = new List<string> ();
-					string id;
-
-					args.Add (item.ToString ());
-					id = item.GetMetadata ("LogicalName");
+					var argument = item.ToString ();
+					var id = item.GetMetadata ("LogicalName");
 					if (string.IsNullOrEmpty (id))
-						id = Path.GetFileName (args[0]);
-					args.Add (id);
+						id = Path.GetFileName (argument);
 
-					cmd.AppendSwitchIfNotNull ("/link-with:", args.ToArray (), ",");
+					cmd.AddQuoted ("/res:" + argument + "," + id);
 				}
 			}
 
 			if (GeneratedSourcesDir != null)
-				cmd.AppendSwitchIfNotNull ("/tmpdir:", Path.GetFullPath (GeneratedSourcesDir));
+				cmd.AddQuoted ("/tmpdir:" + Path.GetFullPath (GeneratedSourcesDir));
 
 			if (GeneratedSourcesFileList != null)
-				cmd.AppendSwitchIfNotNull ("/sourceonly:", Path.GetFullPath (GeneratedSourcesFileList));
+				cmd.AddQuoted ("/sourceonly:" + Path.GetFullPath (GeneratedSourcesFileList));
 
-			cmd.AppendSwitch (GetTargetFrameworkArgument ());
+			cmd.Add ($"/target-framework={TargetFrameworkMoniker}");
 
 			if (!string.IsNullOrEmpty (ExtraArgs)) {
 				var extraArgs = CommandLineArgumentBuilder.Parse (ExtraArgs);
@@ -215,32 +247,37 @@ namespace Xamarin.MacDev.Tasks {
 
 				for (int i = 0; i < extraArgs.Length; i++) {
 					var argument = extraArgs[i];
-					cmd.AppendTextUnquoted (" ");
-					cmd.AppendTextUnquoted (StringParserService.Parse (argument, customTags));
+					cmd.Add (StringParserService.Parse (argument, customTags));
 				}
 			}
 
-			return cmd.ToString ();
-		}
+			cmd.Add (VerbosityUtils.Merge (ExtraArgs, (LoggerVerbosity) Verbosity));
 
-		protected virtual string GetTargetFrameworkArgument ()
-		{
-			switch (TargetFrameworkIdentifier) {
-				case "MonoTouch":
-				case "Xamarin.iOS":
-				case "Xamarin.TVOS":
-				case "Xamarin.WatchOS":
-					return $"/target-framework={TargetFrameworkIdentifier},v1.0";
-				default:
-					Log.LogError ($"Unknown target framework identifier: {TargetFrameworkIdentifier}.");
-					return string.Empty;
-			}
+			var commandLine = cmd.CreateResponseFile (this, ResponseFilePath, null);
+			if (IsDotNet)
+				commandLine = StringUtils.Quote (Path.Combine (BTouchToolPath, BTouchToolExe)) + " " + commandLine;
+
+			return commandLine.ToString ();
 		}
 
 		public override bool Execute ()
 		{
-			ToolExe = BTouchToolExe;
-			ToolPath = BTouchToolPath;
+			AttributeAssembly = PathUtils.ConvertToMacPath (AttributeAssembly);
+			BaseLibDll = PathUtils.ConvertToMacPath (BaseLibDll);
+			BTouchToolExe = PathUtils.ConvertToMacPath (BTouchToolExe);
+			BTouchToolPath = PathUtils.ConvertToMacPath (BTouchToolPath);
+			DotNetCscCompiler = PathUtils.ConvertToMacPath (DotNetCscCompiler);
+
+			if (IsDotNet) {
+				var customHome = Environment.GetEnvironmentVariable ("DOTNET_CUSTOM_HOME");
+
+				if(!string.IsNullOrEmpty(customHome)) {
+					EnvironmentVariables = EnvironmentVariables.CopyAndAdd ($"HOME={customHome}");
+				}
+			} else {
+				ToolExe = BTouchToolExe;
+				ToolPath = BTouchToolPath;
+			}
 
 			if (!string.IsNullOrEmpty (SessionId) &&
 			    !string.IsNullOrEmpty (GeneratedSourcesDir) &&
@@ -249,7 +286,7 @@ namespace Xamarin.MacDev.Tasks {
 			}
 
 			if (ApiDefinitions.Length == 0) {
-				Log.LogError ("No API definition file specified.");
+				Log.LogError (MSBStrings.E0097);
 				return false;
 			}
 

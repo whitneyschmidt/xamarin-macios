@@ -14,7 +14,9 @@ namespace CloudKit
 		CouldNotDetermine = 0,
 		Available = 1,
 		Restricted = 2,
-		NoAccount = 3
+		NoAccount = 3,
+		[Mac (12,0), iOS (15,0), TV (15,0), MacCatalyst (15,0)]
+		TemporarilyUnavailable = 4,
 	}
 
 	// NSUInteger -> CKContainer.h
@@ -75,13 +77,14 @@ namespace CloudKit
 		ZoneNotFound = 26,
 		LimitExceeded  = 27,
 		UserDeletedZone = 28,
-		[iOS (10,0), TV (10,0), Mac (10,12)] TooManyParticipants = 29,
-		[iOS (10,0), TV (10,0), Mac (10,12)] AlreadyShared = 30,
-		[iOS (10,0), TV (10,0), Mac (10,12)] ReferenceViolation = 31,
-		[iOS (10,0), TV (10,0), Mac (10,12)] ManagedAccountRestricted = 32,
-		[iOS (10,0), TV (10,0), Mac (10,12)] ParticipantMayNeedVerification = 33,
-		[iOS (11,0), TV (11,0), Mac (10,13), Watch (4,0)] ResponseLost = 34,
-		[iOS (11,3), TV (11,3), Mac (10,13), Watch (4,3)] AssetNotAvailable = 35,
+		TooManyParticipants = 29,
+		AlreadyShared = 30,
+		ReferenceViolation = 31,
+		ManagedAccountRestricted = 32,
+		ParticipantMayNeedVerification = 33,
+		ResponseLost = 34,
+		AssetNotAvailable = 35,
+		TemporarilyUnavailable = 36,
 	}
 
 	// NSInteger -> CKModifyRecordsOperation.h
@@ -104,7 +107,7 @@ namespace CloudKit
 		Query = 1,
 		RecordZone = 2,
 		ReadNotification = 3,
-		[iOS (10,0), TV (10,0), Mac (10,12), Watch (3,0)] Database = 4,
+		[iOS (10,0), TV (10,0), Mac (10,12)] Database = 4,
 	}
 
 	// NSInteger -> CKNotification.h
@@ -127,7 +130,11 @@ namespace CloudKit
 	public enum CKRecordZoneCapabilities : ulong {
 		FetchChanges = 1 << 0,
 		Atomic = 1 << 1,
-		[iOS (10,0), Watch (3,0), TV (10,0), Mac (10,12)] Sharing = 1 << 2,
+		[iOS (10,0), TV (10,0), Mac (10,12)]
+		Sharing = 1 << 2,
+		[Mac (12,0), iOS (15,0), TV (15,0)]
+		ZoneWideSharing = 1 << 3,
+
 	}
 
 	// NSUInteger -> CKReference.h
@@ -141,7 +148,7 @@ namespace CloudKit
 	}
 
 	// NSInteger -> CKSubscription.h
-	[NoWatch]
+	[Watch (6,0)]
 	[iOS (8,0)]
 	[Mac (10, 10)]
 	[Native]
@@ -153,10 +160,13 @@ namespace CloudKit
 
 	// NSInteger -> CKSubscription.h
 
+#if !NET
 	[NoWatch]
 	[iOS (8, 0)]
+	[Obsoleted (PlatformName.iOS, 14, 0, message : "Use 'CKQuerySubscriptionOptions' instead.")]
 	[Deprecated (PlatformName.iOS, 10, 0, message : "Use 'CKQuerySubscriptionOptions' instead.")]
 	[Mac (10, 10)]
+	[Obsoleted (PlatformName.MacOSX, 10, 16, message : "Use 'CKQuerySubscriptionOptions' instead.")]
 	[Deprecated (PlatformName.MacOSX, 10, 12, message : "Use 'CKQuerySubscriptionOptions' instead.")]
 	[Flags]
 	[Native]
@@ -166,6 +176,7 @@ namespace CloudKit
 		FiresOnRecordDeletion = 1 << 2,
 		FiresOnce = 1 << 3,
 	}
+#endif
 	
 	[Watch (3,0)]
 	[iOS (10,0), Mac (10,12)]
@@ -210,7 +221,7 @@ namespace CloudKit
 		PublicUser = 4,
 	}
 
-	[NoWatch]
+	[Watch (6,0)]
 	[iOS (10,0), Mac(10,12)]
 	[Native]
 	public enum CKQuerySubscriptionOptions : ulong
@@ -235,12 +246,30 @@ namespace CloudKit
 		HundredsOfGigabytes,
 	}
 
-	[Watch (5,0), TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[Watch (5,0), TV (12,0), Mac (10,14), iOS (12,0)]
 	[Native]
 	public enum CKShareParticipantRole : long {
 		Unknown = 0,
 		Owner = 1,
 		PrivateUser = 3,
 		PublicUser = 4,
+	}
+
+	[NoTV, NoWatch, Mac (13,0), iOS (16,0), MacCatalyst (16,0)]
+	[Native, Flags]
+	public enum CKSharingParticipantAccessOption : ulong
+	{
+		AnyoneWithLink = 1uL << 0,
+		SpecifiedRecipientsOnly = 1uL << 1,
+		Any = AnyoneWithLink | SpecifiedRecipientsOnly,
+	}
+
+	[NoTV, NoWatch, Mac (13,0), iOS (16,0), MacCatalyst (16,0)]
+	[Native, Flags]
+	public enum CKSharingParticipantPermissionOption : ulong
+	{
+		ReadOnly = 1uL << 0,
+		ReadWrite = 1uL << 1,
+		Any = ReadOnly | ReadWrite,
 	}
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -7,15 +7,14 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CreateAssetPackManifestTaskBase : Task
+	public abstract class CreateAssetPackManifestTaskBase : XamarinTask
 	{
 		const double DownloadPriorityInterval = 0.90;
 		const double TopDownloadPriority = 0.95;
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem AppBundleDir { get; set; }
@@ -135,7 +134,7 @@ namespace Xamarin.MacDev.Tasks
 				}
 
 				// update AssetPackManifestTemplate.plist
-				resource.Add ("URL", new PString ("http://127.0.0.1" + Path.GetFullPath (dir)));
+				resource.Add ("URL", new PString ("http://127.0.0.1" + Uri.EscapeUriString (Path.GetFullPath (dir))));
 				resource.Add ("bundleKey", new PString (bundleIdentifier));
 
 				if (!double.IsNaN (priority))
@@ -154,7 +153,7 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					onDemandResources.Save (onDemandResourcesPath, true, true);
 				} catch (Exception ex) {
-					Log.LogError ("Error saving `{0}': {1}", onDemandResourcesPath, ex.Message);
+					Log.LogError (MSBStrings.E0120, onDemandResourcesPath, ex.Message);
 				}
 			}
 
@@ -162,7 +161,7 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					manifest.Save (manifestPath, true, true);
 				} catch (Exception ex) {
-					Log.LogError ("Error saving `{0}': {1}", manifestPath, ex.Message);
+					Log.LogError (MSBStrings.E0120, manifestPath, ex.Message);
 				}
 			}
 

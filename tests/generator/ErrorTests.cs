@@ -29,6 +29,18 @@ namespace GeneratorTests
 			bgen.AssertError (86, "A target framework (--target-framework) must be specified.");
 		}
 
+#if !NET
+		[Test]
+		public void BI0087 ()
+		{
+			var bgen = new BGenTool ();
+			bgen.Profile = Profile.macOSClassic;
+			bgen.CreateTemporaryBinding ("");
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (87, "Xamarin.Mac Classic binding projects are not supported anymore. Please upgrade the binding project to a Xamarin.Mac Unified binding project.");
+		}
+#endif
+
 		[Test]
 		[TestCase (Profile.iOS)]
 		public void BI1036 (Profile profile)
@@ -43,9 +55,10 @@ namespace GeneratorTests
 		}
 
 		[Test]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
-		[TestCase (Profile.macOSClassic)]
 		public void BI1037 (Profile profile)
 		{
 			var bgen = new BGenTool ();
@@ -57,9 +70,10 @@ namespace GeneratorTests
 		}
 
 		[Test]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
-		[TestCase (Profile.macOSClassic)]
 		public void BI1038 (Profile profile)
 		{
 			var bgen = new BGenTool ();
@@ -71,9 +85,10 @@ namespace GeneratorTests
 		}
 
 		[Test]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
-		[TestCase (Profile.macOSClassic)]
 		public void BI1039 (Profile profile)
 		{
 			var bgen = new BGenTool ();
@@ -85,9 +100,10 @@ namespace GeneratorTests
 		}
 
 		[Test]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
-		[TestCase (Profile.macOSClassic)]
 		public void BI1040 (Profile profile)
 		{
 			var bgen = new BGenTool ();
@@ -99,9 +115,10 @@ namespace GeneratorTests
 		}
 
 		[Test]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
-		[TestCase (Profile.macOSClassic)]
 		public void BI1041 (Profile profile)
 		{
 			var bgen = new BGenTool ();
@@ -110,6 +127,18 @@ namespace GeneratorTests
 			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "protocol-duplicate-method-diff-type.cs")));
 			bgen.AssertExecuteError ("build");
 			bgen.AssertErrorPattern (1041, "The selector doit:with:more: on type Derived is found multiple times with different argument types on argument 2 - System.Int32 : .*Foundation.NSObject.");
+		}
+
+		[Test]
+		public void BI1042 ()
+		{
+			var bgen = new BGenTool ();
+			bgen.Profile = Profile.iOS;
+			bgen.AddTestApiDefinition ("bi1042.cs");
+			bgen.CreateTemporaryBinding ();
+			bgen.ProcessEnums = true;
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (1042, "Missing '[Field (LibraryName=value)]' for BindingTests.Tools.DoorOpener (e.g.\"__Internal\")");
 		}
 
 		[Test]
@@ -145,6 +174,28 @@ namespace GeneratorTests
 		}
 
 		[Test]
+		public void GH6863_property ()
+		{
+			var bgen = new BGenTool ();
+			bgen.Profile = Profile.iOS;
+			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "ghissue6863_property.cs")));
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (1071, "The BindAs type for the member \"GH6863_property.MyFooClass.StringProp\" must be an array when the member's type is an array.");
+		}
+
+        
+		[Test]
+		public void GH6863_method ()
+		{
+			var bgen = new BGenTool ();
+			bgen.Profile = Profile.iOS;
+			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "ghissue6863_method.cs")));
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (1072, "The BindAs type for the parameter \"id_test\" in the method \"GH6863_method.MyFooClass.StringMethod\" must be an array when the parameter's type is an array.");
+		}
+       
+
+		[Test]
 		public void BI1050_model ()
 		{
 			var bgen = new BGenTool ();
@@ -162,6 +213,16 @@ namespace GeneratorTests
 			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "bindas1050protocolerror.cs")));
 			bgen.AssertExecuteError ("build");
 			bgen.AssertError (1050, "[BindAs] cannot be used inside Protocol or Model types. Type: MyFooClass");
+		}
+
+		[Test]
+		public void BI1059 ()
+		{
+			var bgen = new BGenTool ();
+			bgen.Profile = Profile.iOS;
+			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "bi1059.cs")));
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (1059, "Found 2 Foundation.PreserveAttribute attributes on the member the type BI1059. At most one was expected.");
 		}
 
 		[Test]
@@ -244,6 +305,7 @@ namespace Bug52570Tests {
 			bgen.AssertNoWarnings ();
 		}
 
+#if !NET
 		[Test]
 		public void BI1117_allowstaticmembers ()
 		{
@@ -253,6 +315,7 @@ namespace Bug52570Tests {
 			bgen.AssertExecute ("build");
 			bgen.AssertNoWarnings ();
 		}
+#endif
 
 		[Test]
 		public void BindAsNoMultidimensionalArrays ()
@@ -394,7 +457,7 @@ namespace Bug57804TestsRef {
 	}
 }");
 			bgen.AssertExecuteError ("build");
-			bgen.AssertError (1048, "Unsupported type 'ref/out NSValue' decorated with [BindAs]");
+			bgen.AssertError (1080, "Unsupported type 'ref/out NSValue' decorated with [BindAs]");
 		}
 
 		[Test]
@@ -418,7 +481,7 @@ namespace Bug57804TestsRef {
 	}
 }");
 			bgen.AssertExecuteError ("build");
-			bgen.AssertError (1048, "Unsupported type 'ref/out NSValue' decorated with [BindAs]");
+			bgen.AssertError (1080, "Unsupported type 'ref/out NSValue' decorated with [BindAs]");
 		}
 
 		[Test]
@@ -700,8 +763,26 @@ namespace BI1066Errors
 		}
 
 		[Test]
+		public void BI1067_1070 ()
+		{
+			BGenTool bgen = new BGenTool {
+				Profile = Profile.iOS,
+			};
+			bgen.CreateTemporaryBinding (File.ReadAllText (Path.Combine (Configuration.SourceRoot, "tests", "generator", "tests", "diamond-protocol-errors.cs")));
+			bgen.AssertExecuteError ("build");
+			bgen.AssertError (1067, "The type 'DiamondProtocol.A.C' is trying to inline the property 'P1' from the protocols 'DiamondProtocol.A.P1' and 'DiamondProtocol.A.P2', but the inlined properties don't share the same accessors ('DiamondProtocol.A.P1 P1' is read-only, while '$DiamondProtocol.A.P2 P1' is write-only).");
+			bgen.AssertWarning (1068, "The type 'DiamondProtocol.D.C' is trying to inline the property 'P1' from the protocols 'DiamondProtocol.D.P1' and 'DiamondProtocol.D.P2', and the inlined properties use different selectors (P1.P1 uses 'pA', and P2.P1 uses 'pB'.");
+			bgen.AssertError (1069, "The type 'DiamondProtocol.Y.C' is trying to inline the methods binding the selector 'm1:' from the protocols 'DiamondProtocol.Y.P1' and 'DiamondProtocol.Y.P2', using methods with different signatures ('System.Void M1(System.Int32)' vs 'System.Int32 M1(System.Boolean)').");
+			bgen.AssertError (1070, "The type 'DiamondProtocol.C.C' is trying to inline the property 'P1' from the protocols 'DiamondProtocol.C.P1' and 'DiamondProtocol.C.P2', but the inlined properties are of different types ('DiamondProtocol.C.P1 P1' is int, while 'DiamondProtocol.C.P2 P1' is int).");
+			bgen.AssertErrorCount (3);
+			bgen.AssertWarningCount (1);
+		}
+
+		[Test]
 		[TestCase (Profile.iOS)]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
 		public void WarnAsError (Profile profile)
 		{
@@ -752,7 +833,9 @@ namespace BI1066Errors
 
 		[Test]
 		[TestCase (Profile.iOS)]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
 		public void NoWarn (Profile profile)
 		{
@@ -803,7 +886,9 @@ namespace BI1066Errors
 
 		[Test]
 		[TestCase (Profile.iOS)]
+#if !NET
 		[TestCase (Profile.macOSFull)]
+#endif
 		[TestCase (Profile.macOSMobile)]
 		public void MissingExportOnProperty (Profile profile)
 		{

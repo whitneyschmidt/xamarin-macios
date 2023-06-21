@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -9,14 +9,13 @@ using Microsoft.Build.Utilities;
 using System.Security.Cryptography.X509Certificates;
 
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public class CreateInstallerPackageTaskBase : ToolTask
+	public abstract class CreateInstallerPackageTaskBase : XamarinToolTask
 	{
 		#region Inputs
-		public string SessionId { get; set; }
-
 		[Required]
 		public string OutputDirectory { get; set; }
 
@@ -45,6 +44,9 @@ namespace Xamarin.MacDev.Tasks
 
 		public string PackagingExtraArgs { get ; set; }
 
+		// both input and output
+		[Output]
+		public string PkgPackagePath { get; set; }
 		#endregion
 
 		string GetProjectVersion ()
@@ -54,12 +56,12 @@ namespace Xamarin.MacDev.Tasks
 			try {
 				plist = PDictionary.FromFile (AppManifest);
 			} catch (Exception ex) {
-				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "Error loading '{0}': {1}", AppManifest, ex.Message);
+				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0010, AppManifest, ex.Message);
 				return null;
 			}
 
 			if (plist == null) {
-				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, "Error loading '{0}'", AppManifest);
+				Log.LogError (null, null, null, AppManifest, 0, 0, 0, 0, MSBStrings.E0122, AppManifest);
 				return null;
 			}
 
@@ -89,11 +91,11 @@ namespace Xamarin.MacDev.Tasks
 
 			if (!string.IsNullOrEmpty(ProductDefinition)) {
 				args.Add ("--product");
-				args.AddQuoted (ProductDefinition);
+				args.AddQuoted (Path.GetFullPath (ProductDefinition));
 			}
 
 			args.Add ("--component");
-			args.AddQuoted (Path.Combine (OutputDirectory, Path.GetFileName (AppBundleDir)));
+			args.AddQuoted (Path.GetFullPath (AppBundleDir));
 			args.Add ("/Applications");
 
 			if (EnablePackageSigning) {
@@ -105,14 +107,21 @@ namespace Xamarin.MacDev.Tasks
 				try {
 					AppendExtraArgs (args, PackagingExtraArgs);
 				} catch (FormatException) {
-					Log.LogError ("Package creation failed. Could not parse extra arguments.");
+					Log.LogError (MSBStrings.E0123);
 					return string.Empty;
 				}
 			}
 
-			string projectVersion = GetProjectVersion ();
-			string target = string.Format ("{0}{1}.pkg", Name, String.IsNullOrEmpty (projectVersion) ? "" : "-" + projectVersion);
-			args.AddQuoted (Path.Combine (OutputDirectory, target));
+			if (string.IsNullOrEmpty (PkgPackagePath)) {
+				string projectVersion = GetProjectVersion ();
+				string target = string.Format ("{0}{1}.pkg", Name, String.IsNullOrEmpty (projectVersion) ? "" : "-" + projectVersion);
+				PkgPackagePath = Path.Combine (OutputDirectory, target);
+			}
+			PkgPackagePath = Path.GetFullPath (PkgPackagePath);
+			args.AddQuoted (PkgPackagePath);
+
+			Directory.CreateDirectory (Path.GetDirectoryName (PkgPackagePath));
+
 			return args.ToString ();
 		}
 
@@ -166,7 +175,7 @@ namespace Xamarin.MacDev.Tasks
 			}
 
 			if (best == null) {
-				string msg = string.Format ("The identity '{0}' doesn't match any valid certificate/private key pair in the default keychain", key);
+				string msg = string.Format (MSBStrings.E0124, key);
 				Log.LogError (msg);
 				return string.Empty;
 			}
@@ -175,4 +184,3 @@ namespace Xamarin.MacDev.Tasks
 		}
 	}
 }
-

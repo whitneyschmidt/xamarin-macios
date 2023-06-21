@@ -26,6 +26,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#nullable enable
+
 using System;
 using System.Runtime.InteropServices;
 
@@ -41,7 +43,6 @@ namespace AudioToolbox {
 		BadSpecifierSizeError = 0x21737063,		// '!spc'
 		SystemSoundUnspecifiedError = -1500,
 		SystemSoundClientTimedOutError = -1501,
-		[iOS (10,0), Mac (10,12, onlyOn64: true)]
 		SystemSoundExceededMaximumDurationError = -1502,
 	}
 

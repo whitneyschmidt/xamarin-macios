@@ -1,15 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-#if XAMCORE_2_0
 using Foundation;
 #if !MONOMAC
 using UIKit;
+#if NET
+using NativeException = ObjCRuntime.ObjCException;
+#else
 using NativeException = Foundation.MonoTouchException;
+#endif
 #endif
 using Bindings.Test;
 using ObjCRuntime;
@@ -22,34 +25,12 @@ using CoreAnimation;
 using CoreGraphics;
 using CoreLocation;
 using PlatformException = ObjCRuntime.RuntimeException;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#if !__TVOS__
-using MonoTouch.MapKit;
-#endif
-using MonoTouch.CoreAnimation;
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreLocation;
-using MonoTouch.UIKit;
-using MonoTouchException=MonoTouch.RuntimeException;
-using NativeException=MonoTouch.Foundation.MonoTouchException;
-#endif
-using OpenTK;
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using RectangleF=CoreGraphics.CGRect;
 using SizeF=CoreGraphics.CGSize;
 using PointF=CoreGraphics.CGPoint;
 using CatAttrib=ObjCRuntime.CategoryAttribute;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-using CatAttrib=MonoTouch.ObjCRuntime.CategoryAttribute;
-#endif
 
 namespace MonoTouchFixtures {
 	[CatAttrib (typeof (NSString))]
@@ -121,6 +102,7 @@ namespace MonoTouchFixtures {
 		public void NavigationControllerOverride ()
 		{
 			TestRuntime.IgnoreOnTVOS (); // shouldAutorotate is not available on TVOS.
+			TestRuntime.IgnoreOnMacCatalyst (); // rotation is not available on Mac Catalyst
 
 			try {
 				bool category_invoked = false;
@@ -132,7 +114,12 @@ namespace MonoTouchFixtures {
 					vc.View.BackgroundColor = UIColor.Green;
 				};
 				MonoTouchFixtures.AppDelegate.PresentModalViewController (nc, 0.5);
-				Assert.That (category_invoked);
+				if (TestRuntime.CheckXcodeVersion (14, 0)) {
+					// The 'shouldAutorotate' selector isn't called anymore in iOS 16+ (this is documented in Xcode 14's release notes)
+					Assert.That (!category_invoked);
+				} else {
+					Assert.That (category_invoked);
+				}
 			} finally {
 				Rotation_IOS6.ShouldAutoRotateCallback = null;
 			}
@@ -155,4 +142,3 @@ namespace MonoTouchFixtures {
 	}
 #endif // !__WATCHOS__
 }
-

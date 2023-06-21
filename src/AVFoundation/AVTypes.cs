@@ -5,24 +5,25 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 
 #if !COREBUILD
-using OpenTK;
-#endif
-
-#if XAMCORE_2_0
+#if NET
+using Vector3 = global::System.Numerics.Vector3;
+#else
+using Vector3 = global::OpenTK.Vector3;
+#endif // NET
+#endif // !COREBUILD
+using CoreGraphics;
 using ObjCRuntime;
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-#if MONOMAC
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.ObjCRuntime;
-#endif
-#endif
+
+#nullable enable
 
 namespace AVFoundation {
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVAudio3DVectorOrientation {
 #if !COREBUILD
@@ -48,7 +49,7 @@ namespace AVFoundation {
 			return !left.Equals (right);
 		}
 		
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (!(obj is AVAudio3DVectorOrientation))
 				return false;
@@ -68,6 +69,12 @@ namespace AVFoundation {
 #endif
 	}
 	
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVAudio3DAngularOrientation {
 
@@ -91,8 +98,8 @@ namespace AVFoundation {
 				left.Roll != right.Roll);
 			
 		}
-		
-		public override bool Equals(object obj)
+
+		public override bool Equals(object? obj)
 		{
 			if (!(obj is AVAudio3DAngularOrientation))
 				return false;
@@ -111,6 +118,12 @@ namespace AVFoundation {
 		}
 	}
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVCaptureWhiteBalanceGains {
 		public float RedGain, GreenGain, BlueGain;
@@ -141,7 +154,7 @@ namespace AVFoundation {
 				left.BlueGain != right.BlueGain);
 		}
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (!(obj is AVCaptureWhiteBalanceGains))
 				return false;
@@ -160,6 +173,12 @@ namespace AVFoundation {
 		}
 	}
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVCaptureWhiteBalanceChromaticityValues {
 		public float X, Y;
@@ -185,7 +204,7 @@ namespace AVFoundation {
 			return left.X != right.X || left.Y != right.Y;
 		}
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (!(obj is AVCaptureWhiteBalanceChromaticityValues))
 				return false;
@@ -204,6 +223,12 @@ namespace AVFoundation {
 		}
 	}
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVCaptureWhiteBalanceTemperatureAndTintValues {
 		public float Temperature, Tint;
@@ -229,7 +254,7 @@ namespace AVFoundation {
 			
 		}
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (!(obj is AVCaptureWhiteBalanceTemperatureAndTintValues))
 				return false;
@@ -253,20 +278,41 @@ namespace AVFoundation {
 	}
 #endif
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 #if !WATCH
 	public static class AVUtilities {
 
 		[DllImport (Constants.AVFoundationLibrary)]
-		static extern /* CGRect */ RectangleF AVMakeRectWithAspectRatioInsideRect (/* CGSize */ SizeF aspectRatio, /* CGRect */ RectangleF boundingRect);
+		static extern /* CGRect */ CGRect AVMakeRectWithAspectRatioInsideRect (/* CGSize */ CGSize aspectRatio, /* CGRect */ CGRect boundingRect);
 
-		public static RectangleF WithAspectRatio (this RectangleF self, SizeF aspectRatio)
+		public static CGRect WithAspectRatio (this CGRect self, CGSize aspectRatio)
 		{
 			return AVMakeRectWithAspectRatioInsideRect (aspectRatio, self);
 		}
 	}
 #endif
 
-	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if MONOMAC || !NET
+
+#if NET
+	[SupportedOSPlatform ("macos10.10")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("tvos")]
+#else
+	[Mac (10, 10)]
+	[NoiOS]
+	[NoWatch]
+	[NoTV]
+#endif
+#if !MONOMAC
+	[Obsolete ("This API is not available on this platform.")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVSampleCursorSyncInfo {
 		[MarshalAs (UnmanagedType.I1)]
@@ -279,7 +325,20 @@ namespace AVFoundation {
 		public bool IsDroppable;
 	}
 
-	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if NET
+	[SupportedOSPlatform ("macos10.10")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("tvos")]
+#else
+	[Mac (10, 10)]
+	[NoiOS]
+	[NoWatch]
+	[NoTV]
+#endif
+#if !MONOMAC
+	[Obsolete ("This API is not available on this platform.")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVSampleCursorDependencyInfo {
 		[MarshalAs (UnmanagedType.I1)]
@@ -301,14 +360,40 @@ namespace AVFoundation {
 		public bool HasRedundantCoding;
 	}
 
-	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if NET
+	[SupportedOSPlatform ("macos10.10")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("tvos")]
+#else
+	[Mac (10, 10)]
+	[NoiOS]
+	[NoWatch]
+	[NoTV]
+#endif
+#if !MONOMAC
+	[Obsolete ("This API is not available on this platform.")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVSampleCursorStorageRange {
 		public long Offset;
 		public long Length;
 	}
 
-	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if NET
+	[SupportedOSPlatform ("macos10.10")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("tvos")]
+#else
+	[Mac (10, 10)]
+	[NoiOS]
+	[NoWatch]
+	[NoTV]
+#endif
+#if !MONOMAC
+	[Obsolete ("This API is not available on this platform.")]
+#endif
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVSampleCursorChunkInfo {
 		public long SampleCount;
@@ -322,4 +407,123 @@ namespace AVFoundation {
 		[MarshalAs (UnmanagedType.I1)]
 		public bool HasUniformFormatDescriptions;
 	}
+#endif
+
+#if MONOMAC || __MACCATALYST__
+
+#if NET
+	[SupportedOSPlatform ("macos10.15")]
+	[SupportedOSPlatform ("maccatalyst15.0")]
+#else
+	[Mac (10,15)]
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVSampleCursorAudioDependencyInfo {
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsIndependentlyDecodable;
+
+		public nint PacketRefreshCount;
+	}
+#endif
+
+#if MONOMAC
+
+#if NET
+	[SupportedOSPlatform ("macos12.0")]
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#else
+	[NoWatch]
+	[NoTV]
+	[NoiOS]
+	[Mac (12,0)]
+	[NoMacCatalyst]
+#endif
+	[Native]
+	public enum AVCaptionUnitsType : long {
+		Unspecified = 0,
+		Cells,
+		Percent,
+	}
+
+#if NET
+	[SupportedOSPlatform ("macos12.0")]
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#else
+	[NoWatch]
+	[NoTV]
+	[NoiOS]
+	[Mac (12,0)]
+	[NoMacCatalyst]
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVCaptionDimension {
+		public nfloat Value;
+		nuint units;
+
+		public AVCaptionUnitsType Units {
+			get => (AVCaptionUnitsType) (long) units;
+			set => units = (nuint) (long) value;
+		}
+
+		[DllImport (Constants.AVFoundationLibrary)]
+		static extern AVCaptionDimension AVCaptionDimensionMake (nfloat dimension, /* AVCaptionUnitsType */ nuint units);
+
+		public static AVCaptionDimension Create (nfloat dimension, AVCaptionUnitsType units)
+			=> AVCaptionDimensionMake (dimension, (nuint) (long)units);
+	}
+
+#if NET
+	[SupportedOSPlatform ("macos12.0")]
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#else
+	[NoWatch]
+	[NoTV]
+	[NoiOS]
+	[Mac (12,0)]
+	[NoMacCatalyst]
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVCaptionPoint {
+		public AVCaptionDimension X;
+		public AVCaptionDimension Y;
+
+		[DllImport (Constants.AVFoundationLibrary)]
+		static extern AVCaptionPoint AVCaptionPointMake (AVCaptionDimension x, AVCaptionDimension y);
+
+		public static AVCaptionPoint Create (AVCaptionDimension x, AVCaptionDimension y)
+			=> AVCaptionPointMake (x,y);
+	}
+
+#if NET
+	[SupportedOSPlatform ("macos12.0")]
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#else
+	[NoWatch]
+	[NoTV]
+	[NoiOS]
+	[Mac (12,0)]
+	[NoMacCatalyst]
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVCaptionSize {
+		public AVCaptionDimension Width;
+		public AVCaptionDimension Height;
+
+		[DllImport (Constants.AVFoundationLibrary)]
+		static extern AVCaptionSize AVCaptionSizeMake (AVCaptionDimension width, AVCaptionDimension height);
+
+		public static AVCaptionSize Create (AVCaptionDimension width, AVCaptionDimension height)
+			=> AVCaptionSizeMake (width, height);
+	}
+
+#endif
+
 }

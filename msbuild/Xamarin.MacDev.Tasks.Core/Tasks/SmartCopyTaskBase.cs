@@ -1,19 +1,19 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class SmartCopyTaskBase : Task
+	public abstract class SmartCopyTaskBase : XamarinTask
 	{
 		readonly List<ITaskItem> copied = new List<ITaskItem> ();
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		public ITaskItem[] DestinationFiles { get; set; }
 
@@ -50,7 +50,7 @@ namespace Xamarin.MacDev.Tasks
 			if (File.Exists (path))
 				File.Delete (path);
 
-			Log.LogMessage ("Creating directory '{0}'", path);
+			Log.LogMessage (MSBStrings.M0164, path);
 
 			Directory.CreateDirectory (path);
 		}
@@ -61,9 +61,15 @@ namespace Xamarin.MacDev.Tasks
 
 			EnsureDirectoryExists (dirName);
 
-			Log.LogMessage (MessageImportance.Normal, "Copying file from '{0}' to '{1}'", source, target);
+			Log.LogMessage (MessageImportance.Normal, MSBStrings.M0165, source, target);
 
 			File.Copy (source, target, true);
+			if (Environment.OSVersion.Platform == PlatformID.Unix) {
+				if (stat (target, out var stat_rv) == 0) {
+					// ensure it's world read-able or this might trigger an appstore rejection
+					chmod (target, stat_rv.st_mode | FilePermissions.S_IROTH);
+				}
+			}
 
 			copied.Add (new TaskItem (targetItemSpec));
 		}
@@ -71,14 +77,14 @@ namespace Xamarin.MacDev.Tasks
 		public override bool Execute ()
 		{
 			if (DestinationFiles != null && DestinationFolder != null) {
-				Log.LogError ("You must specify a DestinationFolder or the DestinationFiles, but not both.");
+				Log.LogError (MSBStrings.E0166);
 				return false;
 			}
 
 			try {
 				if (DestinationFiles != null) {
 					if (DestinationFiles.Length != SourceFiles.Length) {
-						Log.LogError ("The number of DestinationFiles must match the number of SourceFiles.");
+						Log.LogError (MSBStrings.E0167);
 						return false;
 					}
 
@@ -105,7 +111,7 @@ namespace Xamarin.MacDev.Tasks
 							CopyFile (source, target, Path.Combine (DestinationFolder.ItemSpec, Path.GetFileName (item.ItemSpec)));
 					}
 				} else {
-					Log.LogError ("You must specify a DestinationFolder or the DestinationFiles.");
+					Log.LogError (MSBStrings.E0166);
 					return false;
 				}
 			} catch (Exception ex) {
@@ -116,5 +122,82 @@ namespace Xamarin.MacDev.Tasks
 
 			return !Log.HasLoggedErrors;
 		}
+
+		[DllImport ("/usr/lib/libc.dylib", EntryPoint = "stat$INODE64")]
+		static extern int stat_x64 (string file_name, out Stat buf);
+
+		[DllImport ("/usr/lib/libc.dylib", EntryPoint = "stat")]
+		static extern int stat_arm64 (string file_name, out Stat buf);
+
+		static int stat (string path, out Stat buf)
+		{
+			if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64) {
+				return stat_arm64 (path, out buf);
+			} else {
+				return stat_x64 (path, out buf);
+			}
+		}
+
+		[DllImport ("libc")]
+		static extern int chmod (string path, FilePermissions mode);
+
+		/* when _DARWIN_FEATURE_64_BIT_INODE is defined */
+		struct Stat {
+			public uint st_dev;
+			public FilePermissions st_mode;
+			public ushort st_nlink;
+			public ulong st_ino;
+			public uint st_uid;
+			public uint st_gid;
+			public uint st_rdev;
+			public timespec st_atimespec;
+			public timespec st_mtimespec;
+			public timespec st_ctimespec;
+			public timespec st_birthtimespec;
+			public ulong st_size;
+			public ulong st_blocks;
+			public uint st_blksize;
+			public uint st_flags;
+			public uint st_gen;
+			public uint st_lspare;
+			public ulong st_qspare_1;
+			public ulong st_qspare_2;
+		}
+
+		struct timespec {
+			public IntPtr tv_sec;
+			public IntPtr tv_nsec;
+		}
+
+		[Flags]
+		public enum FilePermissions : ushort {
+			ACCESSPERMS = 0x1FF,
+			ALLPERMS = 0xFFF,
+			DEFFILEMODE = 0x1B6,
+			S_IFBLK = 0x6000,
+			S_IFCHR = 0x2000,
+			S_IFDIR = 0x4000,
+			S_IFIFO = 0x1000,
+			S_IFLNK = 0xA000,
+			S_IFMT = 0xF000,
+			S_IFREG = 0x8000,
+			S_IFSOCK = 0xC000,
+			S_IRGRP = 0x20,
+			S_IROTH = 0x4,
+			S_IRUSR = 0x100,
+			S_IRWXG = 0x38,
+			S_IRWXO = 0x7,
+			S_IRWXU = 0x1C0,
+			S_ISGID = 0x400,
+			S_ISUID = 0x800,
+			S_ISVTX = 0x200,
+			S_IWGRP = 0x10,
+			S_IWOTH = 0x2,
+			S_IWUSR = 0x80,
+			S_IXGRP = 0x8,
+			S_IXOTH = 0x1,
+			S_IXUSR = 0x40
+		}
+
 	}
 }

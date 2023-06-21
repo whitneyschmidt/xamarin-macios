@@ -26,6 +26,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
+#if !NET
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,11 +38,7 @@ using System.Diagnostics;
 using Foundation;
 using CoreFoundation;
 
-#if XAMCORE_2_0
 using CFRunLoopModeString = global::Foundation.NSString;
-#else
-using CFRunLoopModeString = global::System.String;
-#endif
 
 namespace CFNetwork {
 
@@ -238,4 +237,4 @@ namespace CFNetwork {
 		}
 	}
 }
-
+#endif // !NET

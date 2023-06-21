@@ -1,3 +1,4 @@
+#if !__MACCATALYST__
 using System;
 using Foundation;
 
@@ -7,7 +8,7 @@ namespace AppKit {
 	: INSCoding
 #endif 
 	{
-#if XAMCORE_2_0 && !XAMCORE_3_0
+#if !XAMCORE_3_0
 		public NSPathControlItem (NSCoder coder) : this ()
 		{
 		}
@@ -18,4 +19,4 @@ namespace AppKit {
 #endif
 	}
 }
-
+#endif // !__MACCATALYST__

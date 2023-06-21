@@ -106,7 +106,7 @@ else
 
 	if ./jenkins/fetch-pr-labels.sh --check=run-sample-tests; then
 		echo "The sample tests won't be triggered from public jenkins even if the 'run-sample-tests' label is set (build on internal Jenkins instead)."
-		printf "ℹ️ The sample tests won't be triggered from public jenkins even if the 'run-sample-tests' label is set (build on internal Jenkins instead)." >> "$WORKSPACE/jenkins/pr-comments.md"
+		printf "ℹ️ The sample tests won't be triggered from public jenkins even if the 'run-sample-tests' label is set (build on internal Jenkins instead).\\n" >> "$WORKSPACE/jenkins/pr-comments.md"
 	fi
 
 	if ./jenkins/fetch-pr-labels.sh --check=disable-packaged-mono; then
@@ -120,15 +120,21 @@ if test -z "$ENABLE_DEVICE_BUILD"; then
 	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-ios-device"
 fi
 
-make reset
-make git-clean-all
-make print-versions
+# Enable dotnet bits on the bots
+CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-dotnet --enable-install-source"
 
 echo "Configuring the build with: $CONFIGURE_FLAGS"
 # shellcheck disable=SC2086
 ./configure $CONFIGURE_FLAGS
 
+# If we're building mono from source, we might not have it cloned yet
+make reset
+
 time make -j8
 time make install -j8
 
 printf "✅ [Build succeeded](%s/console)\\n" "$BUILD_URL" >> "$WORKSPACE/jenkins/pr-comments.md"
+
+if grep MONO_BUILD_FROM_SOURCE=. configure.inc Make.config.inc >& /dev/null; then
+	printf "    ⚠️ Mono built from source\\n" >> "$WORKSPACE/jenkins/pr-comments.md"
+fi

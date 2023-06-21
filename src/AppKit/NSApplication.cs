@@ -21,7 +21,11 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
+#if !__MACCATALYST__
+
 using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -33,13 +37,12 @@ namespace AppKit {
 	public partial class NSApplication : NSResponder {
 		public static bool CheckForIllegalCrossThreadCalls = true;
 		public static bool CheckForEventAndDelegateMismatches = true;
+
+#if !NET
 		public static bool IgnoreMissingAssembliesDuringRegistration = false;
+#endif
 
 		private static Thread mainThread;
-
-		static NSApplication () {
-			class_ptr = Class.GetHandle ("NSApplication");
-		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		extern static int /* int */ NSApplicationMain (int /* int */ argc, string [] argv);
@@ -74,8 +77,21 @@ namespace AppKit {
 			// But can affect child xbuild processes, so unset
 			Environment.SetEnvironmentVariable ("MONO_CFG_DIR", "");
 
+			// custom initialization might have happened before native NSApplication code was full ready to be queried
+			// as such it's possible that `class_ptr` might be empty and that will make things fails later
+			// reference: https://github.com/xamarin/xamarin-macios/issues/7932
+			if (class_ptr == IntPtr.Zero)
+				ResetHandle ();
+
 			// TODO:
 			//   Install hook to register dynamically loaded assemblies
+		}
+
+		// separate method so it can be invoked without `Init` (if needed)
+		static void ResetHandle ()
+		{
+			// `class_ptr` is `readonly` so one can't simply do `class_ptr = Class.GetHandle ("NSApplication");`
+			typeof (NSApplication).GetField ("class_ptr", BindingFlags.Static | BindingFlags.NonPublic).SetValue (null, Class.GetHandle ("NSApplication"));
 		}
 
 		public static void InitDrawingBridge ()
@@ -125,10 +141,12 @@ namespace AppKit {
 			DiscardEvents ((nuint)(ulong) mask, lastEvent);
 		}
 
+#if !NET
 		[Obsolete ("This method does nothing.")]
 		public static void RestoreWindow (string identifier, Foundation.NSCoder state, NSWindowCompletionHandler onCompletion)
 		{
 		}
+#endif
 
 		// note: if needed override the protected Get|Set methods
 		public NSApplicationActivationPolicy ActivationPolicy { 
@@ -138,3 +156,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

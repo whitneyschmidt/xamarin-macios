@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 using Microsoft.Build.Utilities;
@@ -6,11 +6,9 @@ using Microsoft.Build.Framework;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class OptimizePropertyListTaskBase : ToolTask
+	public abstract class OptimizePropertyListTaskBase : XamarinToolTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem Input { get; set; }

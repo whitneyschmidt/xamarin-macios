@@ -1,17 +1,16 @@
-﻿using System;
+using System;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class GetNativeExecutableNameTaskBase : Task
+	public abstract class GetNativeExecutableNameTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string AppManifest { get; set; }
@@ -32,7 +31,7 @@ namespace Xamarin.MacDev.Tasks
 			try {
 				plist = PDictionary.FromFile (AppManifest);
 			} catch (Exception ex) {
-				Log.LogError ("Could not load Info.plist: {0}", ex.Message);
+				Log.LogError (MSBStrings.E0055, ex.Message);
 				return false;
 			}
 

@@ -1,18 +1,17 @@
-﻿using System;
+using System;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev.Tasks;
 using Xamarin.MacDev;
+using Xamarin.Utils;
 
 namespace Xamarin.iOS.Tasks
 {
-	public abstract class FindWatchOS2AppBundleTaskBase : Task
+	public abstract class FindWatchOS2AppBundleTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem[] WatchAppReferences { get; set; }

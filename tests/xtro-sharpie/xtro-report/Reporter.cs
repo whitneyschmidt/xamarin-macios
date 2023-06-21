@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -8,9 +8,9 @@ namespace Extrospection {
 		static string InputDirectory { get; set; }
 		static string ReportFolder { get; set; }
 
-		static List<string> Frameworks = new List<string> ();
+		static SortedSet<string> Frameworks = new SortedSet<string> (StringComparer.OrdinalIgnoreCase);
 
-		static readonly string [] Platforms = new [] { "iOS", "tvOS", "watchOS", "macOS" };
+		static readonly string [] Platforms = new [] { "iOS", "tvOS", "watchOS", "macOS", "MacCatalyst" };
 
 		public static bool ProcessFramework (string framework)
 		{
@@ -86,7 +86,8 @@ namespace Extrospection {
 
 			ReportFolder = args.Length > 1 ? args [1] : "report";
 			Directory.CreateDirectory (ReportFolder);
-			var log = new StreamWriter (Path.Combine (ReportFolder, "index.html"));
+			var indexPath = Path.Combine (ReportFolder, "index.html");
+			var log = new StreamWriter (indexPath);
 
 			log.WriteLine ("<html><head><title>Extrospection results</title></head>");
 			log.WriteLine ("<body><h1>Extrospection results</h1>");
@@ -141,7 +142,6 @@ namespace Extrospection {
 			var todo = new int [Platforms.Length];
 			int errors = 0;
 
-			Frameworks.Sort ();
 			foreach (var fx in Frameworks) {
 				if (Helpers.Filter (fx))
 					continue;
@@ -154,7 +154,7 @@ namespace Extrospection {
 				log.WriteLine ("</td>");
 				if (full) {
 					string filename = $"common-{fx}.ignore";
-					var count = ProcessFile (filename);
+					var count = ProcessFile (Path.Combine (InputDirectory, filename));
 					log.Write ("<td align='center' ");
 					if (count < 1)
 						log.Write ("bgcolor='lightgreen'>-</td>");
@@ -164,7 +164,7 @@ namespace Extrospection {
 					ignored [0] += count;
 					for (int i = 0; i < Platforms.Length; i++) {
 						filename = $"{Platforms [i]}-{fx}.ignore";
-						count = ProcessFile (filename);
+						count = ProcessFile (Path.Combine (InputDirectory, filename));
 						log.Write ("<td align='center' ");
 						if (count < 1)
 							log.Write ("bgcolor='lightgreen'>-");
@@ -244,9 +244,9 @@ namespace Extrospection {
 			log.WriteLine ("<tr>");
 			log.WriteLine ("<td>Total (per state)</td>");
 			if (full)
-				log.WriteLine ($"<td align='center' bgcolor='green' colspan='5'>{total_ignored}</td>");
-			log.WriteLine ($"<td align='center' bgcolor='red' colspan='4'>{total_unclassfied}</td>");
-			log.WriteLine ($"<td align='center' bgcolor='orange' colspan='4'>{total_todo}</td>");
+				log.WriteLine ($"<td align='center' bgcolor='green' colspan='{Platforms.Length + 1}'>{total_ignored}</td>");
+			log.WriteLine ($"<td align='center' bgcolor='red' colspan='{Platforms.Length}'>{total_unclassfied}</td>");
+			log.WriteLine ($"<td align='center' bgcolor='orange' colspan='{Platforms.Length}'>{total_todo}</td>");
 			log.WriteLine ("</tr>");
 
 			log.WriteLine ("<tr>");
@@ -270,6 +270,8 @@ namespace Extrospection {
 			log.Flush ();
 
 			Console.WriteLine ($"@MonkeyWrench: SetSummary: {errors} unclassified found.");
+			Console.WriteLine ($"Created {indexPath}");
+
 			return errors == 0 ? 0 : 1;
 		}
 	}

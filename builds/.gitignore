@@ -1,3 +1,5 @@
+dotnet-install.sh
+BundledNETCorePlatformsPackageVersion.txt
 downloads
 .stamp*
 .deps.*.mk
@@ -23,3 +25,8 @@ targettv
 targetwatch
 watchbcl
 mono-ios-sdk-destdir
+*.dylib
+*.o
+x86-64-slice*
+*.pkg
+

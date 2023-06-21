@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -9,13 +9,11 @@ using Xamarin.MacDev.Tasks;
 
 namespace Xamarin.iOS.Tasks
 {
-	public class CollectITunesSourceFilesTaskBase : Task
+	public abstract class CollectITunesSourceFilesTaskBase : XamarinTask
 	{
 		static readonly string[] iTunesFileNames = { "iTunesMetadata.plist", "iTunesArtwork@2x", "iTunesArtwork" };
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string OutputPath { get; set; }

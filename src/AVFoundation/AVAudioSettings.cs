@@ -32,10 +32,18 @@ using CoreFoundation;
 using ObjCRuntime;
 using AudioToolbox;
 
+#nullable enable
+
 namespace AVFoundation {
 
+
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	// Should be called AVAudioSetting but AVAudioSetting has been already used by keys class
-	[iOS (6,0)]
 	public class AudioSettings : DictionaryContainer
 	{
 #if !COREBUILD
@@ -58,21 +66,12 @@ namespace AVFoundation {
 			}
 		}
 
-#if XAMCORE_2_0
-	public double?
-#else
-		public float?
-#endif
-			SampleRate {
+		public double? SampleRate {
 			set {
 				SetNumberValue (AVAudioSettings.AVSampleRateKey, value);
 			}
 			get {
-#if XAMCORE_2_0
 				return GetDoubleValue (AVAudioSettings.AVSampleRateKey);
-#else
-				return GetFloatValue (AVAudioSettings.AVSampleRateKey);
-#endif
 			}
 		}			
 
@@ -172,10 +171,17 @@ namespace AVFoundation {
 			}			
 		}
 
+#if NET
+		[SupportedOSPlatform ("ios7.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+#else
 		[iOS (7,0)]
+#endif
 		public AVAudioBitRateStrategy? BitRateStrategy {
 			set {
-				NSString v = null;
+				NSString? v = null;
 				switch (value){
 				case AVAudioBitRateStrategy.Constant:
 					v = AVAudioSettings._Constant;
@@ -189,12 +195,10 @@ namespace AVFoundation {
 				case AVAudioBitRateStrategy.Variable:
 					v = AVAudioSettings._Variable;
 					break;
-#if XAMCORE_2_0
 				case null:
 					break;
 				default:
 					throw new ArgumentOutOfRangeException ("value");
-#endif
 				}
 				SetStringValue (AVAudioSettings.AVEncoderBitRateStrategyKey, v);
 			}
@@ -212,7 +216,14 @@ namespace AVFoundation {
 			}
 		}
 
+#if NET
+		[SupportedOSPlatform ("ios7.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+#else
 		[iOS (7,0)]
+#endif
 		public AVSampleRateConverterAlgorithm? SampleRateConverterAlgorithm {
 			get {
 				var k = GetNSStringValue (AVAudioSettings.AVSampleRateConverterAlgorithmKey);
@@ -223,7 +234,7 @@ namespace AVFoundation {
 				return null;
 			}
 			set {
-				NSString v = null;
+				NSString? v = null;
 				switch (value){
 				case AVSampleRateConverterAlgorithm.Mastering:
 					v = AVAudioSettings.AVSampleRateConverterAlgorithm_Mastering;
@@ -231,18 +242,23 @@ namespace AVFoundation {
 				case AVSampleRateConverterAlgorithm.Normal:
 					v = AVAudioSettings.AVSampleRateConverterAlgorithm_Normal;
 					break;
-#if XAMCORE_2_0
 				case null:
 					break;
 				default:
 					throw new ArgumentOutOfRangeException ("value");
-#endif
 				}
 				SetStringValue (AVAudioSettings.AVSampleRateConverterAlgorithmKey, v);
 			}
 		}
 
+#if NET
+		[SupportedOSPlatform ("ios7.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+#else
 		[iOS (7,0)]
+#endif
 		public AVAudioQuality? EncoderAudioQualityForVBR {
 			get {
 				return (AVAudioQuality?) (long?) GetNIntValue (AVAudioSettings.AVEncoderAudioQualityForVBRKey);
@@ -254,11 +270,10 @@ namespace AVFoundation {
 		
 		public AudioChannelLayout ChannelLayout {
 			set {
-				SetNativeValue (AVAudioSettings.AVChannelLayoutKey, value == null ? null : value.AsData ());
+				SetNativeValue (AVAudioSettings.AVChannelLayoutKey, value is null ? null : value.AsData ());
 			}
 		}
 
 #endif
 	}
 }
-

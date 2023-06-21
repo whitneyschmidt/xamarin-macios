@@ -8,6 +8,8 @@
 
 using ObjCRuntime;
 
+#nullable enable
+
 namespace SpriteKit {
 
 	// NSInteger -> SKKeyframeSequence.h
@@ -185,9 +187,8 @@ namespace SpriteKit {
 		UpperLeftCorner = Up | UpperRight | Right | Down | LowerLeft | Left | UpperLeft,
 	}
 
-	[NoWatch]
 	[NoMac]
-	[TV (11,0), iOS (11,0)]
+	[TV (11,0), iOS (11,0), Watch (9,0)]
 	[Native]
 	public enum SKNodeFocusBehavior : long {
 		None = 0,

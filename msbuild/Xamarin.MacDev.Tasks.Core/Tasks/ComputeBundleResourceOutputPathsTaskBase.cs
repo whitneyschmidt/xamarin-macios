@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -9,12 +9,10 @@ using Xamarin.MacDev;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class ComputeBundleResourceOutputPathsTaskBase : Task
+	public abstract class ComputeBundleResourceOutputPathsTaskBase : XamarinTask
 	{
-		public string SessionId { get; set; }
-
 		[Required]
-		public ITaskItem AppBundleDir { get; set; }
+		public ITaskItem AppResourcesPath { get; set; }
 
 		[Required]
 		public string BundleIdentifier { get; set; }
@@ -41,6 +39,9 @@ namespace Xamarin.MacDev.Tasks
 			if (BundleResources != null) {
 				foreach (var item in BundleResources) {
 					var logicalName = item.GetMetadata ("LogicalName");
+					// if logicalName is null or empty, use the filename
+					if (string.IsNullOrEmpty (logicalName))
+						logicalName = Path.GetFileName (item.GetMetadata ("FullPath"));
 					var outputPath = item.GetMetadata ("OutputPath");
 					IList<string> tags;
 					string hash;
@@ -73,7 +74,7 @@ namespace Xamarin.MacDev.Tasks
 
 						outputPath = Path.Combine (assetpack, logicalName);
 					} else if (string.IsNullOrEmpty (outputPath)) {
-						outputPath = Path.Combine (AppBundleDir.ItemSpec, logicalName);
+						outputPath = Path.Combine (AppResourcesPath.ItemSpec, logicalName);
 					}
 
 					var bundleResource = new TaskItem (item);

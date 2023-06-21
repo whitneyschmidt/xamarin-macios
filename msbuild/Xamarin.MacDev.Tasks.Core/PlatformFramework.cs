@@ -1,4 +1,4 @@
-﻿//
+//
 // PlatformFramework.cs
 //
 // Author: Jeffrey Stedfast <jeff@xamarin.com>
@@ -24,34 +24,106 @@
 // THE SOFTWARE.
 
 using System;
+using System.IO;
+
+using Xamarin.Localization.MSBuild;
+using Xamarin.Utils;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public enum PlatformFramework
-	{
-		MacOS,
-		iOS,
-		WatchOS,
-		TVOS,
-	}
-
 	public static class PlatformFrameworkHelper
 	{
-		public static PlatformFramework GetFramework (string targetFrameworkIdentifier)
+		public static ApplePlatform GetFramework (string targetFrameworkMoniker)
 		{
-			switch (targetFrameworkIdentifier) {
-			case "Xamarin.Mac":
-			case "MonoMac":
-				return PlatformFramework.MacOS;
-			case "Xamarin.iOS":
-			case "MonoTouch":
-				return PlatformFramework.iOS;
-			case "Xamarin.WatchOS":
-				return PlatformFramework.WatchOS;
-			case "Xamarin.TVOS":
-				return PlatformFramework.TVOS;
+			return TargetFramework.Parse (targetFrameworkMoniker).Platform;
+		}
+
+		public static string GetOperatingSystem (string targetFrameworkMoniker)
+		{
+			var framework = PlatformFrameworkHelper.GetFramework (targetFrameworkMoniker);
+			switch (framework) {
+			case ApplePlatform.WatchOS:
+				return "watchos";
+			case ApplePlatform.TVOS:
+				return "tvos";
+			case ApplePlatform.MacOSX:
+				return "osx";
+			case ApplePlatform.iOS:
+				return "ios";
 			default:
-				throw new InvalidOperationException ("Unknown TargetFrameworkIdentifier: " + targetFrameworkIdentifier);
+				throw new InvalidOperationException (string.Format ("Unknown target framework {0} for target framework moniker {1}.", framework, targetFrameworkMoniker));
+			}
+		}
+
+		public static string GetMinimumOSVersionKey (ApplePlatform platform)
+		{
+			switch (platform) {
+			case ApplePlatform.iOS:
+			case ApplePlatform.TVOS:
+			case ApplePlatform.WatchOS:
+				return ManifestKeys.MinimumOSVersion;
+			case ApplePlatform.MacOSX:
+			case ApplePlatform.MacCatalyst:
+				return ManifestKeys.LSMinimumSystemVersion;
+			default:
+				throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, platform));
+			}
+		}
+
+		// Get the operating system as it's used in the -m<operating-system>-version-min compiler flags.
+		public static string GetMinimumVersionOperatingSystem (string targetFrameworkMoniker, bool is_simulator)
+		{
+			var framework = GetFramework (targetFrameworkMoniker);
+			switch (framework) {
+			case ApplePlatform.iOS:
+				return is_simulator ? "iphonesimulator" : "ios";
+			case ApplePlatform.TVOS:
+				return is_simulator ? "tvos-simulator" : "tvos";
+			case ApplePlatform.WatchOS:
+				return is_simulator ? "watchos-simulator" : "watchos";
+			case ApplePlatform.MacOSX:
+				return "macosx";
+			default:
+				throw new InvalidOperationException (string.Format ("Unknown target framework {0} for target framework moniker {1}.", framework, targetFrameworkMoniker));
+			}
+		}
+
+		// Get the -m<operating-system>-version-min compiler flag.
+		public static string GetMinimumVersionArgument (string targetFrameworkMoniker, bool isSimulator, string minimumOSVersion)
+		{
+			return $"-m{GetMinimumVersionOperatingSystem (targetFrameworkMoniker, isSimulator)}-version-min={minimumOSVersion}";
+		}
+
+		public static string GetAppManifestPath (ApplePlatform platform, string appBundlePath)
+		{
+			switch (platform) {
+			case ApplePlatform.iOS:
+			case ApplePlatform.TVOS:
+			case ApplePlatform.WatchOS:
+				return Path.Combine (appBundlePath, "Info.plist");
+			case ApplePlatform.MacOSX:
+			case ApplePlatform.MacCatalyst:
+				return Path.Combine (appBundlePath, "Contents", "Info.plist");
+			default:
+				throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, platform));
+			}
+		}
+
+		public static string GetSdkPlatform (ApplePlatform platform, bool isSimulator)
+		{
+			switch (platform) {
+			case ApplePlatform.iOS:
+				return isSimulator ? "iPhoneSimulator" : "iPhoneOS";
+			case ApplePlatform.TVOS:
+				return isSimulator ? "AppleTVSimulator" : "AppleTVOS";
+			case ApplePlatform.WatchOS:
+				return isSimulator ? "WatchSimulator" : "WatchOS";
+			case ApplePlatform.MacOSX:
+				return "MacOSX";
+			case ApplePlatform.MacCatalyst:
+				return "MacCatalyst";
+			default:
+				throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, platform));
 			}
 		}
 	}

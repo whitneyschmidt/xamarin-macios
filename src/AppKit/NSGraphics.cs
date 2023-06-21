@@ -20,6 +20,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
+#if !__MACCATALYST__
+
 using System;
 using System.Runtime.InteropServices;
 
@@ -28,6 +31,9 @@ using Foundation;
 using CoreGraphics;
 
 namespace AppKit {
+#if NET
+	[SupportedOSPlatform ("macos")]
+#endif
 	public static class NSGraphics {
 		public static readonly float White = 1;
 		public static readonly float Black = 0;
@@ -35,9 +41,9 @@ namespace AppKit {
 		public static readonly float DarkGray = (float) 1/3.0f;
 		
 		[DllImport (Constants.AppKitLibrary)]
-		extern static NSWindowDepth NSBestDepth (IntPtr colorspaceHandle, nint bitsPerSample, nint bitsPerPixel, bool planar, ref bool exactMatch);
+		extern static NSWindowDepth NSBestDepth (IntPtr colorspaceHandle, nint bitsPerSample, nint bitsPerPixel, [MarshalAs (UnmanagedType.I1)] bool planar, [MarshalAs (UnmanagedType.I1)] ref bool exactMatch);
 		
-		public static NSWindowDepth BestDepth (NSString colorspace, nint bitsPerSample, nint bitsPerPixel, bool planar, ref bool exactMatch)
+		public static NSWindowDepth BestDepth (NSString colorspace, nint bitsPerSample, nint bitsPerPixel, [MarshalAs (UnmanagedType.I1)] bool planar, [MarshalAs (UnmanagedType.I1)] ref bool exactMatch)
 		{
 			if (colorspace == null)
 				throw new ArgumentNullException ("colorspace");
@@ -46,6 +52,7 @@ namespace AppKit {
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
+		[return: MarshalAs (UnmanagedType.I1)]
 		extern static bool NSPlanarFromDepth (NSWindowDepth depth);
 		
 		public static bool PlanarFromDepth (NSWindowDepth depth)
@@ -201,13 +208,30 @@ namespace AppKit {
 		[DllImport (Constants.AppKitLibrary, EntryPoint="NSDrawWindowBackground")]
 		public extern static void DrawWindowBackground (CGRect aRect);
 		
+#if NET
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("macos10.11")]
+#if MONOMAC
+		[Obsolete ("Starting with macos10.11 not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+#endif
+#else
+		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.")]
+#endif
 		[DllImport (Constants.AppKitLibrary, EntryPoint="NSDisableScreenUpdates")]
-		[Deprecated (PlatformName.MacOSX, 10, 14, message : "Not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.")]
 		public extern static void DisableScreenUpdates ();
 		
+#if NET
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("macos10.11")]
+#if MONOMAC
+		[Obsolete ("Starting with macos10.11 not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+#endif
+#else
+		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.")]
+#endif
 		[DllImport (Constants.AppKitLibrary, EntryPoint="NSEnableScreenUpdates")]
-		[Deprecated (PlatformName.MacOSX, 10, 14, message : "Not usually necessary, 'NSAnimationContext.RunAnimation' can be used instead and not suffer from performance issues.")]
 		public extern static void EnableScreenUpdates ();
 		
 	}
 }
+#endif // !__MACCATALYST__

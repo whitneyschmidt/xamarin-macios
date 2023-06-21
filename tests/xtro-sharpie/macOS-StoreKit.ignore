@@ -1,3 +1,2 @@
-# Fixed in XAMCORE_4_0
-!unknown-native-enum! SKCloudServiceAuthorizationStatus bound
-!unknown-native-enum! SKCloudServiceCapability bound
+# delegate do not mention macOS (as unavailable) but the non-delegate type is not (available)
+!missing-protocol! SKCloudServiceSetupViewControllerDelegate not bound

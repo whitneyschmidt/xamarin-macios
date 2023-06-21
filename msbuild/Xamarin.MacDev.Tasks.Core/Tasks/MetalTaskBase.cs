@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -6,19 +6,21 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 using Xamarin.MacDev;
+using Xamarin.MacDev.Tasks;
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class MetalTaskBase : ToolTask
+	public abstract class MetalTaskBase : XamarinToolTask
 	{
 		#region Inputs
 
-		public string SessionId { get; set; }
-
-		public ITaskItem AppManifest { get; set; }
-
 		[Required]
 		public string IntermediateOutputPath { get; set; }
+
+		[Required]
+		public string MinimumOSVersion { get; set; }
 
 		[Required]
 		public string ProjectDir { get; set; }
@@ -33,6 +35,12 @@ namespace Xamarin.MacDev.Tasks
 		public string SdkVersion { get; set; }
 
 		[Required]
+		public bool SdkIsSimulator { get; set; }
+
+		[Required]
+		public string SdkRoot { get; set; }
+
+		[Required]
 		public ITaskItem SourceFile { get; set; }
 
 		#endregion
@@ -40,16 +48,24 @@ namespace Xamarin.MacDev.Tasks
 		[Output]
 		public ITaskItem OutputFile { get; set; }
 
-		protected abstract string MinimumDeploymentTargetKey {
-			get;
-		}
-
-		protected abstract string OperatingSystem {
-			get;
-		}
-
-		protected abstract string DevicePlatformBinDir {
-			get;
+		string DevicePlatformBinDir {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					return AppleSdkSettings.XcodeVersion.Major >= 11
+						? Path.Combine (SdkDevPath, "Toolchains", "XcodeDefault.xctoolchain", "usr", "bin")
+						: Path.Combine (SdkDevPath, "Platforms", "iPhoneOS.platform", "usr", "bin");
+				case ApplePlatform.MacOSX:
+				case ApplePlatform.MacCatalyst:
+					return AppleSdkSettings.XcodeVersion.Major >= 10
+						? Path.Combine (SdkDevPath, "Toolchains", "XcodeDefault.xctoolchain", "usr", "bin")
+						: Path.Combine (SdkDevPath, "Platforms", "MacOSX.platform", "usr", "bin");
+				default:
+					throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, Platform));
+				}
+			}
 		}
 
 		protected override string ToolName {
@@ -66,6 +82,13 @@ namespace Xamarin.MacDev.Tasks
 			return File.Exists (path) ? path : ToolExe;
 		}
 
+		public override bool Execute ()
+		{
+			if (AppleSdkSettings.XcodeVersion.Major >= 11)
+				EnvironmentVariables = EnvironmentVariables.CopyAndAdd ($"SDKROOT={SdkRoot}");
+			return base.Execute ();
+		}
+
 		protected override string GenerateCommandLineCommands ()
 		{
 			var prefixes = BundleResource.SplitResourcePrefixes (ResourcePrefix);
@@ -74,22 +97,9 @@ namespace Xamarin.MacDev.Tasks
 			var path = Path.Combine (intermediate, logicalName);
 			var args = new CommandLineArgumentBuilder ();
 			var dir = Path.GetDirectoryName (path);
-			string minimumDeploymentTarget;
 
 			if (!Directory.Exists (dir))
 				Directory.CreateDirectory (dir);
-
-			if (AppManifest != null) {
-				var plist = PDictionary.FromFile (AppManifest.ItemSpec);
-				PString value;
-
-				if (!plist.TryGetValue (MinimumDeploymentTargetKey, out value) || string.IsNullOrEmpty (value.Value))
-					minimumDeploymentTarget = SdkVersion;
-				else
-					minimumDeploymentTarget = value.Value;
-			} else {
-				minimumDeploymentTarget = SdkVersion;
-			}
 
 			OutputFile = new TaskItem (Path.ChangeExtension (path, ".air"));
 			OutputFile.SetMetadata ("LogicalName", Path.ChangeExtension (logicalName, ".air"));
@@ -106,8 +116,12 @@ namespace Xamarin.MacDev.Tasks
 			args.Add ("-o");
 			args.AddQuoted (Path.ChangeExtension (path, ".air"));
 
-			args.Add (string.Format ("-m{0}-version-min={1}", OperatingSystem, minimumDeploymentTarget));
-
+			if (Platform == ApplePlatform.MacCatalyst) {
+				args.Add ($"-target");
+				args.Add ($"air64-apple-ios{MinimumOSVersion}-macabi");
+			} else {
+				args.Add (PlatformFrameworkHelper.GetMinimumVersionArgument (TargetFrameworkMoniker, SdkIsSimulator, MinimumOSVersion));
+			}
 			args.AddQuoted (SourceFile.ItemSpec);
 
 			return args.ToString ();

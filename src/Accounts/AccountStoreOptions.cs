@@ -24,13 +24,15 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-#if XAMCORE_2_0 || !MONOMAC
 
 using System;
 
 using Foundation;
 using CoreFoundation;
 using ObjCRuntime;
+using System.Runtime.Versioning;
+
+#nullable enable
 
 namespace Accounts {
 
@@ -42,7 +44,11 @@ namespace Accounts {
 		OnlyMe
 	}
 
-	[iOS (6,0)]
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+#endif
 	public class AccountStoreOptions : DictionaryContainer
 	{
 #if !COREBUILD
@@ -56,7 +62,7 @@ namespace Accounts {
 		{
 		}
 
-		public string FacebookAppId {
+		public string? FacebookAppId {
 			set {
 				SetStringValue (ACFacebookKey.AppId, value);
 			}
@@ -68,9 +74,9 @@ namespace Accounts {
 		public void SetPermissions (ACFacebookAudience audience, params string[] permissions)
 		{
 			if (permissions == null)
-				throw new ArgumentNullException ("permissions");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (permissions));
 			if (permissions.Length == 0)
-				throw new ArgumentException ("permissions");
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (nameof (permissions));
 
 			SetArrayValue (ACFacebookKey.Permissions, permissions);
 
@@ -93,7 +99,7 @@ namespace Accounts {
 			SetNativeValue (ACFacebookKey.Audience, v);
 		}
 
-		public string TencentWeiboAppId {
+		public string? TencentWeiboAppId {
 			set {
 				SetStringValue (ACTencentWeiboKey.AppId, value);
 			}
@@ -104,4 +110,3 @@ namespace Accounts {
 #endif
 	}
 }
-#endif

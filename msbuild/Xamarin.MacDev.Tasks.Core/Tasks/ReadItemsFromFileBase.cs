@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ using System.Xml.Linq;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class ReadItemsFromFileBase : Task
+	public abstract class ReadItemsFromFileBase : XamarinTask
 	{
 		static readonly XNamespace XmlNs = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 
@@ -19,11 +19,9 @@ namespace Xamarin.MacDev.Tasks
 
 		#region Inputs
 
-		public string SessionId { get; set; }
-
 		[Output]
 		[Required]
-		public ITaskItem File { get; set; }
+		public ITaskItem[] File { get; set; }
 
 		#endregion
 
@@ -36,13 +34,22 @@ namespace Xamarin.MacDev.Tasks
 
 		public override bool Execute ()
 		{
-			var document = XDocument.Load (this.File.ItemSpec);
+			var result = new List<ITaskItem> ();
+			foreach (var file in File) {
+				var document = XDocument.Load (file.ItemSpec);
 
-			this.Items = document.Root
-				.Elements (ItemGroupElementName)
-				.SelectMany (element => element.Elements ())
-				.Select (element => this.CreateItemFromElement (element))
-				.ToArray ();
+				var items = document.Root
+					.Elements (ItemGroupElementName)
+					.SelectMany (element => element.Elements ())
+					.Select (element => this.CreateItemFromElement (element))
+					.ToList ();
+				result.AddRange (items);
+			}
+
+			if (Items != null)
+				result.AddRange (Items);
+
+			Items = result.ToArray ();
 
 			return true;
 		}

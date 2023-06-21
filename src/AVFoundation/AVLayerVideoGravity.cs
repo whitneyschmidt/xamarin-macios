@@ -33,6 +33,8 @@ using Foundation;
 using CoreFoundation;
 using ObjCRuntime;
 
+#nullable enable
+
 namespace AVFoundation {
 	// Convenience enum for native strings - AVAnimation.h
 	public enum AVLayerVideoGravity
@@ -57,7 +59,7 @@ namespace AVFoundation {
 			return (AVLayerVideoGravity) (-1);
 		}
 
-		static internal NSString EnumToKey (AVLayerVideoGravity vg)
+		static internal NSString EnumToKey (AVLayerVideoGravity? vg)
 		{
 			switch (vg) {
 			case AVLayerVideoGravity.ResizeAspect:
@@ -67,18 +69,13 @@ namespace AVFoundation {
 			case AVLayerVideoGravity.Resize:
 				return AVPlayerLayer.GravityResize;
 			default:
-				return null;
+				return null!;
 			}
 		}
 		
 		
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
+		public AVLayerVideoGravity VideoGravity
 		{
 			set {
 				WeakVideoGravity = EnumToKey (value);
@@ -93,12 +90,7 @@ namespace AVFoundation {
 	partial class AVCaptureVideoPreviewLayer
 	{
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
+		public AVLayerVideoGravity VideoGravity
 		{
 			set {
 				WeakVideoGravity = AVPlayerLayer.EnumToKey (value);
@@ -113,11 +105,9 @@ namespace AVFoundation {
 	partial class AVPlayer
 	{
 		public AVLayerVideoGravity? ExternalPlaybackVideoGravity {
-			[iOS (6,0)]
 			set {
-				WeakExternalPlaybackVideoGravity = value.HasValue ? AVPlayerLayer.EnumToKey (value.Value) : null;
+				WeakExternalPlaybackVideoGravity = AVPlayerLayer.EnumToKey (value);
 			}
-			[iOS (6,0)]
 			get {
 				var r = AVPlayerLayer.KeyToEnum (WeakExternalPlaybackVideoGravity, false);
 				if (((int) r) == -1)

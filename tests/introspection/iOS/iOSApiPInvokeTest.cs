@@ -1,4 +1,4 @@
-﻿//
+//
 // Test the existing of p/invoked symbols
 //
 // Authors:
@@ -11,17 +11,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
 using UIKit;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace Introspection {
 
@@ -32,7 +26,7 @@ namespace Introspection {
 
 		protected override bool Skip (string symbolName)
 		{
-			bool simulator = Runtime.Arch == Arch.SIMULATOR;
+			var simulator = TestRuntime.IsSimulatorOrDesktop;
 			switch (symbolName) {
 			// Metal support inside simulator is only available in recent iOS9 SDK
 #if !__WATCHOS__
@@ -41,6 +35,7 @@ namespace Introspection {
 #endif
 			// still most Metal helpers are not available on the simulator (even when the framework is present, it's missing symbols)
 			case "MPSSupportsMTLDevice":
+			case "MPSGetPreferredDevice":
 			// neither are the CoreVideo extensions for Metal
 			case "CVMetalTextureGetTexture":
 			case "CVMetalTextureIsFlipped":
@@ -52,8 +47,6 @@ namespace Introspection {
 			case "MTKModelIOVertexDescriptorFromMetal":
 			case "MTKModelIOVertexFormatFromMetal":
 			case "MTKMetalVertexFormatFromModelIO":
-			case "CVPixelBufferGetIOSurface":
-			case "CVPixelBufferCreateWithIOSurface":
 			case "MPSImageBatchIncrementReadCount":
 			case "MPSImageBatchSynchronize":
 			case "MPSImageBatchResourceSize":
@@ -62,14 +55,16 @@ namespace Introspection {
 			case "MPSStateBatchResourceSize":
 			case "MPSHintTemporaryMemoryHighWaterMark":
 			case "MPSSetHeapCacheDuration":
+			case "MPSGetImageType":
 				return simulator;
-
-			// it's not needed for ARM64/ARM64_32 and Apple does not have stubs for them in libobjc.dylib
-			case "objc_msgSend_stret":
-			case "objc_msgSendSuper_stret":
-				return !simulator;
+			case "CVPixelBufferGetIOSurface":
+			case "CVPixelBufferCreateWithIOSurface":
+				return simulator && !TestRuntime.CheckXcodeVersion (11, 0);
 
 			default:
+				// MLCompute not available in simulator as of Xcode 12 beta 3
+				if (simulator && symbolName.StartsWith ("MLC", StringComparison.Ordinal))
+					return true;
 				return base.Skip (symbolName);
 			}
 		}
@@ -80,7 +75,7 @@ namespace Introspection {
 			// 1. is the current SDK target (or a newer one)
 			var sdk = new Version (Constants.SdkVersion);
 #if __WATCHOS__
-			if (!TestRuntime.CheckSystemVersion (PlatformName.WatchOS, sdk.Major, sdk.Minor))
+			if (!TestRuntime.CheckSystemVersion (ApplePlatform.WatchOS, sdk.Major, sdk.Minor))
 				return true;
 #elif __IOS__ || __TVOS__
 			if (!UIDevice.CurrentDevice.CheckSystemVersion (sdk.Major, sdk.Minor))
@@ -91,7 +86,7 @@ namespace Introspection {
 			// 2. on the real target for Xamarin.iOS.dll/monotouch.dll
 			//    as the simulator miss some libraries and symbols
 			//    but the rest of the BCL is fine to test
-			return (a == typeof (NSObject).Assembly && (Runtime.Arch == Arch.SIMULATOR));
+			return (a == typeof (NSObject).Assembly && TestRuntime.IsSimulatorOrDesktop);
 		}
 
 		[Test]
@@ -101,7 +96,6 @@ namespace Introspection {
 				let attr = type.GetCustomAttribute<MonoNativeFunctionWrapperAttribute> () where attr != null
 				select type;
 
-			var failed_api = new List<string> ();
 			Errors = 0;
 			int c = 0, n = 0;
 			foreach (var t in nativeDelegates) {
@@ -114,13 +108,12 @@ namespace Introspection {
 				}
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} native delegate validated: {2}", Errors, n, string.Join (", ", failed_api));
+			AssertIfErrors ("{0} errors found in {1} native delegate validated", Errors, n);
 		}
 
 		[Test]
 		public void MonoPInvokeCallback ()
 		{
-			var failed_api = new List<string> ();
 			Errors = 0;
 			int c = 0, n = 0;
 			foreach (var type in Assembly.GetTypes ()) {
@@ -147,26 +140,7 @@ namespace Introspection {
 					n++;
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} native delegate validated: {2}", Errors, n, string.Join (", ", failed_api));
+			AssertIfErrors ("{0} errors found in {1} native delegate validated", Errors, n);
 		}
-
-		[Test]
-		public void NUnitLite ()
-		{
-			var a = typeof (TestAttribute).Assembly;
-			if (!SkipAssembly (a))
-				Check (a);
-		}
-
-#if !__WATCHOS__
-		[Test]
-		public void MonoTouchDialog ()
-		{
-			// there's no direct reference to MTD - but it's there
-			var a = AppDelegate.Runner.NavigationController.TopViewController.GetType ().Assembly;
-			if (!SkipAssembly (a))
-				Check (a);
-		}
-#endif
 	}
 }

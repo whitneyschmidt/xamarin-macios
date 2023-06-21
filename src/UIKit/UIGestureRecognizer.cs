@@ -25,10 +25,7 @@ namespace UIKit {
 		Dictionary<Token,IntPtr> recognizers = new Dictionary<Token,IntPtr> ();
 		const string tsel = "target";
 		internal const string parametrized_selector = "target:";
-#if !XAMCORE_2_0
-		[Obsolete ("Don't use, this field has been removed the Unified API. Use 'Selector.GetHandle (<string>)' instead.")]
-		public static Selector ParametrizedSelector = new Selector ("target:");
-#endif
+
 		[DesignatedInitializer]
 		public UIGestureRecognizer (Action action) : this (Selector.GetHandle (tsel), new ParameterlessDispatch (action))
 		{
@@ -37,6 +34,8 @@ namespace UIKit {
 		// Called by the Dispose() method, because this can run from a finalizer, we need to
 		// (a) reference the handle, that we will release later, and (b) to remove the targets on the
 		// UI thread.
+		// Note: preserving this member allows us to re-enable the `Optimizable` binding flag
+		[Preserve (Conditional = true)]
 		void OnDispose ()
 		{
 			var copyOfRecognizers = recognizers;

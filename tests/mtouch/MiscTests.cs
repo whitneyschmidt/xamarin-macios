@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +24,7 @@ namespace Xamarin.Tests
 
 			foreach (var sdk in new string [] { "iphoneos", "iphonesimulator"}) {
 				foreach (var ext in new string [] { "dylib", "a" }) {
-					var fn = Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "usr", "lib", "libmonosgen-2.0." + ext);
+					var fn = Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "lib", "libmonosgen-2.0." + ext);
 					Assert.IsFalse (Contains (fn, contents), "Found \"{0}\" in {1}", str, fn);
 				}
 			}
@@ -70,7 +70,7 @@ namespace Xamarin.Tests
 			foreach (var symbol in prohibited_symbols) {
 				var contents = ASCIIEncoding.ASCII.GetBytes (symbol);
 				var sdk = "iphoneos"; // we don't care about private symbols for simulator builds
-				foreach (var static_lib in Directory.EnumerateFiles (Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "usr", "lib"), "*.a")) {
+				foreach (var static_lib in Directory.EnumerateFiles (Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "lib"), "*.a")) {
 					Assert.IsFalse (Contains (static_lib, contents), "Found \"{0}\" in {1}", symbol, static_lib);
 				}
 			}
@@ -119,17 +119,26 @@ namespace Xamarin.Tests
 				"_sdb_options",
 				"_SystemNative_",
 				"_NetSecurityNative_",
+				"_Brotli",
+				"_kStaticDictionaryHash",
 				"_MapHardwareType",
 				"_gateway_from_rtm",
 				"_sgen_",
 				"_arm_patch",
-				// These two aren't public in a way we care about
+				// These aren't public in a way we care about
 				"l_OBJC_LABEL_PROTOCOL_$_",
+				"__OBJC_LABEL_PROTOCOL_$_", // Xcode 11 b1 format
 				"l_OBJC_PROTOCOL_$_",
+				"__OBJC_PROTOCOL_$_",  // Xcode 11 b1 format
 				// block stuff, automatically exported by clang
 				"___block_descriptor_",
 				"___copy_helper_block_",
 				"___destroy_helper_block_",
+				// compiler-generated helper methods
+				"___os_log_helper_",
+				// Brotli compression symbols
+				"_kBrotli",
+				"__kBrotli",
 			};
 
 			paths.RemoveWhere ((v) => {
@@ -197,4 +206,3 @@ namespace Xamarin.Tests
 		}
 	}
 }
-

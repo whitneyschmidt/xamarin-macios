@@ -1,24 +1,21 @@
-﻿using System;
+using System;
 using System.IO;
-using System.Text;
-using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CoreMLCompilerTaskBase : Task
+	public abstract class CoreMLCompilerTaskBase : XamarinTask
 	{
 		string toolExe;
 
 		public string ToolName { get { return "coremlc"; } }
 
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		public bool EnableOnDemandResources { get; set; }
 
@@ -73,63 +70,32 @@ namespace Xamarin.MacDev.Tasks
 			return File.Exists (path) ? path : ToolExe;
 		}
 
-		static ProcessStartInfo GetProcessStartInfo (IDictionary<string, string> environment, string tool, string args)
-		{
-			var startInfo = new ProcessStartInfo (tool, args);
-
-			startInfo.WorkingDirectory = Environment.CurrentDirectory;
-
-			foreach (var variable in environment)
-				startInfo.EnvironmentVariables[variable.Key] = variable.Value;
-
-			startInfo.CreateNoWindow = true;
-
-			return startInfo;
-		}
-
 		int Compile (ITaskItem item, string outputDir, string log, string partialPlist)
 		{
-			var environment = new Dictionary<string, string> ();
-			var args = new CommandLineArgumentBuilder ();
+			var args = new List<string> ();
 
 			args.Add ("compile");
-			args.AddQuoted (item.ItemSpec);
-			args.AddQuoted (Path.GetFullPath (outputDir));
+			args.Add (item.ItemSpec);
+			args.Add (Path.GetFullPath (outputDir));
 			args.Add ("--output-partial-info-plist");
-			args.AddQuoted (partialPlist);
+			args.Add (partialPlist);
 
-			var startInfo = GetProcessStartInfo (environment, GetFullPathToTool (), args.ToString ());
-			var errors = new StringBuilder ();
-			int exitCode;
+			var fileName = GetFullPathToTool ();
 
-			try {
-				Log.LogMessage (MessageImportance.Normal, "Tool {0} execution started with arguments: {1}", startInfo.FileName, startInfo.Arguments);
-
-				using (var stdout = File.CreateText (log)) {
-					using (var stderr = new StringWriter (errors)) {
-						using (var process = ProcessUtils.StartProcess (startInfo, stdout, stderr)) {
-							process.Wait ();
-
-							exitCode = process.Result;
-						}
-					}
-
-					Log.LogMessage (MessageImportance.Low, "Tool {0} execution finished (exit code = {1}).", startInfo.FileName, exitCode);
-				}
-			} catch (Exception ex) {
-				Log.LogError ("Error executing tool '{0}': {1}", startInfo.FileName, ex.Message);
-				File.Delete (log);
-				return -1;
-			}
+			var rv = ExecuteAsync (fileName, args, sdkDevPath, mergeOutput: false).Result;
+			var exitCode = rv.ExitCode;
+			var output = rv.StandardOutput.ToString ();
+			File.WriteAllText (log, output);
 
 			if (exitCode != 0) {
 				// Note: coremlc exited with an error. Dump everything we can to help the user
 				// diagnose the issue and then delete the log file so that rebuilding tries
 				// again.
+				var errors = rv.StandardError.ToString ();
 				if (errors.Length > 0)
 					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, "{0}", errors);
 
-				Log.LogError ("{0} exited with code {1}", ToolName, exitCode);
+				Log.LogError (MSBStrings.E0117, ToolName, exitCode);
 
 				// Note: If the log file exists, log those warnings/errors as well...
 				if (File.Exists (log)) {
@@ -224,7 +190,7 @@ namespace Xamarin.MacDev.Tasks
 						if ((Compile (model, outputDir, log, partialPlist)) != 0)
 							return false;
 					} else {
-						Log.LogMessage (MessageImportance.Low, "Skipping `{0}' as the output file, `{1}', is newer.", model.ItemSpec, partialPlist);
+						Log.LogMessage (MessageImportance.Low, MSBStrings.M0119, model.ItemSpec, partialPlist);
 					}
 				}
 
@@ -235,6 +201,9 @@ namespace Xamarin.MacDev.Tasks
 			}
 
 			BundleResources = bundleResources.ToArray ();
+
+			if (PartialAppManifests != null)
+				partialPlists.AddRange (PartialAppManifests);
 			PartialAppManifests = partialPlists.ToArray ();
 
 			return !Log.HasLoggedErrors;

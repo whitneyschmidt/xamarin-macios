@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -9,11 +9,9 @@ using Xamarin.MacDev.Tasks;
 
 namespace Xamarin.iOS.Tasks
 {
-	public class CollectAssetPacksTaskBase : Task
+	public abstract class CollectAssetPacksTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string OnDemandResourcesPath { get; set; }
@@ -45,4 +43,3 @@ namespace Xamarin.iOS.Tasks
 		}
 	}
 }
-

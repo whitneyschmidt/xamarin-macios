@@ -4,7 +4,7 @@
 // Unavailable.
 //
 // This addresses scalability issues with the AvailabilityAttribute
-// introduced originally for XAMCORE_2_0 where the Platform enum
+// introduced originally for the Unified profile where the Platform enum
 // cannot cleanly scale to other platforms (e.g. WatchOS).
 //
 // Used by unit tests to automatically skip selectors not available
@@ -16,6 +16,7 @@
 //
 // Copyright 2015 Xamarin Inc. All rights reserved.
 
+#if !NET
 using System;
 using System.Text;
 
@@ -36,7 +37,10 @@ namespace ObjCRuntime
 		MacOSX,
 		iOS,
 		WatchOS,
-		TvOS
+		TvOS,
+		MacCatalyst,
+		[Obsolete ("Use 'MacCatalyst' instead.")]
+		UIKitForMac = MacCatalyst, // temporary
 	}
 
 	public enum AvailabilityKind
@@ -48,6 +52,7 @@ namespace ObjCRuntime
 	}
 
 	[AttributeUsage (
+		AttributeTargets.Assembly |
 		AttributeTargets.Class |
 		AttributeTargets.Constructor |
 		AttributeTargets.Delegate |
@@ -98,7 +103,7 @@ namespace ObjCRuntime
 			}
 
 			if (Architecture != PlatformArchitecture.None)
-				builder.AppendFormat (", {0}.{1}", nameof (PlatformArchitecture), Architecture);
+				builder.Append (", ObjCRuntime.PlatformArchitecture.").Append (Architecture);
 
 			if (Message != null)
 				builder.AppendFormat (", message: \"{0}\"", Message.Replace ("\"", "\"\""));
@@ -210,6 +215,7 @@ namespace ObjCRuntime
 		{
 		}
 
+		[Obsolete ("Use the overload that takes '(major, minor)', since tvOS is always 64-bit.")]
 		public TVAttribute (byte major, byte minor, bool onlyOn64 = false)
 			: base (PlatformName.TvOS, (int)major, (int)minor, onlyOn64 ? PlatformArchitecture.Arch64 : PlatformArchitecture.All)
 		{
@@ -220,6 +226,7 @@ namespace ObjCRuntime
 		{
 		}
 
+		[Obsolete ("Use the overload that takes '(major, minor, subminor)', since tvOS is always 64-bit.")]
 		public TVAttribute (byte major, byte minor, byte subminor, bool onlyOn64)
 			: base (PlatformName.TvOS, (int)major, (int)minor, (int)subminor, onlyOn64 ? PlatformArchitecture.Arch64 : PlatformArchitecture.All)
 		{
@@ -233,6 +240,7 @@ namespace ObjCRuntime
 		{
 		}
 
+		[Obsolete ("Use the overload that takes '(major, minor)', since watchOS is never 64-bit.")] // not yet at least
 		public WatchAttribute (byte major, byte minor, bool onlyOn64 = false)
 			: base (PlatformName.WatchOS, (int)major, (int)minor, onlyOn64 ? PlatformArchitecture.Arch64 : PlatformArchitecture.All)
 		{
@@ -243,8 +251,22 @@ namespace ObjCRuntime
 		{
 		}
 
+		[Obsolete ("Use the overload that takes '(major, minor)', since watchOS is never 64-bit.")] // not yet at least
 		public WatchAttribute (byte major, byte minor, byte subminor, bool onlyOn64)
 			: base (PlatformName.WatchOS, (int)major, (int)minor, (int)subminor, onlyOn64 ? PlatformArchitecture.Arch64 : PlatformArchitecture.All)
+		{
+		}
+	}
+
+	public sealed class MacCatalystAttribute : IntroducedAttribute
+	{
+		public MacCatalystAttribute (byte major, byte minor)
+			: base (PlatformName.MacCatalyst, (int) major, (int) minor)
+		{
+		}
+
+		public MacCatalystAttribute (byte major, byte minor, byte subminor)
+			: base (PlatformName.MacCatalyst, (int) major, (int) minor, subminor)
 		{
 		}
 	}
@@ -280,5 +302,14 @@ namespace ObjCRuntime
 		{
 		}
 	}
+
+	public sealed class NoMacCatalystAttribute : UnavailableAttribute
+	{
+		public NoMacCatalystAttribute ()
+			: base (PlatformName.MacCatalyst)
+		{
+		}
+	}
 }
 
+#endif // !NET

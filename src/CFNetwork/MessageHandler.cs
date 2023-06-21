@@ -27,6 +27,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !NET
+
 using System;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -78,7 +80,7 @@ namespace CFNetwork {
 		CFHTTPAuthentication auth;
 
 		#region implemented abstract members of HttpMessageHandler
-#if MONOMAC && XAMCORE_2_0
+#if MONOMAC && !NET
 		internal
 #endif
 		protected override async Task<HttpResponseMessage> SendAsync (HttpRequestMessage request,
@@ -396,3 +398,4 @@ namespace CFNetwork {
 		}
 	}
 }
+#endif // !NET

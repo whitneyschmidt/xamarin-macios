@@ -4,14 +4,13 @@ using System.Collections.Generic;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class PackLibraryResourcesTaskBase : Task
+	public abstract class PackLibraryResourcesTaskBase : XamarinTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public string Prefix { get; set; }
@@ -52,7 +51,7 @@ namespace Xamarin.MacDev.Tasks
 					var logicalName = item.GetMetadata ("LogicalName");
 
 					if (string.IsNullOrEmpty (logicalName)) {
-						Log.LogError ("Items must have logical names computed.");
+						Log.LogError (MSBStrings.E0161);
 						return false;
 					}
 

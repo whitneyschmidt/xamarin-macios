@@ -1,18 +1,17 @@
-﻿using System;
+using System;
 using System.IO;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
+using Xamarin.Utils;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class MetalLibTaskBase : ToolTask
+	public abstract class MetalLibTaskBase : XamarinToolTask
 	{
 		#region Inputs
-
-		public string SessionId { get; set; }
 
 		[Required]
 		public ITaskItem[] Items { get; set; }
@@ -23,10 +22,29 @@ namespace Xamarin.MacDev.Tasks
 		[Required]
 		public string SdkDevPath { get; set; }
 
+		[Required]
+		public string SdkRoot { get; set; }
+
 		#endregion
 
-		protected abstract string DevicePlatformBinDir {
-			get;
+		string DevicePlatformBinDir {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					return AppleSdkSettings.XcodeVersion.Major >= 11
+						? Path.Combine (SdkDevPath, "Toolchains", "XcodeDefault.xctoolchain", "usr", "bin")
+						: Path.Combine (SdkDevPath, "Platforms", "iPhoneOS.platform", "usr", "bin");
+				case ApplePlatform.MacOSX:
+				case ApplePlatform.MacCatalyst:
+					return AppleSdkSettings.XcodeVersion.Major >= 10
+						? Path.Combine (SdkDevPath, "Toolchains", "XcodeDefault.xctoolchain", "usr", "bin")
+						: Path.Combine (SdkDevPath, "Platforms", "MacOSX.platform", "usr", "bin");
+				default:
+					throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, Platform));
+				}
+			}
 		}
 
 		protected override string ToolName {
@@ -68,6 +86,9 @@ namespace Xamarin.MacDev.Tasks
 
 			if (!Directory.Exists (dir))
 				Directory.CreateDirectory (dir);
+
+			if (AppleSdkSettings.XcodeVersion.Major >= 11)
+				EnvironmentVariables = EnvironmentVariables.CopyAndAdd ($"SDKROOT={SdkRoot}");
 
 			return base.Execute ();
 		}

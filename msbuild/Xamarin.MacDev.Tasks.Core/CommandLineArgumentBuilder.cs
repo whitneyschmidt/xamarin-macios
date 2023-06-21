@@ -1,6 +1,10 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Text;
 using System.Collections.Generic;
+
+using Microsoft.Build.Utilities;
+using Xamarin.Utils;
 
 namespace Xamarin.MacDev
 {
@@ -36,7 +40,7 @@ namespace Xamarin.MacDev
 		/// </summary>
 		public void Add (string argument, bool appendLine = false)
 		{
-			if (builder.Length > 0)
+			if (builder.Length > 0 && !appendLine)
 				builder.Append (' ');
 
 			builder.Append (argument);
@@ -45,6 +49,13 @@ namespace Xamarin.MacDev
 				builder.AppendLine ();
 
 			hash.Add (argument);
+		}
+
+		public void AddQuotedSwitchIfNotNull (string name, string value)
+		{
+			if (value == null)
+				return;
+			AddQuoted (name + value);
 		}
 
 		/// <summary>
@@ -155,93 +166,9 @@ namespace Xamarin.MacDev
 			return builder.ToString ();
 		}
 
-		static string GetArgument (StringBuilder builder, string buf, int startIndex, out int endIndex, out Exception ex)
-		{
-			bool escaped = false;
-			char qchar, c = '\0';
-			int i = startIndex;
-
-			builder.Clear ();
-			switch (buf[startIndex]) {
-			case '\'': qchar = '\''; i++; break;
-			case '"': qchar = '"'; i++; break;
-			default: qchar = '\0'; break;
-			}
-
-			while (i < buf.Length) {
-			c = buf[i];
-
-			if (c == qchar && !escaped) {
-				// unescaped qchar means we've reached the end of the argument
-				i++;
-				break;
-			}
-
-			if (c == '\\') {
-				escaped = true;
-			} else if (escaped) {
-				builder.Append (c);
-				escaped = false;
-			} else if (qchar == '\0' && (c == ' ' || c == '\t')) {
-				break;
-			} else if (qchar == '\0' && (c == '\'' || c == '"')) {
-				string sofar = builder.ToString ();
-				string embedded;
-
-				if ((embedded = GetArgument (builder, buf, i, out endIndex, out ex)) == null)
-					return null;
-
-				i = endIndex;
-				builder.Clear ();
-				builder.Append (sofar);
-				builder.Append (embedded);
-				continue;
-			} else {
-				builder.Append (c);
-			}
-
-			i++;
-			}
-
-			if (escaped || (qchar != '\0' && c != qchar)) {
-				ex = new FormatException (escaped ? "Incomplete escape sequence." : "No matching quote found.");
-				endIndex = -1;
-				return null;
-			}
-
-			endIndex = i;
-			ex = null;
-
-			return builder.ToString ();
-		}
-
 		static bool TryParse (string commandline, out string[] argv, out Exception ex)
 		{
-			var builder = new StringBuilder ();
-			var args = new List<string> ();
-			string argument;
-			int i = 0, j;
-			char c;
-
-			while (i < commandline.Length) {
-				c = commandline[i];
-				if (c != ' ' && c != '\t') {
-					if ((argument = GetArgument (builder, commandline, i, out j, out ex)) == null) {
-						argv =  null;
-						return false;
-					}
-
-					args.Add (argument);
-					i = j;
-				}
-
-				i++;
-			}
-
-			argv = args.ToArray ();
-			ex = null;
-
-			return true;
+			return StringUtils.TryParseArguments (commandline, out argv, out ex);
 		}
 
 		public static bool TryParse (string commandline, out string[] argv)
@@ -249,6 +176,11 @@ namespace Xamarin.MacDev
 			Exception ex;
 
 			return TryParse (commandline, out argv, out ex);
+		}
+
+		public IList<string> ToList ()
+		{
+			return Parse (ToString ());
 		}
 
 		public static string[] Parse (string commandline)
@@ -260,6 +192,41 @@ namespace Xamarin.MacDev
 				throw ex;
 
 			return argv;
+		}
+
+		// Creates a response file for the given arguments, and returns the command line
+		// with the response file and any arguments that can't go into the response file.
+		public string CreateResponseFile (Task task, string responseFilePath, IList<string> nonResponseArguments)
+		{
+			// Generate a response file
+			var responseFile = Path.GetFullPath (responseFilePath);
+
+			if (File.Exists (responseFile))
+				File.Delete (responseFile);
+
+			try {
+				using (var fs = File.Create (responseFile)) {
+					using (var writer = new StreamWriter (fs))
+						writer.Write (this);
+				}
+			} catch (Exception ex) {
+				task.Log.LogWarning ("Failed to create response file '{0}': {1}", responseFile, ex);
+			}
+
+			// Some arguments can not safely go in the response file and are 
+			// added separately. They must go _after_ the response file
+			// as they may override options passed in the response file
+			var actualArgs = new CommandLineArgumentBuilder ();
+
+			actualArgs.AddQuoted ($"@{responseFile}");
+
+			if (nonResponseArguments != null) {
+				foreach (var arg in nonResponseArguments)
+					actualArgs.AddQuoted (arg);
+			}
+
+			// Generate the command line
+			return actualArgs.ToString ();
 		}
 	}
 }

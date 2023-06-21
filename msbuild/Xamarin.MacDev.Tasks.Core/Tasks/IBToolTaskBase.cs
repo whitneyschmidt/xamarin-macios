@@ -6,14 +6,14 @@ using System.Collections.Generic;
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
+using Xamarin.Utils;
 
 namespace Xamarin.MacDev.Tasks
 {
 	public abstract class IBToolTaskBase : XcodeCompilerToolTask
 	{
 		static readonly string[] WatchAppExtensions = { "-glance.plist", "-notification.plist" };
-		string minimumDeploymentTarget;
-		PDictionary plist;
 
 		#region Inputs
 
@@ -39,7 +39,11 @@ namespace Xamarin.MacDev.Tasks
 			get { return "ibtool"; }
 		}
 
-		protected abstract bool AutoActivateCustomFonts { get; }
+		protected bool AutoActivateCustomFonts {
+			get {
+				return Platform != ApplePlatform.MacOSX;
+			}
+		}
 
 		protected override bool UseCompilationDirectory {
 			get { return AppleSdkSettings.XcodeVersion >= new Version (6, 3); }
@@ -51,13 +55,12 @@ namespace Xamarin.MacDev.Tasks
 
 		protected override void AppendCommandLineArguments (IDictionary<string, string> environment, CommandLineArgumentBuilder args, ITaskItem[] items)
 		{
-			environment.Add ("IBSC_MINIMUM_COMPATIBILITY_VERSION", minimumDeploymentTarget);
-			environment.Add ("IBC_MINIMUM_COMPATIBILITY_VERSION", minimumDeploymentTarget);
+			environment.Add ("IBSC_MINIMUM_COMPATIBILITY_VERSION", MinimumOSVersion);
+			environment.Add ("IBC_MINIMUM_COMPATIBILITY_VERSION", MinimumOSVersion);
 
-			if (AppleSdkSettings.XcodeVersion.Major >= 5)
-				args.Add ("--minimum-deployment-target", minimumDeploymentTarget);
+			args.Add ("--minimum-deployment-target", MinimumOSVersion);
 			
-			foreach (var targetDevice in GetTargetDevices (plist))
+			foreach (var targetDevice in GetTargetDevices ())
 				args.Add ("--target-device", targetDevice);
 
 			if (AppleSdkSettings.XcodeVersion.Major >= 6 && AutoActivateCustomFonts)
@@ -180,7 +183,7 @@ namespace Xamarin.MacDev.Tasks
 		{
 			var mapping = new Dictionary<string, IDictionary> ();
 			var unique = new Dictionary<string, ITaskItem> ();
-			var targets = GetTargetDevices (plist).ToList ();
+			var targets = GetTargetDevices ().ToList ();
 
 			changed = false;
 
@@ -192,12 +195,12 @@ namespace Xamarin.MacDev.Tasks
 				string output;
 
 				if (!File.Exists (item.ItemSpec)) {
-					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, "The file '{0}' does not exist.", item.ItemSpec);
+					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, MSBStrings.E0158, item.ItemSpec);
 					continue;
 				}
 
 				if (unique.TryGetValue (bundleName, out duplicate)) {
-					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, "The file '{0}' conflicts with '{1}'.", item.ItemSpec, duplicate.ItemSpec);
+					Log.LogError (null, null, null, item.ItemSpec, 0, 0, 0, 0, MSBStrings.E0159, item.ItemSpec, duplicate.ItemSpec);
 					continue;
 				}
 
@@ -233,7 +236,7 @@ namespace Xamarin.MacDev.Tasks
 
 					changed = true;
 				} else {
-					Log.LogMessage (MessageImportance.Low, "Skipping `{0}' as the output file, `{1}', is newer.", item.ItemSpec, manifest.ItemSpec);
+					Log.LogMessage (MessageImportance.Low, MSBStrings.M0119, item.ItemSpec, manifest.ItemSpec);
 				}
 
 				try {
@@ -241,7 +244,7 @@ namespace Xamarin.MacDev.Tasks
 
 					LogWarningsAndErrors (dict, item);
 				} catch (Exception ex) {
-					Log.LogError ("Failed to load {0} log file `{1}`: {2}", ToolName, manifest.ItemSpec, ex.Message);
+					Log.LogError (MSBStrings.E0094, ToolName, manifest.ItemSpec, ex.Message);
 					if (File.Exists (manifest.ItemSpec))
 						Log.LogError ("ibtool log: {0}", File.ReadAllText (manifest.ItemSpec));
 					continue;
@@ -403,7 +406,7 @@ namespace Xamarin.MacDev.Tasks
 		public override bool Execute ()
 		{
 			if (IsWatchApp && AppleSdkSettings.XcodeVersion < new Version (6, 2)) {
-				Log.LogError ("Watch apps/extensions require Xcode 6.2 or later. The current Xcode version is {0}", AppleSdkSettings.XcodeVersion);
+				Log.LogError (MSBStrings.E0160, AppleSdkSettings.XcodeVersion);
 
 				return !Log.HasLoggedErrors;
 			}
@@ -415,18 +418,6 @@ namespace Xamarin.MacDev.Tasks
 			bool changed;
 
 			if (InterfaceDefinitions.Length > 0) {
-				if (AppManifest != null) {
-					plist = PDictionary.FromFile (AppManifest.ItemSpec);
-					PString value;
-
-					if (!plist.TryGetValue (MinimumDeploymentTargetKey, out value) || string.IsNullOrEmpty (value.Value))
-						minimumDeploymentTarget = SdkVersion;
-					else
-						minimumDeploymentTarget = value.Value;
-				} else {
-					minimumDeploymentTarget = SdkVersion;
-				}
-
 				Directory.CreateDirectory (ibtoolManifestDir);
 				Directory.CreateDirectory (ibtoolOutputDir);
 

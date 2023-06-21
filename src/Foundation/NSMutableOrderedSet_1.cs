@@ -1,4 +1,4 @@
-﻿//
+//
 // This file contains a generic version of NSMutableOrderedSet
 //
 // Authors:
@@ -7,15 +7,24 @@
 // Copyright 2015, Xamarin Inc.
 //
 
-#if XAMCORE_2_0
-
 using System;
 using System.Collections.Generic;
 using System.Collections;
+using System.Runtime.Versioning;
 
 using ObjCRuntime;
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 namespace Foundation {
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[Register ("NSMutableOrderedSet", SkipRegistration = true)]
 	public sealed partial class NSMutableOrderedSet<TKey> : NSMutableOrderedSet, IEnumerable<TKey>
 		where TKey : class, INativeObject {
@@ -28,7 +37,7 @@ namespace Foundation {
 		{
 		}
 
-		internal NSMutableOrderedSet (IntPtr handle) : base (handle)
+		internal NSMutableOrderedSet (NativeHandle handle) : base (handle)
 		{
 		}
 
@@ -223,7 +232,19 @@ namespace Foundation {
 			copy.MinusSet (second);
 			return copy;
 		}
+
+#if false // https://github.com/xamarin/xamarin-macios/issues/15577
+#if !NET
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+#else
+		[SupportedOSPlatform ("ios13.0"), SupportedOSPlatform ("tvos13.0"), SupportedOSPlatform ("macos10.15")]
+#endif
+		public void ApplyDifference (NSOrderedCollectionDifference<TKey> difference)
+		{
+			if (difference is null)
+				throw new ArgumentNullException (nameof (difference));
+			_ApplyDifference (difference.Handle);
+		}
+#endif
 	}
 }
-
-#endif // XAMCORE_2_0

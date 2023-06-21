@@ -7,12 +7,17 @@
 // Copyright 2018 Microsoft Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-
 using System;
 using System.Runtime.InteropServices;
+#if NET
+using Vector2 = global::System.Numerics.Vector2;
+using Vector3 = global::CoreGraphics.NVector3;
+#else
 using Vector2 = global::OpenTK.Vector2;
 using Vector3 = global::OpenTK.NVector3;
+#endif
+
+#nullable enable
 
 namespace ARKit {
 	public partial class ARPlaneGeometry {
@@ -63,5 +68,3 @@ namespace ARKit {
 		}
 	}
 }
-
-#endif

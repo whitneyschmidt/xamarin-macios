@@ -22,15 +22,24 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if XAMCORE_2_0
-
 using System;
 using System.Collections.Generic;
+using System.Runtime.Versioning;
 
 using ObjCRuntime;
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 namespace Foundation {
 
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	[Register ("NSMutableArray", SkipRegistration = true)]
 	public sealed partial class NSMutableArray<TValue> : NSMutableArray, IEnumerable<TValue>
 		where TValue : class, INativeObject
@@ -44,7 +53,7 @@ namespace Foundation {
 		{
 		}
 
-		internal NSMutableArray (IntPtr handle)
+		internal NSMutableArray (NativeHandle handle)
 			: base (handle)
 		{
 		}
@@ -166,7 +175,7 @@ namespace Foundation {
 			if (index < 0)
 				throw new IndexOutOfRangeException (nameof (index));
 
-			if ((nuint) index >= Count)
+			if ((nuint) index > Count)
 				throw new IndexOutOfRangeException (nameof (index));
 		}
 
@@ -189,7 +198,15 @@ namespace Foundation {
 			return GetEnumerator ();
 		}
 #endregion
+
+#if false // https://github.com/xamarin/xamarin-macios/issues/15577
+#if !NET
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+#else
+		[SupportedOSPlatform ("ios13.0"), SupportedOSPlatform ("tvos13.0"), SupportedOSPlatform ("macos10.15")]
+#endif
+		public void ApplyDifference (NSOrderedCollectionDifference<TValue> difference)
+			=> ApplyDifference ((NSOrderedCollectionDifference) difference);
+#endif
 	}
 }
-
-#endif // XAMCORE_2_0

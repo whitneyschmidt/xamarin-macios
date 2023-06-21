@@ -26,6 +26,9 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
+#if !NET
+
 using System;
 using System.IO;
 using System.Net;
@@ -46,7 +49,7 @@ namespace CFNetwork {
 			this.responseStream = stream;
 		}
 
-#if MONOMAC && XAMCORE_2_0
+#if MONOMAC && !NET
 		internal
 #endif
 		protected override bool TryComputeLength (out long length)
@@ -140,3 +143,4 @@ namespace CFNetwork {
 		#endregion
 	}
 }
+#endif // !NET

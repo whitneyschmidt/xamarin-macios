@@ -1,4 +1,4 @@
-﻿//
+//
 // ClockKit Enums
 //
 // Authors:
@@ -7,11 +7,14 @@
 // Copyright 2015-2016 Xamarin Inc. All rights reserved.
 //
 
+#nullable enable
+
 using System;
 using ObjCRuntime;
 
 namespace ClockKit {
 
+	[Deprecated (PlatformName.WatchOS, 9, 0, message: "Use WidgetKit instead.")]
 	[Native]
 	public enum CLKComplicationFamily : long {
 		ModularSmall,
@@ -32,6 +35,8 @@ namespace ClockKit {
 		GraphicCircular,
 		[Watch (5,0)]
 		GraphicRectangular,
+		[Watch (7,0)]
+		GraphicExtraLarge = 12,
 	}
 
 	[Native]
@@ -74,6 +79,10 @@ namespace ClockKit {
 		Timer,
 		[Watch (5,0)]
 		NaturalAbbreviated,
+		[Watch (6,0)]
+		OffsetShort,
+		[Watch (6,0)]
+		NaturalFull,
 	}
 
 	[Watch (5,0)]
@@ -83,4 +92,3 @@ namespace ClockKit {
 		Fill,
 	}
 }
-

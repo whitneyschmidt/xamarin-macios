@@ -14,9 +14,14 @@ using CoreLocation;
 using UIKit;
 using MediaPlayer;
 
+#nullable enable
+
 namespace AssetsLibrary {
 
+#if !NET
 	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Photos' API instead.")]
+	// dotnet deprecation is handled by partial class in assetslibrary.cs
+#endif
 	public partial class ALAssetsGroup {
 		public NSString Name {
 			get {
@@ -26,11 +31,7 @@ namespace AssetsLibrary {
 		
 		public ALAssetsGroupType Type {
 			get {
-#if XAMCORE_2_0
 				return (ALAssetsGroupType) (int) ((NSNumber) ValueForProperty (_Type)).NIntValue;
-#else
-				return (ALAssetsGroupType) (int) ((NSNumber) ValueForProperty (_Type)).IntValue;
-#endif
 			}
 		}
 
@@ -48,4 +49,3 @@ namespace AssetsLibrary {
 	}
 
 }
-

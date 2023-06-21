@@ -3,22 +3,47 @@ using System.IO;
 using System.Collections.Generic;
 
 using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
 
-using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
+using Xamarin.Utils;
 
 namespace Xamarin.MacDev.Tasks
 {
-	public abstract class CompileEntitlementsTaskBase : Task
+	public abstract class CompileEntitlementsTaskBase : XamarinTask
 	{
-		static readonly byte[] XcentMagic = { 0xfa, 0xde, 0x71, 0x71 };
-
 		bool warnedTeamIdentifierPrefix;
 		bool warnedAppIdentifierPrefix;
 
-		#region Inputs
+		static readonly HashSet<string> macAllowedProvisioningKeys = new HashSet<string> {
+			"com.apple.application-identifier",
+			"com.apple.developer.aps-environment",
+			"com.apple.developer.default-data-protection",
+			//"com.apple.developer.icloud-container-development-container-identifiers",
+			//"com.apple.developer.icloud-container-identifiers",
+			//"com.apple.developer.icloud-container-environment",
+			//"com.apple.developer.icloud-services",
+			"com.apple.developer.pass-type-identifiers",
+			"com.apple.developer.team-identifier",
+			//"com.apple.developer.ubiquity-container-identifiers",
+			"get-task-allow",
+		};
 
-		public string SessionId { get; set; }
+		static readonly HashSet<string> iOSAllowedProvisioningKeys = new HashSet<string> {
+			"application-identifier",
+			"aps-environment",
+			"beta-reports-active",
+			"com.apple.developer.default-data-protection",
+
+			"com.apple.developer.icloud-container-environment",
+			"com.apple.developer.icloud-container-identifiers",
+			"com.apple.developer.pass-type-identifiers",
+			"com.apple.developer.team-identifier",
+			"com.apple.developer.ubiquity-container-identifiers",
+			"get-task-allow"
+		};
+
+
+		#region Inputs
 
 		[Required]
 		public string AppBundleDir { get; set; }
@@ -29,9 +54,10 @@ namespace Xamarin.MacDev.Tasks
 		[Required]
 		public string BundleIdentifier { get; set; }
 
-		[Output]
 		[Required]
 		public ITaskItem CompiledEntitlements { get; set; }
+
+		public bool Debug { get; set; }
 
 		public string Entitlements { get; set; }
 
@@ -41,20 +67,77 @@ namespace Xamarin.MacDev.Tasks
 		public string ProvisioningProfile { get; set; }
 
 		[Required]
+		public string SdkDevPath { get; set; }
+
+		public bool SdkIsSimulator { get; set; }
+
+		[Required]
 		public string SdkPlatform { get; set; }
 
 		[Required]
 		public string SdkVersion { get; set; }
 
+		[Output]
+		public ITaskItem EntitlementsInExecutable { get; set; }
+
+		[Output]
+		public ITaskItem EntitlementsInSignature { get; set; }
+
 		#endregion
 
-		protected abstract string ApplicationIdentifierKey { get; }
+		protected string ApplicationIdentifierKey {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					return "application-identifier";
+				case ApplePlatform.MacOSX:
+				case ApplePlatform.MacCatalyst:
+					return "com.apple.application-identifier";
+				default:
+					throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, Platform));
+				}
+			}
+		}
 
-		protected abstract string DefaultEntitlementsPath { get; }
+		protected virtual string DefaultEntitlementsPath {
+			get {
+				return Path.Combine (Sdks.GetAppleSdk (TargetFrameworkMoniker).GetSdkPath (SdkVersion, false), "Entitlements.plist");
+			}
+		}
 
-		protected abstract HashSet<string> AllowedProvisioningKeys { get; }
+		protected HashSet<string> AllowedProvisioningKeys {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					return iOSAllowedProvisioningKeys;
+				case ApplePlatform.MacOSX:
+				case ApplePlatform.MacCatalyst:
+					return macAllowedProvisioningKeys;
+				default:
+					throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, Platform));
+				}
+			}
+		}
 
-		protected abstract string EntitlementBundlePath { get; }
+		protected string EntitlementBundlePath {
+			get {
+				switch (Platform) {
+				case ApplePlatform.iOS:
+				case ApplePlatform.TVOS:
+				case ApplePlatform.WatchOS:
+					return AppBundleDir;
+				case ApplePlatform.MacOSX:
+				case ApplePlatform.MacCatalyst:
+					return Path.Combine (AppBundleDir, "Contents", "Resources");
+				default:
+					throw new InvalidOperationException (string.Format (MSBStrings.InvalidPlatform, Platform));
+				}
+			}
+		}
 
 		protected virtual bool MergeProfileEntitlements {
 			get { return true; }
@@ -70,12 +153,12 @@ namespace Xamarin.MacDev.Tasks
 
 			if (profile == null) {
 				if (!warnedTeamIdentifierPrefix && pstr.Value.Contains ("$(TeamIdentifierPrefix)")) {
-					Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, "Cannot expand $(TeamIdentifierPrefix) in Entitlements.plist without a provisioning profile.");
+					Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, MSBStrings.W0108);
 					warnedTeamIdentifierPrefix = true;
 				}
 				
 				if (!warnedAppIdentifierPrefix && pstr.Value.Contains ("$(AppIdentifierPrefix)")) {
-					Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, "Cannot expand $(AppIdentifierPrefix) in Entitlements.plist without a provisioning profile.");
+					Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, MSBStrings.W0109);
 					warnedAppIdentifierPrefix = true;
 				}
 			}
@@ -187,14 +270,6 @@ namespace Xamarin.MacDev.Tasks
 			var buf = doc.ToByteArray (false);
 
 			using (var stream = new MemoryStream ()) {
-				if (AppleSdkSettings.XcodeVersion < new Version (4, 4, 1)) {
-					// write the xcent file with the magic header, length, and the plist
-					var length = Mono.DataConverter.BigEndian.GetBytes ((uint) buf.Length + 8); // 8 = magic.length + magicLen.Length
-
-					stream.Write (XcentMagic, 0, XcentMagic.Length);
-					stream.Write (length, 0, length.Length);
-				}
-
 				stream.Write (buf, 0, buf.Length);
 
 				var src = stream.ToArray ();
@@ -251,9 +326,9 @@ namespace Xamarin.MacDev.Tasks
 				    item.Key == "com.apple.developer.icloud-container-environment" ||
 				    item.Key == "com.apple.developer.icloud-services") {
 					if (profile == null)
-						Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, "iCloud entitlements such as '" + item.Key + "' require a Provisioning Profile.");
+						Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, MSBStrings.W0110, item.Key);
 					else if (!profile.Entitlements.ContainsKey (item.Key))
-						Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, "The iCloud entitlement '" + item.Key + "' is not supported by the Provisioning Profile.");
+						Log.LogWarning (null, null, null, Entitlements, 0, 0, 0, 0, MSBStrings.W0111, item.Key);
 				} else if (item.Key == ApplicationIdentifierKey) {
 					var str = value as PString;
 
@@ -273,6 +348,14 @@ namespace Xamarin.MacDev.Tasks
 
 				if (value != null)
 					entitlements[item.Key] = value;
+			}
+
+			switch (Platform) {
+			case ApplePlatform.MacOSX:
+			case ApplePlatform.MacCatalyst:
+				if (Debug && entitlements.TryGetValue ("com.apple.security.app-sandbox", out PBoolean sandbox) && sandbox.Value)
+					entitlements ["com.apple.security.network.client"] = new PBoolean (true);
+				break;
 			}
 
 			return entitlements;
@@ -311,7 +394,6 @@ namespace Xamarin.MacDev.Tasks
 			PDictionary compiled;
 			PDictionary archived;
 			string path;
-			bool save;
 
 			switch (SdkPlatform) {
 			case "AppleTVSimulator":
@@ -327,14 +409,17 @@ namespace Xamarin.MacDev.Tasks
 			case "MacOSX":
 				platform = MobileProvisionPlatform.MacOS;
 				break;
+			case "MacCatalyst":
+				platform = MobileProvisionPlatform.MacOS;
+				break;
 			default:
-				Log.LogError ("Unknown SDK platform: {0}", SdkPlatform);
+				Log.LogError (MSBStrings.E0048, SdkPlatform);
 				return false;
 			}
 
 			if (!string.IsNullOrEmpty (ProvisioningProfile)) {
 				if ((profile = GetMobileProvision (platform, ProvisioningProfile)) == null) {
-					Log.LogError ("Could not locate the provisioning profile with a Name or UUID of {0}.", ProvisioningProfile);
+					Log.LogError (MSBStrings.E0049, ProvisioningProfile);
 					return false;
 				}
 			} else {
@@ -343,7 +428,7 @@ namespace Xamarin.MacDev.Tasks
 
 			if (!string.IsNullOrEmpty (Entitlements)) {
 				if (!File.Exists (Entitlements)) {
-					Log.LogError ("Entitlements.plist template '{0}' not found.", Entitlements);
+					Log.LogError (MSBStrings.E0112, Entitlements);
 					return false;
 				}
 
@@ -355,7 +440,7 @@ namespace Xamarin.MacDev.Tasks
 			try {
 				template = PDictionary.FromFile (path);
 			} catch (Exception ex) {
-				Log.LogError ("Error loading Entitlements.plist template '{0}': {1}", path, ex.Message);
+				Log.LogError (MSBStrings.E0113, path, ex.Message);
 				return false;
 			}
 
@@ -366,32 +451,51 @@ namespace Xamarin.MacDev.Tasks
 				Directory.CreateDirectory (Path.GetDirectoryName (CompiledEntitlements.ItemSpec));
 				WriteXcent (compiled, CompiledEntitlements.ItemSpec);
 			} catch (Exception ex) {
-				Log.LogError ("Error writing xcent file '{0}': {1}", CompiledEntitlements, ex.Message);
+				Log.LogError (MSBStrings.E0114, CompiledEntitlements, ex.Message);
 				return false;
 			}
 
-			path = Path.Combine (EntitlementBundlePath, "archived-expanded-entitlements.xcent");
+			SaveArchivedExpandedEntitlements (archived);
+
+			if (Platform == Utils.ApplePlatform.MacCatalyst) {
+				EntitlementsInSignature = CompiledEntitlements;
+			} else if (SdkIsSimulator) {
+				if (compiled.Count > 0) {
+					EntitlementsInExecutable = CompiledEntitlements;
+				}
+			} else {
+				EntitlementsInSignature = CompiledEntitlements;
+			}
+
+			return !Log.HasLoggedErrors;
+		}
+
+		bool SaveArchivedExpandedEntitlements (PDictionary archived)
+		{
+			if (Platform == Utils.ApplePlatform.MacCatalyst) {
+				// I'm not sure if we need this in catalyst or not, but skip it until it's proven we actually need it.
+				return true;
+			}
+
+			var path = Path.Combine (EntitlementBundlePath, "archived-expanded-entitlements.xcent");
 
 			if (File.Exists (path)) {
 				var plist = PDictionary.FromFile (path);
 				var src = archived.ToXml ();
 				var dest = plist.ToXml ();
 
-				save = src != dest;
-			} else {
-				save = true;
+				if (src == dest)
+					return true;
 			}
 
-			if (save) {
-				try {
-					archived.Save (path, true);
-				} catch (Exception ex) {
-					Log.LogError ("Error writing archived-expanded-entitlements.xcent file: {0}", ex.Message);
-					return false;
-				}
+			try {
+				archived.Save (path, true);
+			} catch (Exception ex) {
+				Log.LogError (MSBStrings.E0115, ex.Message);
+				return false;
 			}
 
-			return !Log.HasLoggedErrors;
+			return true;
 		}
 	}
 }

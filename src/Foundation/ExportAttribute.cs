@@ -30,12 +30,7 @@
 //
 using System;
 using System.Globalization;
-#if BGENERATOR
-using IKVM.Reflection;
-using Type = IKVM.Reflection.Type;
-#else
 using System.Reflection;
-#endif
 using ObjCRuntime;
 using Registrar;
 
@@ -46,12 +41,7 @@ namespace Foundation {
 		string selector;
 		ArgumentSemantic semantic;
 
-#if XAMCORE_2_0 || MTOUCH || MMP
 		protected ExportAttribute () {}
-#else
-		[Obsolete ("Every exported selector must include a name")]
-		public ExportAttribute () {}
-#endif
 
 		public ExportAttribute(string selector) {
 			this.selector = selector;

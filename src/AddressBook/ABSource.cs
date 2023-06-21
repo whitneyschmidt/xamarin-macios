@@ -27,6 +27,8 @@
 //
 //
 
+#nullable enable
+
 #if !MONOMAC
 
 using System;
@@ -36,41 +38,40 @@ using CoreFoundation;
 using Foundation;
 using ObjCRuntime;
 
-namespace AddressBook {
-	
-	// note: not a true flag
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	public enum ABSourceType : int /* typedef int */ {
-		Local		= 0x0,
-		Exchange	= 0x1,
-		ExchangeGAL	= Exchange | SearchableMask,
-		MobileMe	= 0x2,
-		LDAP		= 0x3 | SearchableMask,
-		CardDAV		= 0x4,
-		DAVSearch	= CardDAV | SearchableMask,
-
-		SearchableMask = 0x01000000
-	};	
-	
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	public class ABSource : ABRecord {
-#if !XAMCORE_2_0
-		[Advice ("Use ABSourceType.SearchableMask")]
-		public const int SearchableMask = 0x01000000;
+#if !NET
+using NativeHandle = System.IntPtr;
 #endif
 
-		internal ABSource (IntPtr handle, bool owns)
+namespace AddressBook {
+	
+#if NET
+	[SupportedOSPlatform ("maccatalyst14.0")]
+	[UnsupportedOSPlatform ("maccatalyst14.0")]
+	[UnsupportedOSPlatform ("ios9.0")]
+#if __MACCATALYST__
+	[Obsolete ("Starting with maccatalyst14.0 use the 'Contacts' API instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+#elif IOS
+	[Obsolete ("Starting with ios9.0 use the 'Contacts' API instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+#endif
+#else
+	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[Deprecated (PlatformName.MacCatalyst, 14, 0, message : "Use the 'Contacts' API instead.")]
+#endif
+	public class ABSource : ABRecord {
+		[Preserve (Conditional = true)]
+		internal ABSource (NativeHandle handle, bool owns)
 			: base (handle, owns)
 		{
 		}
 		
-		internal ABSource (IntPtr handle, ABAddressBook addressbook)
+		internal ABSource (NativeHandle handle, ABAddressBook addressbook)
 			: base (handle, false)
 		{
 			AddressBook = addressbook;
 		}
 		
-		public string Name {
+		public string? Name {
 			get { return PropertyToString (ABSourcePropertyId.Name); }
 			set { SetValue (ABSourcePropertyId.Name, value); }
 		}
@@ -82,13 +83,15 @@ namespace AddressBook {
 		}
 	}
 
+#if NET
+	[UnsupportedOSPlatform ("ios9.0")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#if IOS
+	[Obsolete ("Starting with ios9.0 use the 'Contacts' API instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+#endif
+#else
 	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	public enum ABSourceProperty {
-		Name,
-		Type,
-	}
-	
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
+#endif
 	static class ABSourcePropertyId {
 
 		public static int Name { get; private set;}

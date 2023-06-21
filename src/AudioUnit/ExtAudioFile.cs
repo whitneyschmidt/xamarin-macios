@@ -29,6 +29,8 @@
 //
 //
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -38,6 +40,7 @@ using ObjCRuntime;
 using CoreFoundation;
 using AudioToolbox;
 using Foundation;
+using System.Runtime.Versioning;
 
 namespace AudioUnit
 {
@@ -67,6 +70,12 @@ namespace AudioUnit
 		TooManyFilesOpenError         = -42,
 	}
 
+#if NET
+    [SupportedOSPlatform ("ios")]
+    [SupportedOSPlatform ("maccatalyst")]
+    [SupportedOSPlatform ("macos")]
+    [SupportedOSPlatform ("tvos")]
+#endif
     public class ExtAudioFile : IDisposable
     {
         IntPtr _extAudioFile;
@@ -106,7 +115,7 @@ namespace AudioUnit
             }
         }
 
-        public AudioConverter AudioConverter {
+        public AudioConverter? AudioConverter {
             get {
                 uint size = sizeof (uint);
                 IntPtr value;
@@ -185,39 +194,39 @@ namespace AudioUnit
 		// to the actual error code from the native API and we are not allowed to make Breaking Changes
 		// lets reimplement the method in a way to return the actual native value if any
 		// also we can share the underliying implementation so we so not break api and reduce code suplication
-		public static ExtAudioFile OpenUrl (NSUrl url, out ExtAudioFileError error)
+		public static ExtAudioFile? OpenUrl (NSUrl url, out ExtAudioFileError error)
 		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
 			return OpenUrl (url.Handle, out error);
 		}
 
-		public static ExtAudioFile OpenUrl (CFUrl url, out ExtAudioFileError error)
+		public static ExtAudioFile? OpenUrl (CFUrl url, out ExtAudioFileError error)
 		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
 			return OpenUrl (url.Handle, out error);
 		}
 
         public static ExtAudioFile OpenUrl (CFUrl url)
         {
-            if (url == null)
-                throw new ArgumentNullException ("url");
+            if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
 			ExtAudioFileError err;
 			var audioFile = OpenUrl (url.Handle, out err);
 
 			if (err != ExtAudioFileError.OK) // if (err != 0)  <- to keep old implementation
 				throw new ArgumentException (String.Format ("Error code:{0}", err));
-			if (audioFile == null) // if (ptr == IntPtr.Zero)  <- to keep old implementation
+			if (audioFile is null) // if (ptr == IntPtr.Zero)  <- to keep old implementation
 				throw new InvalidOperationException ("Can not get object instance");
 
 			return audioFile;
         }
 
-		static ExtAudioFile OpenUrl (IntPtr urlHandle, out ExtAudioFileError error)
+		static ExtAudioFile? OpenUrl (IntPtr urlHandle, out ExtAudioFileError error)
 		{
 			IntPtr ptr;
 			error = ExtAudioFileOpenUrl (urlHandle, out ptr);
@@ -232,18 +241,18 @@ namespace AudioUnit
 		// to the actual error code from the native API and we are not allowed to make Breaking Changes
 		// lets reimplement the method in a way to return the actual native value if any
 		// also we can share the underliying implementation so we so not break api and reduce code suplication
-		public static ExtAudioFile CreateWithUrl (NSUrl url, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags fileFlags, out ExtAudioFileError error)
+		public static ExtAudioFile? CreateWithUrl (NSUrl url, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags fileFlags, out ExtAudioFileError error)
 		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
 			return CreateWithUrl (url.Handle, fileType, inStreamDesc, fileFlags, out error);
 		}
 
-		public static ExtAudioFile CreateWithUrl (CFUrl url, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags flag,	out ExtAudioFileError error)
+		public static ExtAudioFile? CreateWithUrl (CFUrl url, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags flag,	out ExtAudioFileError error)
 		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
 			return CreateWithUrl (url.Handle, fileType, inStreamDesc, flag, out error);
 		}
@@ -254,21 +263,21 @@ namespace AudioUnit
             //AudioChannelLayout channelLayout, 
             AudioFileFlags flag)
         {             
-            if (url == null)
-                throw new ArgumentNullException ("url");
+            if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
             ExtAudioFileError err;
 			var audioFile = CreateWithUrl (url.Handle, fileType, inStreamDesc, flag, out err);
 
 			if (err != ExtAudioFileError.OK) // if (err != 0)  <- to keep old implementation
 				throw new ArgumentException (String.Format ("Error code:{0}", err));
-			if (audioFile == null) // if (ptr == IntPtr.Zero)  <- to keep old implementation
+			if (audioFile is null) // if (ptr == IntPtr.Zero)  <- to keep old implementation
 				throw new InvalidOperationException ("Can not get object instance");
 
 			return audioFile;
         }
 
-		static ExtAudioFile CreateWithUrl (IntPtr urlHandle, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags flag, out ExtAudioFileError error)
+		static ExtAudioFile? CreateWithUrl (IntPtr urlHandle, AudioFileType fileType, AudioStreamBasicDescription inStreamDesc, AudioFileFlags flag, out ExtAudioFileError error)
 		{
 			IntPtr ptr;
 			error = (ExtAudioFileError) ExtAudioFileCreateWithUrl (urlHandle, fileType, ref inStreamDesc, IntPtr.Zero, (uint)flag, out ptr);
@@ -278,7 +287,7 @@ namespace AudioUnit
 				return new ExtAudioFile (ptr);
 		}
 
-        public static ExtAudioFileError WrapAudioFileID (IntPtr audioFileID, bool forWriting, out ExtAudioFile outAudioFile)
+        public static ExtAudioFileError WrapAudioFileID (IntPtr audioFileID, bool forWriting, out ExtAudioFile? outAudioFile)
         {
             IntPtr ptr;
             ExtAudioFileError res;
@@ -316,56 +325,27 @@ namespace AudioUnit
             return frame;
         }
 
-#if !XAMCORE_2_0
-        [Obsolete ("Use overload with 'AudioBuffers'.")]
-        public int Read(int numberFrames, AudioBufferList data)
-        {
-            if (data == null)
-                throw new ArgumentNullException ("data");
-
-            int err = ExtAudioFileRead(_extAudioFile, ref numberFrames, data);
-            if (err != 0)
-            {
-                throw new ArgumentException(String.Format("Error code:{0}", err));
-            }
-
-            return numberFrames;
-        }
-#endif
-
         public uint Read (uint numberFrames, AudioBuffers audioBufferList, out ExtAudioFileError status)
         {
-            if (audioBufferList == null)
-                throw new ArgumentNullException ("audioBufferList");
+            if (audioBufferList is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioBufferList));
 
             status = ExtAudioFileRead (_extAudioFile, ref numberFrames, (IntPtr) audioBufferList);
             return numberFrames;
         }
 
-#if !XAMCORE_2_0
-        [Obsolete ("Use overload with 'AudioBuffers'.")]
-        public void WriteAsync(int numberFrames, AudioBufferList data)
-        {
-            int err = ExtAudioFileWriteAsync(_extAudioFile, numberFrames, data);
-            
-            if (err != 0) {
-                throw new ArgumentException(String.Format("Error code:{0}", err));
-            }        
-        }
-#endif
-
         public ExtAudioFileError WriteAsync (uint numberFrames, AudioBuffers audioBufferList)
         {
-            if (audioBufferList == null)
-                throw new ArgumentNullException ("audioBufferList");
+            if (audioBufferList is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioBufferList));
 
             return ExtAudioFileWriteAsync (_extAudioFile, numberFrames, (IntPtr) audioBufferList);
         }
 
         public ExtAudioFileError Write (uint numberFrames, AudioBuffers audioBufferList)
         {
-            if (audioBufferList == null)
-                throw new ArgumentNullException ("audioBufferList");
+            if (audioBufferList is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioBufferList));
 
             return ExtAudioFileWrite (_extAudioFile, numberFrames, (IntPtr) audioBufferList);
         }
@@ -392,43 +372,31 @@ namespace AudioUnit
         }
 
         #region Interop
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileOpenURL")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileOpenURL")]
         static extern ExtAudioFileError ExtAudioFileOpenUrl (IntPtr inUrl, out IntPtr outExtAudioFile);
 
         [DllImport (Constants.AudioToolboxLibrary)]
-        static extern ExtAudioFileError ExtAudioFileWrapAudioFileID (IntPtr inFileID, bool inForWriting, IntPtr outExtAudioFile);    
+        static extern ExtAudioFileError ExtAudioFileWrapAudioFileID (IntPtr inFileID, [MarshalAs (UnmanagedType.I1)] bool inForWriting, IntPtr outExtAudioFile);    
 
-#if !XAMCORE_2_0
-        [Obsolete]
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileRead")]
-        static extern int ExtAudioFileRead(IntPtr inExtAudioFile, ref int /* UInt32* */ ioNumberFrames, AudioBufferList ioData);
-#endif
-
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileRead (IntPtr inExtAudioFile, ref uint /* UInt32* */ ioNumberFrames, IntPtr ioData);
 
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileWrite (IntPtr inExtAudioFile, uint /* UInt32 */ inNumberFrames, IntPtr ioData);                 
 
-#if !XAMCORE_2_0
-        [Obsolete]
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileWriteAsync")]
-		static extern int /* OSStatus */ ExtAudioFileWriteAsync(IntPtr inExtAudioFile, int /* UInt32 */ inNumberFrames, AudioBufferList ioData);
-#endif
-
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileWriteAsync(IntPtr inExtAudioFile, uint /* UInt32 */ inNumberFrames, IntPtr ioData);
 
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileDispose")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileDispose")]
 		static extern int /* OSStatus */ ExtAudioFileDispose(IntPtr inExtAudioFile);
 
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileSeek")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileSeek")]
 		static extern int /* OSStatus */ ExtAudioFileSeek(IntPtr inExtAudioFile, long /* SInt64 */ inFrameOffset);
         
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileTell")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileTell")]
 		static extern int /* OSStatus */ ExtAudioFileTell(IntPtr inExtAudioFile, ref long /* SInt64* */ outFrameOffset);
         
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileCreateWithURL")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileCreateWithURL")]
 		static extern int /* OSStatus */ ExtAudioFileCreateWithUrl(IntPtr inURL,
             [MarshalAs(UnmanagedType.U4)] AudioFileType inFileType,
             ref AudioStreamBasicDescription inStreamDesc,
@@ -436,33 +404,33 @@ namespace AudioUnit
             UInt32 /* UInt32 */ flags,
             out IntPtr outExtAudioFile);
         
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileGetProperty")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileGetProperty")]
         static extern int ExtAudioFileGetProperty(
             IntPtr inExtAudioFile, 
             PropertyIDType inPropertyID,
 			ref uint /* UInt32* */ ioPropertyDataSize,
             IntPtr outPropertyData);
         
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileGetProperty")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileGetProperty")]
         static extern int ExtAudioFileGetProperty(
             IntPtr inExtAudioFile,
             PropertyIDType inPropertyID,
 			ref uint /* UInt32* */ ioPropertyDataSize,
             ref AudioStreamBasicDescription outPropertyData);
         
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileGetProperty (IntPtr inExtAudioFile, PropertyIDType inPropertyID, ref uint /* UInt32* */ ioPropertyDataSize, out IntPtr outPropertyData);
 
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileGetProperty (IntPtr inExtAudioFile, PropertyIDType inPropertyID, ref uint /* UInt32* */ ioPropertyDataSize, out long outPropertyData);
 
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileGetProperty (IntPtr inExtAudioFile, PropertyIDType inPropertyID, ref uint /* UInt32* */ ioPropertyDataSize, out uint outPropertyData);
 
-        [DllImport(Constants.AudioToolboxLibrary)]
+        [DllImport (Constants.AudioToolboxLibrary)]
 		static extern ExtAudioFileError ExtAudioFileSetProperty (IntPtr inExtAudioFile, PropertyIDType inPropertyID, int /* UInt32 */ ioPropertyDataSize, IntPtr outPropertyData);
 
-        [DllImport(Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileSetProperty")]
+        [DllImport (Constants.AudioToolboxLibrary, EntryPoint = "ExtAudioFileSetProperty")]
         static extern int ExtAudioFileSetProperty(
             IntPtr inExtAudioFile,
             PropertyIDType inPropertyID,
