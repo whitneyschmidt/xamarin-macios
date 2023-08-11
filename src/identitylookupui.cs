@@ -1,13 +1,12 @@
-﻿//
+//
 // IdentityLookupUI C# bindings
 //
 // Authors:
 //	Alex Soto  <alexsoto@microsoft.com>
 //
-// Copyright 2018 Microsoft Corporation.
+// Copyright 2018-2019 Microsoft Corporation.
 //
 
-#if XAMCORE_2_0
 using System;
 using Foundation;
 using ObjCRuntime;
@@ -16,7 +15,8 @@ using IdentityLookup;
 
 namespace IdentityLookupUI {
 
-	[iOS (12,0)]
+	[iOS (12, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSExtensionContext))]
 	interface ILClassificationUIExtensionContext {
 
@@ -24,7 +24,8 @@ namespace IdentityLookupUI {
 		bool ReadyForClassificationResponse { [Bind ("isReadyForClassificationResponse")] get; set; }
 	}
 
-	[iOS (12,0)]
+	[iOS (12, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (UIViewController))]
 	interface ILClassificationUIExtensionViewController {
 
@@ -38,4 +39,3 @@ namespace IdentityLookupUI {
 		ILClassificationResponse GetClassificationResponse (ILClassificationRequest request);
 	}
 }
-#endif

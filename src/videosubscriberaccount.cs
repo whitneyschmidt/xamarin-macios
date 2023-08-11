@@ -5,7 +5,7 @@
 //	Alex Soto  <alex.soto@xamarin.com>
 //
 // Copyright 2016 Xamarin Inc. All rights reserved.
-// Copyright 2018 Microsoft Corporation.
+// Copyright 2018-2019 Microsoft Corporation.
 //
 
 using System;
@@ -17,13 +17,18 @@ using UIViewController = AppKit.NSViewController;
 using UIKit;
 #endif
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 namespace VideoSubscriberAccount {
 
 	[Native]
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[ErrorDomain ("VSErrorDomain")]
 	public enum VSErrorCode : long {
 		AccessNotGranted = 0,
@@ -31,14 +36,17 @@ namespace VideoSubscriberAccount {
 		UserCancelled = 2,
 		ServiceTemporarilyUnavailable = 3,
 		ProviderRejected = 4,
-		InvalidVerificationToken = 5
+		InvalidVerificationToken = 5,
+		Rejected = 6,
+		Unsupported = 7,
 	}
 
 	[Native]
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	public enum VSAccountAccessStatus : long {
 		NotDetermined = 0,
 		Restricted = 1,
@@ -46,10 +54,41 @@ namespace VideoSubscriberAccount {
 		Granted = 3
 	}
 
+	[TV (16, 0), Mac (13, 0), iOS (16, 0), NoMacCatalyst]
+	[Native]
+	enum VSUserAccountQueryOption : ulong {
+		None = 0,
+		AllDevices,
+	}
+
+	[TV (16, 0), NoMacCatalyst, iOS (16, 0), Mac (13, 0)]
+	[Flags]
+	[Native]
+	public enum VSUserAccountQueryOptions : long {
+		None = 0x0,
+		AllDevices,
+	}
+
+	[TV (16, 0), NoMacCatalyst, iOS (16, 0), Mac (13, 0)]
+	[Native]
+	public enum VSUserAccountType : long {
+		Free,
+		Paid,
+	}
+
+	[TV (16, 0), NoMacCatalyst, iOS (16, 0), Mac (13, 0)]
+	[Native]
+	public enum VSOriginatingDeviceCategory : long {
+		Mobile,
+		Other,
+	}
+
+
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[Static]
 	[Internal]
 	interface VSErrorInfoKeys {
@@ -63,14 +102,16 @@ namespace VideoSubscriberAccount {
 		[Field ("VSErrorInfoKeyUnsupportedProviderIdentifier")]
 		NSString UnsupportedProviderIdentifierKey { get; }
 
-		[TV (10,1)][iOS (10,2)]
+		[TV (10, 1)]
+		[iOS (10, 2)]
 		[Field ("VSErrorInfoKeyAccountProviderResponse")]
 		NSString AccountProviderResponseKey { get; }
 	}
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	[Unavailable (PlatformName.WatchOS)]
 	[StrongDictionary ("VSErrorInfoKeys")]
 	interface VSErrorInfo {
@@ -81,7 +122,8 @@ namespace VideoSubscriberAccount {
 
 		string UnsupportedProviderIdentifier { get; }
 
-		[TV (10,1)][iOS (10,2)]
+		[TV (10, 1)]
+		[iOS (10, 2)]
 		string AccountProviderResponse { get; }
 	}
 
@@ -90,28 +132,41 @@ namespace VideoSubscriberAccount {
 	[Protocol, Model]
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSAccountManagerDelegate {
 
 		[Abstract]
+#if NET
+		[NoMac]
+#elif MONOMAC
+		[Obsoleted (PlatformName.MacOSX, 12,0, message: "Unavailable on macOS, will be removed in the future.")]
+#endif
 		[Export ("accountManager:presentViewController:")]
 		void PresentViewController (VSAccountManager accountManager, UIViewController viewController);
 
 		[Abstract]
+#if NET
+		[NoMac]
+#elif MONOMAC
+		[Obsoleted (PlatformName.MacOSX, 12,0, message: "Unavailable on macOS, will be removed in the future.")]
+#endif
 		[Export ("accountManager:dismissViewController:")]
 		void DismissViewController (VSAccountManager accountManager, UIViewController viewController);
 
-		[iOS (11,0)][TV (11,0)]
+		[iOS (11, 0)]
+		[TV (11, 0)]
 		[Export ("accountManager:shouldAuthenticateAccountProviderWithIdentifier:")]
 		bool ShouldAuthenticateAccountProvider (VSAccountManager accountManager, string accountProviderIdentifier);
 	}
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSAccountManager {
 
@@ -127,14 +182,21 @@ namespace VideoSubscriberAccount {
 		[Async]
 		[Export ("enqueueAccountMetadataRequest:completionHandler:")]
 		VSAccountManagerResult Enqueue (VSAccountMetadataRequest accountMetadataRequest, Action<VSAccountMetadata, NSError> completionHandler);
+
+		[NoMac]
+		[TV (13, 0)]
+		[iOS (13, 0)]
+		[Field ("VSOpenTVProviderSettingsURLString")]
+		NSString OpenTVProviderSettingsUrl { get; }
 	}
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
 	[Static]
 	[Internal]
+	[NoMacCatalyst]
 	interface VSCheckAccessOptionKeys {
 
 		[Field ("VSCheckAccessOptionPrompt")]
@@ -143,8 +205,9 @@ namespace VideoSubscriberAccount {
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[StrongDictionary ("VSCheckAccessOptionKeys")]
 	interface VSAccountManagerAccessOptions {
 
@@ -154,8 +217,9 @@ namespace VideoSubscriberAccount {
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface VSAccountManagerResult {
@@ -166,8 +230,9 @@ namespace VideoSubscriberAccount {
 
 	[iOS (10, 0)]
 	[TV (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSAccountMetadata {
 
@@ -183,15 +248,17 @@ namespace VideoSubscriberAccount {
 		[NullAllowed, Export ("SAMLAttributeQueryResponse")]
 		string SamlAttributeQueryResponse { get; }
 
-		[TV (10,1)][iOS (10,2)]
+		[TV (10, 1)]
+		[iOS (10, 2)]
 		[NullAllowed, Export ("accountProviderResponse", ArgumentSemantic.Strong)]
 		VSAccountProviderResponse AccountProviderResponse { get; }
 	}
 
 	[iOS (10, 0)]
-	[Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
 	[TV (10, 0)]
 	[Unavailable (PlatformName.WatchOS)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSAccountMetadataRequest {
 
@@ -201,9 +268,10 @@ namespace VideoSubscriberAccount {
 		[Export ("supportedAccountProviderIdentifiers", ArgumentSemantic.Copy)]
 		string [] SupportedAccountProviderIdentifiers { get; set; }
 
-		[TV (11,0)][iOS (11,0)]
+		[TV (11, 0)]
+		[iOS (11, 0)]
 		[Export ("featuredAccountProviderIdentifiers", ArgumentSemantic.Copy)]
-		string[] FeaturedAccountProviderIdentifiers { get; set; }
+		string [] FeaturedAccountProviderIdentifiers { get; set; }
 
 		[NullAllowed, Export ("verificationToken")]
 		string VerificationToken { get; set; }
@@ -227,14 +295,26 @@ namespace VideoSubscriberAccount {
 		string [] AttributeNames { get; set; }
 
 		[Protected]
-		[TV (10,1)][iOS (10,2)]
+		[TV (10, 1)]
+		[iOS (10, 2)]
 		[Export ("supportedAuthenticationSchemes", ArgumentSemantic.Copy)]
-		NSString[] SupportedAuthenticationSchemesString { get; set; }
+		NSString [] SupportedAuthenticationSchemesString { get; set; }
+
+		[iOS (13, 0)]
+		[TV (13, 0)]
+		[Mac (10, 15)]
+		[NullAllowed, Export ("accountProviderAuthenticationToken")]
+		string AccountProviderAuthenticationToken { get; set; }
+
+		[TV (14, 2), iOS (14, 2), Mac (11, 0)]
+		[NullAllowed, Export ("applicationAccountProviders", ArgumentSemantic.Copy)]
+		VSAccountApplicationProvider [] ApplicationAccountProviders { get; set; }
 	}
 
-	[iOS (10,2)]
-	[TV (10,1)]
-	[Mac (10,14, onlyOn64: true)]
+	[iOS (10, 2)]
+	[TV (10, 1)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSAccountProviderResponse {
 
@@ -252,16 +332,25 @@ namespace VideoSubscriberAccount {
 		string Body { get; }
 	}
 
-	[iOS (10,2)]
-	[TV (10,1)]
-	[Mac (10,14, onlyOn64: true)]
+	[iOS (10, 2)]
+	[TV (10, 1)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	enum VSAccountProviderAuthenticationScheme {
 		[Field ("VSAccountProviderAuthenticationSchemeSAML")]
 		Saml,
+
+		[iOS (13, 0)]
+		[TV (13, 0)]
+		[Mac (10, 15)]
+		[Field ("VSAccountProviderAuthenticationSchemeAPI")]
+		Api,
 	}
 
-	[TV (11,0)][iOS (11,0)]
-	[Mac (10,14, onlyOn64: true)]
+	[TV (11, 0)]
+	[iOS (11, 0)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	[Native]
 	public enum VSSubscriptionAccessLevel : long {
 		Unknown,
@@ -269,26 +358,32 @@ namespace VideoSubscriberAccount {
 		Paid,
 	}
 
-	[TV (11,0)][iOS (11,0)]
-	[Mac (10,14, onlyOn64: true)]
+	[TV (11, 0)]
+	[iOS (11, 0)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	interface VSSubscription {
+		[NullAllowed] // null_resettable
 		[Export ("expirationDate", ArgumentSemantic.Copy)]
 		NSDate ExpirationDate { get; set; }
 
 		[Export ("accessLevel", ArgumentSemantic.Assign)]
 		VSSubscriptionAccessLevel AccessLevel { get; set; }
 
+		[NullAllowed] // null_resettable
 		[Export ("tierIdentifiers", ArgumentSemantic.Copy)]
-		string[] TierIdentifiers { get; set; }
+		string [] TierIdentifiers { get; set; }
 
-		[TV (11,3), iOS (11,3)]
+		[TV (11, 3), iOS (11, 3)]
 		[NullAllowed, Export ("billingIdentifier")]
 		string BillingIdentifier { get; set; }
 	}
 
-	[TV (11,0)][iOS (11,0)]
-	[Mac (10,14, onlyOn64: true)]
+	[TV (11, 0)]
+	[iOS (11, 0)]
+	[Mac (10, 14)]
+	[NoMacCatalyst]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface VSSubscriptionRegistrationCenter {
@@ -299,5 +394,89 @@ namespace VideoSubscriberAccount {
 		[Export ("setCurrentSubscription:")]
 		void SetCurrentSubscription ([NullAllowed] VSSubscription currentSubscription);
 	}
-}
 
+	[TV (14, 2), iOS (14, 2), Mac (11, 0)]
+	[NoMacCatalyst]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface VSAccountApplicationProvider {
+
+		[Export ("initWithLocalizedDisplayName:identifier:")]
+		NativeHandle Constructor (string localizedDisplayName, string identifier);
+
+		[Export ("localizedDisplayName")]
+		string LocalizedDisplayName { get; }
+
+		[Export ("identifier")]
+		string Identifier { get; }
+	}
+
+	[TV (16, 0), NoMacCatalyst, iOS (16, 0), Mac (13, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface VSUserAccountManager {
+		[Static]
+		[Export ("sharedUserAccountManager")]
+		VSUserAccountManager SharedUserAccountManager { get; }
+
+		[Async]
+		[Export ("updateUserAccount:completion:")]
+		void UpdateUserAccount (VSUserAccount account, [NullAllowed] Action<NSError> completion);
+
+		[Async]
+		[Export ("queryUserAccountsWithOptions:completion:")]
+		void QueryUserAccounts (VSUserAccountQueryOptions options, Action<NSArray<VSUserAccount>, NSError> completion);
+	}
+
+	[TV (16, 0), NoMacCatalyst, iOS (16, 0), Mac (13, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface VSUserAccount {
+		[NullAllowed, Export ("updateURL", ArgumentSemantic.Copy)]
+		NSUrl UpdateUrl { get; set; }
+
+		[Export ("requiresSystemTrust")]
+		bool RequiresSystemTrust { get; set; }
+
+		[NullAllowed, Export ("accountProviderIdentifier", ArgumentSemantic.Strong)]
+		string AccountProviderIdentifier { get; set; }
+
+		[NullAllowed, Export ("identifier")]
+		string Identifier { get; set; }
+
+		[Export ("accountType", ArgumentSemantic.Assign)]
+		VSUserAccountType AccountType { get; set; }
+
+		[Obsoleted (PlatformName.iOS, 16, 4, message: Constants.ApiRemovedGeneral)]
+		[Obsoleted (PlatformName.TvOS, 16, 4, message: Constants.ApiRemovedGeneral)]
+		[Obsoleted (PlatformName.MacOSX, 13, 3, message: Constants.ApiRemovedGeneral)]
+		[Export ("deleted")]
+		bool Deleted { [Bind ("isDeleted")] get; set; }
+
+		[TV (16, 4), NoMacCatalyst, iOS (16, 4), Mac (13, 3)]
+		[Export ("signedOut")]
+		bool SignedOut { [Bind ("isSignedOut")] get; set; }
+
+		[NullAllowed, Export ("subscriptionBillingCycleEndDate", ArgumentSemantic.Copy)]
+		NSDate SubscriptionBillingCycleEndDate { get; set; }
+
+		[NullAllowed, Export ("tierIdentifiers", ArgumentSemantic.Copy)]
+		string [] TierIdentifiers { get; set; }
+
+		[NullAllowed, Export ("billingIdentifier")]
+		string BillingIdentifier { get; set; }
+
+		[NullAllowed, Export ("authenticationData")]
+		string AuthenticationData { get; set; }
+
+		[Export ("fromCurrentDevice")]
+		bool FromCurrentDevice { [Bind ("isFromCurrentDevice")] get; }
+
+		[Export ("deviceCategory")]
+		VSOriginatingDeviceCategory DeviceCategory { get; }
+
+		[Export ("initWithAccountType:updateURL:")]
+		NativeHandle Constructor (VSUserAccountType accountType, [NullAllowed] NSUrl url);
+	}
+
+}

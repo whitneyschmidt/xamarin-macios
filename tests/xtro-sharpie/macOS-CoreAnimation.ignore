@@ -1,20 +1,9 @@
-## OpenGL is deprecated in 10.14
-!missing-selector! +CARenderer::rendererWithCGLContext:options: not bound
-
 ## others
 
 !missing-protocol! CALayoutManager not bound
 !missing-protocol-conformance! CAConstraintLayoutManager should conform to CALayoutManager
 !missing-selector! +CALayer::layerWithRemoteClientId: not bound
 !missing-selector! CAConstraint::offset not bound
-!missing-selector! CAMetalLayer::colorspace not bound
-!missing-selector! CAMetalLayer::setColorspace: not bound
-!missing-selector! CAMetalLayer::setWantsExtendedDynamicRangeContent: not bound
-!missing-selector! CAMetalLayer::wantsExtendedDynamicRangeContent not bound
-!missing-selector! CAOpenGLLayer::colorspace not bound
-!missing-selector! CAOpenGLLayer::setColorspace: not bound
-!missing-selector! CAOpenGLLayer::setWantsExtendedDynamicRangeContent: not bound
-!missing-selector! CAOpenGLLayer::wantsExtendedDynamicRangeContent not bound
 !missing-selector! CARemoteLayerClient::clientId not bound
 !missing-selector! CARemoteLayerClient::initWithServerPort: not bound
 !missing-selector! CARemoteLayerClient::layer not bound
@@ -26,6 +15,5 @@
 !missing-selector! +CARemoteLayerServer::sharedServer not bound
 
 # Initial result from new rule missing-release-attribute-on-return-value
-!missing-release-attribute-on-return-value! CoreAnimation.ICAMetalDrawable CoreAnimation.CAMetalLayer::CreateDrawable()'s selector's ('newDrawable') Objective-C method family ('new') indicates that the native method returns a retained object, and as such a '[return: Release]' attribute is required.
 !missing-release-attribute-on-return-value! OpenGL.CGLContext CoreAnimation.CAOpenGLLayer::CopyContext(OpenGL.CGLPixelFormat)'s selector's ('copyCGLContextForPixelFormat:') Objective-C method family ('copy') indicates that the native method returns a retained object, and as such a '[return: Release]' attribute is required.
 !missing-release-attribute-on-return-value! OpenGL.CGLPixelFormat CoreAnimation.CAOpenGLLayer::CopyCGLPixelFormatForDisplayMask(System.UInt32)'s selector's ('copyCGLPixelFormatForDisplayMask:') Objective-C method family ('copy') indicates that the native method returns a retained object, and as such a '[return: Release]' attribute is required.

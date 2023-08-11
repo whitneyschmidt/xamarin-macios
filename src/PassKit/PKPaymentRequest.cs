@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using Foundation;
 using ObjCRuntime;
@@ -9,14 +11,14 @@ namespace PassKit {
 		static public PKContactFields GetValue (NSSet set)
 		{
 			var fields = PKContactFields.None;
-			if (set == null)
+			if (set is null)
 				return fields;
 
 			foreach (PKContactFields value in Enum.GetValues (typeof (PKContactFields))) {
 				var constant = value.GetConstant ();
 				// None does not have an associated native value and Contains would throw an ANE
-				if ((constant != null) && set.Contains (constant))
-				    fields |= value;
+				if ((constant is not null) && set.Contains (constant))
+					fields |= value;
 			}
 			return fields;
 		}
@@ -26,12 +28,12 @@ namespace PassKit {
 			var set = new NSMutableSet ();
 			if (values == PKContactFields.None)
 				return set;
-			
+
 			foreach (PKContactFields value in Enum.GetValues (typeof (PKContactFields))) {
 				if (values.HasFlag (value)) {
 					var constant = value.GetConstant ();
 					// None does not have an associated native value and Contains would throw an ANE
-					if (constant != null)
+					if (constant is not null)
 						set.Add (constant);
 				}
 			}
@@ -41,13 +43,29 @@ namespace PassKit {
 
 	public partial class PKPaymentRequest {
 
-		[Watch (4,0)][iOS (11,0)]
+#if NET
+		[SupportedOSPlatform ("ios11.0")]
+		[SupportedOSPlatform ("macos11.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+#else
+		[Watch (4, 0)]
+		[iOS (11, 0)]
+#endif
 		public PKContactFields RequiredBillingContactFields {
 			get { return PKContactFieldsExtensions.GetValue (WeakRequiredBillingContactFields); }
 			set { WeakRequiredBillingContactFields = PKContactFieldsExtensions.GetSet (value); }
 		}
 
-		[Watch (4,0)][iOS (11,0)]
+#if NET
+		[SupportedOSPlatform ("ios11.0")]
+		[SupportedOSPlatform ("macos11.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+#else
+		[Watch (4, 0)]
+		[iOS (11, 0)]
+#endif
 		public PKContactFields RequiredShippingContactFields {
 			get { return PKContactFieldsExtensions.GetValue (WeakRequiredShippingContactFields); }
 			set { WeakRequiredShippingContactFields = PKContactFieldsExtensions.GetSet (value); }

@@ -39,9 +39,7 @@ using CoreText;
 
 namespace UIKit {
 
-	[iOS (6,0)]
-	public class UIStringAttributes : DictionaryContainer
-	{
+	public class UIStringAttributes : DictionaryContainer {
 #if !COREBUILD
 		public UIStringAttributes ()
 			: base (new NSMutableDictionary ())
@@ -68,7 +66,7 @@ namespace UIKit {
 			}
 			set {
 				SetNativeValue (UIStringAttributeKey.BackgroundColor, value);
-			}			
+			}
 		}
 
 		public UIFont Font {
@@ -124,7 +122,7 @@ namespace UIKit {
 			}
 			set {
 				SetNativeValue (UIStringAttributeKey.StrokeColor, value);
-			}			
+			}
 		}
 
 		public float? StrokeWidth {
@@ -143,7 +141,7 @@ namespace UIKit {
 			}
 			set {
 				SetNativeValue (UIStringAttributeKey.Shadow, value);
-			}			
+			}
 		}
 #endif // !WATCH
 
@@ -157,7 +155,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public NSString WeakTextEffect {
 			get {
 				return Dictionary [UIStringAttributeKey.TextEffect] as NSString;
@@ -167,13 +169,17 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public NSTextEffect TextEffect {
 			get {
 				var s = WeakTextEffect;
 				if (s == null)
 					return NSTextEffect.None;
-				
+
 				if (s == UIStringAttributeKey.NSTextEffectLetterpressStyle)
 					return NSTextEffect.LetterPressStyle;
 				return NSTextEffect.UnknownUseWeakEffect;
@@ -187,7 +193,11 @@ namespace UIKit {
 		}
 
 #if !WATCH
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public NSTextAttachment TextAttachment {
 			get {
 				return Dictionary [UIStringAttributeKey.Attachment] as NSTextAttachment;
@@ -198,7 +208,11 @@ namespace UIKit {
 		}
 #endif // !WATCH
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public NSUrl Link {
 			get {
 				return Dictionary [UIStringAttributeKey.Link] as NSUrl;
@@ -208,7 +222,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public float? BaselineOffset {
 			get {
 				return GetFloatValue (UIStringAttributeKey.BaselineOffset);
@@ -218,7 +236,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public UIColor StrikethroughColor {
 			get {
 				return Dictionary [UIStringAttributeKey.StrikethroughColor] as UIColor;
@@ -228,7 +250,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public UIColor UnderlineColor {
 			get {
 				return Dictionary [UIStringAttributeKey.UnderlineColor] as UIColor;
@@ -237,9 +263,13 @@ namespace UIKit {
 				SetNativeValue (UIStringAttributeKey.UnderlineColor, value);
 			}
 		}
-		
 
-		[iOS (7,0)]
+
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public float? Obliqueness {
 			get {
 				return GetFloatValue (UIStringAttributeKey.Obliqueness);
@@ -249,7 +279,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public float? Expansion {
 			get {
 				return GetFloatValue (UIStringAttributeKey.Expansion);
@@ -259,7 +293,11 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (7,0)]
+#if NET
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+#endif
 		public NSNumber [] WritingDirectionInt {
 			get {
 				return GetArray<NSNumber> (UIStringAttributeKey.WritingDirection);
@@ -271,4 +309,3 @@ namespace UIKit {
 #endif
 	}
 }
-

@@ -27,9 +27,16 @@
 using System;
 using System.Diagnostics;
 using ObjCRuntime;
+using System.Runtime.Versioning;
 
 namespace Foundation {
-	
+
+#if NET
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#endif
 	public class NSErrorEventArgs : EventArgs {
 		public NSErrorEventArgs (NSError error)
 		{
@@ -46,7 +53,7 @@ namespace Foundation {
 		{
 			Debug.WriteLine ("Warning: you created an NSError without specifying a domain");
 		}
-		
+
 		public static NSError FromDomain (NSString domain, nint code)
 		{
 			return FromDomain (domain, code, null);
@@ -59,6 +66,15 @@ namespace Foundation {
 		{
 			return LocalizedDescription;
 		}
+
+#if __IOS__ && !NET
+		[Obsolete (Constants.WatchKitRemoved)]
+		public static NSString WatchKitErrorDomain {
+			get {
+				throw new PlatformNotSupportedException (Constants.WatchKitRemoved);
+			}
+		}
+#endif // __IOS__
 #endif
 	}
 }

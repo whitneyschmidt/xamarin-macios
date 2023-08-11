@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 
 using UIKit;
 
-namespace Container
-{
-	public partial class ViewController : UIViewController
-	{
+namespace Container {
+	public partial class ViewController : UIViewController {
 		public ViewController (IntPtr handle) : base (handle)
 		{
 		}
@@ -23,4 +21,3 @@ namespace Container
 		}
 	}
 }
-

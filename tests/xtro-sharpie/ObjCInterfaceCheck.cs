@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Mono.Cecil;
@@ -28,16 +28,16 @@ namespace Extrospection {
 					if (ca.HasConstructorArguments) {
 						rname = (ca.ConstructorArguments [0].Value as string);
 						if (ca.ConstructorArguments.Count > 1)
-							wrapper = (bool)ca.ConstructorArguments [1].Value;
+							wrapper = (bool) ca.ConstructorArguments [1].Value;
 					}
 					if (ca.HasProperties) {
 						foreach (var arg in ca.Properties) {
 							switch (arg.Name) {
 							case "Wrapper":
-								wrapper = (bool)arg.Argument.Value;
+								wrapper = (bool) arg.Argument.Value;
 								break;
 							case "SkipRegistration":
-								skip = (bool)arg.Argument.Value;
+								skip = (bool) arg.Argument.Value;
 								break;
 							}
 						}
@@ -111,22 +111,27 @@ namespace Extrospection {
 				return;
 
 			if (!type_map.TryGetValue (name, out var td)) {
-				Log.On (framework).Add ($"!missing-type! {name} not bound");
+				// don't report a missing type if it's deprecated
+				if (!decl.IsDeprecated ())
+					Log.On (framework).Add ($"!missing-type! {name} not bound");
 				// other checks can't be done without an actual type to inspect
 				return;
 			}
 
-			// check base type
-			var nbt = decl.SuperClass?.Name;
-			var mbt = td.BaseType?.Resolve ().GetName ();
-			if (nbt != mbt)
-				Log.On (framework).Add ($"!wrong-base-type! {name} expected {nbt} actual {mbt}");
+			// don't report any errors for deprecated protocols
+			if (!decl.IsDeprecated ()) {
+				// check base type
+				var nbt = decl.SuperClass?.Name;
+				var mbt = td.BaseType?.Resolve ().GetName ();
+				if (nbt != mbt)
+					Log.On (framework).Add ($"!wrong-base-type! {name} expected {nbt} actual {mbt}");
 
-			// check protocols
-			foreach (var protocol in decl.Protocols) {
-				var pname = protocol.Name;
-				if (!ImplementProtocol (pname, td))
-					Log.On (framework).Add ($"!missing-protocol-conformance! {name} should conform to {pname}");
+				// check protocols
+				foreach (var protocol in decl.Protocols) {
+					var pname = protocol.Name;
+					if (!ImplementProtocol (pname, td))
+						Log.On (framework).Add ($"!missing-protocol-conformance! {name} should conform to {pname}");
+				}
 			}
 
 			// TODO : check for extraneous protocols
@@ -158,11 +163,7 @@ namespace Extrospection {
 			if (td.HasInterfaces) {
 				foreach (var intf in td.Interfaces) {
 					TypeReference ifaceType;
-#if CECIL_0_10
 					ifaceType = intf?.InterfaceType;
-#else
-					ifaceType = intf;
-#endif
 					if (protocol == GetProtocolName (ifaceType?.Resolve ()))
 						return true;
 				}

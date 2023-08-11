@@ -23,6 +23,12 @@ void x_call_block (x_block_callback block)
 	block ();
 }
 
+void *
+x_call_func_3 (void* (*fptr)(void*, void*, void*), void* p1, void* p2, void* p3)
+{
+	return fptr (p1, p2, p3);
+}
+
 typedef matrix_float2x2 (*func_x_get_matrix_float2x2_msgSend) (id self, SEL sel);
 void
 x_get_matrix_float2x2 (id self, const char *sel,
@@ -250,6 +256,24 @@ x_mdltransform_get_rotation_matrix (MDLTransform *self, NSTimeInterval time,
 }
 #endif // !TARGET_OS_WATCH
 
+SCNMatrix4
+x_SCNMatrix4MakeTranslation (pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4MakeTranslation (tx, ty, tz);
+}
+
+SCNMatrix4
+x_SCNMatrix4MakeScale (pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4MakeScale (tx, ty, tz);
+}
+
+SCNMatrix4
+x_SCNMatrix4Translate (SCNMatrix4 m, pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4Translate (m, tx, ty, tz);
+}
+
 @interface UltimateMachine : NSObject {
 
 }
@@ -301,6 +325,38 @@ static UltimateMachine *shared;
 }
 	-(void) V
 	{
+	}
+
+	+(void) staticV
+	{
+	}
+
+	-(NSString *) getEmptyString
+	{
+		return [NSString string];
+	}
+
+	-(NSString *) getShortString
+	{
+		return @"this is a short string";
+	}
+
+	-(NSString *) getLongString
+	{
+		return @"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times";
 	}
 
 	-(float) F
@@ -478,6 +534,23 @@ static UltimateMachine *shared;
 		return self.INSCodingArrayProperty;
 	}
 
+	-(void) methodEncodings:
+			      (inout NSObject **) obj1P
+			obj2: (in NSObject **) obj2P
+			obj3: (out NSObject **) obj3P
+			obj4: (const NSObject **) obj4P
+			obj5: (bycopy NSObject **) obj5P
+			obj6: (byref NSObject **) obj6P
+			obj7: (oneway NSObject **) obj7P
+	{
+		obj1P = NULL;
+		obj2P = NULL;
+		obj3P = NULL;
+		obj4P = NULL;
+		obj5P = NULL;
+		obj6P = NULL;
+		obj7P = NULL;
+	}
 @end
 
 @implementation ProtocolAssigner
@@ -489,7 +562,7 @@ static UltimateMachine *shared;
 
 -(void) completedSetProtocol: (id<ProtocolAssignerProtocol>) value
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // "THIS FUNCTION SHOULD BE OVERRIDDEN";
 }
 @end
 
@@ -556,6 +629,17 @@ static UltimateMachine *shared;
 {
 	// Do nothing
 }
+-(void) methodEncodings:
+	(inout NSObject **) obj1P
+	obj2: (in NSObject **) obj2P
+	obj3: (out NSObject **) obj3P
+	obj4: (const NSObject **) obj4P
+	obj5: (bycopy NSObject **) obj5P
+	obj6: (byref NSObject **) obj6P
+	obj7: (oneway NSObject **) obj7P
+{
+	// Do nothing
+}
 @end
 
 static volatile int freed_blocks = 0;
@@ -574,7 +658,7 @@ static Class _TestClass = NULL;
 
 -(void) classCallback: (void (^)(int32_t magic_number))completionHandler
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // THIS FUNCTION SHOULD BE OVERRIDDEN
 }
 
 -(void) callClassCallback
@@ -649,6 +733,23 @@ static Class _TestClass = NULL;
     [obj release];
 }
 
++(void) callAssertMainThreadBlockReleaseQOS: (outerBlock) completionHandler
+{
+	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
+	__block bool success = false;
+
+	dispatch_sync (dispatch_get_global_queue (QOS_CLASS_DEFAULT, 0ul), ^{
+		completionHandler (^(int magic_number)
+		{
+			assert (magic_number == 42);
+			assert ([NSThread isMainThread]); // This may crash way after the failed test has finished executing.
+			success = obj != NULL; // this captures the 'obj', and it's only freed when the block is freed.
+		});
+    });
+	assert (success);
+    [obj release];
+}
+
 -(void) callAssertMainThreadBlockReleaseCallback
 {
 	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
@@ -666,9 +767,26 @@ static Class _TestClass = NULL;
     [obj release];
 }
 
+-(void) callAssertMainThreadBlockReleaseCallbackQOS
+{
+	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
+	__block bool success = false;
+
+	dispatch_sync (dispatch_get_global_queue (QOS_CLASS_DEFAULT, 0ul), ^{
+		[self assertMainThreadBlockReleaseCallback: ^(int magic_number)
+		{
+			assert (magic_number == 42);
+			assert ([NSThread isMainThread]); // This may crash way after the failed test has finished executing.
+			success = obj != NULL; // this captures the 'obj', and it's only freed when the block is freed.
+		}];
+    });
+	assert (success);
+    [obj release];
+}
+
 -(void) assertMainThreadBlockReleaseCallback: (innerBlock) completionHandler
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // THIS FUNCTION SHOULD BE OVERRIDDEN
 }
 
 -(void) testFreedBlocks
@@ -694,7 +812,10 @@ static Class _TestClass = NULL;
 
 static void block_called ()
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	OSAtomicIncrement32 (&called_blocks);
+#pragma clang diagnostic pop
 }
 
 +(void) callProtocolWithBlockProperties: (id<ProtocolWithBlockProperties>) obj required: (bool) required instance: (bool) instance;
@@ -759,7 +880,10 @@ static void block_called ()
 @implementation FreedNotifier
 -(void) dealloc
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	OSAtomicIncrement32 (&freed_blocks);
+#pragma clang diagnostic pop
 	[super dealloc];
 }
 @end
@@ -915,7 +1039,7 @@ static void block_called ()
 
 -(void) testString: (int) action a:(NSString **) refValue b:(NSString **) outValue
 {
-	NSString *obj = NULL;
+	NSString *obj __attribute__((unused)) = NULL;
 
 	// We should never get null pointers.
 	assert (refValue != NULL);
@@ -946,9 +1070,9 @@ static void block_called ()
 	}
 }
 
--(void) testInt: (int) action a:(int32_t *) refValue b:(int32_t *) outValue
+-(void) testInt: (int) action a:(int32_t *) refValue b:(int32_t *) outValue c:(int32_t *) pointerValue
 {
-	NSString *obj = NULL;
+	NSString *obj __attribute__((unused)) = NULL;
 
 	// We should never get null pointers.
 	assert (refValue != NULL);
@@ -958,15 +1082,18 @@ static void block_called ()
 	case 1: // Set both to 0
 		*refValue = 0;
 		*outValue = 0;
+		*pointerValue = 0;
 		break;
 	case 3: // set both parameteres to the same value
 		obj = @"A constant native string";
 		*refValue = 314159;
 		*outValue = 314159;
+		*pointerValue = 314159;
 		return;
 	case 4: // set both parameteres to different objects
 		*refValue = 3141592;
 		*outValue = 2718282;
+		*pointerValue = 5772156;
 		break;
 	default:
 		abort ();

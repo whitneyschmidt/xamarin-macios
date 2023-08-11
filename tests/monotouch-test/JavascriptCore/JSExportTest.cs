@@ -1,20 +1,13 @@
-﻿//
+//
 // Copyright 2014 Xamarin Inc.
 //
 
 #if !__WATCHOS__
 
 using System;
-#if XAMCORE_2_0
 using Foundation;
 using JavaScriptCore;
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.JavaScriptCore;
-using MonoTouch.UIKit;
-using MonoTouch.ObjCRuntime;
-#endif
 using NUnit.Framework;
 
 using XamarinTests.ObjCRuntime;
@@ -65,8 +58,7 @@ namespace MonoTouchFixtures.JavascriptCore {
 		void CallMeBack (JSValue callbackFunc);
 	}
 
-	class MyJavaExporter : NSObject, IMyJavaExporter
-	{
+	class MyJavaExporter : NSObject, IMyJavaExporter {
 		public bool MyFuncCalled;
 		public void MyFunc ()
 		{

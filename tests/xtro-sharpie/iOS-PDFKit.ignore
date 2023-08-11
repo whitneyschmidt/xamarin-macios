@@ -1,2 +1,1 @@
-## only in macOS (10.4+) not in iOS
-!unknown-native-enum! PdfPrintScalingMode bound
+!unknown-field! PDFAnnotationHit bound

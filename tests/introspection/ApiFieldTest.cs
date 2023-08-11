@@ -26,28 +26,14 @@ using System.Reflection;
 
 using NUnit.Framework;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace Introspection {
 
 	[Preserve (AllMembers = true)]
 	public abstract class ApiFieldTest : ApiBaseTest {
-#if XAMCORE_2_0
 		const string NSStringType = "Foundation.NSString";
-#elif MONOMAC
-		const string NSStringType = "MonoMac.Foundation.NSString";
-#else
-		const string NSStringType = "MonoTouch.Foundation.NSString";
-#endif
 
 		/// <summary>
 		/// Override if you want to skip testing the specified type.
@@ -64,6 +50,23 @@ namespace Introspection {
 		/// <param name="property">Property to be tested</param>
 		protected virtual bool Skip (PropertyInfo property)
 		{
+			switch (property.DeclaringType.Name) {
+			case "AVPlayerInterstitialEventObserver":
+				switch (property.Name) { // deprecated
+				case "CurrentEventDidChangeNotification":
+				case "EventsDidChangeNotification":
+					return true;
+				default:
+					return false;
+				}
+			case "SWHighlight":
+				switch (property.Name) {
+				case "MetadataTypeIdentifier":
+					return TestRuntime.IsSimulatorOrDesktop;
+				default:
+					return false;
+				}
+			}
 			return SkipDueToAttribute (property);
 		}
 
@@ -98,7 +101,7 @@ namespace Introspection {
 
 			if (Skip (p))
 				return true;
-			
+
 			try {
 				// if it return nulls then it could be a typo...
 				// or something not available in the executing version of iOS
@@ -106,8 +109,7 @@ namespace Introspection {
 				if (!result)
 					name = p.DeclaringType.FullName + "." + p.Name;
 				return result;
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				Console.WriteLine ("[FAIL] Exception on '{0}' : {1}", p, e);
 				name = p.DeclaringType.FullName + "." + p.Name;
 				return false;
@@ -130,7 +132,7 @@ namespace Introspection {
 					// looking for properties with getters only
 					if (p.CanWrite || !p.CanRead)
 						continue;
-					if (SkipDueToAttribute (p))
+					if (Skip (p) || SkipDueToAttribute (p))
 						continue;
 
 					properties.Add (p);
@@ -150,7 +152,7 @@ namespace Introspection {
 			foreach (var p in AllProperties ()) {
 				if (p.PropertyType.FullName != NSStringType)
 					continue;
-				
+
 				var f = p.GetCustomAttribute<FieldAttribute> ();
 				if (f == null)
 					continue;
@@ -191,7 +193,7 @@ namespace Introspection {
 			}
 			Assert.AreEqual (0, Errors, "{0} errors found in {1} fields validated: {2}", Errors, n, string.Join (", ", failed_fields));
 		}
-		
+
 		[Test]
 		public void NonNullNSStringFields ()
 		{
@@ -201,6 +203,9 @@ namespace Introspection {
 			int n = 0;
 			foreach (var p in AllProperties ()) {
 				if (p.PropertyType.FullName != NSStringType)
+					continue;
+
+				if (MemberHasObsolete (p))
 					continue;
 
 				string name;
@@ -236,6 +241,14 @@ namespace Introspection {
 					ReportError ("Could not open the library '{0}' to find the field '{1}': {2}", path, name, Dlfcn.dlerror ());
 					failed_fields.Add (name);
 				} else if (Dlfcn.GetIndirect (lib, name) == IntPtr.Zero) {
+#if __IOS__
+					switch (name) {
+					case "CPMaximumListItemImageSize":
+						if (TestRuntime.CheckXcodeVersion (12, 0))
+							continue;
+						break;
+					}
+#endif
 					ReportError ("Could not find the field '{0}' in {1}", name, path);
 					failed_fields.Add (name);
 				}

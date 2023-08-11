@@ -2,20 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-#if XAMCORE_2_0
 using CoreFoundation;
 using Foundation;
 using Network;
 using ObjCRuntime;
-using Security;
-#else
-using MonoTouch.CoreFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.Network;
-using MonoTouch.Security;
-#endif
-
 using NUnit.Framework;
+using MonoTests.System.Net.Http;
+
 
 namespace MonoTouchFixtures.Network {
 
@@ -29,33 +22,36 @@ namespace MonoTouchFixtures.Network {
 		List<NWInterface> interfaces = new List<NWInterface> ();
 		NWConnection connection;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Init ()
 		{
 			TestRuntime.AssertXcodeVersion (10, 0);
 			// we want to use a single connection, since it is expensive
-			connectedEvent = new AutoResetEvent(false);
+			connectedEvent = new AutoResetEvent (false);
 			interfaces = new List<NWInterface> ();
-			host = "www.google.com";
+			host = NetworkResources.MicrosoftUri.Host;
 			// we create a connection which we are going to use to get the availabe
 			// interfaces, that way we can later test protperties of the NWParameters class.
 			using (var parameters = NWParameters.CreateUdp ())
-			using (var endpoint = NWEndpoint.Create (host, "80"))
-			{
+			using (var endpoint = NWEndpoint.Create (host, "80")) {
 				using (var protocolStack = parameters.ProtocolStack) {
 					var ipOptions = protocolStack.InternetProtocol;
+#if NET
+					ipOptions.SetVersion (NWIPVersion.Version4);
+#else
 					ipOptions.IPSetVersion (NWIPVersion.Version4);
+#endif
 				}
 				connection = new NWConnection (endpoint, parameters);
 				connection.SetQueue (DispatchQueue.DefaultGlobalQueue); // important, else we will get blocked
 				connection.SetStateChangeHandler (ConnectionStateHandler);
-				connection.Start (); 
+				connection.Start ();
 				Assert.True (connectedEvent.WaitOne (20000), "Connection timed out.");
 			}
 		}
 
-		[TestFixtureTearDown]
-		public void Dispose()
+		[OneTimeTearDown]
+		public void Dispose ()
 		{
 			connection?.Cancel ();
 		}
@@ -72,7 +68,7 @@ namespace MonoTouchFixtures.Network {
 		void ConnectionStateHandler (NWConnectionState state, NWError error)
 		{
 			Console.WriteLine ($"State is {state} and error {error}");
-			switch (state){
+			switch (state) {
 			case NWConnectionState.Ready:
 				connectedEvent.Set ();
 				break;
@@ -110,14 +106,14 @@ namespace MonoTouchFixtures.Network {
 		public void IsExpensivePropertyTest ()
 		{
 			Assert.False (path.IsExpensive, "Path was not expected to be expensive."); // To be tested as part of NWProtocolStack
-		} 
+		}
 
 		[Test]
 		public void HasIPV4PropertyTest ()
 		{
-#if !MONOMAC	
+#if !MONOMAC && !__MACCATALYST__
 			if (Runtime.Arch != Arch.DEVICE)
-				Assert.False (path.HasIPV4, "By default the interface does not support IPV4 on the simulator"); 
+				Assert.False (path.HasIPV4, "By default the interface does not support IPV4 on the simulator");
 			else
 #endif
 				Assert.True (path.HasIPV4, "By default the interface does support IPV4 on the device");
@@ -133,12 +129,12 @@ namespace MonoTouchFixtures.Network {
 		[Test]
 		public void HasDnsPropertyTest ()
 		{
-#if !MONOMAC	
+#if !MONOMAC && !__MACCATALYST__
 			if (Runtime.Arch != Arch.DEVICE)
-				Assert.False (path.HasDns,  "By default the interface does not support DNS on the simulator");
+				Assert.False (path.HasDns, "By default the interface does not support DNS on the simulator");
 			else
 #endif
-				Assert.True (path.HasDns,  "By default the interface does support DNS on the device");
+				Assert.True (path.HasDns, "By default the interface does support DNS on the device");
 		}
 
 		[Test]
@@ -158,6 +154,54 @@ namespace MonoTouchFixtures.Network {
 			interfaces = new List<NWInterface> ();
 			path.EnumerateInterfaces (EnumerateInterfacesHandler);
 			Assert.That (interfaces.Count, Is.GreaterThan (0), "interfaces.Count");
+		}
+
+		[Test]
+		public void EnumerateGatewayNullCallbackTest ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			Assert.Throws<ArgumentNullException> (() => { path.EnumerateGateways ((Func<NWEndpoint, bool>) null); });
+		}
+
+		[Test]
+		public void EnumerateGatewayTest ()
+		{
+			var e1 = new ManualResetEvent (false);
+			var e2 = new ManualResetEvent (false);
+			var monitor = new NWPathMonitor ();
+			try {
+				monitor.SetQueue (DispatchQueue.DefaultGlobalQueue);
+				monitor.Start ();
+				monitor.SnapshotHandler += path => {
+					path.EnumerateGateways (gateway => {
+						e1.Set ();
+						return true;
+					});
+
+					path.EnumerateInterfaces (@interface => {
+						e2.Set ();
+						return true;
+					});
+				};
+				TestRuntime.RunAsync (TimeSpan.FromSeconds (5),
+						() => { },
+						() => WaitHandle.WaitAll (new WaitHandle [] { e1, e2 }, 0));
+				var rv = WaitHandle.WaitAll (new WaitHandle [] { e1, e2 }, 10000);
+				if (!rv)
+					TestRuntime.IgnoreInCI ("This test doesn't seem to be working on the bots, uncommon network setup?");
+				Assert.IsTrue (rv, "Called back");
+			} finally {
+				monitor.Cancel ();
+				monitor.Dispose ();
+			}
+		}
+
+		[Test]
+		public void GetUnsatisfiedReason ()
+		{
+			TestRuntime.AssertXcodeVersion (12, 2);
+			Assert.That (path.GetUnsatisfiedReason (), Is.EqualTo (NWPathUnsatisfiedReason.NotAvailable));
 		}
 	}
 }

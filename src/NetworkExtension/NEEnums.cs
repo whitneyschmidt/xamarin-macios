@@ -2,7 +2,9 @@ using ObjCRuntime;
 
 namespace NetworkExtension {
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
 	[ErrorDomain ("NEVPNErrorDomain")]
 	[Native]
 	public enum NEVpnError : long {
@@ -14,7 +16,9 @@ namespace NetworkExtension {
 		ConfigurationUnknown = 6
 	}
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEVpnStatus : long {
 		Invalid = 0,
@@ -25,7 +29,9 @@ namespace NetworkExtension {
 		Disconnecting = 5
 	}
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEVpnIkeAuthenticationMethod : long {
 		None = 0,
@@ -33,21 +39,33 @@ namespace NetworkExtension {
 		SharedSecret = 2
 	}
 
-	[iOS (8,0)][Mac (10,10)]
-	[Native]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
+	[Native ("NEVPNIKEv2EncryptionAlgorithm")]
 	public enum NEVpnIke2EncryptionAlgorithm : long {
 		DES = 1,
 		TripleDES = 2,
 		AES128 = 3,
 		AES256 = 4,
-		[iOS (8,3)][Mac (10,11)]
+		[iOS (8, 3)]
+		[Mac (10, 11)]
+		[MacCatalyst (13, 1)]
 		AES128GCM = 5,
-		[iOS (8,3)][Mac (10,11)]
+		[iOS (8, 3)]
+		[Mac (10, 11)]
+		[MacCatalyst (13, 1)]
 		AES256GCM = 6,
+		[Mac (10, 15)]
+		[iOS (13, 0)]
+		[MacCatalyst (13, 1)]
+		ChaCha20Poly1305 = 7,
 	}
 
-	[iOS (8,0)][Mac (10,10)]
-	[Native]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
+	[Native ("NEVPNIKEv2IntegrityAlgorithm")]
 	public enum NEVpnIke2IntegrityAlgorithm : long {
 		SHA96 = 1,
 		SHA160 = 2,
@@ -56,8 +74,10 @@ namespace NetworkExtension {
 		SHA512 = 5
 	}
 
-	[iOS (8,0)][Mac (10,10)]
-	[Native]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
+	[Native ("NEVPNIKEv2DeadPeerDetectionRate")]
 	public enum NEVpnIke2DeadPeerDetectionRate : long {
 		None = 0,
 		Low = 1,
@@ -65,8 +85,10 @@ namespace NetworkExtension {
 		High = 3
 	}
 
-	[iOS (8,0)][Mac (10,10)]
-	[Native]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
+	[Native ("NEVPNIKEv2DiffieHellmanGroup")]
 	public enum NEVpnIke2DiffieHellman : long {
 		Invalid = 0,
 		Group0 = Invalid,
@@ -81,9 +103,15 @@ namespace NetworkExtension {
 		Group19 = 19,
 		Group20 = 20,
 		Group21 = 21,
+		[Mac (10, 15)]
+		[iOS (13, 0)]
+		[MacCatalyst (13, 1)]
+		Group31 = 31,
 	}
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEOnDemandRuleAction : long {
 		Connect = 1,
@@ -92,9 +120,10 @@ namespace NetworkExtension {
 		Ignore = 4
 	}
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 11)]
+	[MacCatalyst (13, 1)]
 	[Native]
-		[iOS (9,0)][Mac (10,11)]
 	public enum NEOnDemandRuleInterfaceType : long {
 		Any = 0,
 		Ethernet = 1,
@@ -102,24 +131,33 @@ namespace NetworkExtension {
 		Cellular = 3
 	}
 
-	[iOS (8,0)][Mac (10,10)]
+	[iOS (8, 0)]
+	[Mac (10, 10)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEEvaluateConnectionRuleAction : long {
 		ConnectIfNeeded = 1,
 		NeverConnect = 2
 	}
 
-	[iOS (8,3)][Mac (10,11)]
-	[Native] // NSInteger
+	[iOS (8, 3)]
+	[Mac (10, 11)]
+	[MacCatalyst (13, 1)]
+	[Native ("NEVPNIKEv2CertificateType")] // NSInteger
 	public enum NEVpnIke2CertificateType : long {
 		RSA = 1,
 		ECDSA256 = 2,
 		ECDSA384 = 3,
 		ECDSA521 = 4,
+		[Mac (10, 15)]
+		[iOS (13, 0)]
+		[MacCatalyst (13, 1)]
+		Ed25519 = 5,
 	}
 
 	// in Xcode7 SDK but marked as 8.0
-	[iOS (8,0)]
+	[iOS (8, 0)]
+	[MacCatalyst (13, 1)]
 	[ErrorDomain ("NEFilterErrorDomain")]
 	[Native]
 	public enum NEFilterManagerError : long {
@@ -127,10 +165,13 @@ namespace NetworkExtension {
 		Invalid = 1,
 		Disabled = 2,
 		Stale = 3,
-		CannotBeRemoved = 4
+		CannotBeRemoved = 4,
+		ConfigurationPermissionDenied = 5,
+		ConfigurationInternalError = 6,
 	}
 
-	[iOS (9,0)]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[ErrorDomain ("NETunnelProviderErrorDomain")]
 	[Native]
 	public enum NETunnelProviderError : long {
@@ -140,7 +181,8 @@ namespace NetworkExtension {
 		Failed = 3
 	}
 
-	[iOS (9,0)]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[ErrorDomain ("NEAppProxyErrorDomain")]
 	[Native]
 	public enum NEAppProxyFlowError : long {
@@ -158,10 +200,10 @@ namespace NetworkExtension {
 		ReadAlreadyPending = 10,
 	}
 
-	[iOS (9,0)]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NEProviderStopReason : long
-	{
+	public enum NEProviderStopReason : long {
 		None = 0,
 		UserInitiated = 1,
 		ProviderFailed = 2,
@@ -176,23 +218,31 @@ namespace NetworkExtension {
 		Superseded = 11,
 		UserLogout = 12,
 		UserSwitch = 13,
-		ConnectionFailed = 14
+		ConnectionFailed = 14,
+		[Mac (10, 15)]
+		[iOS (13, 0)]
+		[MacCatalyst (13, 1)]
+		Sleep = 15,
+		[Mac (10, 15)]
+		[iOS (13, 0)]
+		[MacCatalyst (13, 1)]
+		AppUpdate,
 	}
 
-	[iOS (9,0)]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NWPathStatus : long
-	{
+	public enum NWPathStatus : long {
 		Invalid = 0,
 		Satisfied = 1,
 		Unsatisfied = 2,
 		Satisfiable = 3
 	}
-	
-	[iOS (9,0)]
+
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NWTcpConnectionState : long
-	{
+	public enum NWTcpConnectionState : long {
 		Invalid = 0,
 		Connecting = 1,
 		Waiting = 2,
@@ -201,10 +251,10 @@ namespace NetworkExtension {
 		Cancelled = 5
 	}
 
-	[iOS (9,0)]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NWUdpSessionState : long
-	{
+	public enum NWUdpSessionState : long {
 		Invalid = 0,
 		Waiting = 1,
 		Preparing = 2,
@@ -212,16 +262,24 @@ namespace NetworkExtension {
 		Failed = 4,
 		Cancelled = 5
 	}
-	
-	[iOS (9,0)][Mac (10,11)]
+
+	[iOS (9, 0)]
+	[Mac (10, 11)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NETunnelProviderRoutingMethod : long {
 		DestinationIP = 1,
 		SourceApplication = 2,
+		[Mac (10, 15)]
+		[NoiOS]
+		[NoMacCatalyst]
+		NetworkRule = 3,
 	}
 
 #if !MONOMAC
-	[iOS (9,0)]
+	[NoMac]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEHotspotHelperCommandType : long {
 		None = 0,
@@ -233,7 +291,9 @@ namespace NetworkExtension {
 		Logoff = 6
 	}
 
-	[iOS (9,0)]
+	[NoMac]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEHotspotHelperConfidence : long {
 		None = 0,
@@ -241,7 +301,9 @@ namespace NetworkExtension {
 		High = 2
 	}
 
-	[iOS (9,0)]
+	[NoMac]
+	[iOS (9, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NEHotspotHelperResult : long {
 		Success = 0,
@@ -253,4 +315,36 @@ namespace NetworkExtension {
 		TemporaryFailure = 6
 	}
 #endif
+
+	[NoWatch, NoTV, NoMac, iOS (14, 0)]
+	[MacCatalyst (14, 0)]
+	[Native]
+	[ErrorDomain ("NEAppPushErrorDomain")]
+	public enum NEAppPushManagerError : long {
+		ConfigurationInvalid = 1,
+		ConfigurationNotLoaded = 2,
+		InternalError = 3,
+		InactiveSession = 4,
+	}
+
+	[NoWatch, NoTV, Mac (11, 0), iOS (14, 0)]
+	[MacCatalyst (14, 0)]
+	[Native ("NEDNSProtocol")]
+	public enum NEDnsProtocol : long {
+		Cleartext = 1,
+		Tls = 2,
+		Https = 3,
+	}
+
+	[NoWatch, NoTV, Mac (11, 0), iOS (14, 0)]
+	[MacCatalyst (14, 0)]
+	[Native ("NEDNSSettingsManagerError")]
+	[ErrorDomain ("NEDNSSettingsErrorDomain")]
+	public enum NEDnsSettingsManagerError : long {
+		Invalid = 1,
+		Disabled = 2,
+		Stale = 3,
+		CannotBeRemoved = 4,
+	}
+
 }

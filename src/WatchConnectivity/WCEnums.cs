@@ -1,4 +1,4 @@
-﻿//
+//
 // WatchConnectivity enums
 //
 // Authors:
@@ -14,7 +14,7 @@ using Foundation;
 namespace WatchConnectivity {
 
 	// NSInteger -> WCError.h
-	[iOS (9,0)]
+	[iOS (9, 0)]
 	[Native]
 	public enum WCErrorCode : long {
 		GenericError = 7001,
@@ -35,9 +35,13 @@ namespace WatchConnectivity {
 		// iOS 9.3 / watchOS 2.2
 		SessionInactive = 7016,
 		TransferTimedOut = 7017,
+		// iOS 13, watchOS 6
+		CompanionAppNotInstalled = 7018,
+		WatchOnlyApp = 7019,
 	}
 
-	[Watch (2,2)][iOS (9,3)]
+	[Watch (2, 2)]
+	[iOS (9, 3)]
 	[Native]
 	public enum WCSessionActivationState : long {
 		NotActivated = 0,

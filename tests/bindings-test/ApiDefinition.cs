@@ -1,6 +1,5 @@
 using System;
 
-#if __UNIFIED__
 using ObjCRuntime;
 using Foundation;
 #if __MACOS__
@@ -8,17 +7,9 @@ using AppKit;
 #else
 using UIKit;
 #endif
-#else
-#if !__WATCHOS__
-using System.Drawing;
-#endif
-using MonoTouch.ObjCRuntime;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 
 namespace Bindings.Test {
-#if __UNIFIED__ && FRAMEWORK_TEST
+#if FRAMEWORK_TEST
 	[BaseType (typeof (NSObject))]
 	public interface FrameworkTest
 	{
@@ -28,8 +19,7 @@ namespace Bindings.Test {
 #endif
 
 	[BaseType (typeof (NSObject))]
-	public interface UltimateMachine
-	{
+	public interface UltimateMachine {
 		[Export ("getAnswer")]
 		int GetAnswer ();
 
@@ -144,6 +134,25 @@ namespace Bindings.Test {
 		[Export ("V")]
 		void V ();
 
+		[Static]
+		[Export ("staticV")]
+		void StaticV ();
+
+		[Export ("getEmptyString")]
+		string GetEmptyString ();
+
+		[Export ("getShortString")]
+		string GetShortString ();
+
+		[Export ("getLongString")]
+		string GetLongString ();
+
+		[Export ("someObject")]
+		NSObject SomeObject { get; set; }
+
+		[Export ("someArray")]
+		NSObject [] SomeArray { get; set; }
+
 		[Export ("F")]
 		float F ();
 
@@ -215,48 +224,46 @@ namespace Bindings.Test {
 
 		[NullAllowed]
 		[Export ("stringArrayProperty")]
-		string[] StringArrayProperty { get; set; }
+		string [] StringArrayProperty { get; set; }
 
 		[Export ("setStringArrayMethod:")]
-		void SetStringArrayMethod ([NullAllowed] string[] array);
+		void SetStringArrayMethod ([NullAllowed] string [] array);
 
 		[return: NullAllowed]
 		[Export ("getStringArrayMethod")]
-		string[] GetStringArrayMethod ();
+		string [] GetStringArrayMethod ();
 
 		[NullAllowed]
 		[Export ("nsobjectArrayProperty")]
-		NSObject[] NSObjectArrayProperty { get; set; }
+		NSObject [] NSObjectArrayProperty { get; set; }
 
 		[Export ("setNSObjectArrayMethod:")]
-		void SetNSObjectArrayMethod ([NullAllowed] NSObject[] array);
+		void SetNSObjectArrayMethod ([NullAllowed] NSObject [] array);
 
 		[return: NullAllowed]
 		[Export ("getNSObjectArrayMethod")]
-		NSObject[] GetNSObjectArrayMethod ();
+		NSObject [] GetNSObjectArrayMethod ();
 
 		[NullAllowed]
 		[Export ("INSCodingArrayProperty")]
-		INSCoding[] INSCodingArrayProperty { get; set; }
+		INSCoding [] INSCodingArrayProperty { get; set; }
 
 		[Export ("setINSCodingArrayMethod:")]
-		void SetINSCodingArrayMethod ([NullAllowed] INSCoding[] array);
+		void SetINSCodingArrayMethod ([NullAllowed] INSCoding [] array);
 
 		[return: NullAllowed]
 		[Export ("getINSCodingArrayMethod")]
-		INSCoding[] GetINSCodingArrayMethod ();
+		INSCoding [] GetINSCodingArrayMethod ();
 	}
 
 	[Protocol]
-	interface ProtocolAssignerProtocol
-	{
+	interface ProtocolAssignerProtocol {
 	}
 
 	interface IProtocolAssignerProtocol { }
 
 	[BaseType (typeof (NSObject))]
-	interface ProtocolAssigner
-	{
+	interface ProtocolAssigner {
 		[Export ("setProtocol")]
 		void SetProtocol ();
 
@@ -272,19 +279,18 @@ namespace Bindings.Test {
 		[Export ("throwManagedException")]
 		void ThrowManagedException ();
 
-		[Export ("invokeManagedExceptionThrower")] 
+		[Export ("invokeManagedExceptionThrower")]
 		void InvokeManagedExceptionThrower ();
 
-		[Export ("invokeManagedExceptionThrowerAndRethrow")] 
+		[Export ("invokeManagedExceptionThrowerAndRethrow")]
 		void InvokeManagedExceptionThrowerAndRethrow ();
 
 		[Export ("invokeManagedExceptionThrowerAndCatch")]
-		void InvokeManagedExceptionThrowerAndCatch ();	
+		void InvokeManagedExceptionThrowerAndCatch ();
 	}
 
 	[BaseType (typeof (NSObject))]
-	interface CtorChaining1
-	{
+	interface CtorChaining1 {
 		[Export ("initCalled")]
 		bool InitCalled { get; set; }
 
@@ -298,15 +304,16 @@ namespace Bindings.Test {
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
-	interface ObjCProtocolTest
-	{
+	interface ObjCProtocolTest {
 		[Export ("idAsIntPtr:")]
 		void IdAsIntPtr (IntPtr p1);
+
+		[Export ("methodEncodings:obj2:obj3:obj4:obj5:obj6:obj7:")]
+		void GetMethodEncodings (ref NSObject obj1, ref NSObject obj2, ref NSObject obj3, ref NSObject obj4, ref NSObject obj5, ref NSObject obj6, ref NSObject obj7);
 	}
 
 	[Protocol]
-	interface ObjCProtocolBlockTest
-	{
+	interface ObjCProtocolBlockTest {
 		[Abstract]
 		[Export ("requiredCallback:")]
 		void RequiredCallback (Action<int> completionHandler);
@@ -343,8 +350,7 @@ namespace Bindings.Test {
 	interface IObjCProtocolBlockTest { }
 
 	[BaseType (typeof (NSObject))]
-	interface ObjCBlockTester
-	{
+	interface ObjCBlockTester {
 		[Export ("TestObject", ArgumentSemantic.Retain)]
 		IObjCProtocolBlockTest TestObject { get; set; }
 
@@ -376,11 +382,18 @@ namespace Bindings.Test {
 		[Export ("callAssertMainThreadBlockRelease:")]
 		void CallAssertMainThreadBlockRelease (OuterBlock completionHandler);
 
+		[Static]
+		[Export ("callAssertMainThreadBlockReleaseQOS:")]
+		void CallAssertMainThreadBlockReleaseQOS (OuterBlock completionHandler);
+
 		[Export ("assertMainThreadBlockReleaseCallback:")]
 		void AssertMainThreadBlockReleaseCallback (InnerBlock completionHandler);
 
 		[Export ("callAssertMainThreadBlockReleaseCallback")]
 		void CallAssertMainThreadBlockReleaseCallback ();
+
+		[Export ("callAssertMainThreadBlockReleaseCallbackQOS")]
+		void CallAssertMainThreadBlockReleaseCallbackQOS ();
 
 		[Export ("testFreedBlocks")]
 		void TestFreedBlocks ();
@@ -411,8 +424,7 @@ namespace Bindings.Test {
 	delegate void OuterBlock ([BlockCallback] InnerBlock callback);
 
 	[BaseType (typeof (NSObject))]
-	interface EvilDeallocator
-	{
+	interface EvilDeallocator {
 		[Export ("evilCallback")]
 		Action<int> EvilCallback { get; set; }
 	}
@@ -439,5 +451,3 @@ namespace Bindings.Test {
 	}
 	interface IProtocolWithBlockProperties { }
 }
-
-

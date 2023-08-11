@@ -25,16 +25,26 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+
+#if !__MACCATALYST__
+
 using System;
 using ObjCRuntime;
 using Foundation;
 
+#nullable enable
+
 namespace AppKit {
 
 	public partial class NSSlider {
-		NSActionDispatcher dispatcher;
+		NSActionDispatcher? dispatcher;
 
-		[Mac (10,12)]
+#if NET
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+#else
+		[Mac (10, 12)]
+#endif
 		public static NSSlider FromTarget (Action action)
 		{
 			var dispatcher = new NSActionDispatcher (action);
@@ -43,7 +53,12 @@ namespace AppKit {
 			return control;
 		}
 
-		[Mac (10,12)]
+#if NET
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+#else
+		[Mac (10, 12)]
+#endif
 		public static NSSlider FromValue (double value, double minValue, double maxValue, Action action)
 		{
 			var dispatcher = new NSActionDispatcher (action);
@@ -53,4 +68,4 @@ namespace AppKit {
 		}
 	}
 }
-
+#endif // !__MACCATALYST__

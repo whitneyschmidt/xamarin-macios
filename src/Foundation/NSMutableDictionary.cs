@@ -25,14 +25,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 
+using CoreFoundation;
 using ObjCRuntime;
+
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
 
 namespace Foundation {
 
 	public partial class NSMutableDictionary : NSDictionary, IDictionary, IDictionary<NSObject, NSObject> {
-		
+
 		// some API, like SecItemCopyMatching, returns a retained NSMutableDictionary
-		internal NSMutableDictionary (IntPtr handle, bool owns)
+		internal NSMutableDictionary (NativeHandle handle, bool owns)
 			: base (handle)
 		{
 			if (!owns)
@@ -47,10 +52,10 @@ namespace Foundation {
 				throw new ArgumentNullException (nameof (keys));
 			if (objects.Length != keys.Length)
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
-			
+
 			using (var no = NSArray.FromNSObjects (objects))
-				using (var nk = NSArray.FromNSObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromNSObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
 		public static NSMutableDictionary FromObjectsAndKeys (object [] objects, object [] keys)
@@ -61,10 +66,10 @@ namespace Foundation {
 				throw new ArgumentNullException (nameof (keys));
 			if (objects.Length != keys.Length)
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
-			
+
 			using (var no = NSArray.FromObjects (objects))
-				using (var nk = NSArray.FromObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
 		public static NSMutableDictionary FromObjectsAndKeys (NSObject [] objects, NSObject [] keys, nint count)
@@ -77,12 +82,12 @@ namespace Foundation {
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
 			if (count < 1 || objects.Length < count || keys.Length < count)
 				throw new ArgumentException (nameof (count));
-			
+
 			using (var no = NSArray.FromNSObjects (objects))
-				using (var nk = NSArray.FromNSObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromNSObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
-		
+
 		public static NSMutableDictionary FromObjectsAndKeys (object [] objects, object [] keys, nint count)
 		{
 			if (objects == null)
@@ -93,13 +98,13 @@ namespace Foundation {
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
 			if (count < 1 || objects.Length < count || keys.Length < count)
 				throw new ArgumentException (nameof (count));
-			
+
 			using (var no = NSArray.FromObjects (objects))
-				using (var nk = NSArray.FromObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
-#region ICollection<KeyValuePair<NSObject, NSObject>>
+		#region ICollection<KeyValuePair<NSObject, NSObject>>
 		void ICollection<KeyValuePair<NSObject, NSObject>>.Add (KeyValuePair<NSObject, NSObject> item)
 		{
 			SetObject (item.Value, item.Key);
@@ -115,7 +120,7 @@ namespace Foundation {
 			return ContainsKeyValuePair (keyValuePair);
 		}
 
-		void ICollection<KeyValuePair<NSObject, NSObject>>.CopyTo (KeyValuePair<NSObject, NSObject>[] array, int index)
+		void ICollection<KeyValuePair<NSObject, NSObject>>.CopyTo (KeyValuePair<NSObject, NSObject> [] array, int index)
 		{
 			if (array == null)
 				throw new ArgumentNullException (nameof (array));
@@ -124,7 +129,7 @@ namespace Foundation {
 			// we want no exception for index==array.Length && Count == 0
 			if (index > array.Length)
 				throw new ArgumentException (nameof (index) + " larger than largest valid index of array");
-			if (array.Length - index < (int)Count)
+			if (array.Length - index < (int) Count)
 				throw new ArgumentException ("Destination array cannot hold the requested elements!");
 
 			var e = GetEnumerator ();
@@ -146,14 +151,14 @@ namespace Foundation {
 		bool ICollection<KeyValuePair<NSObject, NSObject>>.IsReadOnly {
 			get { return false; }
 		}
-#endregion
+		#endregion
 
-#region IDictionary
+		#region IDictionary
 		void IDictionary.Add (object key, object value)
 		{
 			var nsokey = key as NSObject;
 			var nsovalue = value as NSObject;
-			
+
 			if (nsokey == null || nsovalue == null)
 				throw new ArgumentException ("You can only use NSObjects for keys and values in an NSMutableDictionary");
 
@@ -183,7 +188,7 @@ namespace Foundation {
 			var nskey = key as INativeObject;
 			if (nskey == null)
 				throw new ArgumentException ("The key must be an INativeObject");
-			
+
 			_RemoveObjectForKey (nskey.Handle);
 		}
 
@@ -208,7 +213,7 @@ namespace Foundation {
 
 				if (nsokey == null || nsovalue == null)
 					throw new ArgumentException ("You can only use INativeObjects for keys and values in an NSMutableDictionary");
-				
+
 				_SetObject (nsovalue.Handle, nsokey.Handle);
 			}
 		}
@@ -220,15 +225,15 @@ namespace Foundation {
 		ICollection IDictionary.Values {
 			get { return Values; }
 		}
-#endregion
+		#endregion
 
-#region IDictionary<NSObject, NSObject>
+		#region IDictionary<NSObject, NSObject>
 		public void Add (NSObject key, NSObject value)
 		{
 			// Inverted args.
 			SetObject (value, key);
 		}
-			
+
 		public bool Remove (NSObject key)
 		{
 			if (key == null)
@@ -293,23 +298,23 @@ namespace Foundation {
 		ICollection<NSObject> IDictionary<NSObject, NSObject>.Values {
 			get { return Values; }
 		}
-#endregion
+		#endregion
 
-#region IEnumerable
+		#region IEnumerable
 		IEnumerator IEnumerable.GetEnumerator ()
 		{
 			return ((IEnumerable<KeyValuePair<NSObject, NSObject>>) this).GetEnumerator ();
 		}
-#endregion
+		#endregion
 
-#region IEnumerable<K,V>
+		#region IEnumerable<K,V>
 		public IEnumerator<KeyValuePair<NSObject, NSObject>> GetEnumerator ()
 		{
 			foreach (var key in Keys) {
 				yield return new KeyValuePair<NSObject, NSObject> (key, ObjectForKey (key));
 			}
 		}
-#endregion
+		#endregion
 
 		public static NSMutableDictionary LowlevelFromObjectAndKey (IntPtr obj, IntPtr key)
 		{
@@ -331,13 +336,20 @@ namespace Foundation {
 
 		public void LowlevelSetObject (NSObject obj, IntPtr key)
 		{
-			if (obj == null)
-				throw new ArgumentNullException (nameof (obj));
-#if MONOMAC
-			ObjCRuntime.Messaging.void_objc_msgSend_IntPtr_IntPtr (this.Handle, selSetObject_ForKey_Handle, obj.Handle, key);
-#else
-			ObjCRuntime.Messaging.void_objc_msgSend_IntPtr_IntPtr (this.Handle, Selector.GetHandle ("setObject:forKey:"), obj.Handle, key);
-#endif
+			if (obj is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (obj));
+
+			LowlevelSetObject (obj.Handle, key);
+		}
+
+		public void LowlevelSetObject (string str, IntPtr key)
+		{
+			if (str is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (str));
+
+			var ptr = CFString.CreateNative (str);
+			LowlevelSetObject (ptr, key);
+			CFString.ReleaseNative (ptr);
 		}
 	}
 }

@@ -5,16 +5,13 @@
 //	Sebastien Pouliot  <sebastien@xamarin.com>
 //
 // Copyright 2012-2014 Xamarin Inc.
+// Copyright 2019 Microsoft Corporation
 //
 
 using System;
-#if XAMCORE_2_0
 using Foundation;
+using ObjCRuntime;
 using Security;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.Security {
@@ -27,10 +24,10 @@ namespace MonoTouchFixtures.Security {
 		static public SecIdentity GetIdentity ()
 		{
 			using (var options = NSDictionary.FromObjectAndKey (new NSString ("farscape"), SecImportExport.Passphrase)) {
-				NSDictionary[] array;
+				NSDictionary [] array;
 				if (SecImportExport.ImportPkcs12 (ImportExportTest.farscape_pfx, options, out array) != SecStatusCode.Success)
 					Assert.Fail ("ImportPkcs12");
-				return new SecIdentity (array [0].LowlevelObjectForKey (SecImportExport.Identity.Handle));
+				return Runtime.GetINativeObject<SecIdentity> (array [0].LowlevelObjectForKey (SecImportExport.Identity.Handle), false);
 			}
 		}
 
@@ -46,10 +43,26 @@ namespace MonoTouchFixtures.Security {
 		[Test]
 		public void I2 ()
 		{
-			TestRuntime.AssertXcodeVersion (10,0);
-			using (var i1 = GetIdentity ()) 
+			TestRuntime.AssertXcodeVersion (10, 0);
+			using (var i1 = GetIdentity ())
 			using (var i2 = new SecIdentity2 (i1)) {
 				Assert.That (i1.Certificate.GetCommonName (), Is.EqualTo (i2.Identity.Certificate.GetCommonName ()), "GetCommonName");
+			}
+		}
+
+		[Test]
+		public void AccessCertificates ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using (var i1 = GetIdentity ())
+			using (var i2 = new SecIdentity2 (i1, i1.Certificate)) {
+				int call = 0;
+				Assert.True (i2.AccessCertificates ((c) => {
+					Assert.That (i1.Certificate.GetCommonName (), Is.EqualTo (c.Certificate.GetCommonName ()), "GetCommonName");
+					call++;
+
+				}), "Access");
+				Assert.That (call, Is.EqualTo (1), "call");
 			}
 		}
 	}

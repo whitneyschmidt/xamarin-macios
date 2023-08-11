@@ -14,31 +14,35 @@ using Foundation;
 using ObjCRuntime;
 using UIKit;
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 #if !MONOMAC
 namespace Messages {
 
-	[iOS (10,0)]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
 	[Native]
-	public enum MSMessagesAppPresentationStyle : ulong
-	{
+	public enum MSMessagesAppPresentationStyle : ulong {
 		Compact,
 		Expanded,
 		Transcript,
 	}
 
-	[iOS (10,0)]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
 	[Native]
-	public enum MSStickerSize : long
-	{
+	public enum MSStickerSize : long {
 		Small,
 		Regular,
 		Large
 	}
 
+	[MacCatalyst (14, 0)]
 	[Native]
 	[ErrorDomain ("MSMessagesErrorDomain")]
-	public enum MSMessageErrorCode : long
-	{
+	public enum MSMessageErrorCode : long {
 		Unknown = -1,
 		FileNotFound = 1,
 		FileUnreadable,
@@ -53,31 +57,30 @@ namespace Messages {
 		APIUnavailableInPresentationContext,
 	}
 
-	[iOS (12,0)]
+	[MacCatalyst (14, 0)]
+	[iOS (12, 0)]
 	[Native]
-	public enum MSMessagesAppPresentationContext : long
-	{
+	public enum MSMessagesAppPresentationContext : long {
 		Messages,
 		Media,
 	}
 
-	[iOS (11,0)]
+	[MacCatalyst (14, 0)]
+	[iOS (11, 0)]
 	[Protocol]
-	interface MSMessagesAppTranscriptPresentation
-	{
-		[iOS (11,0)]
+	interface MSMessagesAppTranscriptPresentation {
 		[Abstract]
 		[Export ("contentSizeThatFits:")]
 		CGSize GetContentSizeThatFits (CGSize size);
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(UIViewController))]
-	interface MSMessagesAppViewController : MSMessagesAppTranscriptPresentation
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (UIViewController))]
+	interface MSMessagesAppViewController : MSMessagesAppTranscriptPresentation {
 		// inlined ctor
 		[Export ("initWithNibName:bundle:")]
-		IntPtr Constructor ([NullAllowed] string nibName, [NullAllowed] NSBundle bundle);
+		NativeHandle Constructor ([NullAllowed] string nibName, [NullAllowed] NSBundle bundle);
 
 		[NullAllowed, Export ("activeConversation", ArgumentSemantic.Strong)]
 		MSConversation ActiveConversation { get; }
@@ -124,20 +127,21 @@ namespace Messages {
 		[Export ("didTransitionToPresentationStyle:")]
 		void DidTransition (MSMessagesAppPresentationStyle presentationStyle);
 
-		[iOS (12,0)]
+		[iOS (12, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("presentationContext")]
 		MSMessagesAppPresentationContext PresentationContext { get; }
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(NSObject))]
-	interface MSConversation
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (NSObject))]
+	interface MSConversation {
 		[Export ("localParticipantIdentifier")]
 		NSUuid LocalParticipantIdentifier { get; }
 
 		[Export ("remoteParticipantIdentifiers")]
-		NSUuid[] RemoteParticipantIdentifiers { get; }
+		NSUuid [] RemoteParticipantIdentifiers { get; }
 
 		[NullAllowed, Export ("selectedMessage")]
 		MSMessage SelectedMessage { get; }
@@ -158,44 +162,49 @@ namespace Messages {
 		[Async]
 		void InsertAttachment (NSUrl url, [NullAllowed] string filename, [NullAllowed] Action<NSError> completionHandler);
 
-		[iOS (11,0)]
+		[iOS (11, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("sendMessage:completionHandler:")]
 		[Async]
 		void SendMessage (MSMessage message, [NullAllowed] Action<NSError> completionHandler);
 
-		[iOS (11,0)]
+		[iOS (11, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("sendSticker:completionHandler:")]
 		[Async]
 		void SendSticker (MSSticker sticker, [NullAllowed] Action<NSError> completionHandler);
 
-		[iOS (11,0)]
+		[iOS (11, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("sendText:completionHandler:")]
 		[Async]
 		void SendText (string text, [NullAllowed] Action<NSError> completionHandler);
 
-		[iOS (11,0)]
+		[iOS (11, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("sendAttachment:withAlternateFilename:completionHandler:")]
 		[Async]
 		void SendAttachment (NSUrl url, [NullAllowed] string filename, [NullAllowed] Action<NSError> completionHandler);
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(NSObject))]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // designated
-	interface MSMessage : NSCopying, NSSecureCoding
-	{
+	interface MSMessage : NSCopying, NSSecureCoding {
 		[DesignatedInitializer]
 		[Export ("init")]
-		IntPtr Constructor ();
+		NativeHandle Constructor ();
 
 		[Export ("initWithSession:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MSSession session);
+		NativeHandle Constructor (MSSession session);
 
 		[NullAllowed, Export ("session")]
 		MSSession Session { get; }
 
-		[iOS (11,0)]
+		[iOS (11, 0)]
+		[MacCatalyst (14, 0)]
 		[Export ("pending")]
 		bool Pending { [Bind ("isPending")] get; }
 
@@ -221,16 +230,17 @@ namespace Messages {
 		NSError Error { get; set; }
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(NSObject))]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (NSObject))]
 	[Abstract] // as per docs
 	[DisableDefaultCtor]
-	interface MSMessageLayout : NSCopying {}
+	interface MSMessageLayout : NSCopying { }
 
-	[iOS (10,0)]
-	[BaseType (typeof(MSMessageLayout))]
-	interface MSMessageTemplateLayout
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (MSMessageLayout))]
+	interface MSMessageTemplateLayout {
 		[NullAllowed, Export ("caption")]
 		string Caption { get; set; }
 
@@ -256,18 +266,19 @@ namespace Messages {
 		string ImageSubtitle { get; set; }
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(NSObject))]
-	interface MSSession : NSSecureCoding {}
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (NSObject))]
+	interface MSSession : NSSecureCoding { }
 
-	[iOS (10,0)]
-	[BaseType (typeof(NSObject))]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
-	interface MSSticker
-	{
+	interface MSSticker {
 		[Export ("initWithContentsOfFileURL:localizedDescription:error:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSUrl fileUrl, string localizedDescription, [NullAllowed] out NSError error);
+		NativeHandle Constructor (NSUrl fileUrl, string localizedDescription, [NullAllowed] out NSError error);
 
 		[Export ("imageFileURL", ArgumentSemantic.Strong)]
 		NSUrl ImageFileUrl { get; }
@@ -276,16 +287,16 @@ namespace Messages {
 		string LocalizedDescription { get; }
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(UIView))]
-	interface MSStickerView
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (UIView))]
+	interface MSStickerView {
 		// inlined ctor
 		[Export ("initWithFrame:")]
-		IntPtr Constructor (CGRect frame);
+		NativeHandle Constructor (CGRect frame);
 
 		[Export ("initWithFrame:sticker:")]
-		IntPtr Constructor (CGRect frame, [NullAllowed] MSSticker sticker);
+		NativeHandle Constructor (CGRect frame, [NullAllowed] MSSticker sticker);
 
 		[NullAllowed, Export ("sticker", ArgumentSemantic.Strong)]
 		MSSticker Sticker { get; set; }
@@ -305,11 +316,11 @@ namespace Messages {
 
 	interface IMSStickerBrowserViewDataSource { }
 
-	[iOS (10,0)]
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
 	[Protocol, Model]
-	[BaseType (typeof(NSObject))]
-	interface MSStickerBrowserViewDataSource
-	{
+	[BaseType (typeof (NSObject))]
+	interface MSStickerBrowserViewDataSource {
 		[Abstract]
 		[Export ("numberOfStickersInStickerBrowserView:")]
 		nint GetNumberOfStickers (MSStickerBrowserView stickerBrowserView);
@@ -319,17 +330,17 @@ namespace Messages {
 		MSSticker GetSticker (MSStickerBrowserView stickerBrowserView, nint index);
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(UIView))]
-	interface MSStickerBrowserView
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (UIView))]
+	interface MSStickerBrowserView {
 		[Export ("initWithFrame:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (CGRect frame);
+		NativeHandle Constructor (CGRect frame);
 
 		[Export ("initWithFrame:stickerSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (CGRect frame, MSStickerSize stickerSize);
+		NativeHandle Constructor (CGRect frame, MSStickerSize stickerSize);
 
 		[Export ("stickerSize", ArgumentSemantic.Assign)]
 		MSStickerSize StickerSize { get; }
@@ -350,13 +361,13 @@ namespace Messages {
 		void ReloadData ();
 	}
 
-	[iOS (10,0)]
-	[BaseType (typeof(UIViewController))]
-	interface MSStickerBrowserViewController : MSStickerBrowserViewDataSource
-	{
+	[MacCatalyst (14, 0)]
+	[iOS (10, 0)]
+	[BaseType (typeof (UIViewController))]
+	interface MSStickerBrowserViewController : MSStickerBrowserViewDataSource {
 		[Export ("initWithStickerSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MSStickerSize stickerSize);
+		NativeHandle Constructor (MSStickerSize stickerSize);
 
 		[Export ("stickerBrowserView", ArgumentSemantic.Strong)]
 		MSStickerBrowserView StickerBrowserView { get; }
@@ -365,14 +376,14 @@ namespace Messages {
 		MSStickerSize StickerSize { get; }
 	}
 
-	[iOS (11,0)]
-	[BaseType (typeof(MSMessageLayout))]
+	[MacCatalyst (14, 0)]
+	[iOS (11, 0)]
+	[BaseType (typeof (MSMessageLayout))]
 	[DisableDefaultCtor]
-	interface MSMessageLiveLayout
-	{
+	interface MSMessageLiveLayout {
 		[Export ("initWithAlternateLayout:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MSMessageTemplateLayout alternateLayout);
+		NativeHandle Constructor (MSMessageTemplateLayout alternateLayout);
 
 		[Export ("alternateLayout")]
 		MSMessageTemplateLayout AlternateLayout { get; }

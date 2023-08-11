@@ -27,9 +27,8 @@ namespace Registrar {
 		public static Dictionary<MethodBase, List<MethodBase>> PrepareInterfaceMethodMapping (Type type)
 		{
 			Dictionary<MethodBase, List<MethodBase>> rv = null;
-			var ifaces = type.FindInterfaces ((v, o) =>
-			                                  {
-				var attribs = v.GetCustomAttributes (typeof(ProtocolAttribute), true);
+			var ifaces = type.FindInterfaces ((v, o) => {
+				var attribs = v.GetCustomAttributes (typeof (ProtocolAttribute), true);
 				return attribs != null && attribs.Length > 0;
 			}, null);
 
@@ -55,7 +54,7 @@ namespace Registrar {
 
 			return rv;
 		}
-		
+
 		public static T GetOneAttribute<T> (ICustomAttributeProvider provider) where T : Attribute
 		{
 			var attribs = provider.GetCustomAttributes (typeof (T), false);
@@ -76,21 +75,21 @@ namespace Registrar {
 
 	class DynamicRegistrar : Registrar {
 		Dictionary<IntPtr, ObjCType> type_map;
-		Dictionary <string, object> registered_assemblies; // Use Dictionary instead of HashSet to avoid pulling in System.Core.dll.
+		Dictionary<string, object> registered_assemblies; // Use Dictionary instead of HashSet to avoid pulling in System.Core.dll.
 
 		// custom_type_map can be accessed from multiple threads, and at the
 		// same time mutated by the registrar, so any accesses needs to be locked
 		// so that it's not queried and mutated at the same time from multiple threads.
 		// Note that the registrar is already making sure it's not _mutated_ from
 		// multiple threads at the same time.
-		Dictionary <Type, object> custom_type_map; // Use Dictionary instead of HashSet to avoid pulling in System.Core.dll.
+		Dictionary<Type, object> custom_type_map; // Use Dictionary instead of HashSet to avoid pulling in System.Core.dll.
 
 		protected object lock_obj = new object ();
 
 		public DynamicRegistrar ()
 		{
 			type_map = new Dictionary<IntPtr, ObjCType> (Runtime.IntPtrEqualityComparer);
-			custom_type_map = new Dictionary <Type, object> (Runtime.TypeEqualityComparer);
+			custom_type_map = new Dictionary<Type, object> (Runtime.TypeEqualityComparer);
 		}
 
 		protected override bool SkipRegisterAssembly (Assembly assembly)
@@ -109,11 +108,11 @@ namespace Registrar {
 		{
 			var aname = assembly.GetName ().Name;
 
-			if (aname == CompatAssemblyName || aname == DualAssemblyName)
+			if (aname == AssemblyName)
 				return true;
 
 			foreach (var ar in assembly.GetReferencedAssemblies ()) {
-				if (ar.Name == CompatAssemblyName || ar.Name == DualAssemblyName)
+				if (ar.Name == AssemblyName)
 					return true;
 			}
 			return false;
@@ -130,7 +129,7 @@ namespace Registrar {
 
 		protected override bool IsSimulatorOrDesktop {
 			get {
-#if MONOMAC
+#if MONOMAC || __MACCATALYST__
 				return true;
 #else
 				return Runtime.Arch == Arch.SIMULATOR;
@@ -144,21 +143,9 @@ namespace Registrar {
 			}
 		}
 
-		protected override bool IsDualBuildImpl {
+		protected override bool IsARM64 {
 			get {
-				return NSObject.PlatformAssembly.GetName ().Name == 
-#if MONOMAC
-					"Xamarin.Mac";
-#elif TVOS
-					"Xamarin.TVOS";
-#elif WATCH
-					"Xamarin.WatchOS";
-#elif IOS
-					"Xamarin.iOS";
-#else
-	#error unknown platform
-					"unknown platform";
-#endif
+				return Runtime.IsARM64CallingConvention;
 			}
 		}
 
@@ -209,11 +196,6 @@ namespace Registrar {
 		protected override int GetValueTypeSize (Type type)
 		{
 			return Marshal.SizeOf (type);
-		}
-
-		protected override bool IsCorlibType (Type type)
-		{
-			return type.Assembly == typeof(object).Assembly;
 		}
 
 		protected override IEnumerable<MethodBase> CollectConstructors (Type type)
@@ -325,12 +307,6 @@ namespace Registrar {
 			}
 		}
 
-		protected override List<AvailabilityBaseAttribute> GetAvailabilityAttributes (Type obj)
-		{
-			// No need to implement this until GetSDKVersion is implemented.
-			return null;
-		}
-
 		protected override Version GetSDKVersion ()
 		{
 			// As far as I can tell we can't figure this out at runtime,
@@ -352,7 +328,7 @@ namespace Registrar {
 #elif MONOMAC
 				return "Mac";
 #else
-	#error No platform
+#error No platform
 #endif
 			}
 		}
@@ -380,7 +356,7 @@ namespace Registrar {
 
 		protected override IList<AdoptsAttribute> GetAdoptsAttributes (Type type)
 		{
-			return (AdoptsAttribute[]) type.GetCustomAttributes (typeof (AdoptsAttribute), false);
+			return (AdoptsAttribute []) type.GetCustomAttributes (typeof (AdoptsAttribute), false);
 		}
 
 		protected override string GetAssemblyName (Assembly assembly)
@@ -444,7 +420,7 @@ namespace Registrar {
 			name = type.Name;
 		}
 
-		protected override Type[] GetParameters (MethodBase method)
+		protected override Type [] GetParameters (MethodBase method)
 		{
 			var parameters = method.GetParameters ();
 			var types = new Type [parameters.Length];
@@ -478,7 +454,7 @@ namespace Registrar {
 
 			throw ErrorHelper.CreateError (0, "Cannot get the return type of a {0}", method.GetType ().Name);
 		}
-			
+
 		protected override string GetTypeFullName (Type type)
 		{
 			return type.FullName;
@@ -502,7 +478,7 @@ namespace Registrar {
 						}
 					}
 					// Fallback to NSObject.
-					constrained_type = typeof(NSObject);
+					constrained_type = typeof (NSObject);
 					return true;
 				}
 				return false;
@@ -518,24 +494,28 @@ namespace Registrar {
 					constrs [i] = constr;
 				}
 				constrained_type = type.MakeGenericType (constrs);
-				return true;
+				return rv;
 			}
 
-			return false;
+			return true;
 		}
 
-		protected override Exception CreateException (int code, Exception innerException, MethodBase method, string message, params object[] args)
+		protected override Exception CreateExceptionImpl (int code, bool error, Exception innerException, MethodBase method, string message, params object [] args)
 		{
 			// There doesn't seem to be a way to find the source code location
 			// for the method using System.Reflection.
-			return ErrorHelper.CreateError (code, innerException, message, args);
+			if (error)
+				return ErrorHelper.CreateError (code, innerException, message, args);
+			return ErrorHelper.CreateWarning (code, innerException, message, args);
 		}
 
-		protected override Exception CreateException (int code, Exception innerException, Type type, string message, params object [] args)
+		protected override Exception CreateExceptionImpl (int code, bool error, Exception innerException, Type type, string message, params object [] args)
 		{
 			// There doesn't seem to be a way to find the source code location
 			// for the method using System.Reflection.
-			return ErrorHelper.CreateError (code, innerException, message, args);
+			if (error)
+				return ErrorHelper.CreateError (code, innerException, message, args);
+			return ErrorHelper.CreateWarning (code, innerException, message, args);
 		}
 
 		protected override string GetAssemblyQualifiedName (Type type)
@@ -626,13 +606,23 @@ namespace Registrar {
 		{
 			isNativeEnum = false;
 			if (type.IsEnum)
-				isNativeEnum = IsDualBuildImpl && type.IsDefined (typeof (NativeAttribute), false);
+				isNativeEnum = type.IsDefined (typeof (NativeAttribute), false);
 			return type.IsEnum;
 		}
 
 		protected override bool IsInterface (Type type)
 		{
 			return type.IsInterface;
+		}
+
+		protected override bool IsAbstract (Type type)
+		{
+			return type.IsAbstract;
+		}
+
+		protected override bool IsPointer (Type type)
+		{
+			return type.IsPointer;
 		}
 
 		protected override bool IsINativeObject (Type type)
@@ -654,12 +644,12 @@ namespace Registrar {
 		{
 			return method.IsStatic;
 		}
-		
+
 		protected override bool IsStatic (PropertyInfo property)
 		{
 			return IsStaticProperty (property);
 		}
-	
+
 		protected override bool IsValueType (Type type)
 		{
 			return type.IsValueType;
@@ -670,7 +660,7 @@ namespace Registrar {
 			return method.IsVirtual;
 		}
 
-		protected override Type[] GetInterfaces (Type type)
+		protected override Type [] GetInterfaces (Type type)
 		{
 			return type.GetInterfaces ();
 		}
@@ -696,9 +686,9 @@ namespace Registrar {
 			return attribute != null;
 		}
 
-		protected override void ReportError (int code, string message, params object[] args)
+		protected override void ReportError (int code, string message, params object [] args)
 		{
-			Console.WriteLine (message, args);
+			Runtime.NSLog (String.Format (message, args));
 		}
 
 		Class.objc_attribute_prop [] GetPropertyAttributes (ObjCProperty property, out int count, bool isProtocol)
@@ -747,7 +737,7 @@ namespace Registrar {
 #else
 						const string msg = "Detected a protocol ({0}) inheriting from the JSExport protocol while using the dynamic registrar. It is not possible to export protocols to JavaScriptCore dynamically; the static registrar must be used (add '--registrar:static' to the additional mtouch arguments in the project's iOS Build options to select the static registrar).";
 #endif
-						ErrorHelper.Warning (4147, msg, GetTypeFullName (type.Type));
+						ErrorHelper.Show (ErrorHelper.CreateWarning (4147, msg, GetTypeFullName (type.Type)));
 					}
 					Protocol.protocol_addProtocol (protocol, proto.Handle);
 				}
@@ -874,7 +864,7 @@ namespace Registrar {
 			} else {
 				try {
 					var nsobj = Runtime.GetNSObject (obj, Runtime.MissingCtorResolution.ThrowConstructor1NotFound, true);
-					mthis = ObjectWrapper.Convert (nsobj);
+					mthis = Runtime.AllocGCHandle (nsobj);
 					if (res.Method.ContainsGenericParameters) {
 						res.WriteUnmanagedDescription (desc, Runtime.FindClosedMethod (nsobj.GetType (), res.Method));
 						return;
@@ -902,20 +892,20 @@ namespace Registrar {
 		ObjCMethod GetMethodNoThrow (Type original_type, Type type, string selector, bool is_static)
 		{
 			var objcType = RegisterType (type);
-			
+
 			if (objcType == null)
 				throw ErrorHelper.CreateError (4142, "Failed to register the type '{0}'", type.FullName);
 
 			ObjCMember member = null;
-			
+
 			if (type.BaseType != typeof (object) && !objcType.TryGetMember (selector, is_static, out member))
 				return GetMethodNoThrow (original_type, type.BaseType, selector, is_static);
-			
+
 			var method = member as ObjCMethod;
-			
+
 			if (method == null)
 				throw ErrorHelper.CreateError (8007, "Cannot get the method descriptor for the selector '{0}' on the type '{1}', because the selector does not correspond to a method", selector, original_type.FullName);
-			
+
 			return method;
 		}
 
@@ -948,7 +938,9 @@ namespace Registrar {
 					UnlockRegistrar ();
 			}
 
-			throw ErrorHelper.CreateError (4143, "The ObjectiveC class '{0}' could not be registered, it does not seem to derive from any known ObjectiveC class (including NSObject).", Marshal.PtrToStringAuto (Class.class_getName (original_class)));
+			if (throw_on_error)
+				throw ErrorHelper.CreateError (4143, "The ObjectiveC class '{0}' could not be registered, it does not seem to derive from any known ObjectiveC class (including NSObject).", Marshal.PtrToStringAuto (Class.class_getName (original_class)));
+			return null;
 		}
 
 		bool RegisterMethod (ObjCMethod method)
@@ -1018,6 +1010,12 @@ namespace Registrar {
 			case Trampoline.SetGCHandle:
 				tramp = Method.SetGCHandleTrampoline;
 				break;
+			case Trampoline.GetFlags:
+				tramp = Method.GetFlagsTrampoline;
+				break;
+			case Trampoline.SetFlags:
+				tramp = Method.SetFlagsTrampoline;
+				break;
 			default:
 				throw ErrorHelper.CreateError (4144, "Cannot register the method '{0}.{1}' since it does not have an associated trampoline. Please file a bug report at https://github.com/xamarin/xamarin-macios/issues/new", method.DeclaringType.Type.FullName, method.Name);
 			}
@@ -1053,27 +1051,27 @@ namespace Registrar {
 				var base_property = TryMatchProperty (@base, property);
 				if (base_property != null)
 					return GetBasePropertyInTypeHierarchy (base_property) ?? base_property;
-				
+
 				@base = @base.BaseType;
 			}
-			
+
 			return null;
 		}
-		
+
 		static PropertyInfo TryMatchProperty (Type type, PropertyInfo property)
 		{
 			foreach (var candidate in type.GetProperties (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
 				if (PropertyMatch (candidate, property))
 					return candidate;
-			
+
 			return null;
 		}
-		
+
 		static bool PropertyMatch (PropertyInfo candidate, PropertyInfo property)
 		{
 			if (candidate.Name != property.Name)
 				return false;
-			
+
 			if (candidate.CanRead) {
 				if (!property.CanRead)
 					return false;
@@ -1082,7 +1080,7 @@ namespace Registrar {
 			} else if (property.CanRead) {
 				return false;
 			}
-			
+
 			if (candidate.CanWrite) {
 				if (!property.CanWrite)
 					return false;
@@ -1091,7 +1089,7 @@ namespace Registrar {
 			} else if (property.CanWrite) {
 				return false;
 			}
-			
+
 			return true;
 		}
 
@@ -1099,10 +1097,10 @@ namespace Registrar {
 		{
 			if (!candidate.IsVirtual)
 				return false;
-			
+
 			if (candidate.Name != method.Name)
 				return false;
-			
+
 			if (!TypeMatch (candidate.ReturnType, method.ReturnType))
 				return false;
 
@@ -1110,11 +1108,11 @@ namespace Registrar {
 			var mparams = method.GetParameters ();
 			if (cparams.Length != mparams.Length)
 				return false;
-			
+
 			for (int i = 0; i < cparams.Length; i++)
 				if (!TypeMatch (cparams [i].ParameterType, mparams [i].ParameterType))
 					return false;
-			
+
 			return true;
 		}
 
@@ -1145,4 +1143,3 @@ namespace Registrar {
 		}
 	}
 }
-

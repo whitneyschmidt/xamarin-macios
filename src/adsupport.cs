@@ -13,7 +13,8 @@ using System;
 
 namespace AdSupport {
 
-	[iOS (6,0)][Mac (10,14, onlyOn64: true)]
+	[Mac (10, 14)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface ASIdentifierManager {
@@ -22,13 +23,20 @@ namespace AdSupport {
 		[Static]
 		ASIdentifierManager SharedManager { get; }
 
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'ATTrackingManager.AppTrackingTransparency' instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use 'ATTrackingManager.AppTrackingTransparency' instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use 'ATTrackingManager.AppTrackingTransparency' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'ATTrackingManager.AppTrackingTransparency' instead.")]
 		[Export ("advertisingTrackingEnabled")]
 		bool IsAdvertisingTrackingEnabled { [Bind ("isAdvertisingTrackingEnabled")] get; }
 
 		[Export ("advertisingIdentifier")]
 		NSUuid AdvertisingIdentifier { get; }
 
-		[NoTV][NoiOS]
+		[NoTV]
+		[NoiOS]
+		[NoMac] // unclear when that was changed (xcode 12 GM allowed it)
+		[NoMacCatalyst]
 		[Export ("clearAdvertisingIdentifier")]
 		void ClearAdvertisingIdentifier ();
 	}

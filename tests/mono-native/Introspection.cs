@@ -7,11 +7,9 @@ using System.Runtime.InteropServices;
 using NUnit.Framework;
 using ObjCRuntime;
 
-namespace Xamarin.Tests
-{
+namespace Xamarin.Tests {
 	[TestFixture]
-	public class Introspection
-	{
+	public class Introspection {
 		public static string RootDirectory => Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location);
 
 		void AssertShouldExist (string name)
@@ -78,48 +76,6 @@ namespace Xamarin.Tests
 			default:
 				Assert.Fail ($"Unknown link mode: {MonoNativeConfig.LinkMode}");
 				break;
-			}
-		}
-
-		[Test]
-		public void CheckSymbols ()
-		{
-			string libname;
-			switch (MonoNativeConfig.LinkMode) {
-			case MonoNativeLinkMode.Dynamic:
-				libname = MonoNativeConfig.DynamicLibraryName;
-				break;
-			case MonoNativeLinkMode.Static:
-				libname = null;
-				break;
-			case MonoNativeLinkMode.Symlink:
-				libname = "libmono-native.dylib";
-				break;
-			default:
-				Assert.Fail ($"Unknown link mode: {MonoNativeConfig.LinkMode}");
-				return;
-			}
-
-			mono_native_initialize ();
-
-			var dylib = Dlfcn.dlopen (libname, 0);
-			Assert.That (dylib, Is.Not.EqualTo (IntPtr.Zero), "dlopen()ed mono-native");
-
-			try {
-#if MONOTOUCH_TV || MONOTOUCH_WATCH // on tvOS/watchOS we emit a native reference for P/Invokes in all assemblies, so we'll strip away the 'mono_native_initialize' symbol when we're linking statically (since we don't need the symbol).
-				var has_symbol = MonoNativeConfig.LinkMode != MonoNativeLinkMode.Static || Runtime.Arch == Arch.SIMULATOR;
-#else
-				var has_symbol = true;
-#endif
-				var symbol = Dlfcn.dlsym (dylib, "mono_native_initialize");
-
-				if (has_symbol) {
-					Assert.That (symbol, Is.Not.EqualTo (IntPtr.Zero), "dlsym() found mono_native_initialize()");
-				} else {
-					Assert.That (symbol, Is.EqualTo (IntPtr.Zero), "dlsym() did not find mono_native_initialize()");
-				}
-			} finally {
-				Dlfcn.dlclose (dylib);
 			}
 		}
 

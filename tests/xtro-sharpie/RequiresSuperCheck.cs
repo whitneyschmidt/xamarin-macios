@@ -1,4 +1,4 @@
-﻿//
+//
 // The rule reports
 //
 // !missing-requires-super!
@@ -19,7 +19,7 @@ namespace Extrospection {
 
 	public class RequiresSuperCheck : BaseVisitor {
 
-		static Dictionary<string,MethodDefinition> methods = new Dictionary<string,MethodDefinition> ();
+		static Dictionary<string, MethodDefinition> methods = new Dictionary<string, MethodDefinition> ();
 
 		static MethodDefinition GetMethod (ObjCMethodDecl decl)
 		{

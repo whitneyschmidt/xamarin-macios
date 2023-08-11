@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for HKCdaDocumentSample
 //
 // Authors:
@@ -6,20 +6,20 @@
 //
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
-#if __IOS__
+#if HAS_HEALTHKIT
 
 using System;
 
-#if XAMCORE_2_0
 using Foundation;
+using ObjCRuntime;
+
 using HealthKit;
-using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.HealthKit;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
+#if MONOMAC
+using AppKit;
+#else
+using UIKit;
+#endif
 
 namespace MonoTouchFixtures.HealthKit {
 
@@ -30,17 +30,40 @@ namespace MonoTouchFixtures.HealthKit {
 		[Test]
 		public void Error ()
 		{
+#if MONOMAC
+			TestRuntime.AssertXcodeVersion (14, 0);
+#else
 			TestRuntime.AssertXcodeVersion (8, 0);
+#endif
 
 			NSError error;
-			using (var d = new NSData ())
-			using (var s = HKCdaDocumentSample.Create (d, NSDate.DistantPast, NSDate.DistantFuture, (NSDictionary) null, out error)) {
-				Assert.NotNull (error, "error");
-				var details = new HKDetailedCdaErrors (error.UserInfo);
-				Assert.That (details.ValidationError.Length, Is.EqualTo (0), "Length");
+			using (var d = new NSData ()) {
+				TestDelegate action = () => {
+					using (var s = HKCdaDocumentSample.Create (d, NSDate.DistantPast, NSDate.DistantFuture, (NSDictionary) null, out error)) {
+						Assert.NotNull (error, "error");
+						var details = new HKDetailedCdaErrors (error.UserInfo);
+						Assert.That (details.ValidationError.Length, Is.EqualTo ((nint) 0), "Length");
+					}
+				};
+#if __MACCATALYST__
+				var throwsException = TestRuntime.CheckXcodeVersion (12, 0);
+#else
+				var throwsException = TestRuntime.CheckXcodeVersion (11, 0);
+#endif
+
+				if (throwsException) {
+#if NET || MONOMAC
+					var ex = Assert.Throws<ObjCException> (action, "Exception");
+#else
+					var ex = Assert.Throws<MonoTouchException> (action, "Exception");
+#endif
+					Assert.That (ex.Message, Does.Match ("startDate.*and endDate.*exceed the maximum allowed duration for this sample type"), "Exception Message");
+				} else {
+					action ();
+				}
 			}
 		}
 	}
 }
 
-#endif // __IOS__
+#endif // HAS_HEALTHKIT

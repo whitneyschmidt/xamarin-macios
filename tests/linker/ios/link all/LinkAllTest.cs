@@ -16,36 +16,35 @@ using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 
 using MonoTouch;
-#if XAMCORE_2_0
 using CoreGraphics;
 using Foundation;
 using ObjCRuntime;
 #if !__WATCHOS__
 using StoreKit;
 #endif
+#if __MACOS__ || __IOS__
+using PdfKit;
+#endif
+#if !__MACOS__
 using UIKit;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.StoreKit;
-using MonoTouch.UIKit;
 #endif
 using NUnit.Framework;
+using MonoTests.System.Net.Http;
 
 namespace LinkAll {
-	
+
 	// we DO NOT want the code to be "fully" available
 	public class NotPreserved {
-		
+
 		public byte One {
 			get; set;
 		}
-	
+
 		[DefaultValue (2)]
 		public int Two {
 			get; set;
@@ -57,39 +56,60 @@ namespace LinkAll {
 		// but the nested type is a subclass of NSObject and gets preserved (as it's not part of monotouch.dll)
 		public class Derived : NSObject {
 			[Export ("foo")]
-			public void Foo () {}
+			public void Foo () { }
 		}
 
-		public void UnusedMethod () {}
+		public void UnusedMethod () { }
 	}
 
 	[TestFixture]
 	// we want the tests to be available because we use the linker
 	[Preserve (AllMembers = true)]
 	public class LinkAllRegressionTest {
-#if __IOS__
-#if XAMCORE_2_0
+#if __MACCATALYST__
 		public const string NamespacePrefix = "";
-		public const string AssemblyName = "Xamarin.iOS";
+#if NET
+		public const string AssemblyName = "Microsoft.MacCatalyst";
 #else
-		public const string NamespacePrefix = "MonoTouch.";
-		public const string AssemblyName = "monotouch";
+		public const string AssemblyName = "Xamarin.MacCatalyst";
+#endif
+#elif __IOS__
+		public const string NamespacePrefix = "";
+#if NET
+		public const string AssemblyName = "Microsoft.iOS";
+#else
+		public const string AssemblyName = "Xamarin.iOS";
 #endif
 #elif __TVOS__
 		public const string NamespacePrefix = "";
+#if NET
+		public const string AssemblyName = "Microsoft.tvOS";
+#else
 		public const string AssemblyName = "Xamarin.TVOS";
+#endif
 #elif __WATCHOS__
 		public const string NamespacePrefix = "";
-		public const string AssemblyName = "Xamarin.WatchOS";
+#if NET
+		public const string AssemblyName = "Microsoft.watchOS";
 #else
-	#error Unknown platform
+		public const string AssemblyName = "Xamarin.WatchOS";
+#endif
+#elif __MACOS__
+		public const string NamespacePrefix = "";
+#if NET
+		public const string AssemblyName = "Microsoft.macOS";
+#else
+		public const string AssemblyName = "Xamarin.Mac";
+#endif
+#else
+#error Unknown platform
 #endif
 
 		Type not_preserved_type = typeof (NotPreserved);
 
 
 		class TypeAttribute : Attribute {
-			public TypeAttribute (Type type) {}
+			public TypeAttribute (Type type) { }
 		}
 
 		[Type (null)]
@@ -112,7 +132,7 @@ namespace LinkAll {
 			Assert.NotNull (pi.GetGetMethod (), "getter");
 			Assert.Null (pi.GetSetMethod (), "setter");
 		}
-		
+
 		[Test]
 		public void SetterOnly ()
 		{
@@ -143,6 +163,28 @@ namespace LinkAll {
 			Assert.True (default_value, "DefaultValue");
 		}
 
+		public enum CertificateProblem : long {
+			CertEXPIRED = 0x800B0101,
+			CertVALIDITYPERIODNESTING = 0x800B0102,
+			CertROLE = 0x800B0103,
+			CertPATHLENCONST = 0x800B0104,
+			CertCRITICAL = 0x800B0105,
+			CertPURPOSE = 0x800B0106,
+			CertISSUERCHAINING = 0x800B0107,
+			CertMALFORMED = 0x800B0108,
+			CertUNTRUSTEDROOT = 0x800B0109,
+			CertCHAINING = 0x800B010A,
+			CertREVOKED = 0x800B010C,
+			CertUNTRUSTEDTESTROOT = 0x800B010D,
+			CertREVOCATION_FAILURE = 0x800B010E,
+			CertCN_NO_MATCH = 0x800B010F,
+			CertWRONG_USAGE = 0x800B0110,
+			CertUNTRUSTEDCA = 0x800B0112,
+			CertTRUSTEFAIL = 0x800B010B,
+		}
+
+#if !NET
+		// ICertificatePolicy has been removed from .NET 5+
 		class TestPolicy : ICertificatePolicy {
 
 			const int RecoverableTrustFailure = 5; // SecTrustResult
@@ -156,9 +198,18 @@ namespace LinkAll {
 
 			public bool CheckValidationResult (ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem)
 			{
-				Assert.That (certificateProblem, Is.EqualTo (0), "certificateProblem");
+				Assert.That (certificateProblem, Is.EqualTo (0), GetProblemMessage ((CertificateProblem) certificateProblem));
 				CheckCount++;
 				return true;
+			}
+
+			string GetProblemMessage (CertificateProblem problem)
+			{
+				var problemMessage = "";
+				CertificateProblem problemList = new CertificateProblem ();
+				var problemCodeName = Enum.GetName (problemList.GetType (), problem);
+				problemMessage = problemCodeName != null ? problemMessage + "-Certificateproblem:" + problemCodeName : "Unknown Certificate Problem";
+				return problemMessage;
 			}
 		}
 
@@ -177,69 +228,85 @@ namespace LinkAll {
 			try {
 				ServicePointManager.CertificatePolicy = test_policy;
 				WebClient wc = new WebClient ();
-				Assert.IsNotNull (wc.DownloadString ("https://wrench.internalx.com/Wrench/Login.aspx"));
+				Assert.IsNotNull (wc.DownloadString (NetworkResources.XamarinUrl));
 				// caching means it will be called at least for the first run, but it might not
 				// be called again in subsequent requests (unless it expires)
 				Assert.That (test_policy.CheckCount, Is.GreaterThan (0), "policy checked");
-			}
-			finally {
+			} catch (WebException we) {
+				TestRuntime.IgnoreInCIIfBadNetwork (we);
+				throw;
+			} finally {
 				ServicePointManager.CertificatePolicy = old;
 			}
 		}
-		
+#endif
+
+#if !__MACOS__
 		[Test]
 		public void DetectPlatform ()
 		{
 #if !__WATCHOS__
 			// for (future) nunit[lite] platform detection - if this test fails then platform detection won't work
-			Assert.NotNull (Helper.GetType (NamespacePrefix + "UIKit.UIApplicationDelegate, " + AssemblyName), "UIApplicationDelegate");
+			var typename = NamespacePrefix + "UIKit.UIApplicationDelegate, " + AssemblyName;
+			Assert.NotNull (Helper.GetType (typename), typename);
 #endif
+#if NET
+			Assert.Null (Helper.GetType ("Mono.Runtime"), "Mono.Runtime");
+#else
 			// and you can trust the old trick with the linker
 			Assert.NotNull (Helper.GetType ("Mono.Runtime"), "Mono.Runtime");
+#endif
 		}
+#endif // !__MACOS__
 
 		[Test]
-#if !XAMCORE_2_0
-		// internal (to be removed) in unified
-		[Since (9,9)]
-#endif
-#if !XAMCORE_3_0
+#if !XAMCORE_3_0 && !NET
 		[Availability ()]
-		[iOS (9,9)]
-		[Mac (10, 99)]
 #endif
+#if NET
+		[SupportedOSPlatform ("none")]
+		[UnsupportedOSPlatform ("none)")]
+#else
 		[Introduced (PlatformName.None)]
 		[Deprecated (PlatformName.None)]
 		[Obsoleted (PlatformName.None)]
 		[Unavailable (PlatformName.None)]
+#endif
 		[ThreadSafe]
 		public void RemovedAttributes ()
 		{
-			const string prefix = NamespacePrefix;
-			const string suffix = ", " + AssemblyName;
+			// Don't use constants here, because the linker can see what we're trying to do and keeps what we're verifying has been removed.
+			string prefix = NamespacePrefix;
+			string suffix = AssemblyName;
 
 			// since we're linking the attributes will NOT be available - even if they are used
 #if !XAMCORE_3_0
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.AvailabilityAttribute, " + suffix), "AvailabilityAttribute");
-			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.iOSAttribute, " + suffix), "AvailabilityAttribute");
-			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.AvailabilityAttribute, " + suffix), "AvailabilityAttribute");
-			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.SinceAttribute, " + suffix), "SinceAttribute");
 #endif
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.IntroducedAttribute, " + suffix), "IntroducedAttribute");
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.DeprecatedAttribute, " + suffix), "DeprecatedAttribute");
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.ObsoletedAttribute, " + suffix), "ObsoletedAttribute");
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.UnavailableAttribute, " + suffix), "UnavailableAttribute");
 			Assert.Null (Helper.GetType (prefix + "ObjCRuntime.ThreadSafeAttribute, " + suffix), "ThreadSafeAttribute");
+#if NET
+			Assert.Null (Helper.GetType ("System.Runtime.Versioning.SupportedOSPlatformAttribute, " + suffix), "SupportedOSPlatformAttribute");
+			Assert.Null (Helper.GetType ("System.Runtime.Versioning.UnsupportedOSPlatformAttribute, " + suffix), "UnsupportedOSPlatformAttribute");
+#endif
 		}
 
 		[Test]
 		public void Assembly_Load ()
 		{
+#if NET
+			Assembly mscorlib = Assembly.Load ("System.Private.CoreLib.dll");
+			Assert.NotNull (mscorlib, "System.Private.CoreLib.dll");
+#else
 			Assembly mscorlib = Assembly.Load ("mscorlib.dll");
 			Assert.NotNull (mscorlib, "mscorlib");
 
 			Assembly system = Assembly.Load ("System.dll");
 			Assert.NotNull (system, "System");
+#endif
 		}
 
 		string FindAssemblyPath ()
@@ -284,24 +351,32 @@ namespace LinkAll {
 		public void Assembly_ReflectionOnlyLoadFrom ()
 		{
 			string filename = FindAssemblyPath ();
+#if NET
+			// new behavior across all platforms, see https://github.com/dotnet/runtime/issues/50529
+			Assert.Throws<PlatformNotSupportedException> (() => Assembly.ReflectionOnlyLoadFrom (filename));
+#else
 			Assert.NotNull (Assembly.ReflectionOnlyLoadFrom (filename), "1");
+#endif
 		}
 
+#if !NET
 		[Test]
-#if __WATCHOS__
-		[ExpectedException (typeof (PlatformNotSupportedException))]
-#endif
 		public void SystemDataSqlClient ()
 		{
+#if __WATCHOS__
+			Assert.Throws<PlatformNotSupportedException> (() => new System.Data.SqlClient.SqlConnection ());
+#else
 			// notes:
 			// * this test is mean to fail when building the application using a Community or Indie licenses
 			// * linksdk.app references System.Data (assembly) but not types in SqlClient namespace
 			using (var sc = new System.Data.SqlClient.SqlConnection ()) {
 				Assert.NotNull (sc);
 			}
+#endif
 		}
-		
-#if !__TVOS__ && !__WATCHOS__
+#endif
+
+#if !__TVOS__ && !__WATCHOS__ && !__MACOS__
 		[Test]
 		public void Pasteboard_ImagesTest ()
 		{
@@ -309,10 +384,13 @@ namespace LinkAll {
 			using (var dp = new CGDataProvider (file)) {
 				using (var cgimg = CGImage.FromPNG (dp, null, false, CGColorRenderingIntent.Default)) {
 					using (var img = new UIImage (cgimg)) {
-						UIPasteboard.General.Images = new UIImage[] { img };
+						UIPasteboard.General.Images = new UIImage [] { img };
+						if (TestRuntime.CheckXcodeVersion (8, 0))
+							Assert.True (UIPasteboard.General.HasImages, "HasImages");
+
 						Assert.AreEqual (1, UIPasteboard.General.Images.Length, "a - length");
 
-						UIPasteboard.General.Images = new UIImage[] { img, img };
+						UIPasteboard.General.Images = new UIImage [] { img, img };
 						Assert.AreEqual (2, UIPasteboard.General.Images.Length, "b - length");
 						Assert.IsNotNull (UIPasteboard.General.Images [0], "b - nonnull[0]");
 						Assert.IsNotNull (UIPasteboard.General.Images [1], "b - nonnull[0]");
@@ -332,7 +410,7 @@ namespace LinkAll {
 
 		[TypeConverter (typeof (TestEnumTypeConverter))]
 		public enum TestEnum {
-			One,Two
+			One, Two
 		}
 
 		[Preserve (AllMembers = true)]
@@ -360,8 +438,7 @@ namespace LinkAll {
 		[Test]
 		public void SingleEpsilon_Compare ()
 		{
-			if (Runtime.Arch == Arch.DEVICE)
-				Assert.Ignore ("Known to fail on devices, see bug #15802");
+			TestRuntime.AssertNotDevice ("Known to fail on devices, see bug #15802");
 			// works on some ARM CPU (e.g. iPhone5S) but not others (iPad4 or iPodTouch5)
 			Assert.That (Single.Epsilon, Is.Not.EqualTo (0f), "Epsilon");
 			Assert.That (-Single.Epsilon, Is.Not.EqualTo (0f), "-Epsilon");
@@ -370,18 +447,21 @@ namespace LinkAll {
 		[Test]
 		public void SingleEpsilon_ToString ()
 		{
-			if (Runtime.Arch == Arch.DEVICE)
-				Assert.Ignore ("Known to fail on devices, see bug #15802");
+			TestRuntime.AssertNotDevice ("Known to fail on devices, see bug #15802");
 			var ci = CultureInfo.InvariantCulture;
+#if NET
+			Assert.That (Single.Epsilon.ToString (ci), Is.EqualTo ("1E-45"), "Epsilon.ToString()");
+			Assert.That ((-Single.Epsilon).ToString (ci), Is.EqualTo ("-1E-45"), "-Epsilon.ToString()");
+#else
 			Assert.That (Single.Epsilon.ToString (ci), Is.EqualTo ("1.401298E-45"), "Epsilon.ToString()");
 			Assert.That ((-Single.Epsilon).ToString (ci), Is.EqualTo ("-1.401298E-45"), "-Epsilon.ToString()");
+#endif
 		}
 
 		[Test]
 		public void DoubleEpsilon_Compare ()
 		{
-			if (Runtime.Arch == Arch.DEVICE)
-				Assert.Ignore ("Known to fail on devices, see bug #15802");
+			TestRuntime.AssertNotDevice ("Known to fail on devices, see bug #15802");
 			// works on some ARM CPU (e.g. iPhone5S) but not others (iPad4 or iPodTouch5)
 			Assert.That (Double.Epsilon, Is.Not.EqualTo (0f), "Epsilon");
 			Assert.That (-Double.Epsilon, Is.Not.EqualTo (0f), "-Epsilon");
@@ -390,12 +470,16 @@ namespace LinkAll {
 		[Test]
 		public void DoubleEpsilon_ToString ()
 		{
-			if (Runtime.Arch == Arch.DEVICE)
-				Assert.Ignore ("Known to fail on devices, see bug #15802");
+			TestRuntime.AssertNotDevice ("Known to fail on devices, see bug #15802");
 			var ci = CultureInfo.InvariantCulture;
 			// note: unlike Single this works on both my iPhone5S and iPodTouch5
+#if NET
+			Assert.That (Double.Epsilon.ToString (ci), Is.EqualTo ("5E-324"), "Epsilon.ToString()");
+			Assert.That ((-Double.Epsilon).ToString (ci), Is.EqualTo ("-5E-324"), "-Epsilon.ToString()");
+#else
 			Assert.That (Double.Epsilon.ToString (ci), Is.EqualTo ("4.94065645841247E-324"), "Epsilon.ToString()");
 			Assert.That ((-Double.Epsilon).ToString (ci), Is.EqualTo ("-4.94065645841247E-324"), "-Epsilon.ToString()");
+#endif
 		}
 
 		[Test]
@@ -410,7 +494,8 @@ namespace LinkAll {
 			}
 		}
 
-#if !__WATCHOS__
+#if !__WATCHOS__ && !__MACCATALYST__
+#if !NET // OpenTK-1.0.dll isn't supported in .NET yet
 		[Test]
 		public void OpenTk10_Preserved ()
 		{
@@ -429,7 +514,8 @@ namespace LinkAll {
 			core = Helper.GetType ("OpenTK.Graphics.ES20.GL/Core, OpenTK-1.0", false);
 			Assert.NotNull (core, "ES20/Core");
 		}
-#endif // !__WATCHOS__
+#endif // !NET
+#endif // !__WATCHOS__ && !__MACCATALYST__
 
 		[Test]
 		public void NestedNSObject ()
@@ -495,7 +581,7 @@ namespace LinkAll {
 			using (var pr = new SKProductsRequest ()) {
 				Assert.Null (pr.WeakDelegate, "none");
 				// event on SKProductsRequest itself
-				pr.ReceivedResponse += (object sender, SKProductsRequestResponseEventArgs e) => {};
+				pr.ReceivedResponse += (object sender, SKProductsRequestResponseEventArgs e) => { };
 
 				var t = pr.WeakDelegate.GetType ();
 				Assert.That (t.Name, Is.EqualTo ("_SKProductsRequestDelegate"), "delegate");
@@ -505,23 +591,11 @@ namespace LinkAll {
 				var value = fi.GetValue (pr.WeakDelegate);
 				Assert.NotNull (value, "value");
 
-#if XAMCORE_2_0
 				// and on the SKRequest defined one
-				pr.RequestFailed += (object sender, SKRequestErrorEventArgs e) => {};
+				pr.RequestFailed += (object sender, SKRequestErrorEventArgs e) => { };
 				// and the existing (initial field) is still set
 				fi = t.GetField ("receivedResponse", BindingFlags.NonPublic | BindingFlags.Instance);
 				Assert.NotNull (fi, "receivedResponse/SKRequest");
-#else
-				// In Classic SKRequest also defines a RequestFailed event, so make sure we get the SKRequest one
-				// that's because event are re-defined (new) in classic
-				((SKRequest) pr).RequestFailed += (object sender, SKRequestErrorEventArgs e) => {};
-
-				t = pr.WeakDelegate.GetType ();
-				Assert.That (t.Name, Is.EqualTo ("_SKRequestDelegate"), "delegate-2");
-
-				fi = t.GetField ("receivedResponse", BindingFlags.NonPublic | BindingFlags.Instance);
-				Assert.Null (fi, "receivedResponse/SKRequest");
-#endif
 			}
 		}
 #endif // !__WATCHOS__
@@ -530,7 +604,8 @@ namespace LinkAll {
 		public void Aot_27116 ()
 		{
 			var nix = (from nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces ()
-				where nic.Id.StartsWith ("en") || nic.Id.StartsWith ("pdp_ip") select nic);
+					   where nic.Id.StartsWith ("en") || nic.Id.StartsWith ("pdp_ip")
+					   select nic);
 			Assert.NotNull (nix);
 		}
 
@@ -577,11 +652,14 @@ namespace LinkAll {
 			Assert.NotNull (oifd,  atmb.FullName + ".ObjectIdForDebugger");
 #else
 			Assert.Null (snfwc, atmb.FullName + ".SetNotificationForWaitCompletion");
-			Assert.Null (oifd,  atmb.FullName + ".ObjectIdForDebugger");
+			Assert.Null (oifd, atmb.FullName + ".ObjectIdForDebugger");
 #endif
 		}
 
 		[Test]
+#if NET
+		[Ignore ("BUG https://github.com/xamarin/xamarin-macios/issues/11280")]
+#endif
 		public void LinkedAwayGenericTypeAsOptionalMemberInProtocol ()
 		{
 			// https://github.com/xamarin/xamarin-macios/issues/3523
@@ -593,8 +671,7 @@ namespace LinkAll {
 		[ProtocolMember (IsRequired = false, IsProperty = false, IsStatic = false, Name = "ConfigureView", Selector = "configureViewForParameters:", ParameterType = new Type [] { typeof (global::Foundation.NSSet<global::Foundation.NSString>) }, ParameterByRef = new bool [] { false })]
 		public interface IProtocolWithGenericsInOptionalMember : INativeObject, IDisposable { }
 
-		internal sealed class ProtocolWithGenericsInOptionalMemberWrapper : BaseWrapper, IProtocolWithGenericsInOptionalMember
-		{
+		internal sealed class ProtocolWithGenericsInOptionalMemberWrapper : BaseWrapper, IProtocolWithGenericsInOptionalMember {
 			public ProtocolWithGenericsInOptionalMemberWrapper (IntPtr handle, bool owns) : base (handle, owns) { }
 		}
 
@@ -606,20 +683,50 @@ namespace LinkAll {
 			if (corlib.EndsWith ("/Frameworks/Xamarin.Sdk.framework/MonoBundle/mscorlib.dll", StringComparison.Ordinal))
 				Assert.Pass (corlib);
 
-			var bundlePath = NSBundle.MainBundle.BundlePath;
+#if __MACCATALYST__ || __MACOS__
+			var bundleLocation = Path.Combine ("Contents", "MonoBundle");
+#else
+			var bundleLocation = string.Empty;
+#endif
+			var bundlePath = Path.Combine (NSBundle.MainBundle.BundlePath, bundleLocation);
 			var isExtension = bundlePath.EndsWith (".appex", StringComparison.Ordinal);
-			var suffix = isExtension ? "link all.appex/mscorlib.dll" : "link all.app/mscorlib.dll";
-			Assert.That (corlib, Is.StringEnding (suffix), corlib);
+			var bundleName = isExtension ? "link all.appex" : "link all.app";
+#if NET
+			const string corelib = "System.Private.CoreLib.dll";
+#else
+			const string corelib = "mscorlib.dll";
+#endif
+			var suffix = Path.Combine (bundleName, bundleLocation, corelib);
+			Assert.That (corlib, Does.EndWith (suffix), corlib);
 		}
+
+#if __MACOS__ || __IOS__
+		[Test]
+		public void CGPdfPage ()
+		{
+			TestRuntime.AssertXcodeVersion (9, 0);
+			var pdfPath = NSBundle.MainBundle.PathForResource ("Tamarin", "pdf");
+			using var view = new PdfView ();
+			view.Document = new PdfDocument (NSUrl.FromFilename (pdfPath));
+			using var page = view.CurrentPage;
+			Assert.IsNotNull (page.Page, "Page");
+		}
+#endif
 	}
 
+#if NET
+	[SupportedOSPlatform ("macos1.0")]
+	[SupportedOSPlatform ("ios1.0")]
+	[SupportedOSPlatform ("tvos1.0")]
+	[SupportedOSPlatform ("maccatalyst1.0")]
+#else
 	[Introduced (PlatformName.MacOSX, 1, 0, PlatformArchitecture.Arch64)]
 	[Introduced (PlatformName.iOS, 1, 0)]
 	[Introduced (PlatformName.TvOS, 1, 0)]
 	[Introduced (PlatformName.WatchOS, 1, 0)]
+#endif
 	[Preserve]
-	public class ClassFromThePast : NSObject
-	{
+	public class ClassFromThePast : NSObject {
 		[Export ("foo:")]
 		public void Foo (ClassFromThePast obj)
 		{

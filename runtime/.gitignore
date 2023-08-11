@@ -1,3 +1,4 @@
+product.h
 .libs
 delegates.inc
 Delegates.generated.cs
@@ -9,3 +10,6 @@ app-main.m
 watchextension-main.m
 tvextension-main.m
 bindings-generated.m
+*.dylib
+*.o
+coreclrhost.h

@@ -26,6 +26,10 @@ using System.Collections;
 using System.Collections.Generic;
 using ObjCRuntime;
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 namespace Foundation {
 
 	public partial class NSDictionary : NSObject, IDictionary, IDictionary<NSObject, NSObject> {
@@ -37,16 +41,16 @@ namespace Foundation {
 		{
 		}
 
-		internal NSDictionary (IntPtr handle, bool alloced) : base (handle, alloced)
+		internal NSDictionary (NativeHandle handle, bool owns) : base (handle, owns)
 		{
 		}
-		
+
 		internal static NSArray PickEven (NSObject f, NSObject [] args)
 		{
 			int al = args.Length;
 			if ((al % 2) != 0)
 				throw new ArgumentException ("The arguments to NSDictionary should be a multiple of two", "args");
-			var ret = new NSObject [1+al/2];
+			var ret = new NSObject [1 + al / 2];
 			ret [0] = f;
 			for (int i = 0, target = 1; i < al; i += 2)
 				ret [target++] = args [i];
@@ -55,7 +59,7 @@ namespace Foundation {
 
 		internal static NSArray PickOdd (NSObject f, NSObject [] args)
 		{
-			var ret = new NSObject [1+args.Length/2];
+			var ret = new NSObject [1 + args.Length / 2];
 			ret [0] = f;
 			for (int i = 1, target = 1; i < args.Length; i += 2)
 				ret [target++] = args [i];
@@ -67,7 +71,7 @@ namespace Foundation {
 			int al = args.Length;
 			if ((al % 2) != 0)
 				throw new ArgumentException ("The arguments to NSDictionary should be a multiple of two", "args");
-			var ret = new object [1+al/2];
+			var ret = new object [1 + al / 2];
 			ret [0] = f;
 			for (int i = 0, target = 1; i < al; i += 2)
 				ret [target++] = args [i];
@@ -76,13 +80,13 @@ namespace Foundation {
 
 		internal static NSArray PickOdd (object f, object [] args)
 		{
-			var ret = new object [1+args.Length/2];
+			var ret = new object [1 + args.Length / 2];
 			ret [0] = f;
 			for (int i = 1, target = 1; i < args.Length; i += 2)
 				ret [target++] = args [i];
 			return NSArray.FromObjects (ret);
 		}
-		
+
 		public static NSDictionary FromObjectsAndKeys (NSObject [] objects, NSObject [] keys)
 		{
 			if (objects == null)
@@ -91,10 +95,10 @@ namespace Foundation {
 				throw new ArgumentNullException (nameof (keys));
 			if (objects.Length != keys.Length)
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
-			
+
 			using (var no = NSArray.FromNSObjects (objects))
-				using (var nk = NSArray.FromNSObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromNSObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
 		public static NSDictionary FromObjectsAndKeys (object [] objects, object [] keys)
@@ -105,10 +109,10 @@ namespace Foundation {
 				throw new ArgumentNullException (nameof (keys));
 			if (objects.Length != keys.Length)
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
-			
+
 			using (var no = NSArray.FromObjects (objects))
-				using (var nk = NSArray.FromObjects (keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromObjects (keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
 		public static NSDictionary FromObjectsAndKeys (NSObject [] objects, NSObject [] keys, nint count)
@@ -121,10 +125,10 @@ namespace Foundation {
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
 			if (count < 1 || objects.Length < count || keys.Length < count)
 				throw new ArgumentException ("count");
-			
+
 			using (var no = NSArray.FromNativeObjects (objects, count))
-				using (var nk = NSArray.FromNativeObjects (keys, count))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromNativeObjects (keys, count))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
 
 		public static NSDictionary FromObjectsAndKeys (object [] objects, object [] keys, nint count)
@@ -137,12 +141,12 @@ namespace Foundation {
 				throw new ArgumentException (nameof (objects) + " and " + nameof (keys) + " arrays have different sizes");
 			if (count < 1 || objects.Length < count || keys.Length < count)
 				throw new ArgumentException ("count");
-			
+
 			using (var no = NSArray.FromObjects (count, objects))
-				using (var nk = NSArray.FromObjects (count, keys))
-					return FromObjectsAndKeysInternal (no, nk);
+			using (var nk = NSArray.FromObjects (count, keys))
+				return FromObjectsAndKeysInternal (no, nk);
 		}
-		
+
 		internal bool ContainsKeyValuePair (KeyValuePair<NSObject, NSObject> pair)
 		{
 			NSObject value;
@@ -163,7 +167,7 @@ namespace Foundation {
 				throw new ArgumentException (nameof (array) + " is multidimensional");
 			if ((array.Length > 0) && (arrayIndex >= array.Length))
 				throw new ArgumentException (nameof (arrayIndex) + " is equal to or greater than " + nameof (array) + ".Length");
-			if (arrayIndex + (int)Count > array.Length)
+			if (arrayIndex + (int) Count > array.Length)
 				throw new ArgumentException ("Not enough room from " + nameof (arrayIndex) + " to end of " + nameof (array) + " for this Hashtable");
 			IDictionaryEnumerator e = ((IDictionary) this).GetEnumerator ();
 			int i = arrayIndex;
@@ -172,15 +176,15 @@ namespace Foundation {
 		}
 
 		int ICollection.Count {
-			get {return (int) Count;}
+			get { return (int) Count; }
 		}
 
 		bool ICollection.IsSynchronized {
-			get {return false;}
+			get { return false; }
 		}
 
 		object ICollection.SyncRoot {
-			get {return this;}
+			get { return this; }
 		}
 		#endregion
 
@@ -200,7 +204,7 @@ namespace Foundation {
 			return ContainsKeyValuePair (keyValuePair);
 		}
 
-		void ICollection<KeyValuePair<NSObject, NSObject>>.CopyTo (KeyValuePair<NSObject, NSObject>[] array, int index)
+		void ICollection<KeyValuePair<NSObject, NSObject>>.CopyTo (KeyValuePair<NSObject, NSObject> [] array, int index)
 		{
 			if (array == null)
 				throw new ArgumentNullException (nameof (array));
@@ -209,7 +213,7 @@ namespace Foundation {
 			// we want no exception for index==array.Length && Count == 0
 			if (index > array.Length)
 				throw new ArgumentException (nameof (index) + " larger than largest valid index of " + nameof (array));
-			if (array.Length - index < (int)Count)
+			if (array.Length - index < (int) Count)
 				throw new ArgumentException ("Destination array cannot hold the requested elements!");
 
 			var e = GetEnumerator ();
@@ -315,12 +319,11 @@ namespace Foundation {
 			throw new NotSupportedException ();
 		}
 
-		internal bool TryGetValue<T> (INativeObject key, out T value) where T: class, INativeObject
+		internal bool TryGetValue<T> (INativeObject key, out T value) where T : class, INativeObject
 		{
-			if (key == null)
-				throw new ArgumentNullException (nameof (key));
-
 			value = null;
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
 
 			var ptr = _ObjectForKey (key.Handle);
 			if (ptr == IntPtr.Zero)
@@ -332,6 +335,9 @@ namespace Foundation {
 
 		public bool TryGetValue (NSObject key, out NSObject value)
 		{
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
+
 			value = ObjectForKey (key);
 			// NSDictionary can not contain NULLs, if you want a NULL, it exists as an NSNull
 			return value != null;

@@ -25,13 +25,24 @@ using System;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
+using CoreFoundation;
 using ObjCRuntime;
+
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
 
 namespace Foundation {
 
-	public partial class NSArray {
+#if false // https://github.com/xamarin/xamarin-macios/issues/15577
+	public delegate bool NSOrderedCollectionDifferenceEquivalenceTest (NSObject first, NSObject second);
+#endif
+
+	public partial class NSArray : IEnumerable<NSObject> {
 
 		//
 		// Creates an array with the elements;   If the value passed is null, it
@@ -59,12 +70,48 @@ namespace Foundation {
 			return FromNativeObjects (items, count);
 		}
 
-		public static NSArray FromNSObjects<T> (params T [] items) where T: class, INativeObject
+		public static NSArray FromNSObjects<T> (params T [] items) where T : class, INativeObject
 		{
 			return FromNativeObjects (items);
 		}
+		public static NSArray FromNSObjects<T> (params T [] [] items) where T : class, INativeObject
+		{
+			if (items == null)
+				return null;
 
-		public static NSArray FromNSObjects<T> (int count, params T [] items) where T: class, INativeObject
+			var ret = new NSMutableArray ((nuint) items.Length);
+			for (var i = 0; i < items.Length; i++) {
+				var row = items [i];
+				if (row == null)
+					throw new ArgumentNullException (nameof (items), $"Element [{i}] is null");
+				for (var j = 0; j < row.Length; j++) {
+					var element = row [j];
+					if (element == null)
+						throw new ArgumentNullException (nameof (items), $"Element [{i}][{j}] is null");
+				}
+				ret.Add (NSArray.FromNSObjects (row));
+			}
+
+			return ret;
+		}
+		public static NSArray FromNSObjects<T> (T [,] items) where T : class, INativeObject
+		{
+			if (items == null)
+				return null;
+
+			var width = items.GetLength (0);
+			var height = items.GetLength (1);
+			var ret = new T [height] [];
+			for (var y = 0; y < height; y++) {
+				var row = new T [width];
+				for (var x = 0; x < width; x++) {
+					row [x] = items [x, y];
+				}
+				ret [y] = row;
+			}
+			return FromNSObjects (ret);
+		}
+		public static NSArray FromNSObjects<T> (int count, params T [] items) where T : class, INativeObject
 		{
 			return FromNativeObjects (items, count);
 		}
@@ -94,7 +141,7 @@ namespace Foundation {
 			return From<object> (items, count);
 		}
 
-		internal static NSArray From<T> (T[] items, long count = -1)
+		internal static NSArray From<T> (T [] items, long count = -1)
 		{
 			if ((items == null) || (count == 0))
 				return new NSArray ();
@@ -105,7 +152,7 @@ namespace Foundation {
 				throw new ArgumentException ("count is larger than the number of items", "count");
 
 			NSObject [] nsoa = new NSObject [count];
-			for (nint i = 0; i < count; i++){
+			for (nint i = 0; i < count; i++) {
 				var k = NSObject.FromObject (items [i]);
 				if (k == null)
 					throw new ArgumentException (String.Format ("Do not know how to marshal object of type '{0}' to an NSObject", items [i].GetType ()));
@@ -113,8 +160,8 @@ namespace Foundation {
 			}
 			return FromNSObjects (nsoa);
 		}
-		
-		internal static NSArray FromNativeObjects<T> (T[] items) where T: class, INativeObject
+
+		internal static NSArray FromNativeObjects<T> (T [] items) where T : class, INativeObject
 		{
 			if (items == null)
 				return new NSArray ();
@@ -122,7 +169,7 @@ namespace Foundation {
 			return FromNativeObjects<T> (items, items.Length);
 		}
 
-		internal static NSArray FromNativeObjects<T> (T [] items, nint count) where T: class, INativeObject
+		internal static NSArray FromNativeObjects<T> (T [] items, nint count) where T : class, INativeObject
 		{
 			if (items == null)
 				return new NSArray ();
@@ -134,13 +181,13 @@ namespace Foundation {
 			for (nint i = 0; i < count; i++) {
 				var item = items [i];
 				IntPtr h = item == null ? NSNull.Null.Handle : item.Handle;
-				Marshal.WriteIntPtr (buf, (int)(i * IntPtr.Size), h);
+				Marshal.WriteIntPtr (buf, (int) (i * IntPtr.Size), h);
 			}
 			NSArray arr = Runtime.GetNSObject<NSArray> (NSArray.FromObjects (buf, count));
 			Marshal.FreeHGlobal (buf);
 			return arr;
 		}
-		
+
 		internal static NSArray FromNSObjects (IList<NSObject> items)
 		{
 			if (items == null)
@@ -155,32 +202,34 @@ namespace Foundation {
 			return arr;
 		}
 
-		static public NSArray FromStrings (params string [] items)
+		static public NSArray FromStrings (params string [] items) => FromStrings ((IReadOnlyList<string>) items);
+
+		static public NSArray FromStrings (IReadOnlyList<string> items)
 		{
 			if (items == null)
 				throw new ArgumentNullException (nameof (items));
-			
-			IntPtr buf = Marshal.AllocHGlobal (items.Length * IntPtr.Size);
+
+			IntPtr buf = Marshal.AllocHGlobal (items.Count * IntPtr.Size);
 			try {
-				for (int i = 0; i < items.Length; i++){
+				for (int i = 0; i < items.Count; i++) {
 					IntPtr val;
-					
+
 					if (items [i] == null)
 						val = NSNull.Null.Handle;
 					else {
 						val = NSString.CreateNative (items [i], true);
 					}
-	
+
 					Marshal.WriteIntPtr (buf, i * IntPtr.Size, val);
 				}
-				NSArray arr = Runtime.GetNSObject<NSArray> (NSArray.FromObjects (buf, items.Length));
+				NSArray arr = Runtime.GetNSObject<NSArray> (NSArray.FromObjects (buf, items.Count));
 				return arr;
 			} finally {
 				Marshal.FreeHGlobal (buf);
 			}
 		}
 
-		static public NSArray FromIntPtrs (IntPtr [] vals)
+		static public NSArray FromIntPtrs (NativeHandle [] vals)
 		{
 			if (vals == null)
 				throw new ArgumentNullException ("vals");
@@ -197,54 +246,44 @@ namespace Foundation {
 
 		internal static nuint GetCount (IntPtr handle)
 		{
-#if XAMCORE_2_0
-	#if MONOMAC
-			return Messaging.nuint_objc_msgSend (handle, selCountHandle);
-	#else
-			return Messaging.nuint_objc_msgSend (handle, Selector.GetHandle ("count"));
-	#endif
+#if MONOMAC
+			return (nuint) Messaging.UIntPtr_objc_msgSend (handle, selCountHandle);
 #else
-	#if MONOMAC
-			return Messaging.UInt32_objc_msgSend (handle, selCountHandle);
-	#else
-			return Messaging.UInt32_objc_msgSend (handle, Selector.GetHandle ("count"));
-	#endif
+			return (nuint) Messaging.UIntPtr_objc_msgSend (handle, Selector.GetHandle ("count"));
 #endif
 		}
 
-		internal static IntPtr GetAtIndex (IntPtr handle, nuint i)
+		internal static NativeHandle GetAtIndex (NativeHandle handle, nuint i)
 		{
-#if XAMCORE_2_0
-	#if MONOMAC
-			return Messaging.IntPtr_objc_msgSend_nuint (handle, selObjectAtIndex_Handle, i);
-	#else
-			return Messaging.IntPtr_objc_msgSend_nuint (handle, Selector.GetHandle ("objectAtIndex:"), i);
-	#endif
+#if NET
+			return Messaging.NativeHandle_objc_msgSend_UIntPtr (handle, Selector.GetHandle ("objectAtIndex:"), (UIntPtr) i);
 #else
-	#if MONOMAC
-			return Messaging.IntPtr_objc_msgSend_UInt32 (handle, selObjectAtIndex_Handle, i);
-	#else
-			return Messaging.IntPtr_objc_msgSend_UInt32 (handle, Selector.GetHandle ("objectAtIndex:"), i);
-	#endif
+#if MONOMAC
+			return Messaging.IntPtr_objc_msgSend_UIntPtr (handle, selObjectAtIndex_Handle, (UIntPtr) i);
+#else
+			return Messaging.IntPtr_objc_msgSend_UIntPtr (handle, Selector.GetHandle ("objectAtIndex:"), (UIntPtr) i);
+#endif
 #endif
 		}
-			
-		static public string [] StringArrayFromHandle (IntPtr handle)
+
+		[Obsolete ("Use of 'CFArray.StringArrayFromHandle' offers better performance.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		static public string [] StringArrayFromHandle (NativeHandle handle)
 		{
-			if (handle == IntPtr.Zero)
+			if (handle == NativeHandle.Zero)
 				return null;
 
 			var c = GetCount (handle);
 			string [] ret = new string [c];
 
 			for (nuint i = 0; i < c; i++)
-				ret [i] = NSString.FromHandle (GetAtIndex (handle, i));
+				ret [i] = CFString.FromHandle (GetAtIndex (handle, i));
 			return ret;
 		}
 
-		static public T [] ArrayFromHandle<T> (IntPtr handle) where T : class, INativeObject
+		static public T [] ArrayFromHandle<T> (NativeHandle handle) where T : class, INativeObject
 		{
-			if (handle == IntPtr.Zero)
+			if (handle == NativeHandle.Zero)
 				return null;
 
 			var c = GetCount (handle);
@@ -256,9 +295,9 @@ namespace Foundation {
 			return ret;
 		}
 
-		static public T [] EnumsFromHandle<T> (IntPtr handle) where T : struct, IConvertible
+		static public T [] EnumsFromHandle<T> (NativeHandle handle) where T : struct, IConvertible
 		{
-			if (handle == IntPtr.Zero)
+			if (handle == NativeHandle.Zero)
 				return null;
 			if (!typeof (T).IsEnum)
 				throw new ArgumentException ("T must be an enum");
@@ -274,12 +313,12 @@ namespace Foundation {
 
 		static public T [] FromArray<T> (NSArray weakArray) where T : NSObject
 		{
-			if (weakArray == null || weakArray.Handle == IntPtr.Zero)
+			if (weakArray is null || weakArray.Handle == NativeHandle.Zero)
 				return null;
 			try {
 				nuint n = weakArray.Count;
 				T [] ret = new T [n];
-				for (nuint i = 0; i < n; i++){
+				for (nuint i = 0; i < n; i++) {
 					ret [i] = Runtime.GetNSObject<T> (weakArray.ValueAt (i));
 				}
 				return ret;
@@ -290,12 +329,12 @@ namespace Foundation {
 
 		static public T [] FromArrayNative<T> (NSArray weakArray) where T : class, INativeObject
 		{
-			if (weakArray == null || weakArray.Handle == IntPtr.Zero)
+			if (weakArray is null || weakArray.Handle == NativeHandle.Zero)
 				return null;
 			try {
 				nuint n = weakArray.Count;
 				T [] ret = new T [n];
-				for (nuint i = 0; i < n; i++){
+				for (nuint i = 0; i < n; i++) {
 					ret [i] = Runtime.GetINativeObject<T> (weakArray.ValueAt (i), false);
 				}
 				return ret;
@@ -303,11 +342,11 @@ namespace Foundation {
 				return null;
 			}
 		}
-		
+
 		// Used when we need to provide our constructor
-		static public T [] ArrayFromHandleFunc<T> (IntPtr handle, Func<IntPtr,T> createObject) 
+		static public T [] ArrayFromHandleFunc<T> (NativeHandle handle, Func<NativeHandle, T> createObject)
 		{
-			if (handle == IntPtr.Zero)
+			if (handle == NativeHandle.Zero)
 				return null;
 
 			var c = GetCount (handle);
@@ -318,10 +357,10 @@ namespace Foundation {
 
 			return ret;
 		}
-		
-		static public T [] ArrayFromHandle<T> (IntPtr handle, Converter<IntPtr, T> creator) 
+
+		static public T [] ArrayFromHandle<T> (NativeHandle handle, Converter<NativeHandle, T> creator)
 		{
-			if (handle == IntPtr.Zero)
+			if (handle == NativeHandle.Zero)
 				return null;
 
 			var c = GetCount (handle);
@@ -333,10 +372,18 @@ namespace Foundation {
 			return ret;
 		}
 
+		static public T [] ArrayFromHandle<T> (NativeHandle handle, Converter<NativeHandle, T> creator, bool releaseHandle)
+		{
+			var rv = ArrayFromHandle<T> (handle, creator);
+			if (releaseHandle && handle == NativeHandle.Zero)
+				NSObject.DangerousRelease (handle);
+			return rv;
+		}
+
 		// FIXME: before proving a real `this` indexer we need to clean the issues between
 		// NSObject and INativeObject coexistance across all the API (it can not return T)
 
-		static T UnsafeGetItem<T> (IntPtr handle, nuint index) where T : class, INativeObject
+		static T UnsafeGetItem<T> (NativeHandle handle, nuint index) where T : class, INativeObject
 		{
 			var val = GetAtIndex (handle, index);
 			// A native code could return NSArray with NSNull.Null elements
@@ -349,7 +396,6 @@ namespace Foundation {
 		}
 
 		// can return an INativeObject or an NSObject
-#if XAMCORE_2_0
 		public T GetItem<T> (nuint index) where T : class, INativeObject
 		{
 			if (index >= GetCount (Handle))
@@ -357,44 +403,30 @@ namespace Foundation {
 
 			return UnsafeGetItem<T> (Handle, index);
 		}
-#else
-		public T GetItem<T> (int index) where T : class, INativeObject
-		{
-			if (index < 0 || index >= GetCount (Handle))
-				throw new ArgumentOutOfRangeException ("index");
 
-			return UnsafeGetItem<T> (Handle, (uint) index);
-		}
-#endif
-
-		public static NSObject[][] FromArrayOfArray (NSArray weakArray)
+		public static NSObject [] [] FromArrayOfArray (NSArray weakArray)
 		{
 			if (weakArray == null || weakArray.Handle == IntPtr.Zero)
 				return null;
 
 			try {
 				nuint n = weakArray.Count;
-				var ret = new NSObject[n][];
+				var ret = new NSObject [n] [];
 				for (nuint i = 0; i < n; i++)
-					ret [i] = NSArray.FromArray<NSObject> (weakArray.GetItem<NSArray> (
-#if !XAMCORE_2_0
-						(int)
-#endif
-						i
-					));
+					ret [i] = NSArray.FromArray<NSObject> (weakArray.GetItem<NSArray> (i));
 				return ret;
 			} catch {
 				return null;
 			}
 		}
 
-		public static NSArray From (NSObject[][] items)
+		public static NSArray From (NSObject [] [] items)
 		{
 			if (items == null)
 				return null;
 
 			try {
-				var ret = new NSMutableArray ((nuint)items.Length);
+				var ret = new NSMutableArray ((nuint) items.Length);
 				for (int i = 0; i < items.Length; i++)
 					ret.Add (NSArray.FromNSObjects (items [i]));
 				return ret;
@@ -402,5 +434,64 @@ namespace Foundation {
 				return null;
 			}
 		}
+
+		public TKey [] ToArray<TKey> () where TKey : class, INativeObject
+		{
+			var rv = new TKey [GetCount (Handle)];
+			for (var i = 0; i < rv.Length; i++)
+				rv [i] = GetItem<TKey> ((nuint) i);
+			return rv;
+		}
+
+		public NSObject [] ToArray ()
+		{
+			return ToArray<NSObject> ();
+		}
+
+		IEnumerator<NSObject> IEnumerable<NSObject>.GetEnumerator ()
+		{
+			return new NSFastEnumerator<NSObject> (this);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator ()
+		{
+			return new NSFastEnumerator<NSObject> (this);
+		}
+
+#if false // https://github.com/xamarin/xamarin-macios/issues/15577
+
+		static readonly NSOrderedCollectionDifferenceEquivalenceTestProxy static_DiffEquality = DiffEqualityHandler;
+
+		[MonoPInvokeCallback (typeof (NSOrderedCollectionDifferenceEquivalenceTestProxy))]
+		static bool DiffEqualityHandler (IntPtr block, IntPtr first, IntPtr second)
+		{
+			var callback = BlockLiteral.GetTarget<NSOrderedCollectionDifferenceEquivalenceTest> (block);
+			if (callback is not null) {
+				var nsFirst = Runtime.GetNSObject<NSObject> (first, false);
+				var nsSecond = Runtime.GetNSObject<NSObject> (second, false);
+				return callback (nsFirst, nsSecond);
+			}
+			return false;
+		}
+
+#if !NET
+		[Watch (6,0), TV (13,0), Mac (10,15), iOS (13,0)]
+#else
+		[SupportedOSPlatform ("ios13.0"), SupportedOSPlatform ("tvos13.0"), SupportedOSPlatform ("macos10.15")]
+#endif
+		public NSOrderedCollectionDifference GetDifferenceFromArray (NSArray other, NSOrderedCollectionDifferenceCalculationOptions options, NSOrderedCollectionDifferenceEquivalenceTest equivalenceTest) 
+		{
+			if (equivalenceTest is null)
+				throw new ArgumentNullException (nameof (equivalenceTest));
+
+			var block = new BlockLiteral ();
+			block.SetupBlock (static_DiffEquality, equivalenceTest);
+			try {
+				return Runtime.GetNSObject<NSOrderedCollectionDifference> (_GetDifferenceFromArray (other, options, ref block));
+			} finally {
+				block.CleanupBlock ();
+			}
+		}
+#endif
 	}
 }

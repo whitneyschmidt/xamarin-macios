@@ -12,21 +12,13 @@
 
 using System;
 using System.Collections;
-using Foundation; 
+using Foundation;
 using ObjCRuntime;
 using CoreGraphics;
 
 namespace UIKit {
 	public partial class UIScreen {
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use CreateDisplayLink instead")]
-		CoreAnimation.CADisplayLink DisplayLink (NSObject target, Selector sel)
-		{
-			return CreateDisplayLink (target, sel);
-		}
-#endif
-		
 		public CoreAnimation.CADisplayLink CreateDisplayLink (Action action)
 		{
 			if (action == null)
@@ -37,7 +29,7 @@ namespace UIKit {
 
 		public UIImage Capture ()
 		{
-			if (UIDevice.CurrentDevice.CheckSystemVersion (7, 0)) {
+			if (SystemVersion.CheckiOS (7, 0)) {
 				// This is from https://developer.apple.com/library/content/qa/qa1817/_index.html
 				try {
 					var view = UIApplication.SharedApplication.KeyWindow;
@@ -47,7 +39,7 @@ namespace UIKit {
 				} finally {
 					UIGraphics.EndImageContext ();
 				}
-			} 
+			}
 
 			// This is from: https://developer.apple.com/library/ios/#qa/qa2010/qa1703.html
 			var selScreen = new Selector ("screen");

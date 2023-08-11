@@ -1,4 +1,4 @@
-﻿//
+//
 // MonoNativeTests.cs
 //
 // Author:
@@ -32,14 +32,12 @@ using NUnit.Framework;
 // using ExecutionHelper = Xamarin.Tests.ExecutionHelper;
 // using MTouchRegistrar = Xamarin.Tests.RegistrarOption;
 
-namespace Xamarin
-{
+namespace Xamarin {
 	using Tests;
 	using Utils;
 
 	[TestFixture]
-	public class MonoNativeTests
-	{
+	public class MonoNativeTests {
 		[Test]
 		public void TestDebugSymlink ()
 		{
@@ -112,14 +110,19 @@ namespace Xamarin
 		}
 
 		[Test]
-		[TestCase (Profile.iOS, "9.3", "libmono-native-compat.dylib")]
-		[TestCase (Profile.iOS, "10.0", "libmono-native-unified.dylib")]
-		[TestCase (Profile.tvOS, "9.0", "libmono-native-compat.dylib")]
-		[TestCase (Profile.tvOS, "10.0", "libmono-native-unified.dylib")]
-		[TestCase (Profile.watchOS, "2.0", "libmono-native-compat.dylib")]
-		[TestCase (Profile.watchOS, "5.0", "libmono-native-unified.dylib")]
-		public void TestDeviceDylib (Profile profile, string version, string mono_native_dylib)
+		[TestCase (Profile.iOS, "9.3", "libmono-native-compat.dylib", SdkVersions.MiniOS)]
+		[TestCase (Profile.iOS, "10.0", "libmono-native-unified.dylib", SdkVersions.MiniOS)]
+		[TestCase (Profile.tvOS, "9.0", "libmono-native-compat.dylib", SdkVersions.MinTVOS)]
+		[TestCase (Profile.tvOS, "10.0", "libmono-native-unified.dylib", SdkVersions.MinTVOS)]
+		[TestCase (Profile.watchOS, "2.0", "libmono-native-compat.dylib", SdkVersions.MinWatchOS)]
+		[TestCase (Profile.watchOS, "5.0", "libmono-native-unified.dylib", SdkVersions.MinWatchOS)]
+		public void TestDeviceDylib (Profile profile, string version, string mono_native_dylib, string min_version)
 		{
+			if (mono_native_dylib.Contains ("compat") && Version.Parse (min_version) > Version.Parse (version))
+				Assert.Ignore ("No OS versions that require compat libmono-unified are supported anymore");
+			if (Version.Parse (min_version) > Version.Parse (version))
+				version = min_version;
+
 			using (var mtouch = new MTouchTool ()) {
 				mtouch.Profile = profile;
 				if (profile == Profile.watchOS) {
@@ -140,7 +143,7 @@ namespace Xamarin
 				var mono_native_path = Path.Combine (mtouch.AppPath, mono_native_dylib);
 
 				var symbols = MTouch.GetNativeSymbols (mono_native_path);
-				var otool_dylib = ExecutionHelper.Execute ("otool", $"-L {StringUtils.Quote (mono_native_path)}", hide_output: true);
+				var otool_dylib = ExecutionHelper.Execute ("otool", new [] { "-L", mono_native_path }, hide_output: true);
 
 				Assert.That (symbols, Does.Contain ("_mono_native_initialize"));
 				Assert.That (otool_dylib, Does.Contain ($"@rpath/{mono_native_dylib}"));
@@ -154,7 +157,7 @@ namespace Xamarin
 					Assert.That (otool_dylib, Does.Not.Contain ("/System/Library/Frameworks/GSS.framework/GSS"));
 				}
 
-				var otool_exe = ExecutionHelper.Execute ("otool", $"-L {StringUtils.Quote (mtouch.NativeExecutablePath)}", hide_output: true);
+				var otool_exe = ExecutionHelper.Execute ("otool", new [] { "-L", mtouch.NativeExecutablePath }, hide_output: true);
 				Assert.That (otool_exe, Does.Not.Contain ("GSS"));
 				Assert.That (otool_exe, Does.Contain ($"@rpath/{mono_native_dylib}"));
 			}
@@ -167,7 +170,7 @@ namespace Xamarin
 				mtouch.CreateTemporaryApp ();
 				mtouch.Linker = LinkerOption.LinkAll;
 				mtouch.AssemblyBuildTargets.Add ("@all=framework");
-				mtouch.TargetVer = "10.0";
+				mtouch.TargetVer = SdkVersions.MiniOSVersion.Major >= 10 ? SdkVersions.MiniOS : "10.0";
 
 				mtouch.AssertExecute (MTouchAction.BuildDev, "build");
 
@@ -189,7 +192,7 @@ namespace Xamarin
 				Assert.That (symbols, Does.Contain ("_mono_native_initialize"));
 				Assert.That (symbols, Does.Contain ("_NetSecurityNative_ImportUserName"));
 
-				var otool_exe = ExecutionHelper.Execute ("otool", $"-L {StringUtils.Quote (mtouch.NativeExecutablePath)}", hide_output: true);
+				var otool_exe = ExecutionHelper.Execute ("otool", new [] { "-L", mtouch.NativeExecutablePath }, hide_output: true);
 				Assert.That (otool_exe, Does.Contain ("/System/Library/Frameworks/GSS.framework/GSS"));
 			}
 		}

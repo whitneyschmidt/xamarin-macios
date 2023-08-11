@@ -8,17 +8,8 @@
 //
 
 using System;
-using System.Drawing;
-using System.Reflection;
-#if XAMCORE_2_0
 using Foundation;
-using CoreGraphics;
 using ObjCRuntime;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
@@ -39,16 +30,16 @@ namespace MonoTouchFixtures.Foundation {
 
 			foreach (var type in typeof (NSObject).Assembly.GetTypes ()) {
 				if (!type.IsSubclassOf (typeof (NSObject)))
-				    continue;
+					continue;
 
-				var register = (RegisterAttribute)Attribute.GetCustomAttribute (type, typeof(RegisterAttribute), false);
+				var register = (RegisterAttribute) Attribute.GetCustomAttribute (type, typeof (RegisterAttribute), false);
 				if (register != null && !register.IsWrapper)
 					continue;
-				  
-				if (Attribute.GetCustomAttribute (type, typeof(ModelAttribute), false) == null)
+
+				if (Attribute.GetCustomAttribute (type, typeof (ModelAttribute), false) == null)
 					continue;
 
-				if (Attribute.GetCustomAttribute (type, typeof(ProtocolAttribute), false) == null) {
+				if (Attribute.GetCustomAttribute (type, typeof (ProtocolAttribute), false) == null) {
 					Console.WriteLine ("{0} must have a [Protocol] attribute if it has a [Model] attribute", type.FullName);
 					count++;
 				}

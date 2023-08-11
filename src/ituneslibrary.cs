@@ -1,4 +1,4 @@
-// Copyright 2018, Microsoft, Corp.
+// Copyright 2018-2019, Microsoft, Corp.
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -26,10 +26,14 @@ using AppKit;
 using Foundation;
 using ObjCRuntime;
 
+#if !NET
+using NativeHandle = System.IntPtr;
+#endif
+
 namespace iTunesLibrary {
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
 	interface ITLibAlbum {
 		[NullAllowed, Export ("title")]
 		string Title { get; }
@@ -71,10 +75,9 @@ namespace iTunesLibrary {
 		NSNumber PersistentId { get; }
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
-	interface ITLibArtist
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
+	interface ITLibArtist {
 		[NullAllowed, Export ("name")]
 		string Name { get; }
 
@@ -85,10 +88,9 @@ namespace iTunesLibrary {
 		NSNumber PersistentId { get; }
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
-	interface ITLibArtwork
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
+	interface ITLibArtwork {
 		[NullAllowed, Export ("image", ArgumentSemantic.Retain)]
 		NSImage Image { get; }
 
@@ -101,10 +103,9 @@ namespace iTunesLibrary {
 
 	delegate void ITLibMediaEntityEnumerateValuesHandler (NSString property, NSObject value, out bool stop);
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
-	interface ITLibMediaEntity
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
+	interface ITLibMediaEntity {
 		[Export ("persistentID", ArgumentSemantic.Retain)]
 		NSNumber PersistentId { get; }
 
@@ -119,10 +120,9 @@ namespace iTunesLibrary {
 		void EnumerateValuesExcept ([NullAllowed] NSSet<NSString> properties, ITLibMediaEntityEnumerateValuesHandler handler);
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(ITLibMediaEntity))]
-	interface ITLibMediaItem
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (ITLibMediaEntity))]
+	interface ITLibMediaItem {
 		[Export ("title")]
 		string Title { get; }
 
@@ -271,10 +271,9 @@ namespace iTunesLibrary {
 		ITLibMediaItemLocationType LocationType { get; }
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
-	interface ITLibMediaItemVideoInfo
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
+	interface ITLibMediaItemVideoInfo {
 		[NullAllowed, Export ("series")]
 		string Series { get; }
 
@@ -300,15 +299,19 @@ namespace iTunesLibrary {
 		nuint VideoHeight { get; }
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(ITLibMediaEntity))]
-	interface ITLibPlaylist
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (ITLibMediaEntity))]
+	interface ITLibPlaylist {
 		[Export ("name")]
 		string Name { get; }
 
+		[Deprecated (PlatformName.MacOSX, 12, 0, message: "Use 'Primary' instead.")]
 		[Export ("master")]
 		bool Master { [Bind ("isMaster")] get; }
+
+		[Mac (12, 0)]
+		[Export ("primary")]
+		bool Primary { [Bind ("isPrimary")] get; }
 
 		[NullAllowed, Export ("parentID", ArgumentSemantic.Retain)]
 		NSNumber ParentId { get; }
@@ -320,7 +323,7 @@ namespace iTunesLibrary {
 		bool AllItemsPlaylist { [Bind ("isAllItemsPlaylist")] get; }
 
 		[Export ("items", ArgumentSemantic.Retain)]
-		ITLibMediaItem[] Items { get; }
+		ITLibMediaItem [] Items { get; }
 
 		[Export ("distinguishedKind", ArgumentSemantic.Assign)]
 		ITLibDistinguishedPlaylistKind DistinguishedKind { get; }
@@ -329,10 +332,10 @@ namespace iTunesLibrary {
 		ITLibPlaylistKind Kind { get; }
 	}
 
-	[Mac (10,14, onlyOn64: true)]
-	[BaseType (typeof(NSObject))]
-	interface ITLibrary
-	{
+	[Mac (10, 14)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface ITLibrary {
 		[Export ("applicationVersion")]
 		string ApplicationVersion { get; }
 
@@ -355,10 +358,10 @@ namespace iTunesLibrary {
 		bool ShowContentRating { [Bind ("shouldShowContentRating")] get; }
 
 		[Export ("allMediaItems", ArgumentSemantic.Retain)]
-		ITLibMediaItem[] AllMediaItems { get; }
+		ITLibMediaItem [] AllMediaItems { get; }
 
 		[Export ("allPlaylists", ArgumentSemantic.Retain)]
-		ITLibPlaylist[] AllPlaylists { get; }
+		ITLibPlaylist [] AllPlaylists { get; }
 
 		[Static]
 		[Export ("libraryWithAPIVersion:error:")]
@@ -371,10 +374,11 @@ namespace iTunesLibrary {
 		ITLibrary GetLibrary (string requestedAPIVersion, ITLibInitOptions options, [NullAllowed] out NSError error);
 
 		[Export ("initWithAPIVersion:error:")]
-		IntPtr Constructor (string requestedAPIVersion, [NullAllowed] out NSError error);
+		NativeHandle Constructor (string requestedAPIVersion, [NullAllowed] out NSError error);
 
+		[DesignatedInitializer]
 		[Export ("initWithAPIVersion:options:error:")]
-		IntPtr Constructor (string requestedAPIVersion, ITLibInitOptions options, [NullAllowed] out NSError error);
+		NativeHandle Constructor (string requestedAPIVersion, ITLibInitOptions options, [NullAllowed] out NSError error);
 
 		[Export ("artworkForMediaFile:")]
 		[return: NullAllowed]
@@ -387,4 +391,11 @@ namespace iTunesLibrary {
 		void UnloadData ();
 	}
 
+	[Mac (13, 0), NoiOS, NoMacCatalyst, NoWatch, NoTV]
+	[Static]
+	interface ITLibraryNotifications {
+		[Field ("ITLibraryDidChangeNotification")]
+		[Notification]
+		NSString DidChangeNotification { get; }
+	}
 }

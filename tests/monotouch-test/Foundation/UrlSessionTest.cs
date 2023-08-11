@@ -10,7 +10,6 @@
 using System;
 using System.IO;
 
-#if XAMCORE_2_0
 using Foundation;
 #if MONOMAC
 using AppKit;
@@ -18,18 +17,26 @@ using AppKit;
 using UIKit;
 #endif
 using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
 using NUnit.Framework;
+using MonoTests.System.Net.Http;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class UrlSessionTest {
+		void AssertTrueOrIgnoreInCI (bool value, ref Exception ex, string message)
+		{
+			if (value) {
+				TestRuntime.IgnoreInCIIfBadNetwork (ex);
+				Assert.IsNull (ex, message + " Exception");
+				return;
+			}
+
+			TestRuntime.IgnoreInCI ($"This test times out randomly in CI due to bad network: {message}");
+			Assert.Fail (message);
+		}
 
 		//TODO: TestRuntime.RunAsync is not on mac currently
 #if !MONOMAC
@@ -40,9 +47,9 @@ namespace MonoTouchFixtures.Foundation {
 		public void CreateDataTaskAsync ()
 		{
 			TestRuntime.AssertXcodeVersion (5, 0);
-			
+
 			NSUrlSession session = NSUrlSession.SharedSession;
-			var url = new NSUrl ("https://www.xamarin.com");
+			var url = new NSUrl ("https://www.microsoft.com");
 			var tmpfile = Path.GetTempFileName ();
 			File.WriteAllText (tmpfile, "TMPFILE");
 			var file_url = NSUrl.FromFilename (tmpfile);
@@ -51,67 +58,88 @@ namespace MonoTouchFixtures.Foundation {
 
 			var completed = false;
 			var timeout = 30;
+			Exception ex = null;
 
 			/* CreateDataTask */
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
-				await session.CreateDataTaskAsync (request);
-				completed = true;
-			}, () => completed), "CreateDataTask a");
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+				try {
+					await session.CreateDataTaskAsync (request);
+				} catch (Exception e) {
+					ex = e;
+				} finally {
+					completed = true;
+				}
+			}, () => completed), ref ex, "CreateDataTask a");
 
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
-				await session.CreateDataTaskAsync (url);
-				completed = true;
-			}, () => completed), "CreateDataTask b");
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+				try {
+					await session.CreateDataTaskAsync (url);
+				} catch (Exception e) {
+					ex = e;
+				} finally {
+					completed = true;
+				}
+			}, () => completed), ref ex, "CreateDataTask b");
 
 			/* CreateDownloadTask */
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
-				await session.CreateDownloadTaskAsync (request);
-				completed = true;
-			}, () => completed), "CreateDownloadTask a");
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+				try {
+					await session.CreateDownloadTaskAsync (request);
+				} catch (Exception e) {
+					ex = e;
+				} finally {
+					completed = true;
+				}
+			}, () => completed), ref ex, "CreateDownloadTask a");
 
 
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
-				await session.CreateDownloadTaskAsync (url);
-				completed = true;
-			}, () => completed), "CreateDownloadTask b");
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+				try {
+					await session.CreateDownloadTaskAsync (url);
+				} catch (Exception e) {
+					ex = e;
+				} finally {
+					completed = true;
+				}
+			}, () => completed), ref ex, "CreateDownloadTask b");
 
 			/* CreateUploadTask */
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
 				try {
 					var uploadRequest = new NSMutableUrlRequest (url);
 					uploadRequest.HttpMethod = "POST";
 					await session.CreateUploadTaskAsync (uploadRequest, file_url);
 				} catch /* (Exception ex) */ {
-//					Console.WriteLine ("Ex: {0}", ex);
+					//					Console.WriteLine ("Ex: {0}", ex);
 				} finally {
 					completed = true;
 				}
-			}, () => completed), "CreateUploadTask a");
+			}, () => completed), ref ex, "CreateUploadTask a");
 
 			completed = false;
-			Assert.IsTrue (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
+			AssertTrueOrIgnoreInCI (TestRuntime.RunAsync (DateTime.Now.AddSeconds (timeout), async () => {
 				try {
 					var uploadRequest = new NSMutableUrlRequest (url);
 					uploadRequest.HttpMethod = "POST";
 					await session.CreateUploadTaskAsync (uploadRequest, file_data);
 				} catch /* (Exception ex) */ {
-//					Console.WriteLine ("Ex: {0}", ex);
+					//					Console.WriteLine ("Ex: {0}", ex);
 				} finally {
 					completed = true;
 				}
-			}, () => completed), "CreateUploadTask b");
+			}, () => completed), ref ex, "CreateUploadTask b");
 		}
 
 		[Test]
 		public void DownloadDataAsync ()
 		{
 			TestRuntime.AssertXcodeVersion (5, 0);
-			
+
 			bool completed = false;
 			int failed_iteration = -1;
 			Exception ex = null;
@@ -122,7 +150,7 @@ namespace MonoTouchFixtures.Foundation {
 						// Use the default configuration so we can make use of the shared cookie storage.
 						var session = NSUrlSession.FromConfiguration (NSUrlSessionConfiguration.DefaultSessionConfiguration);
 
-						var downloadUri = new Uri ("https://google.com");
+						var downloadUri = NetworkResources.MicrosoftUri;
 						var downloadResponse = await session.CreateDownloadTaskAsync (downloadUri);
 
 						var tempLocation = downloadResponse.Location;
@@ -139,6 +167,7 @@ namespace MonoTouchFixtures.Foundation {
 				}
 			}, () => completed);
 
+			TestRuntime.IgnoreInCIIfBadNetwork (ex);
 			Assert.IsNull (ex, "Exception");
 			Assert.AreEqual (-1, failed_iteration, "Failed");
 		}
@@ -148,8 +177,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void SharedSession ()
 		{
 			TestRuntime.AssertXcodeVersion (5, 0);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
-			
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
+
 			// in iOS9 those selectors do not respond - but they do work (forwarded to __NSURLSessionLocal type ?)
 			// * delegateQueue, sessionDescription, setSessionDescription:, delegate
 			var session = NSUrlSession.SharedSession;
@@ -157,7 +186,7 @@ namespace MonoTouchFixtures.Foundation {
 			Assert.NotNull (session.DelegateQueue, "delegateQueue");
 			Assert.Null (session.SessionDescription, "sessionDescription");
 			session.SessionDescription = "descriptive label";
-			Assert.That ((string)session.SessionDescription, Is.EqualTo ("descriptive label"), "setSessionDescription:");
+			Assert.That ((string) session.SessionDescription, Is.EqualTo ("descriptive label"), "setSessionDescription:");
 			session.SessionDescription = null; // the session instance is global, so revert value to to make sure the test can be re-run successfully.
 		}
 	}

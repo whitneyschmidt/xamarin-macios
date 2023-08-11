@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using System.Text;
 using Foundation;
@@ -23,7 +23,7 @@ namespace LinkSdk {
 				sb.AppendLine ().Append ("* ").Append (m);
 			Assert.Fail (sb.ToString ());
 		}
-		
+
 		[Test]
 		public void Mscorlib ()
 		{

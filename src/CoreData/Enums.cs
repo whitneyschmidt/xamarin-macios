@@ -24,6 +24,8 @@ using System;
 
 using ObjCRuntime;
 
+#nullable enable
+
 namespace CoreData {
 
 	// NUInteger -> NSEntityMapping.h
@@ -51,9 +53,11 @@ namespace CoreData {
 		Boolean = 800,
 		Date = 900,
 		Binary = 1000,
-		[iOS (11,0), TV (11,0), Mac (10,13), Watch (4,0)]
+		[iOS (11, 0), TV (11, 0), Mac (10, 13), Watch (4, 0)]
+		[MacCatalyst (13, 1)]
 		Uuid = 1100,
-		[iOS (11,0), TV (11,0), Mac (10,13), Watch (4,0)]
+		[iOS (11, 0), TV (11, 0), Mac (10, 13), Watch (4, 0)]
+		[MacCatalyst (13, 1)]
 		Uri = 1200,
 		Transformable = 1800,
 		ObjectID = 2000
@@ -69,17 +73,6 @@ namespace CoreData {
 		NSCountResultType = 0x04
 	}
 
-#if !XAMCORE_2_0
-	// NUInteger -> NSKeyValueObserving.h in Foundation.framework (and it already exists there)
-	[Native]
-	public enum NSKeyValueSetMutationKind : ulong {
-		Union = 1,
-		Minus = 2,
-		Intersect = 3,
-		NSKeyValueSet = 4 // misnamed
-	}
-#endif
-
 	// NUInteger -> NSRelationshipDescription.h
 	[Native]
 	public enum NSDeleteRule : ulong {
@@ -94,6 +87,12 @@ namespace CoreData {
 	public enum NSPersistentStoreRequestType : ulong {
 		Fetch = 1,
 		Save,
+		[iOS (13, 0)]
+		[TV (13, 0)]
+		[Watch (6, 0)]
+		[Mac (10, 15)]
+		[MacCatalyst (13, 1)]
+		BatchInsert = 5,
 		BatchUpdate = 6,
 		BatchDelete = 7
 	}
@@ -126,7 +125,8 @@ namespace CoreData {
 		UpdatedObjectsCount = 2
 	}
 
-	[iOS (9,0), Mac (10,11)]
+	[iOS (9, 0), Mac (10, 11)]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum NSBatchDeleteRequestResultType : ulong {
 		StatusOnly = 0,
@@ -150,7 +150,8 @@ namespace CoreData {
 		StringTooLong = 1660,
 		StringTooShort = 1670,
 		StringPatternMatching = 1680,
-		[iOS (11,0), TV (11,0), Mac (10,13), Watch (4,0)]
+		[iOS (11, 0), TV (11, 0), Mac (10, 13), Watch (4, 0)]
+		[MacCatalyst (13, 1)]
 		InvalidUri = 1690,
 	}
 
@@ -176,7 +177,7 @@ namespace CoreData {
 		Timeout = 134090,
 		IncompatibleVersionHash = 134100
 	}
-	
+
 	[Native]
 	public enum MigrationErrorType {
 		Migration = 134110,
@@ -188,31 +189,32 @@ namespace CoreData {
 		EntityMigrationPolicy = 134170,
 		InferredMappingModel = 134190,
 		ExternalRecordImport = 134200,
-		[iOS (11,0), TV (11,0), Mac (10,13), Watch (4,0)]
+		[iOS (11, 0), TV (11, 0), Mac (10, 13), Watch (4, 0)]
+		[MacCatalyst (13, 1)]
 		HistoryTokenExpired = 134301,
 	}
 
-	[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
+	[Watch (4, 0), TV (11, 0), Mac (10, 13), iOS (11, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NSFetchIndexElementType : ulong
-	{
+	public enum NSFetchIndexElementType : ulong {
 		Binary,
 		RTree
 	}
 
-	[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
+	[Watch (4, 0), TV (11, 0), Mac (10, 13), iOS (11, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NSPersistentHistoryChangeType : long
-	{
+	public enum NSPersistentHistoryChangeType : long {
 		Insert,
 		Update,
 		Delete
 	}
 
-	[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
+	[Watch (4, 0), TV (11, 0), Mac (10, 13), iOS (11, 0)]
+	[MacCatalyst (13, 1)]
 	[Native]
-	public enum NSPersistentHistoryResultType : long
-	{
+	public enum NSPersistentHistoryResultType : long {
 		StatusOnly = 0,
 		ObjectIds = 1,
 		Count = 2,
@@ -220,4 +222,41 @@ namespace CoreData {
 		ChangesOnly = 4,
 		TransactionsAndChanges = 5
 	}
+
+	[Watch (6, 0), TV (13, 0), Mac (10, 15), iOS (13, 0)]
+	[MacCatalyst (13, 1)]
+	[Native]
+	public enum NSBatchInsertRequestResultType : ulong {
+		StatusOnly = 0,
+		ObjectIds = 1,
+		Count = 2,
+	}
+
+	[Watch (6, 0), TV (13, 0), Mac (10, 15), iOS (13, 0)]
+	[MacCatalyst (13, 1)]
+	[Flags]
+	[Native]
+	public enum NSPersistentCloudKitContainerSchemaInitializationOptions : ulong {
+		None = 0x0,
+		DryRun = 1 << 1,
+		PrintSchema = 1 << 2,
+	}
+
+	[Watch (7, 0), TV (14, 0), Mac (11, 0), iOS (14, 0)]
+	[MacCatalyst (14, 0)]
+	[Native]
+	public enum NSPersistentCloudKitContainerEventResultType : long {
+		Events = 0,
+		CountEvents,
+	}
+
+	[Watch (7, 0), TV (14, 0), Mac (11, 0), iOS (14, 0)]
+	[MacCatalyst (14, 0)]
+	[Native]
+	public enum NSPersistentCloudKitContainerEventType : long {
+		Setup,
+		Import,
+		Export,
+	}
+
 }
