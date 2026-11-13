@@ -21,149 +21,110 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using Foundation;
-using ObjCRuntime;
-using AudioToolbox;
-using System;
+
+#nullable enable
 
 namespace AVFoundation {
-#if !XAMCORE_2_0
-	[Advice ("Use 'AudioSettings' instead.")]
-	public class AVAudioPlayerSettings {
-		NSDictionary dict;
-		
-		internal AVAudioPlayerSettings (NSDictionary dictionary)
-		{
-			dict = dictionary;
-		}
-
-		public AudioChannelLayout AudioChannelLayout {
-			get {
-				var data = dict.ObjectForKey (AVAudioSettings.AVChannelLayoutKey) as NSData;
-				if (data == null)
-					return new AudioChannelLayout ();
-				return AudioChannelLayout.FromHandle (data.Bytes);
-			}
-		}
-
-		public int EncoderBitRateKey {
-			get {
-				var rate = dict.ObjectForKey (AVAudioSettings.AVEncoderBitRateKey) as NSNumber;
-				return rate == null ? 0 : rate.Int32Value;
-			}
-		}
-
-		public AudioFormatType AudioFormat {
-			get {
-				var ft = dict.ObjectForKey (AVAudioSettings.AVFormatIDKey) as NSNumber;
-				return (AudioFormatType) (ft == null ? -1 : ft.Int32Value);
-			}
-		}
-
-		public int NumberChannels {
-			get {
-				var n =  dict.ObjectForKey (AVAudioSettings.AVNumberOfChannelsKey) as NSNumber;
-				return n == null ? 1 : n.Int32Value;
-			}
-		}
-
-		public float SampleRate {
-			get {
-				var r = dict.ObjectForKey (AVAudioSettings.AVSampleRateKey) as NSNumber;
-				return r == null ? 0 : r.FloatValue;
-			}
-		}
-		
-		public static implicit operator NSDictionary (AVAudioPlayerSettings settings)
-		{
-			return settings.dict;
-		}
-	}
-#endif
-
-#if !WATCH
+	/// <summary>An audio player that can play audio from memory or the local file system.</summary>
+	///     <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/avfaudio/avaudioplayer">Apple documentation for <c>AVAudioPlayer</c></related>
 	public partial class AVAudioPlayer {
-
-		public static AVAudioPlayer FromUrl (NSUrl url, out NSError error)
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified url and hint for the file type.</summary>
+		/// <param name="url">The url of a local audio file.</param>
+		/// <param name="fileTypeHint">The uniform type identifier for the audio format.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromUrl (NSUrl url, NSString? fileTypeHint, out NSError? error)
 		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
-
-				var ap = new AVAudioPlayer (url, ptrtohandle);
-				if (ap.Handle == IntPtr.Zero){
-					error = (NSError) Runtime.GetNSObject (errhandle);
-					return null;
-				} else
-					error = null;
-				return ap;
+			var rv = new AVAudioPlayer (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithContentsOfUrl (url, fileTypeHint, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
 			}
+			return rv;
 		}
 
-		public static AVAudioPlayer FromUrl (NSUrl url)
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified url and hint for the file type.</summary>
+		/// <param name="url">The url of a local audio file.</param>
+		/// <param name="fileTypeHint">The uniform type identifier for the audio format.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromUrl (NSUrl url, AVFileTypes fileTypeHint, out NSError? error)
 		{
-			unsafe {
-				var ap = new AVAudioPlayer (url, IntPtr.Zero);
-				if (ap.Handle == IntPtr.Zero)
-					return null;
+			return FromUrl (url, fileTypeHint.GetConstant (), out error);
+		}
 
-				return ap;
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified url.</summary>
+		/// <param name="url">The url of a local audio file.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromUrl (NSUrl url, out NSError? error)
+		{
+			var rv = new AVAudioPlayer (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithContentsOfUrl (url, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
 			}
+			return rv;
 		}
 
-		public static AVAudioPlayer FromData (NSData data, out NSError error)
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified url.</summary>
+		/// <param name="url">The url of a local audio file.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromUrl (NSUrl url)
 		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
+			return FromUrl (url, out _);
+		}
 
-				var ap = new AVAudioPlayer (data, ptrtohandle);
-				if (ap.Handle == IntPtr.Zero){
-					error = (NSError) Runtime.GetNSObject (errhandle);
-					return null;
-				} else
-					error = null;
-				return ap;
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified data and hint for the file type.</summary>
+		/// <param name="data">The audio data to play.</param>
+		/// <param name="fileTypeHint">The uniform type identifier for the audio format.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromData (NSData data, AVFileTypes fileTypeHint, out NSError? error)
+		{
+			return FromData (data, fileTypeHint.GetConstant (), out error);
+		}
+
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified data and hint for the file type.</summary>
+		/// <param name="data">The audio data to play.</param>
+		/// <param name="fileTypeHint">The uniform type identifier for the audio format.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromData (NSData data, NSString? fileTypeHint, out NSError? error)
+		{
+			var rv = new AVAudioPlayer (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithData (data, fileTypeHint, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
 			}
+			return rv;
 		}
 
-		public static AVAudioPlayer FromData (NSData data)
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified data.</summary>
+		/// <param name="data">The audio data to play.</param>
+		/// <param name="error">An object describing the error in case an error occurs, null otherwise.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromData (NSData data, out NSError? error)
 		{
-			unsafe {
-				var ap = new AVAudioPlayer (data, IntPtr.Zero);
-				if (ap.Handle == IntPtr.Zero)
-					return null;
-
-				return ap;
+			var rv = new AVAudioPlayer (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithData (data, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
 			}
+			return rv;
 		}
 
-#if !XAMCORE_2_0
-		[Obsolete ("This method had an invalid signature in MonoMac 1.0.3, use 'AVAudioPlayer.FromUrl' instead.")]
-		public AVAudioPlayer (NSUrl url, NSError error) : this (url, IntPtr.Zero)
+		/// <summary>Create a new <see cref="AVAudioPlayer" /> from the specified data.</summary>
+		/// <param name="data">The audio data to play.</param>
+		/// <returns>A new <see cref="AVAudioPlayer" /> instance if successful, null otherwise.</returns>
+		public static AVAudioPlayer? FromData (NSData data)
 		{
-			
+			return FromData (data, out _);
 		}
-
-		[Obsolete ("This method had an invalid signature in MonoMac 1.0.3, use 'AVAudioPlayer.FromData' instead.")]
-		public AVAudioPlayer (NSData data, NSError error) : this (data, IntPtr.Zero)
-		{
-			
-		}
-
-		[Advice ("Use SoundSettings")]
-		public AVAudioPlayerSettings Settings {
-			get {
-				return new AVAudioPlayerSettings (WeakSettings);
-			}
-		}
-
-		[Advice ("This method was incorrectly named, use 'PlayAtTime' instead.")]
-		public bool PlayAtTimetime (double time)
-		{
-			return PlayAtTime (time);
-		}
-#endif
 	}
-#endif // !WATCH
 }

@@ -25,51 +25,38 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace CoreText {
 
 	// Convenience enum for string values in ObjC.
+	/// <summary>The kind of baselines supported when typesetting text.</summary>
 	public enum CTBaselineClass {
+		/// <summary>Used to offset a roman baseline.</summary>
 		Roman,
+		/// <summary>Used to offset a centered ideographic baseline.</summary>
 		IdeographicCentered,
+		/// <summary>Used to offset an ideographic low baseline.</summary>
 		IdeographicLow,
+		/// <summary>Used to offset an ideographic high baseline.</summary>
 		IdeographicHigh,
+		/// <summary>Used to offset a hanging baseline.</summary>
 		Hanging,
+		/// <summary>Used to offset a math baseline.</summary>
 		Math,
 	}
 
-	static class CTBaselineClassID {
-		public static readonly NSString Roman;
-		public static readonly NSString IdeographicCentered;
-		public static readonly NSString IdeographicLow;
-		public static readonly NSString IdeographicHigh;
-		public static readonly NSString Hanging;
-		public static readonly NSString Math;
-
-		static CTBaselineClassID ()
-		{
-			var handle = Libraries.CoreText.Handle;
-			Roman = Dlfcn.GetStringConstant (handle, "kCTBaselineClassRoman");
-			IdeographicCentered = Dlfcn.GetStringConstant (handle, "kCTBaselineClassIdeographicCentered");
-			IdeographicLow = Dlfcn.GetStringConstant (handle, "kCTBaselineClassIdeographicLow");
-			IdeographicHigh = Dlfcn.GetStringConstant (handle, "kCTBaselineClassIdeographicHigh");
-			Hanging = Dlfcn.GetStringConstant (handle, "kCTBaselineClassHanging");
-			Math = Dlfcn.GetStringConstant (handle, "kCTBaselineClassMath");
-		}
-
-		public static NSString ToNSString (CTBaselineClass key)
+	static partial class CTBaselineClassID {
+		public static NSString? ToNSString (CTBaselineClass key)
 		{
 			switch (key) {
-				case CTBaselineClass.Roman:                return Roman;
-				case CTBaselineClass.IdeographicCentered:  return IdeographicCentered;
-				case CTBaselineClass.IdeographicLow:       return IdeographicLow;
-				case CTBaselineClass.IdeographicHigh:      return IdeographicHigh;
-				case CTBaselineClass.Hanging:              return Hanging;
-				case CTBaselineClass.Math:                 return Math;
+			case CTBaselineClass.Roman: return Roman;
+			case CTBaselineClass.IdeographicCentered: return IdeographicCentered;
+			case CTBaselineClass.IdeographicLow: return IdeographicLow;
+			case CTBaselineClass.IdeographicHigh: return IdeographicHigh;
+			case CTBaselineClass.Hanging: return Hanging;
+			case CTBaselineClass.Math: return Math;
 			}
 
 			throw new ArgumentOutOfRangeException ("key");
@@ -77,43 +64,35 @@ namespace CoreText {
 
 		public static CTBaselineClass FromHandle (IntPtr handle)
 		{
-			if (handle == Roman.Handle)                return CTBaselineClass.Roman;
-			if (handle == IdeographicCentered.Handle)  return CTBaselineClass.IdeographicCentered;
-			if (handle == IdeographicLow.Handle)       return CTBaselineClass.IdeographicLow;
-			if (handle == IdeographicHigh.Handle)      return CTBaselineClass.IdeographicHigh;
-			if (handle == Hanging.Handle)              return CTBaselineClass.Hanging;
-			if (handle == Math.Handle)                 return CTBaselineClass.Math;
+			if (handle == Roman?.Handle) return CTBaselineClass.Roman;
+			if (handle == IdeographicCentered?.Handle) return CTBaselineClass.IdeographicCentered;
+			if (handle == IdeographicLow?.Handle) return CTBaselineClass.IdeographicLow;
+			if (handle == IdeographicHigh?.Handle) return CTBaselineClass.IdeographicHigh;
+			if (handle == Hanging?.Handle) return CTBaselineClass.Hanging;
+			if (handle == Math?.Handle) return CTBaselineClass.Math;
 
 			throw new ArgumentOutOfRangeException ("handle");
 		}
 	}
 
 	// Convenience enum for string values in ObjC.
+	/// <summary>An enumeration whose values specify whether the baseline font is from the original font or a reference font.</summary>
 	public enum CTBaselineFont {
+		/// <summary>The reference font baseline.</summary>
 		Reference,
-		Original
+		/// <summary>The original font baseline.</summary>
+		Original,
 	}
 
-	static class CTBaselineFondID {
-		public static readonly NSString Reference;
-		public static readonly NSString Original;
-
-		static CTBaselineFondID ()
-		{
-			var handle = Libraries.CoreText.Handle;
-			Reference = Dlfcn.GetStringConstant (handle, "kCTBaselineReferenceFont");
-			Original = Dlfcn.GetStringConstant (handle, "kCTBaselineOriginalFont");
-		}
-
-		public static NSString ToNSString (CTBaselineFont key)
+	static partial class CTBaselineFontID {
+		public static NSString? ToNSString (CTBaselineFont key)
 		{
 			switch (key) {
-				case CTBaselineFont.Reference: return Reference;
-				case CTBaselineFont.Original:  return Original;
+			case CTBaselineFont.Reference: return Reference;
+			case CTBaselineFont.Original: return Original;
 			}
 
 			throw new ArgumentOutOfRangeException ("key");
 		}
 	}
 }
-

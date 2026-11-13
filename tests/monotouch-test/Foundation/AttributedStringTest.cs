@@ -1,7 +1,5 @@
-using System;
-using NUnit.Framework;
-#if XAMCORE_2_0
-using Foundation;
+using System.IO;
+
 #if MONOMAC
 using AppKit;
 using UIColor = AppKit.NSColor;
@@ -9,65 +7,44 @@ using UIColor = AppKit.NSColor;
 using UIKit;
 #endif
 using CoreGraphics;
-using ObjCRuntime;
-#if !__WATCHOS__
 using CoreText;
-#endif
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-using MonoTouch.CoreText;
-#endif
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class AttributedStringTest {
 
 		CGColor red, yellow;
 		bool failEnum, t1, t2, tFont1, tFont2;
-		
-#if !__WATCHOS__
+
 		[Test]
 		public void Attributes ()
 		{
 			red = TestRuntime.GetCGColor (UIColor.Red);
 			yellow = TestRuntime.GetCGColor (UIColor.Yellow);
 
-			var j = new NSMutableAttributedString ("Hello", new CTStringAttributes() { ForegroundColor = red });
-			j.Append (new NSMutableAttributedString ("12345", new CTStringAttributes() { ForegroundColor = yellow }));
+			var j = new NSMutableAttributedString ("Hello", new CTStringAttributes () { ForegroundColor = red });
+			j.Append (new NSMutableAttributedString ("12345", new CTStringAttributes () { ForegroundColor = yellow }));
 			j.EnumerateAttributes (new NSRange (0, 10), NSAttributedStringEnumeration.None, cb);
-			Assert.True (t1);
-			Assert.True (t2);
-			Assert.False (failEnum);
-			Assert.True (tFont1);
-			Assert.True (tFont2);
+			Assert.That (t1, Is.True);
+			Assert.That (t2, Is.True);
+			Assert.That (failEnum, Is.False);
+			Assert.That (tFont1, Is.True);
+			Assert.That (tFont2, Is.True);
 		}
-#endif // !__WATCHOS__
-		
+
 		void cb (NSDictionary attrs, NSRange range, ref bool stop)
 		{
 			stop = false;
-			if (range.Location == 0){
-				if (range.Length == 5){
+			if (range.Location == 0) {
+				if (range.Length == 5) {
 					t1 = true;
 					tFont1 = attrs.ContainsKey (new NSString ("CTForegroundColor"));
 				}
-			} else if (range.Location == 5){
-				if (range.Length == 5){
+			} else if (range.Location == 5) {
+				if (range.Length == 5) {
 					t2 = true;
 					tFont2 = attrs.ContainsKey (new NSString ("CTForegroundColor"));
 				}
@@ -76,43 +53,18 @@ namespace MonoTouchFixtures.Foundation {
 		}
 
 		[Test]
-		public void Fields ()
-		{
-			// fields are not available in iOS (at least up to 5.1.1)
-			// this test will fail if this ever change in the future
-			IntPtr lib = Dlfcn.dlopen (Constants.FoundationLibrary, 0);
-			try {
-				Assert.That (Dlfcn.dlsym (lib, "NSFontAttributeName"), Is.EqualTo (IntPtr.Zero), "NSFontAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSLinkAttributeName"), Is.EqualTo (IntPtr.Zero), "NSLinkAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSUnderlineStyleAttributeName"), Is.EqualTo (IntPtr.Zero), "NSUnderlineStyleAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSStrikethroughStyleAttributeName"), Is.EqualTo (IntPtr.Zero), "NSStrikethroughStyleAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSStrokeWidthAttributeName"), Is.EqualTo (IntPtr.Zero), "NSStrokeWidthAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSParagraphStyleAttributeName"), Is.EqualTo (IntPtr.Zero), "NSParagraphStyleAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSForegroundColorAttributeName"), Is.EqualTo (IntPtr.Zero), "NSForegroundColorAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSBackgroundColorAttributeName"), Is.EqualTo (IntPtr.Zero), "NSBackgroundColorAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSLigatureAttributeName"), Is.EqualTo (IntPtr.Zero), "NSLigatureAttributeName");
-				Assert.That (Dlfcn.dlsym (lib, "NSObliquenessAttributeName"), Is.EqualTo (IntPtr.Zero), "NSObliquenessAttributeName");
-			}
-			finally {
-				Dlfcn.dlclose (lib);
-			}
-		}
-
-#if !__WATCHOS__
-		[Test]
 		public void UIKitAttachmentConveniences_New ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 11, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 11, throwIfOtherPlatform: false);
 
 			// so we added custom code calling the (old) category helper - but we had to pick a different name
 			using (var ta = new NSTextAttachment (null, null))
 			using (var as2 = NSAttributedString.FromAttachment (ta)) {
 				Assert.That (as2.Length, Is.EqualTo ((nint) 1), "Length");
-				Assert.That (as2.Value [0], Is.EqualTo ((char)0xFFFC), "NSAttachmentCharacter");
+				Assert.That (as2.Value [0], Is.EqualTo ((char) 0xFFFC), "NSAttachmentCharacter");
 			}
 		}
-#endif // !__WATCHOS__
 
 		[Test]
 		public void InitWith ()
@@ -139,9 +91,9 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var s1 = new NSAttributedString ("string")) {
 				using (var copy = s1.MutableCopy ())
-					Assert.That (copy.RetainCount, Is.EqualTo ((nint) 1), "Copy retaincount 1");
+					Assert.That (copy.RetainCount, Is.EqualTo ((nuint) 1), "Copy retaincount 1");
 				using (var copy = ((INSMutableCopying) s1).MutableCopy (NSZone.Default))
-					Assert.That (copy.RetainCount, Is.EqualTo ((nint) 1), "Copy retaincount 2");
+					Assert.That (copy.RetainCount, Is.EqualTo ((nuint) 1), "Copy retaincount 2");
 			}
 		}
 
@@ -153,7 +105,120 @@ namespace MonoTouchFixtures.Foundation {
 			}
 		}
 
-#if !__WATCHOS__
+		[Test]
+		public void Create_Url_Error ()
+		{
+			{
+				using var obj = NSAttributedString.Create (new NSUrl (""), new NSAttributedStringDocumentAttributes (), out var rda, out var e);
+				Assert.That (obj, Is.Null, "IsNull");
+				Assert.That (e, Is.Not.Null, "Error");
+			}
+
+			{
+				using var obj = NSAttributedString.Create (new NSUrl (""), new NSAttributedStringDocumentAttributes (), out var e);
+				Assert.That (obj, Is.Null, "IsNull 2");
+				Assert.That (e, Is.Not.Null, "Error 2");
+			}
+		}
+
+		[Test]
+		public void Create_Markdown_Url_Error ()
+		{
+			using var markdownOptions = new NSAttributedStringMarkdownParsingOptions ();
+			using var obj = NSAttributedString.Create (new NSUrl (""), markdownOptions, null, out var e);
+			Assert.That (obj, Is.Null, "IsNull");
+			Assert.That (e, Is.Not.Null, "Error");
+		}
+
+
+		[Test]
+		public void Create_Url ()
+		{
+			var textFile = Path.Combine (NSBundle.MainBundle.ResourcePath, "uncompressed.txt");
+			var textUrl = NSUrl.CreateFileUrl (textFile);
+			{
+				using var obj = NSAttributedString.Create (textUrl, new NSAttributedStringDocumentAttributes (), out var rda, out var e);
+				Assert.That (e, Is.Null, "Error");
+				Assert.That (obj, Is.Not.Null, "IsNull");
+			}
+			{
+				using var obj = NSAttributedString.Create (textUrl, new NSAttributedStringDocumentAttributes (), out var e);
+				Assert.That (e, Is.Null, "Error 2");
+				Assert.That (obj, Is.Not.Null, "IsNull 2");
+			}
+		}
+
+		[Test]
+		public void Create_Markdown_Url ()
+		{
+			var textFile = Path.Combine (NSBundle.MainBundle.ResourcePath, "uncompressed.txt");
+			var textUrl = NSUrl.CreateFileUrl (textFile);
+			using var markdownOptions = new NSAttributedStringMarkdownParsingOptions ();
+			using var obj = NSAttributedString.Create (textUrl, markdownOptions, null, out var e);
+			Assert.That (e, Is.Null, "Error");
+			Assert.That (obj, Is.Not.Null, "IsNull");
+		}
+
+		[Test]
+		public void Create_Data_Error ()
+		{
+			var attributes = new NSAttributedStringDocumentAttributes ();
+			attributes.DocumentType = NSDocumentType.RTF;
+			{
+				using var obj = NSAttributedString.Create (NSData.FromArray (new byte [42]), attributes, out var rda, out var e);
+				Assert.That (obj, Is.Null, "IsNull");
+				Assert.That (e, Is.Not.Null, "Error");
+			}
+			{
+				using var obj = NSAttributedString.Create (NSData.FromArray (new byte [42]), attributes, out var e);
+				Assert.That (obj, Is.Null, "IsNull 2");
+				Assert.That (e, Is.Not.Null, "Error 2");
+			}
+		}
+
+		[Test]
+		public void Create_Markdown_Data_Error ()
+		{
+			using var markdownOptions = new NSAttributedStringMarkdownParsingOptions ();
+			using var obj = NSAttributedString.Create (NSData.FromArray (new byte [] { (byte) '[', (byte) '!', (byte) '"', (byte) '$', (byte) '%', (byte) '&', (byte) '/', (byte) '(', (byte) ')', (byte) '=', (byte) '?', (byte) '¿', (byte) '^', (byte) '*', (byte) '¨', (byte) '´', (byte) '}', (byte) '\\' }), markdownOptions, null, out var e);
+			Assert.That (obj, Is.Null, "IsNull");
+			Assert.That (e, Is.Not.Null, "Error");
+		}
+
+		[Test]
+		public void Create_Data ()
+		{
+			{
+				using var obj = NSAttributedString.Create (new NSData (), new NSAttributedStringDocumentAttributes (), out var rda, out var e);
+				Assert.That (obj, Is.Not.Null, "IsNull");
+				Assert.That (e, Is.Null, "Error");
+			}
+			{
+				using var obj = NSAttributedString.Create (new NSData (), new NSAttributedStringDocumentAttributes (), out var e);
+				Assert.That (obj, Is.Not.Null, "IsNull 2");
+				Assert.That (e, Is.Null, "Error 2");
+			}
+		}
+
+		[Test]
+		public void Create_Markdown_Data ()
+		{
+			using var markdownOptions = new NSAttributedStringMarkdownParsingOptions ();
+			using var obj = NSAttributedString.Create (new NSData (), markdownOptions, null, out var e);
+			Assert.That (obj, Is.Not.Null, "IsNull");
+			Assert.That (e, Is.Null, "Error");
+		}
+
+
+		[Test]
+		public void Create_Markdown_String ()
+		{
+			using var markdownOptions = new NSAttributedStringMarkdownParsingOptions ();
+			using var obj = NSAttributedString.Create ("#markdown", markdownOptions, null, out var e);
+			Assert.That (obj, Is.Not.Null, "IsNull");
+			Assert.That (e, Is.Null, "Error");
+		}
+
 		[Test]
 		public void IndirectNullDictionary ()
 		{
@@ -162,6 +227,78 @@ namespace MonoTouchFixtures.Foundation {
 				Assert.That (s.Handle, Is.Not.EqualTo (IntPtr.Zero));
 			}
 		}
-#endif // !__WATCHOS__
+
+		[Test]
+		public void LowLevelGetAttributesOverrideTest ()
+		{
+			using var storage = new MyTextStorage ("Hello World");
+			using var container = new NSTextContainer {
+				Size = new CGSize (100, float.MaxValue),
+				WidthTracksTextView = true
+			};
+			using var layoutManager = new NSLayoutManager ();
+			layoutManager.AddTextContainer (container);
+			storage.AddLayoutManager (layoutManager);
+			layoutManager.EnsureLayoutForCharacterRange (new NSRange (0, 1));
+			Assert.That (storage.LowLevelGetAttributes_Called, Is.GreaterThan (0), "LowLevelGetAttributes #called");
+			Assert.That (storage.LowLevelValue_Called, Is.GreaterThan (0), "LowLevelValue #called");
+		}
+
+		public class MyTextStorage : NSTextStorage {
+			string text;
+			NSString nsString;
+			IntPtr stringPtr;
+			NSDictionary attributes;
+			IntPtr attributesPtr;
+			public int LowLevelGetAttributes_Called;
+			public int LowLevelValue_Called;
+
+			public MyTextStorage (string text)
+			{
+				this.text = text ?? "";
+				nsString = (NSString) (this.text);
+				stringPtr = nsString.Handle;
+				attributes = new ();
+				attributesPtr = attributes.Handle;
+			}
+
+			public override IntPtr LowLevelValue {
+				get {
+					LowLevelValue_Called++;
+					return stringPtr;
+				}
+			}
+
+			public override IntPtr LowLevelGetAttributes (nint location, IntPtr effectiveRangePtr)
+			{
+				LowLevelGetAttributes_Called++;
+				if (effectiveRangePtr != IntPtr.Zero) {
+					unsafe {
+						NSRange* effectiveRange = (NSRange*) effectiveRangePtr;
+						*effectiveRange = new NSRange (location, 1);
+					}
+				}
+				return attributesPtr;
+			}
+		}
+
+#if __MACOS__
+		[Test]
+		public void NullOnFailureTest ()
+		{
+			Assert.Multiple (() => {
+				// I wasn't able to figure out any string that would make 'CreateWithHTML' fail :/
+				// var invalidHtml = NSData.FromArray ([(int) '?']);
+				Assert.That (NSAttributedString.CreateWithRTF (NSData.FromArray ([0]), out var _), Is.Null, "CreateWithRTF");
+				Assert.That (NSAttributedString.CreateWithRTFD (NSData.FromArray ([0]), out var _), Is.Null, "CreateWithRTFD");
+				// Assert.That (NSAttributedString.CreateWithHTML (invalidHtml, out var _), Is.Null, "CreateWithHTML");
+				// Assert.That (NSAttributedString.CreateWithHTML (invalidHtml, NSUrl.CreateFileUrl ("/tmp"), out var _), Is.Null, "CreateWithHTML/NSUrl");
+				// Assert.That (NSAttributedString.CreateWithHTML (invalidHtml, new NSDictionary (), out var _), Is.Null, "CreateWithHTML/NSDictionary");
+				// Assert.That (NSAttributedString.CreateWithHTML (invalidHtml, new NSAttributedStringDocumentAttributes (), out var _), Is.Null, "CreateWithHTML/NSAttributedStringDocumentAttributes");
+				Assert.That (NSAttributedString.CreateWithDocFormat (NSData.FromArray ([0]), out var _), Is.Null, "CreateWithDocFormat");
+				Assert.That (NSAttributedString.Create (new NSFileWrapper (NSData.FromArray ([0])), out var _), Is.Null, "Create/NSFileWrapper");
+			});
+		}
+#endif
 	}
 }

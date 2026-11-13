@@ -1,0 +1,71 @@
+parameters:
+
+- name: pool
+  type: string
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: xcodeChannel
+  type: string
+
+- name: macOSName
+  type: string
+
+- name: useACES
+  type: boolean
+  default: false
+
+
+stages:
+
+- stage: configure_build
+  displayName: 'Configure'
+  jobs:
+
+  - job: configure
+    displayName: 'Configure build'
+    pool:
+      vmImage: windows-latest
+
+    variables:
+      isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+      isScheduled: $[eq(variables['Build.Reason'], 'Schedule')]
+      BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+
+    steps:
+    - template: common/configure.yml
+      parameters: 
+        repositoryAlias: ${{ parameters.repositoryAlias }}
+        commit: ${{ parameters.commit }}
+        statusContext: 'VSTS: simulator tests' 
+        uploadArtifacts: true
+        use1ES: false
+        isPR: ${{ parameters.isPR }}
+
+- stage: generate_api_diff
+  displayName: 'API diff'
+  dependsOn: [ configure_build ]
+  condition: and(succeeded(), ne(dependencies.configure_build.outputs['configure.configure_platforms.DOTNET_PLATFORMS'], ''))
+  jobs:
+  - template: ./build/api-diff-stage.yml
+    parameters:
+      xcodeChannel: ${{ parameters.xcodeChannel }}
+      macOSName: ${{ parameters.macOSName }}
+      isPR: ${{ parameters.isPR }}
+      repositoryAlias: ${{ parameters.repositoryAlias }}
+      commit: ${{ parameters.commit }}
+      vsdropsPrefix: ${{ variables.vsdropsPrefix }}
+      keyringPass: $(pass--lab--mac--builder--keychain)
+      gitHubToken: $(Github.Token)
+      xqaCertPass: $(xqa--certificates--password)
+      pool: ${{ parameters.pool }}
+      useACES: ${{ parameters.useACES }}

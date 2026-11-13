@@ -7,25 +7,20 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.IO;
-#if XAMCORE_2_0
-using Foundation;
+using System.Threading;
+using System.Threading.Tasks;
+
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using MonoTests.System.Net.Http;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Foundation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class UrlProtocolTest {
@@ -34,16 +29,15 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			Class c = new Class (typeof (CustomProtocol));
 			bool res;
-			
+
 			res = NSUrlProtocol.RegisterClass (c);
-			
+
 			Assert.That (res, "#1");
-			
+
 			NSUrlProtocol.UnregisterClass (c);
 		}
 
-		class CustomProtocol : NSUrlProtocol
-		{
+		class CustomProtocol : NSUrlProtocol {
 		}
 
 		// API disabled - see comments in src/foundation.cs
@@ -53,7 +47,7 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			// NSInvalidArgumentException Reason: *** -canInitWithRequest: cannot be sent to an abstract object of class NSURLProtocol: Create a concrete instance!
 			using (var t = new NSUrlSessionTask ()) {
-				Assert.False (NSUrlProtocol.CanInitWithTask (t), "CanInitWithTask");
+				Assert.That (NSUrlProtocol.CanInitWithTask (t), Is.False, "CanInitWithTask");
 			}
 		}
 
@@ -62,9 +56,132 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			// NSInvalidArgumentException -[MonoTouchFixtures_Foundation_UrlProtocolTest_CustomProtocol task]: unrecognized selector sent to instance 0x7ff4c910
 			using (var p = new CustomProtocol ()) {
-				Assert.Null (p.Task, "Task");
+				Assert.That (p.Task, Is.Null, "Task");
 			}
 		}
 #endif
+
+		[Test]
+		public void RegistrarTest ()
+		{
+			CustomUrlProtocol.State = 0;
+			var success = false;
+
+			var task = Task.Run (async () => {
+				var config = NSUrlSessionConfiguration.DefaultSessionConfiguration;
+				config.WeakProtocolClasses = NSArray.FromNSObjects (new Class (typeof (CustomUrlProtocol)));
+				var session = NSUrlSession.FromConfiguration (config);
+				var custom_url = new NSUrl ("foo://server");
+				using (var task = await session.CreateDownloadTaskAsync (custom_url)) {
+					success = true;
+				}
+			});
+
+			// Use the completion check overload so RunAsync also waits for
+			// StopLoading to fire (State reaches 5) instead of returning as
+			// soon as the download task completes (State may still be 4).
+			Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (10), task, () => CustomUrlProtocol.State >= 5), Is.True, "Timed out");
+			Assert.That (CustomUrlProtocol.State, Is.EqualTo (5), "State");
+			Assert.That (success, Is.True, "Success");
+		}
+
+		public class CustomUrlProtocol : NSUrlProtocol, INSUrlSessionDelegate, INSUrlSessionTaskDelegate, INSUrlSessionDataDelegate {
+
+			public static int State;
+
+			[Export ("canInitWithRequest:")]
+			public static new bool CanInitWithRequest (NSUrlRequest request)
+			{
+				if (State == 0)
+					State++;
+				return true;
+			}
+
+			[Export ("canonicalRequestForRequest:")]
+			public static new NSUrlRequest GetCanonicalRequest (NSUrlRequest request)
+			{
+				if (State == 1)
+					State++;
+				return request;
+			}
+
+			[Export ("initWithRequest:cachedResponse:client:")]
+			public CustomUrlProtocol (NSUrlRequest request, NSCachedUrlResponse cachedResponse, INSUrlProtocolClient client)
+			: base (request, cachedResponse, client)
+			{
+				if (State == 2)
+					State++;
+			}
+
+			[Export ("startLoading")]
+			public override void StartLoading ()
+			{
+#if MONOMAC
+				if (State == 3)
+					State++;
+#else
+				if (State == 3)
+					State++;
+#endif
+
+				string file = Path.Combine (NSBundle.MainBundle.ResourcePath, "basn3p08.png");
+
+				using (var d = NSData.FromFile (file))
+				using (var response = new NSUrlResponse (Request.Url, "image/png", (nint) d.Length, null)) {
+					Client.ReceivedResponse (this, response, NSUrlCacheStoragePolicy.NotAllowed);
+					Client.DataLoaded (this, d);
+					Client.FinishedLoading (this);
+				}
+			}
+
+			[Export ("stopLoading")]
+			public override void StopLoading ()
+			{
+				if (State == 4)
+					State++;
+			}
+
+			//NSURLSessionTaskDelegate
+			[Export ("URLSession:task:willPerformHTTPRedirection:newRequest:completionHandler:")]
+			public virtual void WillPerformHttpRedirection (NSUrlSession session, NSUrlSessionTask task, NSHttpUrlResponse response, NSUrlRequest newRequest, Action<NSUrlRequest> completionHandler)
+			{
+				State = -1;
+				completionHandler (newRequest);
+			}
+
+			[Export ("URLSession:task:didReceiveChallenge:completionHandler:")]
+			public virtual void DidReceiveChallenge (NSUrlSession session, NSUrlSessionTask task, NSUrlAuthenticationChallenge challenge, Action<NSUrlSessionAuthChallengeDisposition, NSUrlCredential> completionHandler)
+			{
+				State = -2;
+				completionHandler (NSUrlSessionAuthChallengeDisposition.PerformDefaultHandling, null);
+			}
+
+			//NSURLSessionDataDelegate
+			[Export ("URLSession:dataTask:didReceiveResponse:completionHandler:")]
+			public virtual void DidReceiveResponse (NSUrlSession session, NSUrlSessionDataTask dataTask, NSUrlResponse response, Action<NSUrlSessionResponseDisposition> completionHandler)
+			{
+				State = -3;
+				completionHandler (NSUrlSessionResponseDisposition.Allow);
+				this.Client.ReceivedResponse (this, response, NSUrlCacheStoragePolicy.Allowed);
+			}
+
+			[Export ("URLSession:dataTask:didReceiveData:")]
+			public virtual void DidReceiveData (NSUrlSession session, NSUrlSessionDataTask dataTask, NSData data)
+			{
+				State = -4;
+				this.Client.DataLoaded (this, data);
+			}
+
+			[Export ("URLSession:task:didCompleteWithError:")]
+			public virtual void DidCompleteWithError (NSUrlSession session, NSUrlSessionTask task, NSError error)
+			{
+				State = -5;
+				if (error is not null) {
+					this.Client.FailedWithError (this, error);
+				} else {
+					this.Client.FinishedLoading (this);
+				}
+			}
+		}
 	}
 }

@@ -1,4 +1,4 @@
-﻿//
+//
 // GKObstacleGraph.cs: Implements Generic variant of GKObstacleGraph
 //
 // Authors:
@@ -7,53 +7,69 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
-
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace GameplayKit {
 
 	public partial class GKObstacleGraph {
-		public
-#if !XAMCORE_4_0
-		virtual
-#endif
-		GKGraphNode2D [] GetNodes (GKPolygonObstacle obstacle)
+		/// <param name="obstacle">To be added.</param>
+		///         <summary>Returns the array of <see cref="GameplayKit.GKGraphNode2D" /> corresponding to the <paramref name="obstacle" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public GKGraphNode2D []? GetNodes (GKPolygonObstacle obstacle)
 		{
-			return NSArray.ArrayFromHandle<GKGraphNode2D> (_GetNodes (obstacle));
+			return NSArray.ArrayFromHandleDropNullElements<GKGraphNode2D> (_GetNodes (obstacle));
 		}
 	}
 
-#if XAMCORE_2_0
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[Register ("GKObstacleGraph", SkipRegistration = true)]
 	public partial class GKObstacleGraph<NodeType> : GKObstacleGraph where NodeType : GKGraphNode2D {
 
 		[Preserve (Conditional = true)]
-		internal GKObstacleGraph (IntPtr handle) : base (handle)
+		internal GKObstacleGraph (NativeHandle handle) : base (handle)
 		{
 		}
 
+		/// <param name="coder">The unarchiver object.</param>
+		///         <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		///         <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		public GKObstacleGraph (NSCoder coder) : base (coder)
 		{
 		}
 
+		/// <param name="obstacles">To be added.</param>
+		///         <param name="bufferRadius">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public GKObstacleGraph (GKPolygonObstacle [] obstacles, float bufferRadius) : base (obstacles, bufferRadius, new Class (typeof (NodeType)))
 		{
 		}
 
-		public static GKObstacleGraph<NodeType> FromObstacles (GKPolygonObstacle [] obstacles, float bufferRadius)
+		/// <param name="obstacles">To be added.</param>
+		///         <param name="bufferRadius">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static new GKObstacleGraph<NodeType>? FromObstacles (GKPolygonObstacle [] obstacles, float bufferRadius)
 		{
-			return Runtime.GetNSObject <GKObstacleGraph<NodeType>> (GraphWithObstacles (obstacles, bufferRadius, new Class (typeof (NodeType))));
+			return Runtime.GetNSObject<GKObstacleGraph<NodeType>> (GraphWithObstacles (obstacles, bufferRadius, new Class (typeof (NodeType))));
 		}
 
-		public NodeType [] GetNodes (GKPolygonObstacle obstacle)
+		/// <param name="obstacle">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public new NodeType []? GetNodes (GKPolygonObstacle obstacle)
 		{
-			return NSArray.ArrayFromHandle<NodeType> (_GetNodes (obstacle));
+			return NSArray.ArrayFromHandleDropNullElements<NodeType> (_GetNodes (obstacle));
 		}
 	}
-#endif
 }
-#endif

@@ -2,17 +2,12 @@
 // UISearchController.cs: Simplify the UISearchController
 //
 
-#if !WATCH
-
-using System;
-using Foundation;
-
 namespace UIKit {
 
 	public partial class UISearchController {
 		class __Xamarin_UISearchResultsUpdating : UISearchResultsUpdating {
 			Action<UISearchController> cback;
-			
+
 			public __Xamarin_UISearchResultsUpdating (Action<UISearchController> cback)
 			{
 				this.cback = cback;
@@ -25,10 +20,12 @@ namespace UIKit {
 				cback (searchController);
 			}
 		}
-		
+
+		/// <param name="updateSearchResults">An action to invoke when the search results need to be updated.</param>
+		/// <summary>Sets a callback to be invoked when the search results need to be updated.</summary>
 		public void SetSearchResultsUpdater (Action<UISearchController> updateSearchResults)
 		{
-			if (updateSearchResults == null){
+			if (updateSearchResults is null) {
 				WeakSearchResultsUpdater = null;
 				return;
 			}
@@ -37,5 +34,3 @@ namespace UIKit {
 		}
 	}
 }
-
-#endif // !WATCH

@@ -1,0 +1,93 @@
+<Documentation>
+  <Docs DocId="T:UIKit.UITextView">
+    <summary>A <see cref="UIKit.UIControl" /> that displays a scrollable multi-line text editor.</summary>
+    <remarks>
+      <para>The <see cref="UIKit.UITextView" /> is a scrollable, multi-line text view that can display styled text and can be editable.</para>
+      <format type="text/html">
+        <h2>Editing</h2>
+      </format>
+      <para>If <see cref="UIKit.UITextView.Editable" /> is <see langword="true" />, the text view will be editable by the application user. When the application user taps on the view, it becomes the first responder and displays the system keyboard. It is the application developer's responsibility to ensure that the keyboard does not obscure functionality (e.g., by scrolling or rearranging views). To make the keyboard disappear, the application developer must have the <see cref="UIKit.UITextView" /> resign first responder status (by calling <see cref="UIKit.UIResponder.ResignFirstResponder" />).</para>
+      <para>Application developers can use <see cref="UIKit.UIKeyboard.Notifications" /> to calculate the necessary scrolling or rearranging of views associated with the appearance and disappearance of the keyboard. </para>
+      <para>Since the <see cref="UIKit.UITextView" /> is multiline, unlike the <see cref="UIKit.UITextField" />, the keyboard's <c>return</c> key cannot be replaced by a <c>done</c> key and there is no equivalent to the <see cref="UIKit.UITextField.ShouldReturn" /> property. A common idiom for a <see cref="UIKit.UITextView" /> is to "end editing when the user touches anywhere outside the text field." This can be done by overriding <see cref="UIKit.UIResponder.TouchesBegan(Foundation.NSSet,UIKit.UIEvent)" /> in the containing <see cref="UIKit.UIView" /> and calling <see cref="UIKit.UIView.EndEditing" />, as shown in the following example:</para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[
+public class MyView : UIView
+{
+	UITextView textView;
+
+	public MyView()
+	{
+		textView = new UITextView(new CGRect(10, 44, UIScreen.MainScreen.Bounds.Width - 20, 300)){
+			Editable = true
+		};
+		AddSubview(textView);
+	}
+
+	public override void TouchesBegan(NSSet touches, UIEvent evt)
+	{
+		EndEditing(true);
+	}
+}
+          ]]></code>
+      </example>
+      <format type="text/html">
+        <h2>Text Kit</h2>
+      </format>
+      <para>iOS 7 introduced "Text Kit," a broad set of APIs and modifications of existing classes, built on <see cref="CoreText" />, that greatly expands the typographical flexibility of iOS.</para>
+      <para>
+        <see cref="UIKit.UITextView" />s are intended to display large amounts of text. The text is stored in <see cref="NSTextStorage" /> objects and layout of the text is managed by a <see cref="NSLayoutManager" />, which lays out the text in an area defined by <see cref="NSTextContainer" /> objects. </para>
+      <para>Mapped to the Model-View-Controller pattern, the <see cref="NSLayoutManager" /> is the Controller, the <see cref="UIKit.UITextView" /> is the View, and <see cref="NSTextStorage" /> and <see cref="NSTextContainer" />s are Model elements.</para>
+      <para>
+        <see cref="NSTextStorage" /> is a subclass of <see cref="Foundation.NSMutableAttributedString" /> and is responsible for holding the string, with various text styles. <see cref="NSTextContainer" /> objects are responsible for modeling the geometric layout of the page. The <see cref="NSLayoutManager" /> translates characters in the <see cref="NSTextStorage" /> into glyphs, lays those out in lines according to the constraints of the <see cref="NSTextContainer" />s, and coordinates the display of one or more <see cref="UIKit.UITextView" /> objects.</para>
+      <para>The following example shows the basic use of two important Text Kit features: multiple text styles and exclusion paths:</para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[
+	var size = UIScreen.MainScreen.Bounds.Size;
+
+	var atts = new UIStringAttributes();
+	atts.ForegroundColor = UIColor.Blue;
+	var txt = "\nText Kit.\n Lorem ipsum dolor ...  auctor.";
+	var attributedString = new NSMutableAttributedString(txt, atts);
+	attributedString.BeginEditing();
+	attributedString.AddAttribute(UIStringAttributeKey.ForegroundColor, UIColor.Red, new NSRange(0, 10));
+	attributedString.AddAttribute(UIStringAttributeKey.Font, UIFont.PreferredFontForTextStyle(UIFontTextStyle.Headline), new NSRange(0, 10));
+	attributedString.EndEditing();
+
+	//NSTextStorage == MVC Model (partial)
+	var storage = new NSTextStorage();
+	storage.SetString(attributedString);
+
+	//NSLayoutManager == MVC Controller
+	var layoutManager = new NSLayoutManager();
+	storage.AddLayoutManager(layoutManager);
+	//NSTextContainer defines a logical block (page, column)
+	var container = new NSTextContainer(size);
+	layoutManager.AddTextContainer(container);
+
+	//UITextView == MVC View
+	TextView = new UITextView(new CGRect(new CGPoint(0, 0), size), container);
+	TextView.AttributedText = attributedString;
+	TextView.ScrollEnabled = false;
+	TextView.Editable = false;
+	TextView.UserInteractionEnabled = false;
+	AddSubview(TextView);
+
+	//Add an image overlay, with exclusion path..
+	var logoRect = new CGRect(96, 195, 95, 90);
+	var img = UIImage.FromBundle("xam.png");
+	var imgView = new UIImageView(logoRect);
+	imgView.Image = img;
+	AddSubview(imgView);
+
+	//Note exclusion path in container coordinate system...
+	var xRect = TextView.ConvertRectFromView(logoRect, this);
+	var hexPath = HexPath(xRect);
+	container.ExclusionPaths = new UIBezierPath[] { hexPath };
+}
+            ]]></code>
+      </example>
+      <para>iOS 6 added multiple text-style capability to <see cref="UIKit.UITextView" />. To use multiple styles, application developers must use the <see cref="UIKit.UITextView.AttributedText" /> property. The <see cref="UIKit.UITextView.Font" />, <see cref="UIKit.UITextView.TextColor" />, and <see cref="UIKit.UITextView.TextAlignment" /> properties apply to all the text in the <see cref="UIKit.UITextView" />.</para>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/UIKit/Reference/UITextView_Class/index.html">Apple documentation for <c>UITextView</c></related>
+  </Docs>
+</Documentation>

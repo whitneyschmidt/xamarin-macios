@@ -1,0 +1,499 @@
+//
+// AutomaticAssessmentConfiguration C# bindings
+//
+// Authors:
+//	Alex Soto <alexsoto@microsoft.com>
+//	TJ Lambert <TJ.Lambert@microsoft.com>
+//
+// Copyright (c) Microsoft Corporation.
+//
+
+namespace AutomaticAssessmentConfiguration {
+
+	[ErrorDomain ("AEAssessmentErrorDomain")]
+	[iOS (13, 4)]
+	[MacCatalyst (14, 0)]
+	[Native]
+	public enum AEAssessmentErrorCode : long {
+		Unknown = 1,
+		UnsupportedPlatform = 2,
+		MultipleParticipantsNotSupported = 3,
+		ConfigurationUpdatesNotSupported = 4,
+		RequiredParticipantsNotAvailable = 5,
+	}
+
+	[Static]
+	public interface AEAssessmentErrorKeys {
+		[Field ("AENotInstalledParticipantsKey")]
+		NSString NotInstalledParticipants { get; set; }
+
+		[Field ("AERestrictedSystemParticipantsKey")]
+		NSString RestrictedSystemParticipants { get; set; }
+	}
+
+	[iOS (14, 0)]
+	[MacCatalyst (18, 0)]
+	[Mac (15, 0)]
+	[Native]
+	enum AEAutocorrectMode : long {
+		None = 0,
+		Spelling = 1 << 0,
+		Punctuation = 1 << 1,
+	}
+
+	[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+	[Native]
+	enum AEUserAccountType : long {
+		Any = 0,
+		Standard = 1,
+		Guest = 2,
+	}
+
+	[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+	enum AEAppleMenuItem {
+		[Field ("AEAppleMenuItemAboutThisMac")]
+		AboutThisMac,
+
+		[Field ("AEAppleMenuItemAppStore")]
+		AppStore,
+
+		[Field ("AEAppleMenuItemForceQuit")]
+		ForceQuit,
+
+		[Field ("AEAppleMenuItemLocation")]
+		Location,
+
+		[Field ("AEAppleMenuItemLockScreen")]
+		LockScreen,
+
+		[Field ("AEAppleMenuItemLogout")]
+		Logout,
+
+		[Field ("AEAppleMenuItemRecent")]
+		Recent,
+
+		[Field ("AEAppleMenuItemRestart")]
+		Restart,
+
+		[Field ("AEAppleMenuItemShutDown")]
+		ShutDown,
+
+		[Field ("AEAppleMenuItemSleep")]
+		Sleep,
+
+		[Field ("AEAppleMenuItemSystemInformation")]
+		SystemInformation,
+
+		[Field ("AEAppleMenuItemSystemSettings")]
+		SystemSettings,
+	}
+
+	[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+	enum AEMenuBarItem {
+		[Field ("AEMenuBarItemBattery")]
+		Battery,
+
+		[Field ("AEMenuBarItemBluetooth")]
+		Bluetooth,
+
+		[Field ("AEMenuBarItemClock")]
+		Clock,
+
+		[Field ("AEMenuBarItemDisplays")]
+		Displays,
+
+		[Field ("AEMenuBarItemKeyboard")]
+		Keyboard,
+
+		[Field ("AEMenuBarItemVolume")]
+		Volume,
+
+		[Field ("AEMenuBarItemWifi")]
+		Wifi,
+	}
+
+	[iOS (13, 4)]
+	[MacCatalyst (14, 0)]
+	[BaseType (typeof (NSObject))]
+	interface AEAssessmentConfiguration : NSCopying {
+
+		[Mac (15, 0), iOS (14, 0)]
+		[MacCatalyst (18, 0)]
+		[Export ("autocorrectMode")]
+		AEAutocorrectMode AutocorrectMode { get; set; }
+
+		[Mac (15, 0), iOS (14, 0)]
+		[MacCatalyst (18, 0)]
+		[Export ("allowsSpellCheck")]
+		bool AllowsSpellCheck { get; set; }
+
+		[Mac (15, 0), iOS (14, 0)]
+		[MacCatalyst (18, 0)]
+		[Export ("allowsPredictiveKeyboard")]
+		bool AllowsPredictiveKeyboard { get; set; }
+
+		[Mac (15, 0), iOS (14, 0)]
+		[MacCatalyst (18, 0)]
+		[Export ("allowsKeyboardShortcuts")]
+		bool AllowsKeyboardShortcuts { get; set; }
+
+		[NoMac, iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("allowsActivityContinuation")]
+		bool AllowsActivityContinuation { get; set; }
+
+		[Mac (27, 0), iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("allowsDictation")]
+		bool AllowsDictation { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityAlternativeInputMethods")]
+		bool AllowsAccessibilityAlternativeInputMethods { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityBackgroundSounds")]
+		bool AllowsAccessibilityBackgroundSounds { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityFullKeyboardAccess")]
+		bool AllowsAccessibilityFullKeyboardAccess { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityHoverText")]
+		bool AllowsAccessibilityHoverText { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityLiveSpeech")]
+		bool AllowsAccessibilityLiveSpeech { get; set; }
+
+		[MacCatalyst (27, 0), Mac (27, 0), iOS (27, 0)]
+		[Export ("allowsAccessibilitySpokenContent")]
+		bool AllowsAccessibilitySpokenContent { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilitySwitchControl")]
+		bool AllowsAccessibilitySwitchControl { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityVoiceControl")]
+		bool AllowsAccessibilityVoiceControl { get; set; }
+
+		[MacCatalyst (27, 0), Mac (27, 0), iOS (27, 0)]
+		[Export ("allowsAccessibilityVoiceOver")]
+		bool AllowsAccessibilityVoiceOver { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAccessibilityZoom")]
+		bool AllowsAccessibilityZoom { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsUserScriptExecution")]
+		bool AllowsUserScriptExecution { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsAutoFill")]
+		bool AllowsAutoFill { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsStructuralInput")]
+		bool AllowsStructuralInput { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsForceQuitKeyboardShortcuts")]
+		bool AllowsForceQuitKeyboardShortcuts { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[NullAllowed, Export ("allowedDirectoriesAndFiles", ArgumentSemantic.Copy)]
+		NSSet<NSUrl> AllowedDirectoriesAndFiles { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsDock")]
+		bool AllowsDock { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsMenuBar")]
+		bool AllowsMenuBar { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[NullAllowed, Export ("allowedAppleMenuItems", ArgumentSemantic.Copy)]
+		NSSet<NSString> AllowedAppleMenuItems { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[NullAllowed, Export ("allowedMenuBarItems", ArgumentSemantic.Copy)]
+		NSSet<NSString> AllowedMenuBarItems { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsOnlyParticipantsToRun")]
+		bool AllowsOnlyParticipantsToRun { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsLockdownMode")]
+		bool AllowsLockdownMode { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsPrivateRelay")]
+		bool AllowsPrivateRelay { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowsVirtualMachine")]
+		bool AllowsVirtualMachine { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("requiresManagedDevice")]
+		bool RequiresManagedDevice { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("requiresReleaseOS")]
+		bool RequiresReleaseOS { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("requiresSIP")]
+		bool RequiresSip { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("requiresSingleUser")]
+		bool RequiresSingleUser { get; set; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("requiresUserAccountType")]
+		AEUserAccountType RequiresUserAccountType { get; set; }
+
+		[NoiOS, MacCatalyst (26, 1), Mac (26, 1)]
+		[Export ("allowsAccessibilityKeyboard")]
+		bool AllowsAccessibilityKeyboard { get; set; }
+
+		[MacCatalyst (26, 1), Mac (26, 1), iOS (26, 1)]
+		[Export ("allowsAccessibilityLiveCaptions")]
+		bool AllowsAccessibilityLiveCaptions { get; set; }
+
+		[MacCatalyst (26, 1), Mac (26, 1), iOS (26, 1)]
+		[Export ("allowsAccessibilityReader")]
+		bool AllowsAccessibilityReader { get; set; }
+
+		[NoMac, iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Deprecated (PlatformName.iOS, 27, 0, message: "Use 'AllowsAccessibilitySpokenContent' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 27, 0, message: "Use 'AllowsAccessibilitySpokenContent' instead.")]
+		[Export ("allowsAccessibilitySpeech")]
+		bool AllowsAccessibilitySpeech { get; set; }
+
+		[NoMac, iOS (26, 0)]
+		[NoMacCatalyst]
+		[Export ("allowsAccessibilityTypingFeedback")]
+		bool AllowsAccessibilityTypingFeedback { get; set; }
+
+		[NoMac, iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("allowsPasswordAutoFill")]
+		bool AllowsPasswordAutoFill { get; set; }
+
+		[NoMac, iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("allowsContinuousPathKeyboard")]
+		bool AllowsContinuousPathKeyboard { get; set; }
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("configurationsByApplication", ArgumentSemantic.Copy)]
+		NSDictionary<AEAssessmentApplication, AEAssessmentParticipantConfiguration> ConfigurationsByApplication { get; }
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("mainParticipantConfiguration", ArgumentSemantic.Strong)]
+		AEAssessmentParticipantConfiguration MainParticipantConfiguration { get; }
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("removeApplication:")]
+		void Remove (AEAssessmentApplication application);
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("setConfiguration:forApplication:")]
+		void SetConfiguration (AEAssessmentParticipantConfiguration configuration, AEAssessmentApplication application);
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("configurationsByBinaryExecutable", ArgumentSemantic.Copy)]
+		NSDictionary<AEAssessmentBinaryExecutable, AEAssessmentBinaryExecutableConfiguration> ConfigurationsByBinaryExecutable { get; }
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("removeBinaryExecutable:")]
+		void Remove (AEAssessmentBinaryExecutable binaryExecutable);
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("setConfiguration:forBinaryExecutable:")]
+		void SetConfiguration (AEAssessmentBinaryExecutableConfiguration configuration, AEAssessmentBinaryExecutable binaryExecutable);
+
+		[NoiOS, MacCatalyst (26, 1), Mac (26, 1)]
+		[Export ("allowsScreenshots")]
+		bool AllowsScreenshots { get; set; }
+
+		/// <summary>Gets or sets a value that determines whether the emoji keyboard is allowed during an assessment session.</summary>
+		[MacCatalyst (27, 0), Mac (27, 0), iOS (26, 4)]
+		[Export ("allowsEmojiKeyboard")]
+		bool AllowsEmojiKeyboard { get; set; }
+	}
+
+	[iOS (13, 4)]
+	[MacCatalyst (14, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface AEAssessmentSession {
+
+		[MacCatalyst (17, 5), Mac (14, 5), iOS (17, 5)]
+		[Static]
+		[Export ("supportsMultipleParticipants")]
+		bool SupportsMultipleParticipants { get; }
+
+		[MacCatalyst (17, 5), Mac (14, 5), iOS (17, 5)]
+		[Static]
+		[Export ("supportsConfigurationUpdates")]
+		bool SupportsConfigurationUpdates { get; }
+
+		[Wrap ("WeakDelegate")]
+		[NullAllowed]
+		IAEAssessmentSessionDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Export ("active")]
+		bool Active { [Bind ("isActive")] get; }
+
+		[Export ("initWithConfiguration:")]
+		NativeHandle Constructor (AEAssessmentConfiguration configuration);
+
+		[iOS (15, 0), MacCatalyst (15, 0)]
+		[Export ("configuration", ArgumentSemantic.Copy)]
+		AEAssessmentConfiguration Configuration { get; }
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("updateToConfiguration:")]
+		void Update (AEAssessmentConfiguration configuration);
+
+		[Export ("begin")]
+		void Begin ();
+
+		[Export ("end")]
+		void End ();
+	}
+
+	interface IAEAssessmentSessionDelegate { }
+
+	[iOS (13, 4)]
+	[MacCatalyst (14, 0)]
+	[Protocol, Model]
+	[BaseType (typeof (NSObject))]
+	interface AEAssessmentSessionDelegate {
+
+		[Export ("assessmentSessionDidBegin:")]
+		void DidBegin (AEAssessmentSession session);
+
+		[Export ("assessmentSession:failedToBeginWithError:")]
+		void FailedToBegin (AEAssessmentSession session, NSError error);
+
+		[Export ("assessmentSession:wasInterruptedWithError:")]
+		void WasInterrupted (AEAssessmentSession session, NSError error);
+
+		[Export ("assessmentSessionDidEnd:")]
+		void DidEnd (AEAssessmentSession session);
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("assessmentSessionDidUpdate:")]
+		void DidUpdate (AEAssessmentSession session);
+
+		[iOS (17, 5), MacCatalyst (15, 0)]
+		[Export ("assessmentSession:failedToUpdateToConfiguration:error:")]
+		void FailedToUpdate (AEAssessmentSession session, AEAssessmentConfiguration configuration, NSError error);
+	}
+
+	[iOS (15, 0), MacCatalyst (15, 0)]
+	[BaseType (typeof (NSObject))]
+#if XAMCORE_5_0
+	[DisableDefaultCtor]
+#endif
+	interface AEAssessmentApplication : NSCopying {
+		[iOS (17, 5)]
+		[MacCatalyst (15, 0)]
+		[Export ("initWithBundleIdentifier:")]
+		NativeHandle Constructor (string bundleIdentifier);
+
+		[iOS (27, 0)]
+		[NoMacCatalyst] // header says it's available in Mac Catalyst, Apple's documentation + xtro says it's not, so don't add it for now.
+		[Export ("initWithBundleIdentifier:teamIdentifier:")]
+		NativeHandle Constructor (string bundleIdentifier, [NullAllowed] string TeamIdentifier);
+
+		[Export ("bundleIdentifier")]
+		string BundleIdentifier { get; }
+
+		[iOS (27, 0)]
+		[NullAllowed, Export ("teamIdentifier")]
+		string TeamIdentifier { get; }
+
+		[Export ("requiresSignatureValidation")]
+		bool RequiresSignatureValidation { get; set; }
+	}
+
+	[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface AEAssessmentBinaryExecutable : NSCopying {
+		[Export ("initWithBinaryExecutableURL:")]
+		NativeHandle Constructor (NSUrl binaryExecutableUrl);
+
+		[Export ("initWithBinaryExecutableURL:teamIdentifier:")]
+		NativeHandle Constructor (NSUrl binaryExecutableUrl, [NullAllowed] string teamIdentifier);
+
+		[Export ("binaryExecutableURL", ArgumentSemantic.Copy)]
+		NSUrl BinaryExecutableUrl { get; }
+
+		[NullAllowed, Export ("teamIdentifier")]
+		string TeamIdentifier { get; }
+
+		[Export ("requiresSignatureValidation")]
+		bool RequiresSignatureValidation { get; set; }
+	}
+
+	[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+	[BaseType (typeof (NSObject))]
+	interface AEAssessmentBinaryExecutableConfiguration : NSCopying {
+		[Export ("allowsNetworkAccess")]
+		bool AllowsNetworkAccess { get; set; }
+
+		[Export ("required")]
+		bool Required {
+			[Bind ("isRequired")]
+			get;
+			set;
+		}
+	}
+
+	[iOS (17, 5), MacCatalyst (15, 0)]
+	[BaseType (typeof (NSObject))]
+	interface AEAssessmentParticipantConfiguration : NSCopying {
+		[Export ("allowsNetworkAccess")]
+		bool AllowsNetworkAccess { get; set; }
+
+		[Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("configurationInfo", ArgumentSemantic.Copy)]
+		NSDictionary<NSString, NSObject> ConfigurationInfo { get; set; }
+
+		[Mac (26, 0), iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("required")]
+		bool Required {
+			[Bind ("isRequired")]
+			get;
+			set;
+		}
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowedMenuItemsForLanguageIdentifier:")]
+		[return: NullAllowed]
+		NSSet<NSString> GetAllowedMenuItems (string languageIdentifier);
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("setAllowedMenuItems:forLanguageIdentifier:")]
+		void SetAllowedMenuItems ([NullAllowed] NSSet<NSString> menuItems, string languageIdentifier);
+
+		[NoiOS, MacCatalyst (27, 0), Mac (27, 0)]
+		[Export ("allowedMenuItemLanguageIdentifiers", ArgumentSemantic.Copy)]
+		NSSet<NSString> AllowedMenuItemLanguageIdentifiers { get; }
+	}
+}

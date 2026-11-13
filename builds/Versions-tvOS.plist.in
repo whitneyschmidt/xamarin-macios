@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>MonoVersion</key>
+	<string>@MONO_VERSION@</string>
+	<key>KnownVersions</key>
+	<dict>
+		<key>tvOS</key>
+		<array>
+			<string>15.0</string>
+			<string>15.2</string>
+			<string>15.4</string>
+			<string>16.0</string>
+			<string>16.1</string>
+			<string>16.4</string>
+			<string>17.0</string>
+			<string>17.2</string>
+			<string>17.4</string>
+			<string>17.5</string>
+			<string>18.0</string>
+			<string>18.1</string>
+			<string>18.2</string>
+			<string>18.3</string>
+			<string>18.4</string>
+			<string>18.5</string>
+			<string>26.0</string>
+			<string>26.1</string>
+			<string>26.2</string>
+			<string>26.4</string>
+			<string>26.5</string>
+			<string>27.0</string>
+			<string>27.2</string>
+		</array>
+	</dict>
+	<key>SupportedTargetPlatformVersions</key>
+	<dict>
+		<key>tvOS</key>
+		<array>
+			<!-- When an entry is added to KnownVersions, an entry must be added here too -->
+			<!-- However, versions are never removed from this array -->
+			<!-- The values here are used to generate the TVOSX_Y_OR_GREATER conditional compilation symbols, and those must be generated even for old OS versions -->
+			<string>10.0</string>
+			<string>10.1</string>
+			<string>10.2</string>
+			<string>11.0</string>
+			<string>11.0</string>
+			<string>11.1</string>
+			<string>11.2</string>
+			<string>11.3</string>
+			<string>11.4</string>
+			<string>12.0</string>
+			<string>12.1</string>
+			<string>12.2</string>
+			<string>12.3</string>
+			<string>12.4</string>
+			<string>13.0</string>
+			<string>13.2</string>
+			<string>13.3</string>
+			<string>13.4</string>
+			<string>14.0</string>
+			<string>14.2</string>
+			<string>14.3</string>
+			<string>14.4</string>
+			<string>14.5</string>
+			<string>15.0</string>
+			<string>15.2</string>
+			<string>15.4</string>
+			<string>16.0</string>
+			<string>16.1</string>
+			<string>16.4</string>
+			<string>17.0</string>
+			<string>17.2</string>
+			<string>17.4</string>
+			<string>17.5</string>
+			<string>18.0</string>
+			<string>18.1</string>
+			<string>18.2</string>
+			<string>18.3</string>
+			<string>18.4</string>
+			<string>18.5</string>
+			<string>26.0</string>
+			<string>26.1</string>
+			<string>26.2</string>
+			<string>26.4</string>
+			<string>26.5</string>
+			<string>27.0</string>
+			<string>27.2</string>
+		</array>
+	</dict>
+	<key>RecommendedXcodeVersion</key>
+	<string>@XCODE_VERSION@</string>
+	<key>MinExtensionVersion</key>
+	<dict>
+		<key>tvOS</key>
+		<dict>
+			<key>com.apple.broadcast-services</key>
+			<string>10.0</string>
+			<key>com.apple.tv-services</key>
+			<string>9.0</string>
+		</dict>
+	</dict>
+	<key>Features</key>
+	<array>
+		<string>mlaunch-launchdevbundleid</string>
+		<string>mlaunch-launch-simulator</string>
+		<string>mlaunch-install-progress</string>
+		<string>mlaunch-wireless-devices</string>
+		<string>http-client-handlers</string>
+		<string>altool</string>
+		<string>maccatalyst</string>
+	</array>
+	<key>Optimizations</key>
+	<dict>
+		<!-- The key is the value to be passed to mtouch. The string is a very short description. Any IDE UI should also point to the documentation for the optimizations. -->
+		<key>dead-code-elimination</key>
+		<string>Dead code elimination</string>
+		<key>remove-uithread-checks</key>
+		<string>Remove UI thread checks</string>
+	</dict>
+</dict>
+</plist>

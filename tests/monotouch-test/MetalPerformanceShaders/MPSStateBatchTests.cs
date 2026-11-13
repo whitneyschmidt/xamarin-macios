@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for MPSStateBatch
 //
 // Authors:
@@ -8,32 +8,27 @@
 // Copyright 2019 Microsoft Corporation.
 //
 
-#if !__WATCHOS__
-
-using System;
-
-using Foundation;
 using Metal;
 using MetalPerformanceShaders;
 
-using NUnit.Framework;
-
 namespace MonoTouchFixtures.MetalPerformanceShaders {
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MPSStateBatchTests {
 
 		IMTLDevice device;
 		NSArray<MPSState> cache;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Metal ()
 		{
 			TestRuntime.AssertDevice ();
 			TestRuntime.AssertXcodeVersion (10, 0);
+			TestRuntime.AssertNotVirtualMachine ();
 
 			device = MTLDevice.SystemDefault;
 			// some older hardware won't have a default
-			if (device == null || !MPSKernel.Supports (device))
+			if (device is null || !MPSKernel.Supports (device))
 				Assert.Inconclusive ("Metal is not supported");
 
 			cache = NSArray<MPSState>.FromNSObjects (
@@ -53,8 +48,7 @@ namespace MonoTouchFixtures.MetalPerformanceShaders {
 		public void MPSImageBatchResourceSizeTest ()
 		{
 			var size = MPSStateBatch.GetResourceSize (cache);
-			Assert.That (size, Is.GreaterThan (0), "idx");
+			Assert.That (size, Is.GreaterThan ((nuint) 0), "idx");
 		}
 	}
 }
-#endif // !__WATCHOS__

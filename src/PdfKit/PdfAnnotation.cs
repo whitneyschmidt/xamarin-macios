@@ -1,4 +1,4 @@
-﻿//
+//
 // PdfAnnotation.cs
 //
 // Authors:
@@ -7,67 +7,92 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-using System;
+using CoreFoundation;
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
 
-#if XAMCORE_2_0
+#nullable enable
+
 namespace PdfKit {
 	public partial class PdfAnnotation {
 
-		[Mac (10,12)]
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="value">To be added.</param>
+		///         <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos18.2")]
 		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject
 		{
-			if (value == null)
-				throw new ArgumentNullException (nameof (value));
+			if (value is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
 
-			return _SetValue (value.Handle, key.GetConstant ());
+			bool result = _SetValue (value.Handle, key.GetConstant ()!);
+			GC.KeepAlive (value);
+			return result;
 		}
 
-		[Mac (10,12)]
+		/// <param name="str">To be added.</param>
+		///         <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos18.2")]
 		public bool SetValue (string str, PdfAnnotationKey key)
 		{
-			var nstr = NSString.CreateNative (str);
+			var nstr = CFString.CreateNative (str);
 			try {
-				return _SetValue (nstr, key.GetConstant ());
+				return _SetValue (nstr, key.GetConstant ()!);
 			} finally {
-				NSString.ReleaseNative (nstr);
+				CFString.ReleaseNative (nstr);
 			}
 		}
 
-		[Mac (10,12)]
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos18.2")]
 		public T GetValue<T> (PdfAnnotationKey key) where T : class, INativeObject
 		{
-			return Runtime.GetINativeObject<T> (_GetValue (key.GetConstant ()), true);
+			return Runtime.GetINativeObject<T> (_GetValue (key.GetConstant ()!), true)!;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public PdfAnnotationKey AnnotationType {
-			get { return PdfAnnotationKeyExtensions.GetValue ((NSString) Type); }
-			set { Type = value.GetConstant (); }
+			get { return PdfAnnotationKeyExtensions.GetValue (Type!); }
+			set { Type = value.GetConstant ()!; }
 		}
 
-		[Mac (10,13)]
-		public CGPoint[] QuadrilateralPoints {
+		/// <summary>Gets or sets the points defining the quadrilateral bounds of the annotation.</summary>
+		/// <value>An array of <see cref="CGPoint" /> values representing the quadrilateral vertices, or <see langword="null" />.</value>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos18.2")]
+		public CGPoint []? QuadrilateralPoints {
 			get {
-				return NSArray.ArrayFromHandleFunc<CGPoint> (_QuadrilateralPoints, (v) =>
-					{
-						using (var value = new NSValue (v))
-							return value.CGPointValue;
-					});
+				return NSArray.ArrayFromHandle<CGPoint> (_QuadrilateralPoints, (v) => {
+					using (var value = new NSValue (v))
+						return value.CGPointValue;
+				});
 			}
 			set {
-				if (value == null) {
-					_QuadrilateralPoints = IntPtr.Zero;
-				} else {
-					using (var arr = new NSMutableArray ()) {
-						for (int i = 0; i < value.Length; i++)
-							arr.Add (NSValue.FromCGPoint (value [i]));
-						_QuadrilateralPoints = arr.Handle;
-					}
-				}
+				using var arr = NSArray.FromNSObjects<CGPoint> ((element) => NSValue.FromCGPoint (element), value);
+				_QuadrilateralPoints = arr.GetHandle ();
 			}
 		}
 	}
 }
-#endif // XAMCORE_2_0

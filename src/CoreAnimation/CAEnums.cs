@@ -27,61 +27,90 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using Foundation;
-using System.Runtime.InteropServices;
 using CoreGraphics;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreAnimation {
 
 	// untyped enum -> CALayer.h
 	// note: edgeAntialiasingMask is an `unsigned int` @property
+	/// <summary>Flags used to determine what side of a layer should be antialiased.</summary>
 	[Flags]
 	public enum CAEdgeAntialiasingMask : uint {
-		LeftEdge      = 1 << 0,
-		RightEdge     = 1 << 1,
-		BottomEdge    = 1 << 2,
-		TopEdge       = 1 << 3,
+		/// <summary>Left side of the layer is antialiased.</summary>
+		LeftEdge = 1 << 0,
+		/// <summary>Right side of the layer is antialiased.</summary>
+		RightEdge = 1 << 1,
+		/// <summary>Bottom side of the layer is antialiased.</summary>
+		BottomEdge = 1 << 2,
+		/// <summary>Top side of the layer is antialiased.</summary>
+		TopEdge = 1 << 3,
+		/// <summary>All sides of the layer are antialiased.</summary>
 		All = LeftEdge | RightEdge | BottomEdge | TopEdge,
+		/// <summary>Left and right sides of the layer are antialiased.</summary>
 		LeftRightEdges = LeftEdge | RightEdge,
-		TopBottomEdges = TopEdge | BottomEdge
+		/// <summary>Top and bottom side of the layer are antialiased.</summary>
+		TopBottomEdges = TopEdge | BottomEdge,
 	}
 
-	[NoWatch] // headers not updated
-	[iOS (11,0)][TV (11,0)][Mac (10,13)]
-	[Native][Flags]
+	[MacCatalyst (13, 1)]
+	[Native]
+	[Flags]
 	public enum CACornerMask : ulong {
+		/// <summary>To be added.</summary>
 		MinXMinYCorner = 1 << 0,
+		/// <summary>To be added.</summary>
 		MaxXMinYCorner = 1 << 1,
+		/// <summary>To be added.</summary>
 		MinXMaxYCorner = 1 << 2,
+		/// <summary>To be added.</summary>
 		MaxXMaxYCorner = 1 << 3,
 	}
 
-#if MONOMAC
 	// untyped enum -> CALayer.h (only on OSX headers)
 	// note: autoresizingMask is an `unsigned int` @property
 	[Flags]
+	[NoiOS]
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	public enum CAAutoresizingMask : uint {
-		NotSizable   = 0,
-		MinXMargin   = 1 << 0,
+		/// <summary>To be added.</summary>
+		NotSizable = 0,
+		/// <summary>To be added.</summary>
+		MinXMargin = 1 << 0,
+		/// <summary>To be added.</summary>
 		WidthSizable = 1 << 1,
-		MaxXMargin   = 1 << 2,
-		MinYMargin   = 1 << 3,
+		/// <summary>To be added.</summary>
+		MaxXMargin = 1 << 2,
+		/// <summary>To be added.</summary>
+		MinYMargin = 1 << 3,
+		/// <summary>To be added.</summary>
 		HeightSizable = 1 << 4,
-		MaxYMargin   = 1 << 5
+		/// <summary>To be added.</summary>
+		MaxYMargin = 1 << 5,
 	}
 
 	// typedef int -> CAConstraintLayoutManager.h
+	[NoiOS]
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	public enum CAConstraintAttribute {
+		/// <summary>To be added.</summary>
 		MinX,
+		/// <summary>To be added.</summary>
 		MidX,
+		/// <summary>To be added.</summary>
 		MaxX,
+		/// <summary>To be added.</summary>
 		Width,
+		/// <summary>To be added.</summary>
 		MinY,
+		/// <summary>To be added.</summary>
 		MidY,
+		/// <summary>To be added.</summary>
 		MaxY,
+		/// <summary>To be added.</summary>
 		Height,
 	};
-#endif
 }

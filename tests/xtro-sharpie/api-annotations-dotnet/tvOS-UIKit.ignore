@@ -1,0 +1,397 @@
+## lack of availabilty macros on NSItemProvder.PreferredPresentationStyle - intro says they are not available
+## and that also means the (enum/returned) type is unused
+!missing-enum! UIPreferredPresentationStyle not bound
+
+# Added in UIAccessibility, this is later inlined in UIView, else we will
+# add all of the properties to all objects whihc is not correct.
+
+!missing-selector! NSObject::accessibilityHeaderElements not bound
+!missing-selector! NSObject::setAccessibilityHeaderElements: not bound
+!missing-selector! NSObject::accessibilityActivateBlock not bound
+!missing-selector! NSObject::accessibilityActivationPointBlock not bound
+!missing-selector! NSObject::accessibilityAttributedHintBlock not bound
+!missing-selector! NSObject::accessibilityAttributedLabelBlock not bound
+!missing-selector! NSObject::accessibilityAttributedUserInputLabelsBlock not bound
+!missing-selector! NSObject::accessibilityAttributedValueBlock not bound
+!missing-selector! NSObject::accessibilityContainerTypeBlock not bound
+!missing-selector! NSObject::accessibilityCustomActionsBlock not bound
+!missing-selector! NSObject::accessibilityCustomRotorsBlock not bound
+!missing-selector! NSObject::accessibilityDecrementBlock not bound
+!missing-selector! NSObject::accessibilityDirectTouchOptions not bound
+!missing-selector! NSObject::accessibilityElementsBlock not bound
+!missing-selector! NSObject::accessibilityElementsHiddenBlock not bound
+!missing-selector! NSObject::accessibilityFrameBlock not bound
+!missing-selector! NSObject::accessibilityHeaderElementsBlock not bound
+!missing-selector! NSObject::accessibilityHintBlock not bound
+!missing-selector! NSObject::accessibilityIdentifierBlock not bound
+!missing-selector! NSObject::accessibilityIncrementBlock not bound
+!missing-selector! NSObject::accessibilityLabelBlock not bound
+!missing-selector! NSObject::accessibilityLanguageBlock not bound
+!missing-selector! NSObject::accessibilityMagicTapBlock not bound
+!missing-selector! NSObject::accessibilityNavigationStyleBlock not bound
+!missing-selector! NSObject::accessibilityPathBlock not bound
+!missing-selector! NSObject::accessibilityPerformEscapeBlock not bound
+!missing-selector! NSObject::accessibilityRespondsToUserInteractionBlock not bound
+!missing-selector! NSObject::accessibilityShouldGroupAccessibilityChildrenBlock not bound
+!missing-selector! NSObject::accessibilityTextualContextBlock not bound
+!missing-selector! NSObject::accessibilityTraitsBlock not bound
+!missing-selector! NSObject::accessibilityUserInputLabelsBlock not bound
+!missing-selector! NSObject::accessibilityValueBlock not bound
+!missing-selector! NSObject::accessibilityViewIsModalBlock not bound
+!missing-selector! NSObject::accessibilityZoomInAtPoint: not bound
+!missing-selector! NSObject::accessibilityZoomOutAtPoint: not bound
+!missing-selector! NSObject::automationElements not bound
+!missing-selector! NSObject::automationElementsBlock not bound
+!missing-selector! NSObject::isAccessibilityElementBlock not bound
+!missing-selector! NSObject::setAccessibilityActivateBlock: not bound
+!missing-selector! NSObject::setAccessibilityActivationPointBlock: not bound
+!missing-selector! NSObject::setAccessibilityAttributedHintBlock: not bound
+!missing-selector! NSObject::setAccessibilityAttributedLabelBlock: not bound
+!missing-selector! NSObject::setAccessibilityAttributedUserInputLabelsBlock: not bound
+!missing-selector! NSObject::setAccessibilityAttributedValueBlock: not bound
+!missing-selector! NSObject::setAccessibilityContainerTypeBlock: not bound
+!missing-selector! NSObject::setAccessibilityCustomActionsBlock: not bound
+!missing-selector! NSObject::setAccessibilityCustomRotorsBlock: not bound
+!missing-selector! NSObject::setAccessibilityDecrementBlock: not bound
+!missing-selector! NSObject::setAccessibilityDirectTouchOptions: not bound
+!missing-selector! NSObject::setAccessibilityElementsBlock: not bound
+!missing-selector! NSObject::setAccessibilityElementsHiddenBlock: not bound
+!missing-selector! NSObject::setAccessibilityFrameBlock: not bound
+!missing-selector! NSObject::setAccessibilityHeaderElementsBlock: not bound
+!missing-selector! NSObject::setAccessibilityHintBlock: not bound
+!missing-selector! NSObject::setAccessibilityIdentifierBlock: not bound
+!missing-selector! NSObject::setAccessibilityIncrementBlock: not bound
+!missing-selector! NSObject::setAccessibilityLabelBlock: not bound
+!missing-selector! NSObject::setAccessibilityLanguageBlock: not bound
+!missing-selector! NSObject::setAccessibilityMagicTapBlock: not bound
+!missing-selector! NSObject::setAccessibilityNavigationStyleBlock: not bound
+!missing-selector! NSObject::setAccessibilityPathBlock: not bound
+!missing-selector! NSObject::setAccessibilityPerformEscapeBlock: not bound
+!missing-selector! NSObject::setAccessibilityRespondsToUserInteractionBlock: not bound
+!missing-selector! NSObject::setAccessibilityShouldGroupAccessibilityChildrenBlock: not bound
+!missing-selector! NSObject::setAccessibilityTextualContextBlock: not bound
+!missing-selector! NSObject::setAccessibilityTraitsBlock: not bound
+!missing-selector! NSObject::setAccessibilityUserInputLabelsBlock: not bound
+!missing-selector! NSObject::setAccessibilityValueBlock: not bound
+!missing-selector! NSObject::setAccessibilityViewIsModalBlock: not bound
+!missing-selector! NSObject::setAutomationElements: not bound
+!missing-selector! NSObject::setAutomationElementsBlock: not bound
+!missing-selector! NSObject::setIsAccessibilityElementBlock: not bound
+
+## Intent not yet available on tvOS
+!missing-protocol-member! UIApplicationDelegate::application:handleIntent:completionHandler: not found
+
+## Headers says it is available but none of its members or implementor class are available
+!missing-protocol! UIPreviewInteractionDelegate not bound
+
+## enums only exposed from properties marked with UIKIT_CLASS_AVAILABLE_IOS_ONLY(10_0)
+
+## headers are unclear (added in iOS9.1) but Apple web documentation does not show those members
+## and several only make sense for the stylus touches
+!missing-selector! UITouch::altitudeAngle not bound
+!missing-selector! UITouch::azimuthAngleInView: not bound
+!missing-selector! UITouch::azimuthUnitVectorInView: not bound
+!missing-selector! UITouch::estimatedProperties not bound
+!missing-selector! UITouch::estimatedPropertiesExpectingUpdates not bound
+!missing-selector! UITouch::estimationUpdateIndex not bound
+!missing-selector! UITouch::preciseLocationInView: not bound
+!missing-selector! UITouch::precisePreviousLocationInView: not bound
+
+## the signature use UILexicon which is not part of tvOS
+!missing-selector! UIInputViewController::requestSupplementaryLexiconWithCompletion: not bound
+
+## the UIActivityItemSource protocol is not marked as unavailable but all it's members use UIActivityViewController which is not allowed on tvOS
+!missing-protocol! UIActivityItemSource not bound
+
+## confusing header wrt categories, defined in: UIAdaptivePresentations (UIViewController)
+## UIPopoverPresentationController, the returned type, is not available in tvOS
+!missing-selector! UIViewController::popoverPresentationController not bound
+
+## property not decorated as unavailable but UIPinchGestureRecognizer, the returned type, is not available in tvOS
+
+## Ignore what the header files say, the NSItemProviderReading methods are not actually implemented on TV or Watch
+!missing-protocol-conformance! UIColor should conform to NSItemProviderReading (defined in 'UINSItemProvider' category)
+!missing-protocol-conformance! UIColor should conform to NSItemProviderWriting (defined in 'UINSItemProvider' category)
+!missing-protocol-conformance! UIImage should conform to NSItemProviderReading (defined in 'NSItemProvider' category)
+!missing-protocol-conformance! UIImage should conform to NSItemProviderWriting (defined in 'NSItemProvider' category)
+
+## https://github.com/dotnet/macios/issues/3213 should be fixed before conformance to 'UIStateRestoring' is restored.
+!missing-protocol-conformance! UIViewController should conform to UIStateRestoring (defined in 'UIStateRestoration' category)
+
+## not supported as per introspection, rdar filled: 42851110
+!missing-protocol-conformance! NSAttributedString should conform to NSItemProviderReading (defined in 'NSAttributedString_ItemProvider' category)
+!missing-protocol-conformance! NSAttributedString should conform to NSItemProviderWriting (defined in 'NSAttributedString_ItemProvider' category)
+
+## Does not make much sense to have it bound in tvOS
+!missing-field! UIGuidedAccessErrorDomain not bound
+
+## enum only used in iOS API (lack correct decorations on tvOS headers)
+!missing-enum! UINavigationItemBackButtonDisplayMode not bound
+
+# Xcode 11
+
+## Inherited from another protocol
+!missing-protocol-member! NSCollectionLayoutVisibleItem::bounds not found
+!missing-protocol-member! NSCollectionLayoutVisibleItem::center not found
+!missing-protocol-member! NSCollectionLayoutVisibleItem::setCenter: not found
+!missing-protocol-member! NSCollectionLayoutVisibleItem::setTransform: not found
+!missing-protocol-member! NSCollectionLayoutVisibleItem::transform not found
+
+## Not really useful to have them exposed
+!missing-pinvoke! UIFontWeightForImageSymbolWeight is not bound
+!missing-pinvoke! UIImageSymbolWeightForFontWeight is not bound
+
+## UITextInteraction is not available in tvOS
+
+## Introduced and deprecated in Xcode 11 and likely it will be removed in a future beta
+!missing-selector! UIGestureRecognizer::initWithCoder: not bound
+!missing-selector! UIKeyCommand::action not bound
+
+## Introduced in Xcode 11 b5 but unlikely to be there at the end of beta, these usualy get replaced by NSCopying protocol
+!missing-selector! UIBarAppearance::copy not bound
+!missing-selector! UIBarButtonItemAppearance::copy not bound
+!missing-selector! UITabBarItemAppearance::copy not bound
+
+# Initial result from new rule extra-null-allowed
+!extra-null-allowed! 'Foundation.NSIndexPath UIKit.IUICollectionViewDataSource::GetIndexPath(UIKit.UICollectionView,System.String,System.IntPtr)' has a extraneous [NullAllowed] on return type
+!extra-null-allowed! 'System.Void UIKit.UIAccessibilityCustomAction::.ctor(Foundation.NSAttributedString,UIKit.UIAccessibilityCustomActionHandler)' has a extraneous [NullAllowed] on parameter #1
+!extra-null-allowed! 'System.Void UIKit.UIAccessibilityCustomAction::.ctor(System.String,UIKit.UIAccessibilityCustomActionHandler)' has a extraneous [NullAllowed] on parameter #1
+!extra-null-allowed! 'System.Void UIKit.UIAccessibilityCustomAction::set_Name(System.String)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UIAccessibilityCustomAction::set_Selector(ObjCRuntime.Selector)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UIBezierPath::set_CGPath(CoreGraphics.CGPath)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UICollectionReusableView::ApplyLayoutAttributes(UIKit.UICollectionViewLayoutAttributes)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.IUIContentContainer::WillTransitionToTraitCollection(UIKit.UITraitCollection,UIKit.IUIViewControllerTransitionCoordinator)' has a extraneous [NullAllowed] on parameter #1
+!extra-null-allowed! 'System.Void UIKit.UIDynamicAnimator::AddBehavior(UIKit.UIDynamicBehavior)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UIDynamicAnimator::RemoveBehavior(UIKit.UIDynamicBehavior)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UINavigationController::set_ViewControllers(UIKit.UIViewController[])' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UINavigationController::SetViewControllers(UIKit.UIViewController[],System.Boolean)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UITextField::set_WeakDefaultTextAttributes(Foundation.NSDictionary)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UITextView::set_TypingAttributes(Foundation.NSDictionary)' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'System.Void UIKit.UIView::set_MotionEffects(UIKit.UIMotionEffect[])' has a extraneous [NullAllowed] on parameter #0
+!extra-null-allowed! 'UIKit.IUITextDocumentProxy UIKit.UIInputViewController::get_TextDocumentProxy()' has a extraneous [NullAllowed] on return type
+!extra-null-allowed! 'UIKit.UIView UIKit.UIScreen::SnapshotView(System.Boolean)' has a extraneous [NullAllowed] on return type
+
+# Initial result from new rule missing-null-allowed
+!missing-null-allowed! 'System.Boolean UIKit.UIScrollView::TouchesShouldBegin(Foundation.NSSet,UIKit.UIEvent,UIKit.UIView)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Boolean UIKit.IUISplitViewControllerDelegate::EventShowDetailViewController(UIKit.UISplitViewController,UIKit.UIViewController,Foundation.NSObject)' is missing an [NullAllowed] on parameter #2
+!missing-null-allowed! 'System.Boolean UIKit.IUISplitViewControllerDelegate::EventShowViewController(UIKit.UISplitViewController,UIKit.UIViewController,Foundation.NSObject)' is missing an [NullAllowed] on parameter #2
+!missing-null-allowed! 'System.Double UIKit.IUIViewControllerAnimatedTransitioning::TransitionDuration(UIKit.IUIViewControllerContextTransitioning)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void Foundation.NSObject::set_AccessibilityAttributedUserInputLabels(Foundation.NSAttributedString[])' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void Foundation.NSObject::set_AccessibilityUserInputLabels(System.String[])' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIAccessibilityCustomAction::.ctor(System.String,Foundation.NSObject,ObjCRuntime.Selector)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UIAlertController::AddTextField(System.Action`1<UIKit.UITextField>)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UICollectionViewController::set_CollectionView(UIKit.UICollectionView)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIControl::EndTracking(UIKit.UITouch,UIKit.UIEvent)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIGestureRecognizer::.ctor(Foundation.NSObject,ObjCRuntime.Selector)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIGestureRecognizer::.ctor(Foundation.NSObject,ObjCRuntime.Selector)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UILabel::set_Font(UIKit.UIFont)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UINavigationBar::set_Items(UIKit.UINavigationItem[])' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UINavigationBar::SetItems(UIKit.UINavigationItem[],System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UINavigationItem::SetLeftBarButtonItems(UIKit.UIBarButtonItem[],System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UINavigationItem::SetRightBarButtonItems(UIKit.UIBarButtonItem[],System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIPageViewController::SetViewControllers(UIKit.UIViewController[],UIKit.UIPageViewControllerNavigationDirection,System.Boolean,UIKit.UICompletionHandler)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIResponder::PressesBegan(Foundation.NSSet`1<UIKit.UIPress>,UIKit.UIPressesEvent)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UIResponder::PressesCancelled(Foundation.NSSet`1<UIKit.UIPress>,UIKit.UIPressesEvent)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UIResponder::PressesChanged(Foundation.NSSet`1<UIKit.UIPress>,UIKit.UIPressesEvent)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UIResponder::PressesEnded(Foundation.NSSet`1<UIKit.UIPress>,UIKit.UIPressesEvent)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UIScene::set_Title(System.String)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUIScrollViewDelegate::ZoomingEnded(UIKit.UIScrollView,UIKit.UIView,System.Runtime.InteropServices.NFloat)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.IUIScrollViewDelegate::ZoomingStarted(UIKit.UIScrollView,UIKit.UIView)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.Void UIKit.UISearchBar::_SetScopeBarButtonTitle(Foundation.NSDictionary,UIKit.UIControlState)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UISegmentedControl::.ctor(Foundation.NSArray)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UISegmentedControl::InsertSegment(System.String,System.IntPtr,System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UISegmentedControl::InsertSegment(UIKit.UIImage,System.IntPtr,System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UISegmentedControl::SetImage(UIKit.UIImage,System.IntPtr)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UISegmentedControl::SetTitle(System.String,System.IntPtr)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UITabBarController::SetViewControllers(UIKit.UIViewController[],System.Boolean)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UITableViewController::set_TableView(UIKit.UITableView)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UITableViewHeaderFooterView::.ctor(Foundation.NSString)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUITextInputDelegate::SelectionDidChange(UIKit.IUITextInput)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUITextInputDelegate::SelectionWillChange(UIKit.IUITextInput)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUITextInputDelegate::TextDidChange(UIKit.IUITextInput)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUITextInputDelegate::TextWillChange(UIKit.IUITextInput)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UITextView::set_AttributedText(Foundation.NSAttributedString)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UITextView::set_WeakLinkTextAttributes(Foundation.NSDictionary)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIViewController::set_TabBarItem(UIKit.UITabBarItem)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'UIKit.IUIStateRestoring UIKit.IUIStateRestoring::get_RestorationParent()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerAnimatedTransitioning UIKit.IUINavigationControllerDelegate::GetAnimationControllerForOperation(UIKit.UINavigationController,UIKit.UINavigationControllerOperation,UIKit.UIViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerAnimatedTransitioning UIKit.IUITabBarControllerDelegate::GetAnimationControllerForTransition(UIKit.UITabBarController,UIKit.UIViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerAnimatedTransitioning UIKit.IUIViewControllerTransitioningDelegate::GetAnimationControllerForDismissedController(UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerAnimatedTransitioning UIKit.IUIViewControllerTransitioningDelegate::GetAnimationControllerForPresentedController(UIKit.UIViewController,UIKit.UIViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerInteractiveTransitioning UIKit.IUINavigationControllerDelegate::GetInteractionControllerForAnimationController(UIKit.UINavigationController,UIKit.IUIViewControllerAnimatedTransitioning)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerInteractiveTransitioning UIKit.IUITabBarControllerDelegate::GetInteractionControllerForAnimationController(UIKit.UITabBarController,UIKit.IUIViewControllerAnimatedTransitioning)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerInteractiveTransitioning UIKit.IUIViewControllerTransitioningDelegate::GetInteractionControllerForDismissal(UIKit.IUIViewControllerAnimatedTransitioning)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.IUIViewControllerInteractiveTransitioning UIKit.IUIViewControllerTransitioningDelegate::GetInteractionControllerForPresentation(UIKit.IUIViewControllerAnimatedTransitioning)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.NSTextContainer UIKit.NSLayoutManager::get_ExtraLineFragmentTextContainer()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIAlertAction UIKit.UIAlertAction::Create(System.String,UIKit.UIAlertActionStyle,System.Action`1<UIKit.UIAlertAction>)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'UIKit.UIBezierPath UIKit.UICollisionBehavior::GetBoundary(Foundation.NSObject)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionView UIKit.UICollectionViewLayout::get_CollectionView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::FinalLayoutAttributesForDisappearingDecorationElement(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::FinalLayoutAttributesForDisappearingItem(Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::FinalLayoutAttributesForDisappearingSupplementaryElement(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::InitialLayoutAttributesForAppearingDecorationElement(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::InitialLayoutAttributesForAppearingItem(Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::InitialLayoutAttributesForAppearingSupplementaryElement(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::LayoutAttributesForDecorationView(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::LayoutAttributesForItem(Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UICollectionViewLayout::LayoutAttributesForSupplementaryView(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UIDynamicAnimator::GetLayoutAttributesForCell(Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UIDynamicAnimator::GetLayoutAttributesForDecorationView(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes UIKit.UIDynamicAnimator::GetLayoutAttributesForSupplementaryView(Foundation.NSString,Foundation.NSIndexPath)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UICollectionViewLayoutAttributes[] UIKit.UICollectionViewLayout::LayoutAttributesForElementsInRect(CoreGraphics.CGRect)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIColor UIKit.UIButton::get_CurrentTitleShadowColor()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIColor UIKit.UIButton::TitleColor(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIColor UIKit.UIButton::TitleShadowColor(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIDynamicAnimator UIKit.UIDynamicBehavior::get_DynamicAnimator()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIFontDescriptor UIKit.UIFontDescriptor::CreateWithTraits(UIKit.UIFontDescriptorSymbolicTraits)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIGestureRecognizer[] UIKit.UITouch::get_GestureRecognizers()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIBarButtonItem::GetBackgroundImage(UIKit.UIControlState,UIKit.UIBarButtonItemStyle,UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIBarButtonItem::GetBackgroundImage(UIKit.UIControlState,UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIButton::BackgroundImageForState(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIButton::get_CurrentBackgroundImage()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIButton::get_CurrentImage()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UIButton::ImageForState(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UINavigationBar::GetBackgroundImage(UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UINavigationBar::GetBackgroundImage(UIKit.UIBarPosition,UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISearchBar::BackgroundImageForBarPosition(UIKit.UIBarPosition,UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISearchBar::GetImageForSearchBarIcon(UIKit.UISearchBarIcon,UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISearchBar::GetScopeBarButtonBackgroundImage(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISearchBar::GetScopeBarButtonDividerImage(UIKit.UIControlState,UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISearchBar::GetSearchFieldBackgroundImage(UIKit.UIControlState)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISegmentedControl::GetBackgroundImage(UIKit.UIControlState,UIKit.UIBarMetrics)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImage UIKit.UISegmentedControl::ImageAt(System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIImageView UIKit.UIButton::get_ImageView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIInputViewController UIKit.UIResponder::get_InputAccessoryViewController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIInputViewController UIKit.UIResponder::get_InputViewController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIKeyCommand[] UIKit.UIResponder::get_KeyCommands()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UILabel UIKit.UIButton::get_TitleLabel()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UINavigationItem UIKit.UINavigationBar::get_BackItem()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UINavigationItem UIKit.UINavigationBar::get_TopItem()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UINavigationItem UIKit.UINavigationBar::PopNavigationItem(System.Boolean)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIPresentationController UIKit.IUIViewControllerTransitioningDelegate::GetPresentationControllerForPresentedViewController(UIKit.UIViewController,UIKit.UIViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIResponder UIKit.UIResponder::get_NextResponder()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIScreen UIKit.UIScreen::get_MirroredScreen()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextField[] UIKit.UIAlertController::get_TextFields()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextInputMode UIKit.UIResponder::get_TextInputMode()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInputTokenizer::GetPosition(UIKit.UITextPosition,UIKit.UITextGranularity,UIKit.UITextDirection)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextRange UIKit.IUITextInputTokenizer::GetRangeEnclosingPosition(UIKit.UITextPosition,UIKit.UITextGranularity,UIKit.UITextDirection)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIDynamicAnimator::get_ReferenceView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIGestureRecognizer::get_View()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIPresentationController::get_ContainerView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIPresentationController::get_PresentedView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIResponder::get_InputAccessoryView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UIResponder::get_InputView()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUIScrollViewDelegate::ViewForZoomingInScrollView(UIKit.UIScrollView)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUITableViewDelegate::GetViewForFooter(UIKit.UITableView,System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUITableViewDelegate::GetViewForHeader(UIKit.UITableView,System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.UITouch::get_View()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUIViewControllerContextTransitioning::GetViewFor(Foundation.NSString)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUIAdaptivePresentationControllerDelegate::GetViewControllerForAdaptivePresentation(UIKit.UIPresentationController,UIKit.UIModalPresentationStyle)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UINavigationController::get_TopViewController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UINavigationController::get_VisibleViewController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UINavigationController::PopViewController(System.Boolean)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUIPageViewControllerDataSource::GetNextViewController(UIKit.UIPageViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUIPageViewControllerDataSource::GetPreviousViewController(UIKit.UIPageViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UISearchController::get_SearchResultsController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UISplitViewController_UIViewController::SeparateSecondaryViewControllerForSplitViewController(UIKit.UIViewController,UIKit.UISplitViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUISplitViewControllerDelegate::GetPrimaryViewControllerForCollapsingSplitViewController(UIKit.UISplitViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUISplitViewControllerDelegate::GetPrimaryViewControllerForExpandingSplitViewController(UIKit.UISplitViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUISplitViewControllerDelegate::SeparateSecondaryViewController(UIKit.UISplitViewController,UIKit.UIViewController)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UIStoryboard::InstantiateInitialViewController()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.UIStoryboard::InstantiateInitialViewController(UIKit.UIStoryboardViewControllerCreator)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUIViewControllerContextTransitioning::GetViewControllerForKey(Foundation.NSString)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController[] UIKit.UINavigationController::PopToRootViewController(System.Boolean)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController[] UIKit.UINavigationController::PopToViewController(UIKit.UIViewController,System.Boolean)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController[] UIKit.UIPageViewController::get_ViewControllers()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIWindow UIKit.UITouch::get_Window()' is missing an [NullAllowed] on return type
+
+## Enums not needed on tvOS
+!missing-enum! UIListSeparatorVisibility not bound
+!missing-enum! UIPrintRenderingQuality not bound
+
+# Not binding for now, does not make sense on tvOS
+!missing-selector! +UITextInputContext::current not bound
+!missing-selector! UITextInputContext::isDictationInputExpected not bound
+!missing-selector! UITextInputContext::isHardwareKeyboardInputExpected not bound
+!missing-selector! UITextInputContext::isPencilInputExpected not bound
+!missing-selector! UITextInputContext::setDictationInputExpected: not bound
+!missing-selector! UITextInputContext::setHardwareKeyboardInputExpected: not bound
+!missing-selector! UITextInputContext::setPencilInputExpected: not bound
+!missing-type! UITextInputContext not bound
+
+# not really needed, seems that xtro is confused
+!missing-requires-super! UIControl::contextMenuInteraction:willDisplayMenuForConfiguration:animator: is missing an [RequiresSuper] attribute
+!missing-requires-super! UIControl::contextMenuInteraction:willEndForConfiguration:animator: is missing an [RequiresSuper] attribute
+
+# added and deprecated on xcode 15
+!missing-selector! UIControlUIControl::contextMenuInteraction:previewForDismissingMenuWithConfiguration: not bound
+!missing-selector! UIControlUIControl::contextMenuInteraction:previewForHighlightingMenuWithConfiguration: not bound
+
+# xamcore 5 changes
+!incorrect-protocol-member! UIMenuLeaf::selectedImage is REQUIRED and should be abstract
+!incorrect-protocol-member! UIMenuLeaf::setSelectedImage: is REQUIRED and should be abstract
+
+!missing-protocol! UIItemProviderReadingAugmentationDesignating not bound
+
+# Will be removed in XAMCORE_5
+!unknown-field! UIPasteboardDetectionPatternCalendarEvent bound
+!unknown-field! UIPasteboardDetectionPatternEmailAddress bound
+!unknown-field! UIPasteboardDetectionPatternFlightNumber bound
+!unknown-field! UIPasteboardDetectionPatternLink bound
+!unknown-field! UIPasteboardDetectionPatternMoneyAmount bound
+!unknown-field! UIPasteboardDetectionPatternNumber bound
+!unknown-field! UIPasteboardDetectionPatternPhoneNumber bound
+!unknown-field! UIPasteboardDetectionPatternPostalAddress bound
+!unknown-field! UIPasteboardDetectionPatternProbableWebSearch bound
+!unknown-field! UIPasteboardDetectionPatternProbableWebURL bound
+!unknown-field! UIPasteboardDetectionPatternShipmentTrackingNumber bound
+!unknown-native-enum! UIPasteControlDisplayMode bound
+
+# results from initial block parameter nullability analysis
+!missing-null-allowed! 'System.Void UIKit.UIApplication::SetAlternateIconName(System.String,System.Action`1<Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUIApplicationDelegate::HandleWatchKitExtensionRequest(UIKit.UIApplication,Foundation.NSDictionary,System.Action`1<Foundation.NSDictionary>)' is missing a '?' on parameter 'reply' block parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIImage::PrepareForDisplay(System.Action`1<UIKit.UIImage>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIImage::PrepareThumbnail(CoreGraphics.CGSize,System.Action`1<UIKit.UIImage>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIImageReader::GetImage(Foundation.NSData,System.Action`1<UIKit.UIImage>)' is missing a '?' on parameter 'completion' block parameter #0
+!missing-null-allowed! 'System.Void UIKit.UIImageReader::GetImage(Foundation.NSUrl,System.Action`1<UIKit.UIImage>)' is missing a '?' on parameter 'completion' block parameter #0
+
+# These enums are unavailable on tvOS natively (API_UNAVAILABLE on the typedef), but the managed enums are bound and used by bound API.
+!unknown-native-enum! UIBehavioralStyle bound
+!unknown-native-enum! UICornerCurve bound
+!unknown-native-enum! UIFindSessionSearchResultDisplayStyle bound
+!unknown-native-enum! UITextSearchMatchMethod bound
+
+## bound selectors with no native declaration reachable from the class in the current SDK headers:
+## private/SPI selectors, protocol/category members Apple inlines without declaring the conformance on
+## the class, managed callback infrastructure, or API Apple removed/privatized - kept for compatibility
+## (baseline for https://github.com/dotnet/macios/issues/26053)
+!unknown-selector! +UIFocusDebugger::checkFocusGroupTreeForEnvironment: not found
+!extra-null-allowed! 'CoreGraphics.CGRect UIKit.IUITextInput::GetCaretRectForPosition(UIKit.UITextPosition)' has a extraneous [NullAllowed] on parameter #0
+!missing-null-allowed! 'Foundation.NSDictionary UIKit.IUITextInput::GetTextStyling(UIKit.UITextPosition,UIKit.UITextStorageDirection)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'Foundation.NSIndexPath UIKit.IUIDataSourceModelAssociation::GetIndexPath(System.String,UIKit.UIView)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.Boolean UIKit.IUIViewControllerTransitionCoordinator::AnimateAlongsideTransition(System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>,System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Boolean UIKit.IUIViewControllerTransitionCoordinator::AnimateAlongsideTransitionInView(UIKit.UIView,System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>,System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Boolean UIKit.IUIViewControllerTransitionCoordinator::AnimateAlongsideTransitionInView(UIKit.UIView,System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>,System.Action`1<UIKit.IUIViewControllerTransitionCoordinatorContext>)' is missing an [NullAllowed] on parameter #1
+!missing-null-allowed! 'System.String UIKit.IUIAccessibilityReadingContent::GetAccessibilityContent(System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String UIKit.IUIAccessibilityReadingContent::GetAccessibilityPageContent()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String UIKit.IUIDataSourceModelAssociation::GetModelIdentifier(Foundation.NSIndexPath,UIKit.UIView)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String UIKit.IUIGuidedAccessRestrictionDelegate::GetDetailTextForGuidedAccessRestriction(System.String)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String UIKit.IUIGuidedAccessRestrictionDelegate::GetTextForGuidedAccessRestriction(System.String)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String UIKit.IUITextInput::TextInRange(UIKit.UITextRange)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.String[] UIKit.IUIGuidedAccessRestrictionDelegate::get_GetGuidedAccessRestrictionIdentifiers()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'System.Void UIKit.IUIMenuLeaf::set_SelectedImage(UIKit.UIImage)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'System.Void UIKit.IUITextInput::SetMarkedText(System.String,Foundation.NSRange)' is missing an [NullAllowed] on parameter #0
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetClosestPositionToPoint(CoreGraphics.CGPoint,UIKit.UITextRange)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetClosestPositionToPoint(CoreGraphics.CGPoint)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetPosition(UIKit.UITextPosition,System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetPosition(UIKit.UITextPosition,UIKit.UITextLayoutDirection,System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetPosition(UIKit.UITextRange,System.IntPtr)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextPosition UIKit.IUITextInput::GetPositionWithinRange(UIKit.UITextRange,UIKit.UITextLayoutDirection)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextRange UIKit.IUITextInput::get_MarkedTextRange()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextRange UIKit.IUITextInput::GetCharacterRange(UIKit.UITextPosition,UIKit.UITextLayoutDirection)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextRange UIKit.IUITextInput::GetCharacterRangeAtPoint(CoreGraphics.CGPoint)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UITextRange UIKit.IUITextInput::GetTextRange(UIKit.UITextPosition,UIKit.UITextPosition)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUIInteraction::get_View()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIView UIKit.IUIViewControllerTransitionCoordinatorContext::GetTransitionViewControllerForKey(Foundation.NSString)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewController UIKit.IUIViewControllerTransitionCoordinatorContext::GetViewControllerForKey(Foundation.NSString)' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'UIKit.UIViewControllerTransition UIKit.UIViewControllerTransition::Zoom(UIKit.UIZoomTransitionOptions,System.Func`2<UIKit.UIZoomTransitionSourceViewProviderContext,UIKit.UIView>)' is missing a '?' on parameter 'sourceViewProvider' block return type

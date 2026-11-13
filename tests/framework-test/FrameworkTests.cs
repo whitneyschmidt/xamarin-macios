@@ -1,4 +1,4 @@
-﻿//
+//
 // Framework tests
 //
 // Authors:
@@ -7,17 +7,7 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.Runtime.InteropServices;
-
-#if XAMCORE_2_0
-
 using MonoTouch;
-using Foundation;
-using ObjCRuntime;
-using UIKit;
-
-using NUnit.Framework;
 
 using Bindings.Test;
 
@@ -29,19 +19,19 @@ namespace MonoTouchFixtures {
 		[Test]
 		public void CFunction ()
 		{
-			Assert.AreEqual (42, CFunctions.theUltimateAnswer (), "a");
-			Assert.AreEqual (42, CFunctions.object_theUltimateAnswer (), "object");
-			Assert.AreEqual (42, CFunctions.ar_theUltimateAnswer (), "ar");
+			Assert.That (CFunctions.theUltimateAnswer (), Is.EqualTo (42), "a");
+#if !__MACOS__
+			Assert.That (CFunctions.object_theUltimateAnswer (), Is.EqualTo (42), "object");
+			Assert.That (CFunctions.ar_theUltimateAnswer (), Is.EqualTo (42), "ar");
+#endif
 		}
 
 		[Test]
 		public void ObjCClass ()
 		{
 			using (var obj = new FrameworkTest ()) {
-				Assert.AreEqual (42, obj.Func (), "a");
+				Assert.That (obj.Func (), Is.EqualTo (42), "a");
 			}
 		}
 	}
 }
-
-#endif

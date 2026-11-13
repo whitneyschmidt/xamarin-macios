@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+    <DefineConstants>$(DefineConstants);MSBUILD_TASKS</DefineConstants>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../../../product.snk</AssemblyOriginatorKeyFile>
+    <NoWarn>$(NoWarn);MSB3277</NoWarn> <!-- warning MSB3277: Found conflicts between different versions of "System.Reflection.Metadata" that could not be resolved. -->
+    <NoWarn>$(NoWarn);CS1685</NoWarn> <!-- Ignore the duplicate ImmutableArray<T> warning caused by the ILMerged Xamarin.MacDev.Tasks assembly. -->
+  </PropertyGroup>
+
+  <!--
+
+    The task assembly (Xamarin.MacDev.Tasks.dll) is ILMerged, which really
+    confuses VSfM when using a project reference to the task assembly project
+    file, so instead use a reference to the final Xamarin.MacDev.Tasks.dll
+    assembly instead. This approach requires us to manually build the task
+    assembly before building the test assembly (the BuildTasksAssembly
+    target).
+
+  -->
+
+  <ItemGroup>
+    <Reference Include="Microsoft.Build" HintPath="$(MSBuildBinPath)\Microsoft.Build.dll" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(MSBuildBinPath)\Microsoft.Build.Framework.dll" />
+    <Reference Include="Microsoft.Build.Tasks.Core" HintPath="$(MSBuildBinPath)\Microsoft.Build.Tasks.Core.dll" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(MSBuildBinPath)\Microsoft.Build.Utilities.Core.dll" />
+
+    <!-- Reference the ILMerged assemblies for testing / runtime -->
+    <Reference Include="Xamarin.MacDev.Tasks" Condition="'$(DesignTimeBuild)' != 'true'" HintPath="..\..\..\msbuild\Xamarin.MacDev.Tasks\bin\$(Configuration)\netstandard2.0\Xamarin.MacDev.Tasks.dll" />
+    <Reference Include="Build" Condition="'$(DesignTimeBuild)' != 'true'" HintPath="..\..\..\msbuild\Messaging\Xamarin.Messaging.Build\bin\$(Configuration)\Build.dll" />
+
+    <!-- Reference the projects for intellisense in VSCode. -->
+    <ProjectReference Include="../../../msbuild/Xamarin.MacDev.Tasks/Xamarin.MacDev.Tasks.csproj" Condition="'$(DesignTimeBuild)' == 'true'" />
+    <ProjectReference Include="../../../msbuild/Messaging/Xamarin.Messaging.Build/Xamarin.Messaging.Build.csproj" Condition="'$(DesignTimeBuild)' == 'true'" />
+    <ProjectReference Include="../../../external/Xamarin.MacDev/Xamarin.MacDev/Xamarin.MacDev.csproj" Condition="'$(DesignTimeBuild)' == 'true'"/>
+
+    <PackageReference Include="NUnit" Version="$(NUnitPackageVersion)" />
+    <PackageReference Include="NUnit3TestAdapter" Version="$(NUnit3TestAdapterPackageVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkPackageVersion)" />
+    <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildPackageVersion)" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="$(MicrosoftBuildFrameworkPackageVersion)" />
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCorePackageVersion)" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="$(MicrosoftBuildUtilitiesCorePackageVersion)" />
+    <PackageReference Include="NUnitXml.TestLogger" Version="$(NUnitXmlTestLoggerPackageVersion)" />
+    <!-- Fix transient dependency issue found by component governance 4.7.0 -> 4.7.2 -->
+    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
+    <!-- Fix transient dependency issue found by component governance 4.7.0 -> 4.7.1 -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="$(SystemSecurityCryptographyXmlPackageVersion)" />
+  </ItemGroup>
+
+  <Target Name="BuildTasksAssembly" AfterTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="..\..\..\msbuild\Xamarin.MacDev.Tasks\Xamarin.MacDev.Tasks.csproj;..\..\..\msbuild\Messaging\Xamarin.Messaging.Build\Xamarin.Messaging.Build.csproj" Targets="Restore" Properties="SomeGlobalPropertyToMakeThisUnique=RestoreMe" />
+    <MSBuild Projects="..\..\..\msbuild\Xamarin.MacDev.Tasks\Xamarin.MacDev.Tasks.csproj;..\..\..\msbuild\Messaging\Xamarin.Messaging.Build\Xamarin.Messaging.Build.csproj" />
+  </Target>
+
+  <ItemGroup>
+    <Compile Include="..\..\mtouch\Cache.cs">
+      <Link>external\Cache.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\Configuration.cs">
+      <Link>external\Configuration.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ConfigurationNUnit.cs">
+      <Link>external\ConfigurationNUnit.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\DotNet.cs">
+      <Link>external\DotNet.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ExecutionHelper.cs">
+      <Link>external\ExecutionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\Profile.cs">
+      <Link>external\Profile.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ErrorHelper.tests.cs">
+      <Link>external\ErrorHelper.tests.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\PListAsserts.cs">
+      <Link>external\PListAsserts.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ResxAssertions.cs">
+      <Link>external\ResxAssertions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\SdkVersions.cs">
+      <Link>external\SdkVersions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\StringUtils.cs">
+      <Link>external\StringUtils.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Entitlements.plist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\EmptyEntitlements.plist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\*.mobileprovision">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\*.provisionprofile">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork%402x.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork%402x.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork-invalid-size.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\iTunesArtwork-invalid-size.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Resources\PropertyList.plist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\xcf-xcode12.2.plist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\xcf-prexcode12.plist">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

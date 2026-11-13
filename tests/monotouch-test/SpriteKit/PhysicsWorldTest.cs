@@ -1,28 +1,6 @@
-﻿
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
 using SpriteKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.SpriteKit;
-using MonoTouch.UIKit;
-#endif
-using OpenTK;
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
+using System.Numerics;
 
 namespace MonoTouchFixtures.SpriteKit {
 
@@ -32,8 +10,8 @@ namespace MonoTouchFixtures.SpriteKit {
 		[SetUp]
 		public void VersionCheck ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
 		}
 
 		[Test]
@@ -42,13 +20,12 @@ namespace MonoTouchFixtures.SpriteKit {
 			using (var scene = new SKScene ()) {
 				using (var world = scene.PhysicsWorld) {
 					var v = world.SampleFields (new Vector3 (1, 2, 3));
-					Assert.AreEqual (0, v.X, "#x1");
-					Assert.AreEqual (0, v.Y, "#y1");
-					Assert.AreEqual (0, v.Z, "#z1");
+					Assert.That (v.X, Is.EqualTo (0), "#x1");
+					Assert.That (v.Y, Is.EqualTo (0), "#y1");
+					Assert.That (v.Z, Is.EqualTo (0), "#z1");
 				}
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__

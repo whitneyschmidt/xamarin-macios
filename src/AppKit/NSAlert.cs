@@ -26,21 +26,19 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__ // Mac Catalyst doesn't have NSAlert
+
 using System.Collections.Generic;
 
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
-namespace AppKit
-{
+namespace AppKit {
 	[Register ("__MonoMac_NSAlertDidEndDispatcher")]
-	internal class NSAlertDidEndDispatcher : NSObject
-	{
+	internal class NSAlertDidEndDispatcher : NSObject {
 		const string selector = "alertDidEnd:returnCode:contextInfo:";
 		public static readonly Selector Selector = new Selector (selector);
 
-		Action<nint> action;
+		Action<nint>? action;
 
 		public NSAlertDidEndDispatcher (Action<nint> action)
 		{
@@ -54,7 +52,7 @@ namespace AppKit
 		public void OnAlertDidEnd (NSAlert alert, nint returnCode, IntPtr context)
 		{
 			try {
-				if (action != null)
+				if (action is not null)
 					action (returnCode);
 			} finally {
 				action = null;
@@ -63,38 +61,57 @@ namespace AppKit
 		}
 	}
 
-	public partial class NSAlert
-	{
+	public partial class NSAlert {
+		/// <param name="window">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void BeginSheet (NSWindow window)
 		{
 			BeginSheet (window, null, null, IntPtr.Zero);
 		}
 
-		public void BeginSheet (NSWindow window, Action onEnded)
+		/// <param name="window">To be added.</param>
+		///         <param name="onEnded">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void BeginSheet (NSWindow window, Action? onEnded)
 		{
 			BeginSheetForResponse (window, r => {
-				if (onEnded != null)
+				if (onEnded is not null)
 					onEnded ();
 			});
 		}
 
+		/// <param name="window">To be added.</param>
+		/// <param name="onEnded">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public void BeginSheetForResponse (NSWindow window, Action<nint> onEnded)
 		{
 			BeginSheet (window, new NSAlertDidEndDispatcher (onEnded), NSAlertDidEndDispatcher.Selector, IntPtr.Zero);
 		}
 
+		/// <param name="window">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public nint RunSheetModal (NSWindow window)
 		{
 			return RunSheetModal (window, NSApplication.SharedApplication);
 		}
 
-		public nint RunSheetModal (NSWindow window, NSApplication application)
+		/// <param name="window">To be added.</param>
+		///         <param name="application">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public nint RunSheetModal (NSWindow? window, NSApplication application)
 		{
-			if (application == null)
+			if (application is null)
 				throw new ArgumentNullException ("application");
 
 			// same behavior as BeginSheet with a null window
-			if (window == null)
+			if (window is null)
 				return RunModal ();
 
 			nint returnCode = -1000;
@@ -110,3 +127,4 @@ namespace AppKit
 		}
 	}
 }
+#endif // __MACCATALYST__

@@ -1,4 +1,4 @@
-﻿//
+//
 // NEHotspotEapSettings.cs
 //
 // Authors:
@@ -7,23 +7,28 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 && !MONOMAC
-using System;
-using Foundation;
+#nullable enable
+
+#if !MONOMAC && !TVOS
 
 namespace NetworkExtension {
+
+	/// <summary>Provides EAP settings for configuring hotspot networks.</summary>
 	public partial class NEHotspotEapSettings {
 
+		/// <summary>Gets or sets the supported EAP types for hotspot authentication.</summary>
+		/// <value>An array of supported EAP authentication types.</value>
 		public NEHotspotConfigurationEapType [] SupportedEapTypes {
 			get {
-				return NSArray.EnumsFromHandle<NEHotspotConfigurationEapType> (_SupportedEapTypes);
+				return NSArray.NonNullEnumsFromHandle<NEHotspotConfigurationEapType> (_SupportedEapTypes);
 			}
 			set {
-				if (value == null)
-					throw new ArgumentNullException (nameof (value));
+				if (value is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
 
 				var ret = NSArray.From (value, value.Length);
 				_SupportedEapTypes = ret.Handle;
+				GC.KeepAlive (ret);
 			}
 		}
 	}

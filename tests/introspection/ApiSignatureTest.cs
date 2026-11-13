@@ -19,29 +19,17 @@
 // limitations under the License.
 //
 
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Reflection;
 using System.Text;
-using NUnit.Framework;
 using System.Linq;
 
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 
 	public abstract class ApiSignatureTest : ApiBaseTest {
-
+		const string NFloatTypeName = "System.Runtime.InteropServices.NFloat";
 		[DllImport ("/usr/lib/libobjc.dylib")]
 		// note: the returned string is not ours to free
 		static extern IntPtr objc_getClass (string name);
@@ -56,11 +44,11 @@ namespace Introspection {
 		[DllImport ("/usr/lib/libobjc.dylib")]
 		static extern IntPtr class_getInstanceMethod (IntPtr klass, IntPtr selector);
 
-		protected string[] Split (string encoded, out int size)
+		protected string []? Split (string encoded, out int size)
 		{
-			List<string> elements = new List<string> ();
+			var elements = new List<string> ();
 			int pos = 0;
-			string s = Next (encoded, ref pos);
+			string? s = Next (encoded, ref pos);
 			int end = pos;
 			while (Char.IsDigit (encoded [end]))
 				end++;
@@ -69,21 +57,21 @@ namespace Introspection {
 
 			if (encoded [end] != '@' || encoded [end + 1] != '0' || encoded [end + 2] != ':') {
 				if (!ContinueOnFailure)
-					Assert.Fail ("Unexpected format, missing '@0:', inside '{0}'", encoded);
+					Assert.Fail ($"Unexpected format, missing '@0:', inside '{encoded}'");
 				return null;
 			}
 
 			pos = end + 3;
 
 			while (pos < encoded.Length) {
-				if (s != null)
+				if (s is not null)
 					elements.Add (s);
 				s = Next (encoded, ref pos);
 			}
 			return elements.ToArray ();
 		}
 
-		static string Next (string encoded, ref int pos)
+		static string? Next (string encoded, ref int pos)
 		{
 			// skip digits
 			while (pos < encoded.Length && Char.IsDigit (encoded [pos]))
@@ -91,7 +79,7 @@ namespace Introspection {
 			if (pos >= encoded.Length)
 				return null;
 
-			StringBuilder sb = new StringBuilder ();
+			var sb = new StringBuilder ();
 			int acc = 0;
 			char c = encoded [pos];
 			while (!Char.IsDigit (c) || acc > 0) {
@@ -153,15 +141,15 @@ namespace Introspection {
 			}
 			if (simd) {
 				switch (t.Name) {
-				case "Vector3i":	// sizeof (vector_uint3)
-				case "Vector3":		// sizeof (vector_float3)
+				case "Vector3i":    // sizeof (vector_uint3)
+				case "Vector3":     // sizeof (vector_float3)
 					return 16;
 				case "Matrix2":
-					return 16;	// matrix_float2x2
+					return 16;  // matrix_float2x2
 				case "Matrix3":
-					return 48;	// matrix_float3x3
+					return 48;  // matrix_float3x3
 				case "Matrix4":
-					return 64;	// matrix_float4x4
+					return 64;  // matrix_float4x4
 				case "Vector3d":    // sizeof (vector_double3)
 				case "MDLAxisAlignedBoundingBox":
 					return 32; // struct (Vector3, Vector3)
@@ -175,7 +163,7 @@ namespace Introspection {
 		{
 			if (type.ContainsGenericParameters)
 				return true;
-			
+
 			return false;
 		}
 
@@ -186,11 +174,11 @@ namespace Introspection {
 
 		public int CurrentParameter { get; private set; }
 
-		public MethodBase CurrentMethod { get; private set; }
+		public MethodBase? CurrentMethod { get; private set; }
 
-		public string CurrentSelector { get; private set; }
+		public string? CurrentSelector { get; private set; }
 
-		public Type CurrentType { get; private set; }
+		public Type? CurrentType { get; private set; }
 
 		const BindingFlags Flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
 
@@ -200,7 +188,7 @@ namespace Introspection {
 			int n = 0;
 			Errors = 0;
 			ErrorData.Clear ();
-			
+
 			foreach (Type t in Assembly.GetTypes ()) {
 
 				var static_type = t.IsSealed && t.IsAbstract; // e.g. [Category]
@@ -212,14 +200,14 @@ namespace Introspection {
 
 				CurrentType = t;
 
-				FieldInfo fi = null;
+				FieldInfo? fi = null;
 				if (!static_type)
 					fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-				IntPtr class_ptr = fi == null ? IntPtr.Zero : (IntPtr) fi.GetValue (null);
+				IntPtr class_ptr = fi is null ? IntPtr.Zero : (IntPtr) (NativeHandle) fi.GetValue (null)!;
 
-				foreach (MethodBase m in t.GetMethods (Flags)) 
+				foreach (MethodBase m in t.GetMethods (Flags))
 					CheckMemberSignature (m, t, class_ptr, ref n);
-				foreach (MethodBase m in t.GetConstructors (Flags)) 
+				foreach (MethodBase m in t.GetConstructors (Flags))
 					CheckMemberSignature (m, t, class_ptr, ref n);
 			}
 			AssertIfErrors ("{0} errors found in {1} signatures validated{2}", Errors, n, Errors == 0 ? string.Empty : ":\n" + ErrorData.ToString () + "\n");
@@ -230,32 +218,32 @@ namespace Introspection {
 			var methodinfo = m as MethodInfo;
 			var constructorinfo = m as ConstructorInfo;
 
-			if (methodinfo == null && constructorinfo == null)
+			if (methodinfo is null && constructorinfo is null)
 				return;
 
 			// Don't check obsolete methods, it could be obsoleted because it was broken.
-			if (m.GetCustomAttributes<ObsoleteAttribute> () != null)
+			if (m.GetCustomAttributes<ObsoleteAttribute> () is not null)
 				return;
-			
+
 			if (m.DeclaringType != t)
 				return;
-			
+
 			CurrentMethod = m;
-			
+
 			foreach (object ca in m.GetCustomAttributes (true)) {
 				var exportAttribute = ca as ExportAttribute;
-				if (exportAttribute == null)
+				if (exportAttribute is null)
 					continue;
-				string name = exportAttribute.Selector;
+				string name = exportAttribute.Selector!;
 
 				if (exportAttribute.IsVariadic) {
 					VariadicChecks (m);
 					continue;
 				}
-				
+
 				if (Skip (t, m, name))
 					continue;
-				
+
 				CurrentSelector = name;
 
 				// in some cases, e.g. *Delegate, we cannot use introspection but we can still do some checks
@@ -270,14 +258,14 @@ namespace Introspection {
 		void VariadicChecks (MethodBase m)
 		{
 			if (m.IsPublic || m.IsFamily || m.IsFamilyOrAssembly) {
-				AddErrorLine ("Function '{0}.{1}' is exposed and variadic. Variadic methods need custom marshaling, and must not be exposed directly.", m.DeclaringType.FullName, m.Name);
+				AddErrorLine ("Function '{0}.{1}' is exposed and variadic. Variadic methods need custom marshaling, and must not be exposed directly.", m.DeclaringType?.FullName, m.Name);
 			}
 		}
 
 		void BasicChecks (MethodBase m, Type t, ref int n)
 		{
 			int native = 0;
-			int pos = CurrentSelector.IndexOf (':');
+			int pos = CurrentSelector!.IndexOf (':');
 			while (pos != -1) {
 				native++;
 				pos = CurrentSelector.IndexOf (':', pos + 1);
@@ -298,32 +286,31 @@ namespace Introspection {
 			}
 		}
 
-		void IntrospectionTest (MethodBase m, MethodInfo methodinfo, Type t, IntPtr class_ptr, ref int n)
+		void IntrospectionTest (MethodBase m, MethodInfo? methodinfo, Type t, IntPtr class_ptr, ref int n)
 		{
-			IntPtr sel = Selector.GetHandle (CurrentSelector);
+			IntPtr sel = Selector.GetHandle (CurrentSelector!);
 			IntPtr method;
-			if (methodinfo != null)
-				method = m.IsStatic ? class_getClassMethod (class_ptr, sel) :  class_getInstanceMethod (class_ptr, sel);
+			if (methodinfo is not null)
+				method = m.IsStatic ? class_getClassMethod (class_ptr, sel) : class_getInstanceMethod (class_ptr, sel);
 			else
 				method = class_getInstanceMethod (class_ptr, sel);
 			IntPtr tenc = method_getTypeEncoding (method);
-			string encoded = Marshal.PtrToStringAuto (tenc);
+			string? encoded = Marshal.PtrToStringAuto (tenc);
 
 			if (LogProgress)
-				Console.WriteLine ("{0} {1} '{2} {3}' selector: {4} == {5}", ++n, t.Name, methodinfo != null ? methodinfo.IsStatic ? "static" : "instance" : "ctor", m, CurrentSelector, encoded);
+				Console.WriteLine ("{0} {1} '{2} {3}' selector: {4} == {5}", ++n, t.Name, methodinfo is not null ? methodinfo.IsStatic ? "static" : "instance" : "ctor", m, CurrentSelector, encoded);
 
 			// NSObject has quite a bit of stuff that's not usable (except by some class that inherits from it)
 			if (String.IsNullOrEmpty (encoded))
 				return;
 
 			int encoded_size = -1;
-			string [] elements = null;
+			string []? elements = null;
 			try {
 				elements = Split (encoded, out encoded_size);
+			} catch {
 			}
-			catch {
-			}
-			if (elements == null || !elements.Any ()) {
+			if (elements is null || !elements.Any ()) {
 				if (LogProgress)
 					Console.WriteLine ("[WARNING] Could not parse encoded signature for {0} : {1}", CurrentSelector, encoded);
 				return;
@@ -332,7 +319,7 @@ namespace Introspection {
 			bool result;
 			CurrentParameter = 0;
 
-			if (methodinfo != null) {
+			if (methodinfo is not null) {
 				// check return value
 
 				if (IgnoreSimd (methodinfo.ReturnType)) {
@@ -405,25 +392,16 @@ namespace Introspection {
 		protected virtual bool IsValidStruct (Type type, string structName)
 		{
 			switch (structName) {
-			// MKPolygon 'static MonoTouch.MapKit.MKPolygon _FromPoints(IntPtr, Int32)' selector: polygonWithPoints:count: == @16@0:4^{?=dd}8I12
-			// NSValue 'static MonoTouch.Foundation.NSValue FromCMTime(CMTime)' selector: valueWithCMTime: == @32@0:4{?=qiIq}8
+			// MKPolygon 'static MapKit.MKPolygon _FromPoints(IntPtr, Int32)' selector: polygonWithPoints:count: == @16@0:4^{?=dd}8I12
+			// NSValue 'static Foundation.NSValue FromCMTime(CMTime)' selector: valueWithCMTime: == @32@0:4{?=qiIq}8
 			case "?":
 				return type.IsValueType; // || (type.FullName == "System.IntPtr");
-#if XAMCORE_2_0
 			case "CGRect":
 				return type.FullName == "CoreGraphics.CGRect";
 			case "CGSize":
 				return type.FullName == "CoreGraphics.CGSize";
 			case "CGPoint":
 				return type.FullName == "CoreGraphics.CGPoint";
-#else
-			case "CGRect":
-				return type.FullName == "System.Drawing.RectangleF";
-			case "CGSize":
-				return type.FullName == "System.Drawing.SizeF";
-			case "CGPoint":
-				return type.FullName == "System.Drawing.PointF";
-#endif
 			case "opaqueCMFormatDescription":
 				switch (type.Name) {
 				case "CMFormatDescription":
@@ -541,18 +519,8 @@ namespace Introspection {
 			case "AudioChannelLayout":
 				// this is actually an `nint` used as a pointer (to get a unique signature for the .ctor)
 				// there's custom code in src/AVFoundation/AVAudioChannelLayout.cs to deal with this
-#if XAMCORE_2_0
 				structName = "nint";
-#else
-				structName = "Int32";
-#endif
 				break;
-#if !XAMCORE_2_0
-			// in compat it's a class (instead of a struct) hence this hack
-			case "AudioComponentDescription":
-				structName = "AudioComponentDescriptionNative";
-				break;
-#endif
 			}
 			return type.Name == structName;
 		}
@@ -575,7 +543,7 @@ namespace Introspection {
 			case '@':
 				switch (encodedType [1]) {
 				case '?':
-					return (type.Name == "NSAction") || type.BaseType.FullName == "System.MulticastDelegate";
+					return (type.Name == "NSAction") || type.BaseType?.FullName == "System.MulticastDelegate";
 				default:
 					return false;
 				}
@@ -583,7 +551,7 @@ namespace Introspection {
 				switch (encodedType [1]) {
 				case 'v':
 					// NSOpenGLContext 'instance MonoMac.OpenGL.CGLContext get_CGLContext()' selector: CGLContextObj == ^v8@0:4
-					if ((CurrentType.Name == "NSOpenGLContext") && (type.Name == "CGLContext"))
+					if ((CurrentType!.Name == "NSOpenGLContext") && (type.Name == "CGLContext"))
 						return true;
 					// NSOpenGLPixelFormat 'instance MonoMac.OpenGL.CGLPixelFormat get_CGLPixelFormat()' selector: CGLPixelFormatObj == ^v8@0:4
 					if ((CurrentType.Name == "NSOpenGLPixelFormat") && (type.Name == "CGLPixelFormat"))
@@ -604,7 +572,7 @@ namespace Introspection {
 				case 'q':
 				case 'Q':
 				case 'S':
-					return (type.FullName == "System.IntPtr") || Check (encodedType.Substring (1), type.GetElementType ());
+					return (type.FullName == "System.IntPtr") || Check (encodedType.Substring (1), type.GetElementType ()!);
 				// NSInputStream 'instance Boolean GetBuffer(IntPtr ByRef, UInt32 ByRef)' selector: getBuffer:length: == c16@0:4^*8^I12
 				case '*':
 				case '{':
@@ -612,9 +580,9 @@ namespace Introspection {
 				case 'r':
 					if (type.FullName == "System.IntPtr")
 						return true;
-					return Check (encodedType.Substring (1), type.IsByRef ? type.GetElementType () : type);
+					return Check (encodedType.Substring (1), type.IsByRef ? type.GetElementType ()! : type);
 				case '@':
-					return Check ('@', type.IsByRef ? type.GetElementType () : type);
+					return Check ('@', type.IsByRef ? type.GetElementType ()! : type);
 				case '^':
 				case '?':
 					return (type.FullName == "System.IntPtr");
@@ -622,14 +590,14 @@ namespace Introspection {
 					return false;
 				}
 			case 'r':
-				// const -> ignore
-				// e.g. vectorWithValues:count: == @16@0:4r^f8L12
+			// const -> ignore
+			// e.g. vectorWithValues:count: == @16@0:4r^f8L12
 			case 'o':
-				// out -> ignore
-				// e.g. validateValue:forKey:error: == c20@0:4N^@8@12o^@16
+			// out -> ignore
+			// e.g. validateValue:forKey:error: == c20@0:4N^@8@12o^@16
 			case 'N':
-				// inout -> ignore
-				// e.g. validateValue:forKey:error: == c20@0:4N^@8@12o^@16
+			// inout -> ignore
+			// e.g. validateValue:forKey:error: == c20@0:4N^@8@12o^@16
 			case 'V':
 				// oneway -> ignore
 				// e.g. NSObject 'instance Void NativeRelease()' selector: release == Vv8@0:4
@@ -652,17 +620,17 @@ namespace Introspection {
 				// We use BindAsAttribute to wrap NSNumber/NSValue into more accurate Nullable<T> types
 				// So we check if T of nullable is supported by bindAs
 				var nullableType = Nullable.GetUnderlyingType (type);
-				if (nullableType != null)
+				if (nullableType is not null)
 					return BindAsSupportedTypes.Contains (nullableType.Name);
 
-				return (type.IsInterface ||								// protocol
-					type.IsArray || 									// NSArray
-					(type.Name == "NSArray") || 						// NSArray
-					(type.FullName == "System.String") || 						// NSString
-					(type.FullName == "System.IntPtr") || 						// unbinded, e.g. internal
-					(type.BaseType.FullName == "System.MulticastDelegate") || 	// completion handler -> delegate
-					NSObjectType.IsAssignableFrom (type)) ||					// NSObject derived
-					inativeobject.IsAssignableFrom (type);						// e.g. CGImage
+				return (type.IsInterface ||                             // protocol
+					type.IsArray ||                                     // NSArray
+					(type.Name == "NSArray") ||                         // NSArray
+					(type.FullName == "System.String") ||                       // NSString
+					(type.FullName == "System.IntPtr") ||                       // unbinded, e.g. internal
+					(type.BaseType?.FullName == "System.MulticastDelegate") ||   // completion handler -> delegate
+					NSObjectType.IsAssignableFrom (type)) ||                    // NSObject derived
+					inativeobject.IsAssignableFrom (type);                      // e.g. CGImage
 			case 'B':
 				// 64 bits only encode this
 				return type.FullName == "System.Boolean";
@@ -689,7 +657,7 @@ namespace Introspection {
 				switch (type.FullName) {
 				case "System.Double":
 					return true;
-				case "System.nfloat":
+				case NFloatTypeName:
 					return IntPtr.Size == 8;
 				default:
 					return false;
@@ -698,7 +666,7 @@ namespace Introspection {
 				switch (type.FullName) {
 				case "System.Single":
 					return true;
-				case "System.nfloat":
+				case NFloatTypeName:
 					return IntPtr.Size == 4;
 				default:
 					return false;
@@ -719,7 +687,7 @@ namespace Introspection {
 				case "EventKit.EKRecurrenceFrequency":
 				case "EventKit.EKSpan":
 				case "EventKit.EKAlarmType":
-				// EventKit.EK* enums are anonymous enums in 10.10 and iOS 8, but an NSInteger in 10.11 and iOS 9.
+					// EventKit.EK* enums are anonymous enums in 10.10 and iOS 8, but an NSInteger in 10.11 and iOS 9.
 					if (TestRuntime.CheckXcodeVersion (7, 0))
 						goto default;
 					return true;
@@ -791,7 +759,7 @@ namespace Introspection {
 			case 'v':
 				return type.FullName == "System.Void";
 			case '?':
-				return type.BaseType.FullName == "System.MulticastDelegate";	// completion handler -> delegate
+				return type.BaseType?.FullName == "System.MulticastDelegate";    // completion handler -> delegate
 			case '#':
 				return type.FullName == "System.IntPtr" || type.Name == "Class";
 			// CAMediaTimingFunction 'instance Void GetControlPointAtIndex(Int32, IntPtr)' selector: getControlPointAtIndex:values: == v16@0:4L8[2f]12
@@ -807,9 +775,7 @@ namespace Introspection {
 			return false;
 		}
 
-#if XAMCORE_2_0
 		[Test]
-#endif
 		public void ManagedSignature ()
 		{
 			int n = 0;
@@ -835,18 +801,18 @@ namespace Introspection {
 		protected virtual bool CheckType (Type t, ref int n)
 		{
 			if (t.IsArray)
-				return CheckType (t.GetElementType (), ref n);
+				return CheckType (t.GetElementType ()!, ref n);
 			// e.g. NSDictionary<NSString,NSObject> needs 3 check
 			if (t.IsGenericType) {
 				foreach (var ga in t.GetGenericArguments ())
 					return CheckType (ga, ref n);
 			}
 			// look for [Model] types
-			if (t.GetCustomAttribute<ModelAttribute> (false) == null)
+			if (t.GetCustomAttribute<ModelAttribute> (false) is null)
 				return true;
 			n++;
 			switch (t.Name) {
-			case "CAAnimationDelegate":	// this was not a protocol before iOS 10 and was not bound as such
+			case "CAAnimationDelegate": // this was not a protocol before iOS 10 and was not bound as such
 				return true;
 			default:
 				return false;
@@ -856,7 +822,7 @@ namespace Introspection {
 		protected virtual void CheckManagedMemberSignatures (MethodBase m, Type t, ref int n)
 		{
 			// if the method was obsoleted then it's not an issue, we assume the alternative is fine
-			if (m.GetCustomAttribute<ObsoleteAttribute> () != null)
+			if (m.GetCustomAttribute<ObsoleteAttribute> () is not null)
 				return;
 			if (m.DeclaringType != t)
 				return;
@@ -871,8 +837,8 @@ namespace Introspection {
 				if (!CheckType (pt, ref n))
 					ReportError ($"`{t.Name}.{m.Name}` includes a parameter of type `{pt.Name}` which is a concrete type `[Model]` and not an interface `[Protocol]`");
 			}
-			if (!m.IsConstructor) {
-				var rt = (m as MethodInfo).ReturnType;
+			if (m is MethodInfo minfo) {
+				var rt = minfo.ReturnType;
 				if (!CheckType (rt, ref n))
 					ReportError ($"`{t.Name}.{m.Name}` return type `{rt.Name}` is a concrete type `[Model]` and not an interface `[Protocol]`");
 			}
@@ -889,6 +855,10 @@ namespace Introspection {
 					return true;
 				}
 			}
+
+			if (TestRuntime.HasOSPlatformAttributeForCurrentPlatform<UnsupportedOSPlatformAttribute> (mi))
+				return true;
+
 			return false;
 		}
 
@@ -910,9 +880,9 @@ namespace Introspection {
 				if (!NSObjectType.IsAssignableFrom (t))
 					continue;
 
-				if (t.GetCustomAttribute<ProtocolAttribute> () != null)
+				if (t.GetCustomAttribute<ProtocolAttribute> () is not null)
 					continue;
-				if (t.GetCustomAttribute<ModelAttribute> () != null)
+				if (t.GetCustomAttribute<ModelAttribute> () is not null)
 					continue;
 
 				// let's not encourage the use of some API
@@ -960,10 +930,10 @@ namespace Introspection {
 
 					// did we provide a async wrapper ?
 					string ma = m.Name + "Async";
-					if (methods.Where ((mi) => mi.Name == ma).FirstOrDefault () != null)
+					if (methods.Where ((mi) => mi.Name == ma).FirstOrDefault () is not null)
 						continue;
 
-					var name = m.ToString ();
+					var name = m.ToString ()!;
 					var i = name.IndexOf (' ');
 					ErrorData.AppendLine (name.Insert (i + 1, m.DeclaringType.Name + "::"));
 					Errors++;
@@ -977,20 +947,27 @@ namespace Introspection {
 			switch (m.Name) {
 			// we bind PerformChangesAndWait which does the same
 			case "PerformChanges":
-				return m.DeclaringType.Name == "PHPhotoLibrary";
+				return m.DeclaringType?.Name == "PHPhotoLibrary";
 			// it sets the callback, it will never call it
 			case "SetCompletionBlock":
-				return m.DeclaringType.Name == "SCNTransaction";
+				return m.DeclaringType?.Name == "SCNTransaction";
 			// It does not make sense for this API
 			case "CreateRunningPropertyAnimator":
-				return m.DeclaringType.Name == "UIViewPropertyAnimator";
+				return m.DeclaringType?.Name == "UIViewPropertyAnimator";
 			// It does not make sense for this API
 			case "RequestData":
-				return m.DeclaringType.Name == "PHAssetResourceManager";
+				return m.DeclaringType?.Name == "PHAssetResourceManager";
 			// It does not make sense for this API
 			case "Register":
 			case "SignalEnumerator":
-				return m.DeclaringType.Name == "NSFileProviderManager";
+				return m.DeclaringType?.Name == "NSFileProviderManager";
+			case "Synchronize": // comes from a protocol implementation
+				return m.DeclaringType?.Name == "NSTextContentManager";
+			case "AccommodatePresentedItemEviction": // comes from a protocol implementation
+				return m.DeclaringType?.Name == "NSFilePresenter" || m.DeclaringType?.Name == "UIDocument";
+			case "StartCapture":
+			case "StopCapture": // it does not make sense for these APIs
+				return m.DeclaringType?.Name == "SCStream";
 			}
 			return false;
 		}
@@ -1000,6 +977,7 @@ namespace Introspection {
 			"CGAffineTransform", "Range", "CGVector", "SCNMatrix4", "CLLocationCoordinate2D",
 			"SCNVector3", "Vector", "CGPoint", "CGRect", "CGSize", "UIEdgeInsets",
 			"UIOffset", "MKCoordinateSpan", "CMTimeRange", "CMTime", "CMTimeMapping",
+			"CMVideoDimensions",
 			"CATransform3D", "Boolean", "Byte", "Double", "Float", "Int16", "Int32",
 			"Int64", "SByte", "UInt16", "UInt32", "UInt64", "nfloat", "nint", "nuint",
 		};

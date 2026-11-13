@@ -1,4 +1,4 @@
-﻿//
+//
 // MusicSequence unit Tests
 //
 // Authors:
@@ -7,19 +7,9 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-#if XAMCORE_2_0
 using AudioToolbox;
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.AudioToolbox;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.AudioToolbox {
 
@@ -31,7 +21,7 @@ namespace MonoTouchFixtures.AudioToolbox {
 		public void Defaults ()
 		{
 			using (var ms = new MusicSequence ()) {
-				Assert.NotNull (ms.AUGraph, "AUGraph");
+				Assert.That (ms.AUGraph, Is.Not.Null, "AUGraph");
 				Assert.That (ms.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
 				Assert.That (ms.SequenceType, Is.EqualTo (MusicSequenceType.Beats), "SequenceType");
 				Assert.That (ms.TrackCount, Is.EqualTo (0), "TrackCount");
@@ -57,4 +47,4 @@ namespace MonoTouchFixtures.AudioToolbox {
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

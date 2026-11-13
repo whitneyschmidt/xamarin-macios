@@ -25,17 +25,16 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreBluetooth {
 
-	public partial class PeripheralScanningOptions
-	{
+	public partial class PeripheralScanningOptions {
 #if !COREBUILD
+		/// <summary>Gets or sets whether duplicate peripheral discoveries should be reported.</summary>
+		/// <value><see langword="true" /> to allow duplicates; otherwise, <see langword="false" />.</value>
 		public bool AllowDuplicatesKey {
 			get {
 				var value = GetBoolValue (CBCentralManager.ScanOptionAllowDuplicatesKey);

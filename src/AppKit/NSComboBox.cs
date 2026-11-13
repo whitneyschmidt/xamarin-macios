@@ -1,20 +1,16 @@
-using System;
-using Foundation;
+#if !__MACCATALYST__
 using CoreGraphics;
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSComboBox {
-		[Obsolete ("Use GetItemObject instead.")]
-		public virtual NSComboBox GetItem (nint index)
-		{
-			return (NSComboBox) GetItemObject (index);
-		}
-
-		public NSObject this [nint index] { 
+		public NSObject this [nint index] {
 			get {
 				return GetItemObject (index);
 			}
 		}
 	}
 }
+#endif // !__MACCATALYST__

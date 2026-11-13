@@ -7,54 +7,31 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.Net;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.Foundation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class HttpCookieTest {
-		
+
 		// https://bugzilla.xamarin.com/show_bug.cgi?id=3603
 		[Test]
 		public void NSDictionaryCtor ()
 		{
 			using (var props = new NSMutableDictionary ()) {
-#if XAMCORE_2_0
 				props.Add (NSHttpCookie.KeyOriginUrl, new NSString ("http://yodawg.com"));
-#else
-				props.Add (NSHttpCookie.KeyOriginURL, new NSString ("http://yodawg.com"));
-#endif
 				props.Add (NSHttpCookie.KeyName, new NSString ("iherd"));
 				props.Add (NSHttpCookie.KeyValue, new NSString ("ulikecookies"));
-				
+
 				// an invalid NSDictionary returns null from Objective-C but that
 				// results in an 'empty' instance inside MonoTouch
 				Assert.Throws<Exception> (() => new NSHttpCookie (props), "ctor");
-	
+
 				props.Add (NSHttpCookie.KeyPath, new NSString ("/"));
 				using (var cookie = new NSHttpCookie (props)) {
 					Assert.That (cookie.Handle, Is.Not.EqualTo (IntPtr.Zero), "ctor");
-					
+
 					Assert.That (cookie.Domain, Is.EqualTo ("yodawg.com"), "Domain");
 					Assert.That (cookie.Name, Is.EqualTo ("iherd"), "Name");
 					Assert.That (cookie.Value, Is.EqualTo ("ulikecookies"), "Value");
@@ -62,26 +39,22 @@ namespace MonoTouchFixtures.Foundation {
 				}
 			}
 		}
-		
+
 		[Test]
 		public void CookieFromProperties ()
 		{
 			using (var props = new NSMutableDictionary ()) {
-#if XAMCORE_2_0
 				props.Add (NSHttpCookie.KeyOriginUrl, new NSString ("http://yodawg.com"));
-#else
-				props.Add (NSHttpCookie.KeyOriginURL, new NSString ("http://yodawg.com"));
-#endif
 				props.Add (NSHttpCookie.KeyName, new NSString ("iherd"));
 				props.Add (NSHttpCookie.KeyValue, new NSString ("ulikecookies"));
-				
+
 				var cookie = NSHttpCookie.CookieFromProperties (props);
-				Assert.Null (cookie, "missing path");
-	
+				Assert.That (cookie, Is.Null, "missing path");
+
 				props.Add (NSHttpCookie.KeyPath, new NSString ("/"));
 				using (cookie = NSHttpCookie.CookieFromProperties (props)) {
-					Assert.NotNull (cookie, "w/path");
-		
+					Assert.That (cookie, Is.Not.Null, "w/path");
+
 					Assert.That (cookie.Domain, Is.EqualTo ("yodawg.com"), "Domain");
 					Assert.That (cookie.Name, Is.EqualTo ("iherd"), "Name");
 					Assert.That (cookie.Value, Is.EqualTo ("ulikecookies"), "Value");
@@ -89,7 +62,7 @@ namespace MonoTouchFixtures.Foundation {
 				}
 			}
 		}
-		
+
 		[Test]
 		public void NiceTwoCtor ()
 		{
@@ -100,7 +73,7 @@ namespace MonoTouchFixtures.Foundation {
 				Assert.That (cookie.Domain, Is.EqualTo ("*"), "Domain");
 			}
 		}
-		
+
 		[Test]
 		public void NiceThreeCtor ()
 		{
@@ -128,9 +101,13 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			// an invalid NSDictionary returns null from Objective-C but that
 			// results in an 'empty' instance inside MonoTouch
+#if NET10_0_OR_GREATER
+			Assert.Throws<Exception> (() => { new NSHttpCookie (new Cookie ()); }, "Exception");
+#else
 			using (var cookie = new NSHttpCookie (new Cookie ())) {
-				Assert.That (cookie.Handle, Is.EqualTo (IntPtr.Zero), "ctor");
+				Assert.That (cookie.Handle, Is.EqualTo (NativeHandle.Zero), "ctor");
 			}
+#endif
 		}
 
 		[Test]
@@ -143,18 +120,18 @@ namespace MonoTouchFixtures.Foundation {
 				Assert.That (cookie.Path, Is.EqualTo ("path"), "Path");
 				Assert.That (cookie.Domain, Is.EqualTo ("domain"), "Domain");
 				// defaults
-				Assert.Null (cookie.Comment, "Comment");
-				Assert.Null (cookie.CommentUrl, "CommentUrl");
-				Assert.Null (cookie.ExpiresDate, "ExpiresDate");
-				Assert.False (cookie.IsHttpOnly, "IsHttpOnly");
-				Assert.False (cookie.IsSecure, "IsSecure");
-				Assert.True (cookie.IsSessionOnly, "IsSessionOnly"); // discard
+				Assert.That (cookie.Comment, Is.Null, "Comment");
+				Assert.That (cookie.CommentUrl, Is.Null, "CommentUrl");
+				Assert.That (cookie.ExpiresDate, Is.Null, "ExpiresDate");
+				Assert.That (cookie.IsHttpOnly, Is.False, "IsHttpOnly");
+				Assert.That (cookie.IsSecure, Is.False, "IsSecure");
+				Assert.That (cookie.IsSessionOnly, Is.True, "IsSessionOnly"); // discard
 				Assert.That (cookie.PortList.Length, Is.EqualTo (0), "PortList");
-				Assert.NotNull (cookie.Properties, "Properties");
+				Assert.That (cookie.Properties, Is.Not.Null, "Properties");
 				Assert.That (cookie.Version, Is.EqualTo ((nuint) 0), "Version");
 			}
 		}
-		
+
 		[Test]
 		public void DotNetInteropMax ()
 		{
@@ -175,12 +152,12 @@ namespace MonoTouchFixtures.Foundation {
 				// custom values
 				Assert.That (cookie.Comment, Is.EqualTo ("comment"), "Comment");
 				Assert.That (cookie.CommentUrl.ToString (), Is.EqualTo ("http://comment.uri/"), "CommentUrl");
-				Assert.Null (cookie.ExpiresDate, "ExpiresDate"); // session-only always returns null
-				Assert.False (cookie.IsHttpOnly, "IsHttpOnly");
-				Assert.True (cookie.IsSecure, "IsSecure");
-				Assert.True (cookie.IsSessionOnly, "IsSessionOnly");
+				Assert.That (cookie.ExpiresDate, Is.Null, "ExpiresDate"); // session-only always returns null
+				Assert.That (cookie.IsHttpOnly, Is.False, "IsHttpOnly");
+				Assert.That (cookie.IsSecure, Is.True, "IsSecure");
+				Assert.That (cookie.IsSessionOnly, Is.True, "IsSessionOnly");
 				Assert.That ((int) cookie.PortList [0], Is.EqualTo (80), "PortList");
-				Assert.NotNull (cookie.Properties, "Properties");
+				Assert.That (cookie.Properties, Is.Not.Null, "Properties");
 				Assert.That (cookie.Version, Is.EqualTo ((nuint) 1), "Version");
 			}
 		}
@@ -193,7 +170,9 @@ namespace MonoTouchFixtures.Foundation {
 			c.CommentUri = new Uri ("http://comment.uri");
 			c.Discard = false;
 			c.Expires = DateTime.Now.AddDays (1);
+#pragma warning disable SM02360 // "Websites must specify the HttpOnly attribute on sensitive cookies" - this is a cookie test, we're not sending any requests, so it's safe to ignore
 			c.HttpOnly = false;
+#pragma warning restore SM02360
 			c.Port = "\"80\"";
 			c.Secure = true;
 			c.Version = 1;
@@ -211,11 +190,11 @@ namespace MonoTouchFixtures.Foundation {
 				// can be rounded up. This means that these two dates might be a second off.
 				// So assert that they're no more than a second apart.
 				Assert.That (Math.Abs ((dt1 - dt2).TotalSeconds), Is.LessThan (1.0), $"ExpiresDate");
-				Assert.False (cookie.IsHttpOnly, "IsHttpOnly");
-				Assert.True (cookie.IsSecure, "IsSecure");
-				Assert.IsFalse (cookie.IsSessionOnly, "IsSessionOnly");
+				Assert.That (cookie.IsHttpOnly, Is.False, "IsHttpOnly");
+				Assert.That (cookie.IsSecure, Is.True, "IsSecure");
+				Assert.That (cookie.IsSessionOnly, Is.False, "IsSessionOnly");
 				Assert.That ((int) cookie.PortList [0], Is.EqualTo (80), "PortList");
-				Assert.NotNull (cookie.Properties, "Properties");
+				Assert.That (cookie.Properties, Is.Not.Null, "Properties");
 				Assert.That (cookie.Version, Is.EqualTo ((nuint) 1), "Version");
 			}
 		}

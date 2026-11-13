@@ -1,141 +1,100 @@
 TOP=.
-SUBDIRS=builds runtime fsharp src msbuild tools
+SUBDIRS=builds
 include $(TOP)/Make.config
 include $(TOP)/mk/versions.mk
+
+# Without Xcode, skip directories that require native compilation or macOS platform
+ifndef NO_XCODE
+SUBDIRS += runtime
+endif
+
+SUBDIRS += src
+
+ifndef ONLY_SHARPIE
+SUBDIRS += msbuild
+endif
+
+SUBDIRS += tools
+
+ifeq ($(UNAME_S),Darwin)
+SUBDIRS += dotnet
+endif
 
 #
 # Common
 #
 
 all-local:: check-system
-install-local:: check-system
+install-local::
 
 .PHONY: world
 world: check-system
 	@$(MAKE) reset-versions
 	@$(MAKE) all -j8
 	@$(MAKE) install -j8
+	@echo "Build is done, the following workloads were built:"
+	@$(DOTNET) workload list
 
 .PHONY: check-system
 check-system:
-	@if [[ "x$(IOS_COMMIT_DISTANCE)" != "x$(MAC_COMMIT_DISTANCE)" ]]; then \
-		echo "$(COLOR_RED)*** The commit distance for Xamarin.iOS ($(IOS_COMMIT_DISTANCE)) and Xamarin.Mac ($(MAC_COMMIT_DISTANCE)) are different.$(COLOR_CLEAR)"; \
-		echo "$(COLOR_RED)*** To fix this problem, bump the revision (the third number) for both $(COLOR_GRAY)IOS_PACKAGE_NUMBER$(COLOR_RED) and $(COLOR_GRAY)MAC_PACKAGE_NUMBER$(COLOR_RED) in Make.versions.$(COLOR_CLEAR)"; \
-		echo "$(COLOR_RED)*** Once fixed, you need to commit the changes for them to pass this check.$(COLOR_CLEAR)"; \
-		exit 1; \
-	elif (( $(IOS_COMMIT_DISTANCE) > 999 || $(MAC_COMMIT_DISTANCE) > 999 )); then \
-		echo "$(COLOR_RED)*** The commit distance for Xamarin.iOS ($(IOS_COMMIT_DISTANCE)) and/or Xamarin.Mac ($(MAC_COMMIT_DISTANCE)) are > 999.$(COLOR_CLEAR)"; \
-		echo "$(COLOR_RED)*** To fix this problem, bump the revision (the third number) for both $(COLOR_GRAY)IOS_PACKAGE_NUMBER$(COLOR_RED) and $(COLOR_GRAY)MAC_PACKAGE_NUMBER$(COLOR_RED) in Make.versions.$(COLOR_CLEAR)"; \
-		echo "$(COLOR_RED)*** Once fixed, you need to commit the changes for them to pass this check.$(COLOR_CLEAR)"; \
-		exit 1; \
-	fi
 	@./system-dependencies.sh
-	@echo "Building Xamarin.iOS $(IOS_PACKAGE_VERSION) and Xamarin.Mac $(MAC_PACKAGE_VERSION)"
+	$(Q) $(MAKE) show-versions
 
-check-permissions:
-ifdef INCLUDE_MAC
-	@UNREADABLE=`find $(MAC_DESTDIR) ! -perm -0644`; if ! test -z "$$UNREADABLE"; then echo "There are files with invalid permissions (all installed files at least be readable by everybody, and writable by owner: 0644): "; find $(MAC_DESTDIR) ! -perm -0644 | xargs ls -la; exit 1; fi
-	@echo Validated file permissions for Xamarin.Mac.
-endif
-ifdef INCLUDE_IOS
-	@UNREADABLE=`find $(IOS_DESTDIR) ! -perm -0644`; if ! test -z "$$UNREADABLE"; then echo "There are files with invalid permissions (all installed files at least be readable by everybody, and writable by owner: 0644): "; find $(IOS_DESTDIR) ! -perm -0644 | xargs ls -la; exit 1; fi
-	@echo Validated file permissions for Xamarin.iOS.
-endif
+show-versions:
+	@echo "Building:"
+	@echo "    The .NET NuGet(s):"
+	@$(foreach platform,$(DOTNET_PLATFORMS),echo "        Microsoft.$(platform) $($(call uppercase,$(platform))_NUGET_VERSION_FULL)";)
+	@$(MAKE) -C tools/sharpie show-version
+
+all-local:: global.json
+
+# This tells NuGet to use the exact same dotnet version we've configured in Make.config
+global.json: $(TOP)/dotnet.config Makefile $(GIT_DIRECTORY)/HEAD $(GIT_DIRECTORY)/index
+	$(Q_GEN) \
+		printf "{\n" > $@; \
+		printf "  \"sdk\": {\n" >> $@; \
+		printf "    \"version\": \"$(DOTNET_VERSION)\",\n" >> $@; \
+		printf "    \"paths\": [\n" >> $@; \
+		printf "      \"builds/downloads/dotnet\",\n" >> $@; \
+		printf "      \"\$$host\$$\"\n" >> $@; \
+		printf "    ],\n" >> $@; \
+		printf "    \"errorMessage\": \"The .NET SDK could not be found, please run 'make dotnet -C builds'.\"\n" >> $@; \
+		printf "  },\n" >> $@; \
+		printf "  \"tools\": {\n    \"dotnet\": \"$(DOTNET_VERSION)\"\n  },\n" >> $@; \
+		printf "  \"msbuild-sdks\": {\n    \"Microsoft.DotNet.Arcade.Sdk\": \"$(ARCADE_VERSION)\"\n  }\n" >> $@; \
+		printf "}\n" >> $@
 
 install-hook::
-	@$(MAKE) check-permissions
-ifdef INCLUDE_IOS
-ifneq ($(findstring $(IOS_DESTDIR)$(MONOTOUCH_PREFIX),$(shell ls -l /Library/Frameworks/Xamarin.iOS.framework/Versions/Current 2>&1)),)
-	@echo
-	@echo "	This build of Xamarin.iOS is the now default version on your system. "
-	@echo
-else
-	@echo
-	@echo "	Xamarin.iOS has not been installed into your system by 'make install'"
-	@echo "	In order to set the currently built Xamarin.iOS as your system version,"
-	@echo "	execute 'make install-system'".
-	@echo
-endif
-endif
-ifdef INCLUDE_MAC
-ifndef INCLUDE_IOS
-	@echo
-endif
-ifneq ($(findstring $(abspath $(MAC_DESTDIR)$(MAC_FRAMEWORK_DIR)/Versions),$(shell ls -l $(MAC_FRAMEWORK_DIR)/Versions/Current 2>&1)),)
-	@echo "	This build of Xamarin.Mac is the now default version on your system. "
-	@echo
-else
-	@echo "	Xamarin.Mac has not been installed into your system by 'make install'"
-	@echo "	In order to set the currently built Xamarin.Mac as your system version,"
-	@echo "	execute 'make install-system'".
-	@echo
-endif
-endif
+	$(Q) if ! git diff --exit-code global.json; then \
+		echo "Error: global.json has changed: please commit the changes."; \
+		exit 1; \
+	fi
 
-package:
-	mkdir -p ../package
-	$(MAKE) -C $(MACCORE_PATH) package
-	# copy .pkg, .zip and *updateinfo to the packages directory to be uploaded to storage
-	$(CP) $(MACCORE_PATH)/release/*.pkg ../package
-	$(CP) $(MACCORE_PATH)/release/*.zip ../package
-	$(CP) $(MACCORE_PATH)/release/*updateinfo ../package
+dotnet-install-system:
+	$(Q) $(MAKE) -C dotnet install-system
 
-install-system: install-system-ios install-system-mac
-	@# Clean up some old files
-	$(Q) rm -Rf /Library/Frameworks/Mono.framework/External/xbuild/Xamarin/iOS
-	$(Q) rm -Rf /Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Xamarin.ObjcBinding.CSharp.targets
-	$(Q) rm -Rf /Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Xamarin.Common.CSharp.targets
-	$(Q) rm -Rf /Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Xamarin.ObjcBinding.Tasks.dll
-	$(Q) rm -Rf /Library/Frameworks/Mono.framework/External/xbuild/Xamarin/Mac
-	$(Q) $(MAKE) install-symlinks MAC_DESTDIR=/ MAC_INSTALL_VERSION=Current IOS_DESTDIR=/ IOS_INSTALL_VERSION=Current -C msbuild V=$(V)
-ifdef ENABLE_XAMARIN
-	$(Q) $(MAKE) install-symlinks MAC_DESTDIR=/ MAC_INSTALL_VERSION=Current IOS_DESTDIR=/ IOS_INSTALL_VERSION=Current -C $(MACCORE_PATH) V=$(V)
-endif
+fix-xcode-select:
+	sudo xcode-select -s $(XCODE_DEVELOPER_ROOT)
 
-install-system-ios:
-ifdef INCLUDE_IOS
-	@if ! test -s "$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX)/buildinfo"; then echo "The Xamarin.iOS build seems incomplete. Did you run \"make install\"?"; exit 1; fi
-	$(Q) rm -f /Library/Frameworks/Xamarin.iOS.framework/Versions/Current
-	$(Q) mkdir -p /Library/Frameworks/Xamarin.iOS.framework/Versions
-	$(Q) ln -s $(IOS_DESTDIR)$(MONOTOUCH_PREFIX) /Library/Frameworks/Xamarin.iOS.framework/Versions/Current
-	$(Q) echo Installed Xamarin.iOS into /Library/Frameworks/Xamarin.iOS.framework/Versions/Current
-endif
+fix-xcode-first-run:
+	$(XCODE_DEVELOPER_ROOT)/usr/bin/xcodebuild -runFirstLaunch
 
-install-system-mac:
-ifdef INCLUDE_MAC
-	@if ! test -s "$(MAC_DESTDIR)/$(MAC_FRAMEWORK_CURRENT_DIR)/buildinfo" ; then echo "The Xamarin.Mac build seems incomplete. Did you run \"make install\"?"; exit 1; fi
-	$(Q) rm -f $(MAC_FRAMEWORK_DIR)/Versions/Current
-	$(Q) mkdir -p $(MAC_FRAMEWORK_DIR)/Versions
-	$(Q) ln -s $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR) $(MAC_FRAMEWORK_DIR)/Versions/Current
-	$(Q) echo Installed Xamarin.Mac into $(MAC_FRAMEWORK_DIR)/Versions/Current
-endif
-
-fix-install-permissions:
-	sudo mkdir -p /Library/Frameworks/Mono.framework/External/
-	sudo mkdir -p /Library/Frameworks/Xamarin.iOS.framework
-	sudo mkdir -p /Library/Frameworks/Xamarin.Mac.framework
-	sudo chown -R $(USER) /Library/Frameworks/Mono.framework/External/
-	sudo chown -R $(USER) /Library/Frameworks/Xamarin.iOS.framework
-	sudo chown -R $(USER) /Library/Frameworks/Xamarin.Mac.framework
+install-dotnet:
+	@echo "Figuring out package link..."
+	@export PKG=$$(make -C builds print-dotnet-pkg-urls); \
+	echo "Downloading $$(basename $$PKG)..."; \
+	curl -LO "$$PKG"; \
+	echo "Installing $$(basename $$PKG)..."; \
+	time sudo installer -pkg "$$(basename $$PKG)" -target / -verbose -dumplog
 
 git-clean-all:
 	@echo "$(COLOR_RED)Cleaning and resetting all dependencies. This is a destructive operation.$(COLOR_CLEAR)"
 	@echo "$(COLOR_RED)You have 5 seconds to cancel (Ctrl-C) if you wish.$(COLOR_CLEAR)"
 	@sleep 5
-	@echo "Cleaning xamarin-macios..."
+	@echo "Cleaning macios..."
 	@git clean -xffdq
+	@echo "Cleaning submodules..."
 	@git submodule foreach -q --recursive 'git clean -xffdq && git reset --hard -q'
-	@for dir in $(DEPENDENCY_DIRECTORIES); do if test -d $(CURDIR)/$$dir; then echo "Cleaning $$dir" && cd $(CURDIR)/$$dir && git clean -xffdq && git reset --hard -q && git submodule foreach -q --recursive 'git clean -xffdq'; else echo "Skipped  $$dir (does not exist)"; fi; done
-ifdef ENABLE_XAMARIN
-	@./configure --enable-xamarin
-	$(MAKE) reset
-	@echo "Done (Xamarin-specific build has been re-enabled)"
-else
 	@echo "Done"
-endif
-
-ifdef ENABLE_XAMARIN
-SUBDIRS += $(MACCORE_PATH)
-endif
 
 SUBDIRS += tests

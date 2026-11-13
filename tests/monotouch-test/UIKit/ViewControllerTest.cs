@@ -7,29 +7,20 @@
 // Copyright 2012-2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Reflection;
-#if XAMCORE_2_0
-using Foundation;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using UIKit;
-using ObjCRuntime;
-#if !__TVOS__
-using iAd;
-#endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.iAd;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.UIKit {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class ViewControllerTest {
-		
+
 #if !__TVOS__
 		[Test]
 		public void Bug3489 ()
@@ -39,14 +30,9 @@ namespace MonoTouchFixtures.UIKit {
 			using (UIViewController c = new UIViewController ()) {
 				a.PresentModalViewController (b, true);
 				b.PresentModalViewController (c, true);
-				
-#if XAMCORE_2_0
+
 				b.DismissModalViewController (true);
 				a.DismissModalViewController (true); //error
-#else
-				b.DismissModalViewControllerAnimated (true);
-				a.DismissModalViewControllerAnimated (true); //error
-#endif
 			}
 		}
 #endif
@@ -59,16 +45,11 @@ namespace MonoTouchFixtures.UIKit {
 			using (UIViewController b = new UIViewController ())
 			using (UIViewController c = new UIViewController ())
 			using (UIViewController wb = new UINavigationController (b))
-			using (UIViewController wc = new UINavigationController (c))
-			{
+			using (UIViewController wc = new UINavigationController (c)) {
 				a.PresentModalViewController (wb, true);
 				b.PresentModalViewController (wc, true);
 
-#if XAMCORE_2_0
 				c.DismissModalViewController (true); //error
-#else
-				c.DismissModalViewControllerAnimated (true); //error
-#endif
 			}
 		}
 #endif
@@ -80,8 +61,7 @@ namespace MonoTouchFixtures.UIKit {
 			using (UIViewController b = new UIViewController ())
 			using (UIViewController c = new UIViewController ())
 			using (UIViewController wb = new UINavigationController (b))
-			using (UIViewController wc = new UINavigationController (c))
-			{
+			using (UIViewController wc = new UINavigationController (c)) {
 				// interesting [PreSnippet] for the linker (wrt backing field elimitation)
 				a.PresentViewController (wb, true, null);
 				b.PresentViewController (wc, true, null);
@@ -90,7 +70,7 @@ namespace MonoTouchFixtures.UIKit {
 				c.DismissViewController (true, null);
 			}
 		}
-				
+
 		[Test]
 		public void NSAction_Null ()
 		{
@@ -105,39 +85,43 @@ namespace MonoTouchFixtures.UIKit {
 		public void Defaults ()
 		{
 			using (var vc = new UIViewController ()) {
-				Assert.That (vc.ChildViewControllers, Is.Empty, "ChildViewControllers");
-				Assert.False (vc.DefinesPresentationContext, "DefinesPresentationContext");
-				Assert.False (vc.DisablesAutomaticKeyboardDismissal, "DisablesAutomaticKeyboardDismissal");
-				Assert.False (vc.Editing, "Editing");
-				Assert.False (vc.IsBeingDismissed, "IsBeingDismissed");
-				Assert.False (vc.IsBeingPresented, "IsBeingPresented");
-				Assert.False (vc.IsMovingFromParentViewController, "IsMovingFromParentViewController");
-				Assert.False (vc.IsMovingToParentViewController, "IsMovingToParentViewController");
-				Assert.False (vc.IsViewLoaded, "IsViewLoaded");
-				Assert.False (vc.ModalInPopover, "ModalInPopover");
-				Assert.Null (vc.NavigationController, "NavigationController");
-				Assert.NotNull (vc.NibBundle, "NibBundle");
-				Assert.Null (vc.NibName, "NibName");
-				Assert.Null (vc.ParentViewController, "ParentViewController");
-				Assert.Null (vc.PresentedViewController, "PresentedViewController");
-				Assert.Null (vc.PresentingViewController, "PresentingViewController");
-				Assert.False (vc.ProvidesPresentationContextTransitionStyle, "ProvidesPresentationContextTransitionStyle");
+				Assert.Multiple (() => {
+					Assert.That (vc.ChildViewControllers, Is.Empty, "ChildViewControllers");
+					Assert.That (vc.DefinesPresentationContext, Is.False, "DefinesPresentationContext");
+					Assert.That (vc.DisablesAutomaticKeyboardDismissal, Is.EqualTo (true).Or.EqualTo (false), "DisablesAutomaticKeyboardDismissal");
+					Assert.That (vc.Editing, Is.False, "Editing");
+					Assert.That (vc.IsBeingDismissed, Is.False, "IsBeingDismissed");
+					Assert.That (vc.IsBeingPresented, Is.False, "IsBeingPresented");
+					Assert.That (vc.IsMovingFromParentViewController, Is.False, "IsMovingFromParentViewController");
+					Assert.That (vc.IsMovingToParentViewController, Is.False, "IsMovingToParentViewController");
+					Assert.That (vc.IsViewLoaded, Is.False, "IsViewLoaded");
+					Assert.That (vc.ModalInPopover, Is.False, "ModalInPopover");
+					Assert.That (vc.NavigationController, Is.Null, "NavigationController");
+					Assert.That (vc.NibBundle, Is.Not.Null, "NibBundle");
+					Assert.That (vc.NibName, Is.Null, "NibName");
+					Assert.That (vc.ParentViewController, Is.Null, "ParentViewController");
+					Assert.That (vc.PresentedViewController, Is.Null, "PresentedViewController");
+					Assert.That (vc.PresentingViewController, Is.Null, "PresentingViewController");
+					Assert.That (vc.ProvidesPresentationContextTransitionStyle, Is.False, "ProvidesPresentationContextTransitionStyle");
 #if !__TVOS__
-				Assert.True (vc.AutomaticallyForwardAppearanceAndRotationMethodsToChildViewControllers, "AutomaticallyForwardAppearanceAndRotationMethodsToChildViewControllers");
-				Assert.False (vc.HidesBottomBarWhenPushed, "HidesBottomBarWhenPushed");
-				Assert.Null (vc.ModalViewController, "ModalViewController");
-				Assert.Null (vc.RotatingFooterView, "RotatingFooterView");
-				Assert.Null (vc.RotatingHeaderView, "RotatingHeaderView");
-				Assert.Null (vc.SearchDisplayController, "SearchDisplayController");
-				Assert.False (vc.WantsFullScreenLayout, "WantsFullScreenLayout");
+					Assert.That (vc.AutomaticallyForwardAppearanceAndRotationMethodsToChildViewControllers, Is.True, "AutomaticallyForwardAppearanceAndRotationMethodsToChildViewControllers");
+					Assert.That (vc.HidesBottomBarWhenPushed, Is.False, "HidesBottomBarWhenPushed");
+					Assert.That (vc.ModalViewController, Is.Null, "ModalViewController");
+					Assert.That (vc.RotatingFooterView, Is.Null, "RotatingFooterView");
+					Assert.That (vc.RotatingHeaderView, Is.Null, "RotatingHeaderView");
+#if !__MACCATALYST__
+					Assert.That (vc.SearchDisplayController, Is.Null, "SearchDisplayController");
 #endif
-				Assert.Null (vc.SplitViewController, "SplitViewController");
-				Assert.Null (vc.Storyboard, "Storyboard");
-				Assert.Null (vc.TabBarController, "TabBarController");
-				Assert.NotNull (vc.TabBarItem, "TabBarItem");
-				Assert.Null (vc.Title, "Title");
-				Assert.Null (vc.ToolbarItems, "ToolbarItems");
-				Assert.NotNull (vc.View, "View");
+					Assert.That (vc.WantsFullScreenLayout, Is.False, "WantsFullScreenLayout");
+#endif
+					Assert.That (vc.SplitViewController, Is.Null, "SplitViewController");
+					Assert.That (vc.Storyboard, Is.Null, "Storyboard");
+					Assert.That (vc.TabBarController, Is.Null, "TabBarController");
+					Assert.That (vc.TabBarItem, Is.Not.Null, "TabBarItem");
+					Assert.That (vc.Title, Is.Null, "Title");
+					Assert.That (vc.ToolbarItems, Is.Null, "ToolbarItems");
+					Assert.That (vc.View, Is.Not.Null, "View");
+				});
 			}
 		}
 
@@ -151,12 +135,12 @@ namespace MonoTouchFixtures.UIKit {
 				vc.ToolbarItems = buttons;
 				Assert.That (vc.ToolbarItems.Length, Is.EqualTo (2), "1");
 				vc.ToolbarItems = null;
-				Assert.Null (vc.ToolbarItems, "2");
+				Assert.That (vc.ToolbarItems, Is.Null, "2");
 #if !__TVOS__
 				vc.SetToolbarItems (buttons, true);
 				Assert.That (vc.ToolbarItems.Length, Is.EqualTo (2), "3");
 				vc.SetToolbarItems (null, false);
-				Assert.Null (vc.ToolbarItems, "4");
+				Assert.That (vc.ToolbarItems, Is.Null, "4");
 #endif
 			}
 		}
@@ -167,12 +151,12 @@ namespace MonoTouchFixtures.UIKit {
 			using (var vc = new UIViewController ()) {
 				// even if the default is null <quote>The default value of this property is nil.</quote>
 				// we'll never see it as such as it will be loaded (loadView)
-				Assert.NotNull (vc.View, "View-a");
+				Assert.That (vc.View, Is.Not.Null, "View-a");
 				// OTOH we can set it to null ourself
 				// or the controller can do it if iOS runs out of memory
 				vc.View = null;
 				// but again, accessing it will load the view
-				Assert.NotNull (vc.View, "View-b");
+				Assert.That (vc.View, Is.Not.Null, "View-b");
 			}
 		}
 
@@ -187,16 +171,129 @@ namespace MonoTouchFixtures.UIKit {
 			}
 		}
 
-#if !__TVOS__
-		[Test]
-		public void InterstitialAds_New ()
+		[TestCase (false)]
+		[TestCase (true)]
+		public void RunAsyncKeepsVisibleRoot (bool useNavigationController)
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
-			
-			UIViewController.PrepareForInterstitialAds ();
+			if (useNavigationController && UIDevice.CurrentDevice.UserInterfaceIdiom != UIUserInterfaceIdiom.Phone)
+				Assert.Ignore ("Navigation-controller containment is only used on iPhone.");
+
+			var originalWindow = GetKeyWindow ();
+			using var content = new AppearanceTrackingController ();
+			using var navigation = useNavigationController ? new UINavigationController (content) : null;
+			UIViewController root = content;
+			if (navigation is not null)
+				root = navigation;
+			using var window = new UIWindow (originalWindow.WindowScene);
+			var timeout = TimeSpan.FromSeconds (5);
+			try {
+				window.RootViewController = root;
+				window.MakeKeyAndVisible ();
+				Assert.That (NSRunLoop.Main.RunUntil (content.Appeared.Task, timeout), Is.True, "Root appeared");
+				Assert.That (window.IsKeyWindow, Is.True, "Temporary key window");
+				var originalChildren = root.ChildViewControllers;
+				var originalAppearance = content.Appearance.ToArray ();
+				Assert.That (originalAppearance, Is.EqualTo (new [] { "WillAppear", "DidAppear" }), "Initial appearance");
+
+				for (var iteration = 0; iteration < 2; iteration++) {
+					UIViewController overlay = null;
+					var inspected = false;
+					try {
+						Assert.That (TestRuntime.RunAsync (timeout, () => {
+							Assert.That (window.RootViewController, Is.SameAs (root), "Root during RunAsync");
+							overlay = root.ChildViewControllers.Except (originalChildren).Single ();
+							Assert.That (overlay.ParentViewController, Is.SameAs (root), "Overlay parent");
+							Assert.That (overlay.View.Superview, Is.SameAs (root.View), "Overlay superview");
+							Assert.That (overlay.View.Window, Is.SameAs (window), "Overlay window");
+							Assert.That (overlay.View.Frame, Is.EqualTo (root.View.Bounds), "Overlay frame");
+							if (navigation is not null)
+								Assert.That (navigation.ViewControllers, Is.EqualTo (new UIViewController [] { content, overlay }), "Navigation stack with overlay");
+							inspected = true;
+						}, () => inspected), Is.True, "RunAsync completed");
+						Assert.That (inspected, Is.True, "Inspected overlay");
+						Assert.That (overlay.ParentViewController, Is.Null, "Detached overlay parent");
+						Assert.That (overlay.View.Superview, Is.Null, "Detached overlay view");
+						Assert.That (window.RootViewController, Is.SameAs (root), "Root after RunAsync");
+						Assert.That (root.ChildViewControllers, Is.EqualTo (originalChildren), "Restored children");
+						if (navigation is not null)
+							Assert.That (navigation.ViewControllers, Is.EqualTo (new [] { content }), "Restored navigation stack");
+						Assert.That (content.Appearance, Is.EqualTo (originalAppearance), "Root appearance unchanged");
+					} finally {
+						overlay?.Dispose ();
+					}
+				}
+			} finally {
+				window.Hidden = true;
+				window.RootViewController = null;
+				originalWindow.MakeKeyWindow ();
+			}
 		}
-#endif // !__TVOS__
+
+		[Test]
+		public void RunAsyncRestoresRootlessKeyWindow ()
+		{
+			var originalWindow = GetKeyWindow ();
+			using var window = new UIWindow (originalWindow.WindowScene);
+			try {
+				window.MakeKeyWindow ();
+				Assert.That (window.IsKeyWindow, Is.True, "Rootless key window");
+				Assert.That (window.RootViewController, Is.Null, "Initial root");
+				var inspected = false;
+				Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (5), () => {
+					Assert.That (window.IsKeyWindow, Is.False, "Temporary window became key");
+					Assert.That (GetKeyWindow ().WindowScene, Is.SameAs (window.WindowScene), "Temporary window scene");
+					inspected = true;
+				}, () => inspected), Is.True, "RunAsync completed");
+				Assert.That (inspected, Is.True, "Inspected temporary window");
+				Assert.That (window.IsKeyWindow, Is.True, "Restored key window");
+				Assert.That (window.RootViewController, Is.Null, "Root remains unchanged");
+			} finally {
+				window.Hidden = true;
+				originalWindow.MakeKeyWindow ();
+			}
+		}
+
+		static UIWindow GetKeyWindow ()
+		{
+			var window = UIApplication.SharedApplication.ConnectedScenes
+				.OfType<UIWindowScene> ()
+				.SelectMany (scene => scene.Windows)
+				.LastOrDefault (candidate => candidate.IsKeyWindow);
+			Assert.That (window, Is.Not.Null, "Existing key window");
+			return window;
+		}
+
+		[Preserve (AllMembers = true)]
+		class AppearanceTrackingController : UIViewController {
+			public List<string> Appearance { get; } = new List<string> ();
+			public TaskCompletionSource<bool> Appeared { get; } = new TaskCompletionSource<bool> ();
+
+			public override void ViewWillAppear (bool animated)
+			{
+				base.ViewWillAppear (animated);
+				Appearance.Add ("WillAppear");
+			}
+
+			public override void ViewDidAppear (bool animated)
+			{
+				base.ViewDidAppear (animated);
+				Appearance.Add ("DidAppear");
+				Appeared.TrySetResult (true);
+			}
+
+			public override void ViewWillDisappear (bool animated)
+			{
+				base.ViewWillDisappear (animated);
+				Appearance.Add ("WillDisappear");
+			}
+
+			public override void ViewDidDisappear (bool animated)
+			{
+				base.ViewDidDisappear (animated);
+				Appearance.Add ("DidDisappear");
+			}
+		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

@@ -1,0 +1,21 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<!--
+
+			Some feeds have testing versions of the Messaging packages 
+			with versions 99.*. This means that we'll want the exact
+			version of the packages below, not the specified version or any
+			other later version, because if the requested version doesn't
+			exist, we'll get the testing version and things break in
+			interesting ways. So in order to get the exact version, they're
+			enclosed in brackets.
+
+			Lists of versions can be found here:
+
+			https://dev.azure.com/azure-public/vside/_artifacts/feed/xamarin-impl/NuGet/Xamarin.Messaging.Client/
+
+		-->
+		<MessagingVersion Condition="'$(MessagingVersion)' == ''">[18.11.15-g73d6b6539d]</MessagingVersion>
+	</PropertyGroup>
+	<Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+</Project>

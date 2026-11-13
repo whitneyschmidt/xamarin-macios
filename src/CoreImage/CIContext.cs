@@ -24,152 +24,148 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using Foundation;
+
+using System.ComponentModel;
+
 using CoreGraphics;
 using CoreFoundation;
-using ObjCRuntime;
-#if !MONOMAC
 using Metal;
+#if HAS_OPENGLES
 using OpenGLES;
 #endif
+
+#nullable enable
+
 namespace CoreImage {
-	public class CIContextOptions : DictionaryContainer {
-
-		public CIContextOptions ()
-		{
-		}
-
-		public CIContextOptions (NSDictionary dictionary)
-			: base (dictionary)
-		{
-		}
-
-		public CGColorSpace OutputColorSpace {
-			get {
-				return GetNativeValue<CGColorSpace> (CIContext.OutputColorSpace);
-			}
-			set {
-				SetNativeValue (CIContext.OutputColorSpace, value);
-			}
-		}
-
-		public CGColorSpace WorkingColorSpace {
-			get {
-				return GetNativeValue<CGColorSpace> (CIContext._WorkingColorSpace);
-			}
-			set {
-				SetNativeValue (CIContext._WorkingColorSpace, value);
-			}
-		}
-
+	/// <summary>Used to configure the CIContext rendering pipeline.</summary>
+	/// <remarks>You would use an instance of this class to configure the CIContext rendering operations.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public partial class CIContextOptions : DictionaryContainer {
+#if !XAMCORE_5_0
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'NullableUseSoftwareRenderer' instead.")]
 		public bool UseSoftwareRenderer {
 			get {
-				var b = GetBoolValue (CIContext.UseSoftwareRenderer);
+				var b = GetBoolValue (CIContextOptionKeys.UseSoftwareRenderer);
 				return b.HasValue ? b.Value : false;
 			}
 			set {
-				SetBooleanValue (CIContext.UseSoftwareRenderer, value);
+				SetBooleanValue (CIContextOptionKeys.UseSoftwareRenderer, value);
 			}
 		}
 
+		/// <summary>Gets or sets the image format to use for storing intermediate rendering results.</summary>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'WorkingFormatField' instead.")]
 		public int? CIImageFormat {
 			get {
-				return GetInt32Value (CIContext.WorkingFormatField);
+				return GetInt32Value (CIContextOptionKeys.WorkingFormatField);
 			}
 			set {
-				SetNumberValue (CIContext.WorkingFormatField, value);
+				SetNumberValue (CIContextOptionKeys.WorkingFormatField, value);
 			}
 		}
-
-		[Mac (10,12)]
-		public bool? PriorityRequestLow {
-			get {
-				return GetBoolValue (CIContext.PriorityRequestLow);
-			}
-			set {
-				SetBooleanValue (CIContext.PriorityRequestLow, value);
-			}
-		}
-
-		public bool? HighQualityDownsample {
-			get {
-				return GetBoolValue (CIContext.HighQualityDownsample);
-			}
-			set {
-				SetBooleanValue (CIContext.HighQualityDownsample, value);
-			}
-		}
-
-		[iOS (7,0)]
-		public bool? OutputPremultiplied {
-			get {
-				return GetBoolValue (CIContext.OutputPremultiplied);
-			}
-			set {
-				SetBooleanValue (CIContext.OutputPremultiplied, value);
-			}
-		}
-
-		[iOS (10,0)][Mac (10,12)]
-		public bool? CacheIntermediates {
-			get {
-				return GetBoolValue (CIContext.CacheIntermediates);
-			}
-			set {
-				SetBooleanValue (CIContext.CacheIntermediates, value);
-			}
-		}
+#endif // !XAMCORE_5_0
 	}
-	
-	public partial class CIContext {
 
-		[iOS (8,0)]
-		public CIContext (CIContextOptions options) :
+	public partial class CIContext {
+		/// <summary>Creates a new Core Image context with the specified <paramref name="options" />.</summary>
+		/// <param name="options">The context options to use, or <see langword="null" /> to use the default options.</param>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		public CIContext (CIContextOptions? options) :
 			this (options?.Dictionary)
 		{
 		}
 
-		public static CIContext FromContext (CGContext ctx, CIContextOptions options)
+		/// <param name="ctx">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>Creates a new CIContext from an existing one, along with the provided </summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CIContext FromContext (CGContext ctx, CIContextOptions? options)
 		{
 			return FromContext (ctx, options?.Dictionary);
 		}
-		
+
+		/// <param name="ctx">To be added.</param>
+		///         <summary>Creates a new CIContext from an existing one.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static CIContext FromContext (CGContext ctx)
 		{
-			return FromContext (ctx, (CIContextOptions) null);
+			return FromContext (ctx, (NSDictionary?) null);
 		}
 
-#if !MONOMAC
-		public static CIContext FromContext (EAGLContext eaglContext, CIContextOptions options)
+#if HAS_OPENGLES
+		/// <param name="eaglContext">The source <see cref="OpenGLES.EAGLContext" />.</param>
+		///         <param name="options">The desired <see cref="CoreImage.CIContextOptions" />.</param>
+		///         <summary>Creates a <see cref="CoreImage.CIContext" /> based on the <paramref name="eaglContext" />, with the specified <paramref name="options" />.</summary>
+		///         <returns>A new <see cref="CoreImage.CIContext" />.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("ios12.0")]
+		[ObsoletedOSPlatform ("tvos12.0")]
+		public static CIContext FromContext (EAGLContext eaglContext, CIContextOptions? options)
 		{
-			if (options == null)
+			if (options is null)
 				return FromContext (eaglContext);
 
 			return FromContext (eaglContext, options.Dictionary);
 		}
+#endif
 
-		public static CIContext FromMetalDevice (IMTLDevice device, CIContextOptions options)
+		/// <param name="device">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>Creates a new CIContext from the provided Metal device, along with the specified context.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CIContext FromMetalDevice (IMTLDevice device, CIContextOptions? options)
 		{
-			if (options == null)
+			if (options is null)
 				return FromMetalDevice (device);
 
 			return FromMetalDevice (device, options.Dictionary);
 		}
-#endif
 
 #if MONOMAC
-		[Deprecated (PlatformName.MacOSX, 10, 11)]
-		public CGLayer CreateCGLayer (CGSize size)
+		/// <param name="size">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("macos10.11")]
+		public CGLayer? CreateCGLayer (CGSize size)
 		{
 			return CreateCGLayer (size, null);
 		}
 #else
-		public static CIContext FromOptions (CIContextOptions options)
+		/// <param name="options">To be added.</param>
+		///         <summary>Creates a new <see cref="CoreImage.CIContext" /> from the options that are named in <paramref name="options" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CIContext FromOptions (CIContextOptions? options)
 		{
 			return FromOptions (options?.Dictionary);
 		}
-		
-		public CGImage CreateCGImage (CIImage image, CGRect fromRect, CIFormat ciImageFormat, CGColorSpace colorSpace)
+
+		/// <param name="image">To be added.</param>
+		///         <param name="fromRect">To be added.</param>
+		///         <param name="ciImageFormat">To be added.</param>
+		///         <param name="colorSpace">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CGImage? CreateCGImage (CIImage image, CGRect fromRect, CIFormat ciImageFormat, CGColorSpace? colorSpace)
 		{
 			return CreateCGImage (image, fromRect, CIImage.CIFormatToInt (ciImageFormat), colorSpace);
 		}

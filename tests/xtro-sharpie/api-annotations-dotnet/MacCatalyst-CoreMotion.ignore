@@ -1,0 +1,25 @@
+## not available on Catalyst (tested with macOS 12 b3)
+!missing-selector! +CMAltimeter::isAbsoluteAltitudeAvailable not bound
+!missing-selector! CMAltimeter::startAbsoluteAltitudeUpdatesToQueue:withHandler: not bound
+!missing-selector! CMAltimeter::stopAbsoluteAltitudeUpdates not bound
+
+## no generator support for FastEnumeration - https://bugzilla.xamarin.com/show_bug.cgi?id=4391
+!missing-protocol-conformance! CMSensorDataList should conform to NSFastEnumeration
+
+## Types that use these are not available on MacCatalyst
+!missing-enum! CMWaterSubmersionDepthState not bound
+!missing-enum! CMWaterSubmersionState not bound
+
+# results from initial block parameter nullability analysis
+!missing-null-allowed! 'System.Void CoreMotion.CMBatchedSensorManager::StartAccelerometerUpdates(System.Action`2<CoreMotion.CMAccelerometerData[],Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMBatchedSensorManager::StartAccelerometerUpdates(System.Action`2<CoreMotion.CMAccelerometerData[],Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMBatchedSensorManager::StartDeviceMotionUpdates(System.Action`2<CoreMotion.CMDeviceMotion[],Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMBatchedSensorManager::StartDeviceMotionUpdates(System.Action`2<CoreMotion.CMDeviceMotion[],Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMAltimeter::StartRelativeAltitudeUpdates(Foundation.NSOperationQueue,System.Action`2<CoreMotion.CMAltitudeData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMAltimeter::StartRelativeAltitudeUpdates(Foundation.NSOperationQueue,System.Action`2<CoreMotion.CMAltitudeData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::QueryPedometerData(Foundation.NSDate,Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::QueryPedometerData(Foundation.NSDate,Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerEventUpdates(System.Action`2<CoreMotion.CMPedometerEvent,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerEventUpdates(System.Action`2<CoreMotion.CMPedometerEvent,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerUpdates(Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerUpdates(Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1

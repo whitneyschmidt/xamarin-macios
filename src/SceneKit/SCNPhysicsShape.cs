@@ -7,23 +7,22 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
-
-namespace SceneKit
-{
-	public partial class SCNPhysicsShape
-	{
+namespace SceneKit {
+	public partial class SCNPhysicsShape {
+		/// <param name="shapes">A list of shapes to transform.</param>
+		///         <param name="transforms">A list of transforms to apply..</param>
+		///         <summary>Creates and returns a new physics shape by applying the specified <paramref name="transforms" /> to the specified shapes <paramref name="shapes" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static SCNPhysicsShape Create (SCNPhysicsShape [] shapes, SCNMatrix4 [] transforms)
 		{
-			if (shapes == null)
-				throw new ArgumentNullException ("shapes");
+			if (shapes is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (nameof (shapes));
 
-			if (transforms == null)
-				throw new ArgumentNullException ("transforms");
+			if (transforms is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (nameof (transforms));
 
 			var t = new NSValue [transforms.Length];
 			for (var i = 0; i < t.Length; i++)
@@ -32,24 +31,13 @@ namespace SceneKit
 			return Create (shapes, t);
 		}
 
-#if !XAMCORE_4_0
-		[Obsolete ("Use the 'Create' method that takes a 'SCNMatrix4 []'.")]
-		public static SCNPhysicsShape Create (SCNPhysicsShape [] shapes, SCNVector3 [] transforms)
-		{
-			if (shapes == null)
-				throw new ArgumentNullException ("shapes");
-
-			if (transforms == null)
-				throw new ArgumentNullException ("transforms");
-
-			var t = new NSValue [transforms.Length];
-			for (var i = 0; i < t.Length; i++)
-				t [i] = NSValue.FromVector (transforms [i]);
-
-			return Create (shapes, t);
-		}
-#endif
-
+		/// <param name="geometry">To be added.</param>
+		///         <param name="shapeType">To be added.</param>
+		///         <param name="keepAsCompound">To be added.</param>
+		///         <param name="scale">To be added.</param>
+		///         <summary>Creates and returns a new physics shape from the specified values.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static SCNPhysicsShape Create (SCNGeometry geometry,
 			SCNPhysicsShapeType? shapeType = null,
 			bool? keepAsCompound = null,
@@ -58,15 +46,27 @@ namespace SceneKit
 			return Create (geometry, new SCNPhysicsShapeOptions {
 				ShapeType = shapeType,
 				KeepAsCompound = keepAsCompound,
-				Scale = scale
+				Scale = scale,
 			}.ToDictionary ());
 		}
 
-		public static SCNPhysicsShape Create (SCNGeometry geometry, SCNPhysicsShapeOptions options)
+		/// <param name="geometry">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>Creates and returns a new physics shape from the specified <paramref name="geometry" /> and <paramref name="options" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static SCNPhysicsShape Create (SCNGeometry geometry, SCNPhysicsShapeOptions? options)
 		{
-			return Create (geometry, options.ToDictionary ());
+			return Create (geometry, options?.ToDictionary ());
 		}
 
+		/// <param name="node">To be added.</param>
+		///         <param name="shapeType">To be added.</param>
+		///         <param name="keepAsCompound">To be added.</param>
+		///         <param name="scale">To be added.</param>
+		///         <summary>Creates and returns a new physics shape from the specified values.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static SCNPhysicsShape Create (SCNNode node,
 			SCNPhysicsShapeType? shapeType = null,
 			bool? keepAsCompound = null,
@@ -75,48 +75,60 @@ namespace SceneKit
 			return Create (node, new SCNPhysicsShapeOptions {
 				ShapeType = shapeType,
 				KeepAsCompound = keepAsCompound,
-				Scale = scale
+				Scale = scale,
 			}.ToDictionary ());
 		}
 
-		public static SCNPhysicsShape Create (SCNNode node, SCNPhysicsShapeOptions options)
+		/// <param name="node">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>Creates and returns a new physics shape from the specified <paramref name="node" /> and <paramref name="options" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static SCNPhysicsShape Create (SCNNode node, SCNPhysicsShapeOptions? options)
 		{
-			return Create (node, options.ToDictionary ());
+			return Create (node, options?.ToDictionary ());
 		}
 
-		public SCNPhysicsShapeOptions Options {
+		/// <summary>Gets the options that were used when creating the physics shape.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNPhysicsShapeOptions? Options {
 			get {
 				var o = _Options;
-				if (o == null)
+				if (o is null)
 					return null;
 				return new SCNPhysicsShapeOptions (o);
 			}
 		}
 	}
 
-	[Mac (10, 10)]
-	[iOS (8, 0)]
-	public enum SCNPhysicsShapeType
-	{
-		ConvexHull,
-		BoundingBox,
-		ConcavePolyhedron
-	}
-
-	[Mac (10, 10)]
-	[iOS (8, 0)]
-	public class SCNPhysicsShapeOptions
-	{
+	/// <summary>Valid keys for the <c>options</c> creating new <see cref="SceneKit.SCNPhysicsShape" /> instances.</summary>
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
+	public class SCNPhysicsShapeOptions {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public SCNPhysicsShapeType? ShapeType { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool? KeepAsCompound { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public SCNVector3? Scale { get; set; }
 
-		public SCNPhysicsShapeOptions () {}
-		
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public SCNPhysicsShapeOptions () { }
+
 		internal SCNPhysicsShapeOptions (NSDictionary source)
 		{
 			var ret = source [SCNPhysicsShapeOptionsKeys.Type] as NSString;
-			if (ret != null){
+			if (ret is not null) {
 				if (ret == SCNPhysicsShapeOptionsTypes.BoundingBox)
 					ShapeType = SCNPhysicsShapeType.BoundingBox;
 				else if (ret == SCNPhysicsShapeOptionsTypes.ConcavePolyhedron)
@@ -125,14 +137,17 @@ namespace SceneKit
 					ShapeType = SCNPhysicsShapeType.ConvexHull;
 			}
 			var bret = source [SCNPhysicsShapeOptionsKeys.KeepAsCompound] as NSNumber;
-			if (bret != null)
+			if (bret is not null)
 				KeepAsCompound = bret.Int32Value != 0;
 			var nret = source [SCNPhysicsShapeOptionsKeys.Scale] as NSValue;
-			if (nret != null)
+			if (nret is not null)
 				Scale = nret.Vector3Value;
 		}
-		
-		public NSDictionary ToDictionary ()
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public NSDictionary? ToDictionary ()
 		{
 			var n = 0;
 			if (ShapeType.HasValue) n++;

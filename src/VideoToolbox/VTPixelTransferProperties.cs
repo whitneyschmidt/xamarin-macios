@@ -1,17 +1,16 @@
-﻿// 
+// 
 // VTPixelTransferProperties.cs: Strongly Typed dictionary for VTPixelTransferPropertyKeys 
 //
 // Authors: Alex Soto (alex.soto@xamarin.com)
 //     
 // Copyright 2015 Xamarin Inc.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Collections.Generic;
 
 using CoreFoundation;
-using ObjCRuntime;
-using Foundation;
 using CoreMedia;
 using CoreVideo;
 using AVFoundation;
@@ -20,11 +19,14 @@ using AVFoundation;
 namespace VideoToolbox {
 	public partial class VTPixelTransferProperties : DictionaryContainer {
 
-		public VTScalingMode ScalingMode { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public VTScalingMode ScalingMode {
 			get {
 				var key = GetNSStringValue (VTPixelTransferPropertyKeys.ScalingMode);
 
-				if (key == null)
+				if (key is null)
 					return VTScalingMode.Unset;
 				if (key == VTPixelTransferPropertyKeys.ScalingMode_Normal)
 					return VTScalingMode.Normal;
@@ -34,7 +36,7 @@ namespace VideoToolbox {
 					return VTScalingMode.Letterbox;
 				if (key == VTPixelTransferPropertyKeys.ScalingMode_Trim)
 					return VTScalingMode.Trim;
-				return VTScalingMode.Unset; 
+				return VTScalingMode.Unset;
 			}
 			set {
 				switch (value) {
@@ -57,17 +59,20 @@ namespace VideoToolbox {
 			}
 		}
 
-		public VTDownsamplingMode DownsamplingMode { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public VTDownsamplingMode DownsamplingMode {
 			get {
 				var key = GetNSStringValue (VTPixelTransferPropertyKeys.DownsamplingMode);
 
-				if (key == null)
+				if (key is null)
 					return VTDownsamplingMode.Unset;
 				if (key == VTPixelTransferPropertyKeys.DownsamplingMode_Decimate)
 					return VTDownsamplingMode.Decimate;
 				if (key == VTPixelTransferPropertyKeys.DownsamplingMode_Average)
 					return VTDownsamplingMode.Average;
-				return VTDownsamplingMode.Unset; 
+				return VTDownsamplingMode.Unset;
 			}
 			set {
 				switch (value) {
@@ -84,13 +89,18 @@ namespace VideoToolbox {
 			}
 		}
 
-#if XAMCORE_2_0
-		[iOS (10,0)]
-		public VTColorPrimaries DestinationColorPrimaries { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public VTColorPrimaries DestinationColorPrimaries {
 			get {
 				var key = GetNSStringValue (VTPixelTransferPropertyKeys.DestinationColorPrimaries);
 
-				if (key == null)
+				if (key is null)
 					return VTColorPrimaries.Unset;
 				if (key == CVImageBuffer.ColorPrimaries_ITU_R_709_2)
 					return VTColorPrimaries.ItuR7092;
@@ -122,14 +132,19 @@ namespace VideoToolbox {
 				}
 			}
 		}
-#endif
 
-		[iOS (10,0)]
-		public VTTransferFunction DestinationTransferFunction { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public VTTransferFunction DestinationTransferFunction {
 			get {
 				var key = GetNSStringValue (VTPixelTransferPropertyKeys.DestinationTransferFunction);
 
-				if (key == null)
+				if (key is null)
 					return VTTransferFunction.Unset;
 				if (key == CVImageBuffer.TransferFunction_ITU_R_709_2)
 					return VTTransferFunction.ItuR7092;
@@ -157,11 +172,14 @@ namespace VideoToolbox {
 			}
 		}
 
-		public VTYCbCrMatrix DestinationYCbCrMatrix { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public VTYCbCrMatrix DestinationYCbCrMatrix {
 			get {
 				var key = GetNSStringValue (VTPixelTransferPropertyKeys.DestinationYCbCrMatrix);
 
-				if (key == null)
+				if (key is null)
 					return VTYCbCrMatrix.Unset;
 				if (key == CVImageBuffer.YCbCrMatrix_ITU_R_709_2)
 					return VTYCbCrMatrix.ItuR7092;
@@ -169,7 +187,7 @@ namespace VideoToolbox {
 					return VTYCbCrMatrix.ItuR6014;
 				if (key == CVImageBuffer.YCbCrMatrix_SMPTE_240M_1995)
 					return VTYCbCrMatrix.Smpte240M1955;
-				return VTYCbCrMatrix.Unset; 
+				return VTYCbCrMatrix.Unset;
 			}
 			set {
 				switch (value) {

@@ -2,32 +2,13 @@
 // Unit tests for AudioUnit
 //
 
-#if !__WATCHOS__
-
-using System;
-using NUnit.Framework;
-using System.Runtime.InteropServices;
-
-
-#if XAMCORE_2_0
-using Foundation;
 using AudioUnit;
 using AudioToolbox;
-using ObjCRuntime;
-#else
-using MonoTouch.AudioUnit;
-using MonoTouch.AudioToolbox;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch;
-#endif
 
-namespace MonoTouchFixtures.AudioUnit
-{
+namespace MonoTouchFixtures.AudioUnit {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class AudioUnitTest
-	{
+	public class AudioUnitTest {
 		[Test]
 		public void DisposeMethodTest ()
 		{
@@ -37,9 +18,9 @@ namespace MonoTouchFixtures.AudioUnit
 			AudioComponentDescription cd = new AudioComponentDescription () {
 				ComponentType = AudioComponentType.Output,
 #if MONOMAC
-				ComponentSubType = (int)AudioUnitSubType.VoiceProcessingIO,
+				ComponentSubType = AudioUnitSubType.GenericOutput,
 #else
-				ComponentSubType = 0x72696f63, // Remote_IO
+				ComponentSubType = (AudioUnitSubType) AudioTypeOutput.Remote,
 #endif
 				ComponentManufacturer = AudioComponentManufacturerType.Apple
 			};
@@ -56,9 +37,34 @@ namespace MonoTouchFixtures.AudioUnit
 			var mixerNode = graph.AddNode (AudioComponentDescription.CreateMixer (AudioTypeMixer.MultiChannel));
 			graph.Open ();
 			var mixer = graph.GetNodeInfo (mixerNode);
-			Assert.AreEqual (1, mixer.GetElementCount (AudioUnitScopeType.Global));
+			Assert.That (mixer.GetElementCount (AudioUnitScopeType.Global), Is.EqualTo (1));
+		}
+
+		[Test]
+		public void CopyIconTest ()
+		{
+			TestRuntime.AssertXcodeVersion (12, TestRuntime.MinorXcode12APIMismatch);
+			AudioComponentDescription cd = new AudioComponentDescription () {
+				ComponentType = AudioComponentType.Output,
+#if MONOMAC
+				ComponentSubType = AudioUnitSubType.VoiceProcessingIO,
+#else
+				ComponentSubType = (AudioUnitSubType) AudioTypeOutput.Remote,
+#endif
+				ComponentManufacturer = AudioComponentManufacturerType.Apple
+			};
+			AudioComponent component = AudioComponent.FindComponent (ref cd);
+			Assert.DoesNotThrow (() => {
+				var icon = component.CopyIcon (); // ensuring that the manual binding does not throw, we do not care about the result
+			});
+		}
+
+		[Test]
+		public unsafe void TestSizeOf ()
+		{
+			Assert.That (Marshal.SizeOf<AudioFormat> (), Is.EqualTo (sizeof (AudioFormat)));
+			Assert.That (Marshal.SizeOf<AudioValueRange> (), Is.EqualTo (sizeof (AudioValueRange)));
+			Assert.That (Marshal.SizeOf<AudioClassDescription> (), Is.EqualTo (sizeof (AudioClassDescription)));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

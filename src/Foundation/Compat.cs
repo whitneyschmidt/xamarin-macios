@@ -1,39 +1,31 @@
 //
-// Compat.cs: Stuff we won't provide in Xamarin.iOS.dll or newer XAMCORE_* profiles
+// Compat.cs: Stuff we won't provide in newer XAMCORE_* profiles
 //
 // Authors:
 //   Sebastien Pouliot  <sebastien@xamarin.com>
 //
 // Copyright 2015 Xamarin, Inc.
 
-
-using System;
+using System.ComponentModel;
 
 namespace Foundation {
-
-#if !XAMCORE_3_0
-	public partial class NSOperation {
-
-		[Obsolete ("Use 'WaitUntilFinished' method.")]
-		public virtual void WaitUntilFinishedNS ()
-		{
-			WaitUntilFinished ();
+#if !XAMCORE_5_0
+#if __IOS__ && !__MACCATALYST__
+	public partial class NSUrlConnection {
+		// Extension from iOS5, NewsstandKit
+		/// <summary>Retrieves the NKAssetDownload of this newsstand-related connection.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("The NewsstandKit framework has been removed from iOS.")]
+		public virtual global::NewsstandKit.NKAssetDownload NewsstandAssetDownload {
+			get {
+				throw new InvalidOperationException (Constants.NewsstandKitRemoved);
+			}
 		}
-	}
-#endif
 
-#if !XAMCORE_4_0 && (XAMCORE_2_0 || !MONOMAC) && !WATCH
-	public partial class NSUserActivity {
-
-		[Obsolete ("Use the constructor that allows you to set an activity type.")]
-		public NSUserActivity ()
-#if XAMCORE_2_0
-			: this (String.Empty)
-#else
-			: this (NSString.Empty)
-#endif
-		{
-		}
 	}
-#endif
+#endif // __IOS__
+#endif // !XAMCORE_5_0
 }
+

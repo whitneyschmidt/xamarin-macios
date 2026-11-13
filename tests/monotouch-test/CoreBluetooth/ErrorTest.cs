@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CB[ATT]Error enums
 //
 // Authors:
@@ -7,18 +7,7 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-
-#if XAMCORE_2_0
-using Foundation;
 using CoreBluetooth;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.CoreBluetooth;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreBluetooth {
 
@@ -39,5 +28,3 @@ namespace MonoTouchFixtures.CoreBluetooth {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

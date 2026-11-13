@@ -6,14 +6,10 @@
 //
 // Copyrigh 2014-2015, Xamarin Inc.
 //
-#if XAMCORE_2_0 || !MONOMAC
 
-using System;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace Metal {
 #if MONOMAC
@@ -21,155 +17,219 @@ namespace Metal {
 	public delegate void MTLDeviceNotificationHandler (IMTLDevice device, NSString notifyName);
 #endif
 
-	[iOS (8,0)][Mac (10,11)]
+	/// <summary>Represents a single GPU.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
 	public static partial class MTLDevice {
 		[DllImport (Constants.MetalLibrary)]
 		extern static IntPtr MTLCreateSystemDefaultDevice ();
 
-		static IMTLDevice system_default;
-		
-		public static IMTLDevice SystemDefault {
+		static IMTLDevice? system_default;
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public static IMTLDevice? SystemDefault {
 			get {
 				// Metal could be unavailable on the hardware (and we don't want to return an invalid instance)
 				// also the instance could be disposed (by mistake) which would make the app unusable
-				if ((system_default == null) || (system_default.Handle == IntPtr.Zero)) {
+				if ((system_default is null) || (system_default.Handle == IntPtr.Zero)) {
 					try {
 						var h = MTLCreateSystemDefaultDevice ();
 						if (h != IntPtr.Zero)
 							system_default = new MTLDeviceWrapper (h, false);
-					}
-					catch (EntryPointNotFoundException) {
-					}
-					catch (DllNotFoundException) {
+					} catch (EntryPointNotFoundException) {
+					} catch (DllNotFoundException) {
 					}
 				}
 				return system_default;
 			}
 		}
 
-#if MONOMAC
-		[Mac (10,11, onlyOn64: true), NoiOS, NoWatch, NoTV]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios18.0")]
+		[SupportedOSPlatform ("tvos18.0")]
 		[DllImport (Constants.MetalLibrary)]
 		unsafe static extern IntPtr MTLCopyAllDevices ();
 
-		[Mac (10,11, onlyOn64: true), NoiOS, NoWatch, NoTV]
-		public static IMTLDevice [] GetAllDevices ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios18.0")]
+		[SupportedOSPlatform ("tvos18.0")]
+		public static IMTLDevice []? GetAllDevices ()
 		{
 			var rv = MTLCopyAllDevices ();
-			return NSArray.ArrayFromHandle<IMTLDevice> (rv);
+			return NSArray.ArrayFromHandleDropNullElements<IMTLDevice> (rv, releaseHandle: true);
 		}
 
-		[Mac (10, 13, onlyOn64: true), NoiOS, NoWatch, NoTV]
+#if MONOMAC
+
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos27.0", "Device notifications are not applicable on Apple Silicon")]
 		[DllImport (Constants.MetalLibrary)]
-		unsafe static extern IntPtr MTLCopyAllDevicesWithObserver (ref IntPtr observer, void* handler);
+		unsafe static extern IntPtr MTLCopyAllDevicesWithObserver (IntPtr* observer, BlockLiteral* handler);
 
-		[Mac (10, 13, onlyOn64: true), NoiOS, NoWatch, NoTV]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos27.0", "Device notifications are not applicable on Apple Silicon")]
 		[BindingImpl (BindingImplOptions.Optimizable)]
-		public static IMTLDevice [] GetAllDevices (ref NSObject observer, MTLDeviceNotificationHandler handler)
+		public static IMTLDevice [] GetAllDevices (MTLDeviceNotificationHandler handler, out NSObject? observer)
 		{
-			if (observer == null)
-				throw new ArgumentNullException ("observer");
+			IntPtr rv;
+			IntPtr observer_handle;
 
-			IntPtr handle = observer.Handle;
-
-			unsafe
-			{
-				BlockLiteral* block_ptr_handler;
-				BlockLiteral block_handler;
-				block_handler = new BlockLiteral ();
-				block_ptr_handler = &block_handler;
-				block_handler.SetupBlockUnsafe (static_notificationHandler, handler);
-
-				var rv = MTLCopyAllDevicesWithObserver (ref handle, (void*) block_ptr_handler);
-				var obj = NSArray.ArrayFromHandle<IMTLDevice> (rv);
-
-				if (handle != observer.Handle)
-					observer = Runtime.GetNSObject (handle);
-
-				return obj;
+			unsafe {
+				delegate* unmanaged<IntPtr, IntPtr, IntPtr, void> trampoline = &TrampolineNotificationHandler;
+				using var block = new BlockLiteral (trampoline, handler, typeof (MTLDevice), nameof (TrampolineNotificationHandler));
+				rv = MTLCopyAllDevicesWithObserver (&observer_handle, &block);
 			}
+
+			// owns: Apple's documentation says "The observer out parameter is returned with a +1 retain count [...]."
+			observer = Runtime.GetNSObject (observer_handle, owns: true);
+
+			return NSArray.NonNullArrayFromHandleDropNullElements<IMTLDevice> (rv, releaseHandle: true);
 		}
 
-		internal delegate void InnerNotification (IntPtr block, IntPtr device, IntPtr notifyName);
-		static readonly InnerNotification static_notificationHandler = TrampolineNotificationHandler;
-		[MonoPInvokeCallback (typeof (InnerNotification))]
+		/// <param name="block">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <param name="notifyName">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[UnmanagedCallersOnly]
 		public static unsafe void TrampolineNotificationHandler (IntPtr block, IntPtr device, IntPtr notifyName)
 		{
-			var descriptor = (BlockLiteral*) block;
-			var del = (MTLDeviceNotificationHandler) (descriptor->Target);
-			if (del != null)
-				del ((IMTLDevice) Runtime.GetNSObject (device), (Foundation.NSString) Runtime.GetNSObject (notifyName));
+			var del = BlockLiteral.GetTarget<MTLDeviceNotificationHandler> (block);
+			if (del is not null)
+				del ((IMTLDevice) Runtime.GetNSObject (device)!, (Foundation.NSString) Runtime.GetNSObject (notifyName)!);
 		}
 
-		[Mac (10, 13, onlyOn64: true), NoiOS, NoWatch, NoTV]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos27.0", "Device notifications are not applicable on Apple Silicon")]
 		[DllImport (Constants.MetalLibrary)]
 		static extern void MTLRemoveDeviceObserver (IntPtr observer);
 
-		[Mac (10, 13, onlyOn64: true), NoiOS, NoWatch, NoTV]
+		/// <param name="observer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos27.0", "Device notifications are not applicable on Apple Silicon")]
 		public static void RemoveObserver (NSObject observer)
 		{
-			if (observer == null)
-				throw new ArgumentNullException ("observer");
+			if (observer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (observer));
 
 			MTLRemoveDeviceObserver (observer.Handle);
+			GC.KeepAlive (observer);
 		}
 #endif
 	}
 
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public static partial class MTLDevice_Extensions {
-		public static IMTLBuffer CreateBuffer<T> (this IMTLDevice This, T [] data, MTLResourceOptions options) where T : struct
+		/// <typeparam name="T">The type for which to create a buffer.</typeparam>
+		///         <param name="This">The instance on which this method operates.</param>
+		///         <param name="data">The data to copy into the buffer.</param>
+		///         <param name="options">Options for creating the buffer.</param>
+		///         <summary>Creates and returns a new buffer with a copy of the specified data.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static IMTLBuffer? CreateBuffer<T> (this IMTLDevice This, T [] data, MTLResourceOptions options) where T : struct
 		{
+			if (data is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data));
+
 			var handle = GCHandle.Alloc (data, GCHandleType.Pinned); // This requires a pinned GCHandle, since it's not possible to use unsafe code to get the address of a generic object.
 			try {
 				IntPtr ptr = handle.AddrOfPinnedObject ();
-				return This.CreateBuffer (ptr, (nuint)(data.Length * Marshal.SizeOf (typeof (T))) , options);
+				return This.CreateBuffer (ptr, (nuint) (data.Length * Marshal.SizeOf<T> ()), options);
 			} finally {
 				handle.Free ();
 			}
 		}
 
-#if !XAMCORE_4_0
-		[Obsolete ("Use the overload that takes an IntPtr instead. The 'data' parameter must be page-aligned and allocated using vm_allocate or mmap, which won't be the case for managed arrays, so this method will always fail.")]
-		public static IMTLBuffer CreateBufferNoCopy<T> (this IMTLDevice This, T [] data, MTLResourceOptions options, MTLDeallocator deallocator) where T : struct
-		{
-			var handle = GCHandle.Alloc (data, GCHandleType.Pinned); // This requires a pinned GCHandle, since it's not possible to use unsafe code to get the address of a generic object.
-			IntPtr ptr = handle.AddrOfPinnedObject ();
-			return This.CreateBufferNoCopy (ptr, (nuint)(data.Length * Marshal.SizeOf (typeof (T))), options, (pointer, length) => {
-				handle.Free ();
-				deallocator (pointer, length);
-			});
-		}
-#endif
-
+		/// <param name="This">The instance on which this method operates.</param>
+		/// <param name="positions">Array that will be filled with the default sample postions.</param>
+		/// <param name="count">The number of positions, which determines the set of default positions.</param>
+		/// <summary>Provides the default sample positions for the specified sample <paramref name="count" />.</summary>
+		/// <remarks>To be added.</remarks>
 		public unsafe static void GetDefaultSamplePositions (this IMTLDevice This, MTLSamplePosition [] positions, nuint count)
 		{
-			if (positions.Length < (nint)count)
+			if (positions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (positions));
+
+			if (positions.Length < (nint) count)
 				throw new ArgumentException ("Length of 'positions' cannot be less than 'count'.");
-			fixed (void * handle = positions)
-				GetDefaultSamplePositions (This, (IntPtr)handle, count);
+			fixed (void* handle = positions)
+				This.GetDefaultSamplePositions ((IntPtr) handle, count);
+		}
+#if IOS
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		public static void ConvertSparseTileRegions (this IMTLDevice This, MTLRegion [] tileRegions, MTLRegion [] pixelRegions, MTLSize tileSize, nuint numRegions)
+		{
+			if (tileRegions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tileRegions));
+			if (pixelRegions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (pixelRegions));
+
+			var tileRegionsHandle = GCHandle.Alloc (tileRegions, GCHandleType.Pinned);
+			var pixelRegionsHandle = GCHandle.Alloc (pixelRegions, GCHandleType.Pinned);
+			try {
+				IntPtr tilePtr = tileRegionsHandle.AddrOfPinnedObject ();
+				IntPtr pixelPtr = pixelRegionsHandle.AddrOfPinnedObject ();
+				This.ConvertSparseTileRegions (tilePtr, pixelPtr, tileSize, numRegions);
+			} finally {
+				tileRegionsHandle.Free ();
+				pixelRegionsHandle.Free ();
+			}
 		}
 
-#if !XAMCORE_4_0
-		[return: Release]
-		[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-		public static IMTLLibrary CreateLibrary (this IMTLDevice This, global::CoreFoundation.DispatchData data, out NSError error)
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		public static void ConvertSparsePixelRegions (this IMTLDevice This, MTLRegion [] pixelRegions, MTLRegion [] tileRegions, MTLSize tileSize, MTLSparseTextureRegionAlignmentMode mode, nuint numRegions)
 		{
-			if (data == null)
-				throw new ArgumentNullException ("data");
-			IntPtr errorValue = IntPtr.Zero;
+			if (tileRegions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tileRegions));
+			if (pixelRegions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (pixelRegions));
 
-			IMTLLibrary ret;
-			ret = Runtime.GetINativeObject<IMTLLibrary> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr_ref_IntPtr (This.Handle, Selector.GetHandle ("newLibraryWithData:error:"), data.Handle, ref errorValue), true);
-			error = Runtime.GetNSObject<NSError> (errorValue);
-
-			return ret;
-		}
-
-		public static IMTLLibrary CreateDefaultLibrary (this IMTLDevice This, NSBundle bundle, out NSError error)
-		{
-			return MTLDevice_Extensions.CreateLibrary (This, bundle, out error);
+			var tileRegionsHandle = GCHandle.Alloc (tileRegions, GCHandleType.Pinned);
+			var pixelRegionsHandle = GCHandle.Alloc (pixelRegions, GCHandleType.Pinned);
+			try {
+				IntPtr tilePtr = tileRegionsHandle.AddrOfPinnedObject ();
+				IntPtr pixelPtr = pixelRegionsHandle.AddrOfPinnedObject ();
+				This.ConvertSparsePixelRegions (pixelPtr, tilePtr, tileSize, mode, numRegions);
+			} finally {
+				tileRegionsHandle.Free ();
+				pixelRegionsHandle.Free ();
+			}
 		}
 #endif
 	}
 }
-#endif

@@ -25,31 +25,32 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#nullable enable
+
+#if !MONOMAC
+
 using System.Drawing;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
-using Foundation;
 using AVFoundation;
 
 namespace ReplayKit {
 	public partial class RPBroadcastConfiguration {
-		public AVVideoCodecSettings VideoCompressionProperties {
+		/// <summary>Gets or sets the video compression properties for the broadcast.</summary>
+		/// <value>The video compression settings, or <see langword="null" /> if not set.</value>
+		public AVVideoCodecSettings? VideoCompressionProperties {
 			get {
-				var weak = WeakVideoCompressionProperties; 
-				return weak == null ? null : new AVVideoCodecSettings (new NSMutableDictionary (weak));
+				var weak = WeakVideoCompressionProperties;
+				return weak is null ? null : new AVVideoCodecSettings (new NSMutableDictionary (weak));
 			}
 			set {
-#if XAMCORE_2_0
-				WeakVideoCompressionProperties = value == null ? null : new NSDictionary<NSString, INSSecureCoding> (value.Dictionary.Handle);
-#else
-				WeakVideoCompressionProperties = value == null ? null : new NSDictionary (value.Dictionary.Handle);
-#endif
+				WeakVideoCompressionProperties = value is null ? null : new NSDictionary<NSString, INSSecureCoding> (value.Dictionary.Handle);
 			}
-		}		
+		}
 	}
 }
+
+#endif

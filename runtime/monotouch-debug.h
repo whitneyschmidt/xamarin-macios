@@ -18,26 +18,16 @@
 extern "C" {
 #endif
 
+void monotouch_start_launch_timer ();
+void xamarin_capture_debugging_settings ();
 void monotouch_configure_debugging ();
 void monotouch_start_debugging ();
+void monotouch_wait_for_port_forwarding ();
 void monotouch_start_profiling ();
 
 void monotouch_set_connection_mode (const char *mode);
 void monotouch_set_monodevelop_port (int port);
 
-
-typedef struct {
-	const char *name;
-	void (*connect) (const char *address);
-	void (*close1) (void);
-	void (*close2) (void);
-	gboolean (*send) (void *buf, int len);
-	int (*recv) (void *buf, int len);
-} DebuggerTransport;
-
-void mono_debugger_agent_parse_options (const char *options); 
-gboolean mono_debugger_agent_transport_handshake (void);
-void mono_debugger_agent_register_transport (DebuggerTransport *trans);
 bool xamarin_is_native_debugger_attached ();
 
 #ifdef __cplusplus

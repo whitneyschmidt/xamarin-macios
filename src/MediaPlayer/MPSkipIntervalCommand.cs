@@ -7,26 +7,29 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace MediaPlayer {
-#if XAMCORE_2_0
+	/// <summary>Additional information for the skip interval command properties defined in <see cref="MPRemoteCommandCenter" />.</summary>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPSkipIntervalCommand_Ref/index.html">Apple documentation for <c>MPSkipIntervalCommand</c></related>
 	public partial class MPSkipIntervalCommand {
-		public double[] PreferredIntervals {
+		/// <summary>Gets or sets the preferred skip intervals, in seconds.</summary>
+		/// <value>An array of preferred skip intervals in seconds, or <see langword="null" /> if no intervals are set.</value>
+		public double []? PreferredIntervals {
 			get {
 				NSArray a = _PreferredIntervals;
-				if (a == null)
+				if ((a is null) || (a.Count == 0))
 					return null;
 
-                return NSArray.ArrayFromHandle<double> (a.Handle, input => {
+				double []? result = NSArray.ArrayFromHandle<double> (a.Handle, input => {
 					return new NSNumber (input).DoubleValue;
 				});
+				GC.KeepAlive (a);
+				return result;
 			}
 			set {
-				if (value == null)
-					_PreferredIntervals = null;
+				if (value is null)
+					_PreferredIntervals = new NSArray ();
 				else {
 					NSObject [] nsoa = new NSObject [value.Length];
 					for (int i = 0; i < value.Length; i++)
@@ -36,5 +39,4 @@ namespace MediaPlayer {
 			}
 		}
 	}
-#endif
 }

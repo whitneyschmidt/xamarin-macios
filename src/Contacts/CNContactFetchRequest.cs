@@ -4,19 +4,20 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace Contacts {
-#if XAMCORE_2_0 // The Contacts framework uses generics heavily, which is only supported in Unified (for now at least)
 	public partial class CNContactFetchRequest {
 
+		/// <summary>Creates and returns a new <see cref="Contacts.CNContactFetchRequest" /> that retrieves data with the specified <paramref name="keysToFetch" />.</summary>
+		/// <param name="keysToFetch">The keys to fetch.</param>
 		public CNContactFetchRequest (params ICNKeyDescriptor [] keysToFetch)
 			: this (NSArray.FromNativeObjects (keysToFetch))
 		{
 		}
 
+		/// <summary>Creates a new <see cref="Contacts.CNContactFetchRequest" /> that retrieves data with the specified <paramref name="keysToFetch" />.</summary>
+		/// <param name="keysToFetch">The keys to fetch.</param>
 		public CNContactFetchRequest (params NSString [] keysToFetch)
 			: this (NSArray.FromNSObjects (keysToFetch))
 		{
@@ -26,6 +27,8 @@ namespace Contacts {
 		// but a ctor using this (ICNKeyDescriptor) would not accept NSString
 		// so if you want to mix both NSString and (NSObjectProtocol, NSSecureCoding, NSCopying) you need to use
 		// this constructor, which will manually verify the requirements (at runtime, not a compile time)
+		/// <summary>Creates a new <see cref="Contacts.CNContactFetchRequest" /> that retrieves data with the specified <paramref name="keysToFetch" />.</summary>
+		/// <param name="keysToFetch">The keys to fetch.</param>
 		public CNContactFetchRequest (params INativeObject [] keysToFetch)
 			: this (Validate (keysToFetch))
 		{
@@ -40,7 +43,7 @@ namespace Contacts {
 		// NSObject.ConformsToProtocol won't work for *Wrapper types, like what returns ICNKeyDescriptor instances
 		static bool ConformsToProtocol (IntPtr handle, IntPtr protocol)
 		{
-			return Messaging.bool_objc_msgSend_IntPtr (handle, Selector.GetHandle ("conformsToProtocol:"), protocol);
+			return Messaging.bool_objc_msgSend_IntPtr (handle, Selector.GetHandle ("conformsToProtocol:"), protocol) != 0;
 		}
 
 		static NSArray Validate (params INativeObject [] keysToFetch)
@@ -60,5 +63,4 @@ namespace Contacts {
 			return NSArray.FromNativeObjects (keysToFetch);
 		}
 	}
-#endif // XAMCORE_2_0
 }

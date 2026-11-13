@@ -7,18 +7,10 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.UIKit {
 
@@ -29,17 +21,17 @@ namespace MonoTouchFixtures.UIKit {
 		[Test]
 		public void CtorNull ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
 
 			using (var ta = new NSTextAttachment (null, null)) {
-				Assert.IsTrue (ta.Bounds.IsEmpty, "Bounds");
-				Assert.Null (ta.Contents, "Contents");
-				Assert.Null (ta.FileType, "FileType");
-				Assert.Null (ta.FileWrapper, "FileWrapper");
-				Assert.Null (ta.Image, "Image");
+				Assert.That (ta.Bounds.IsEmpty, Is.True, "Bounds");
+				Assert.That (ta.Contents, Is.Null, "Contents");
+				Assert.That (ta.FileType, Is.Null, "FileType");
+				Assert.That (ta.FileWrapper, Is.Null, "FileWrapper");
+				Assert.That (ta.Image, Is.Null, "Image");
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

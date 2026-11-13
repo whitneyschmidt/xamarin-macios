@@ -9,7 +9,10 @@
 // Copyright 2011-2012 Xamarin Inc. 
 //
 
+#include <TargetConditionals.h>
+#if !TARGET_OS_OSX
 #include <UIKit/UIKit.h>
+#endif
 #include <sys/time.h>
 #include <zlib.h>
 #include <dlfcn.h>
@@ -24,14 +27,18 @@
 #include "runtime-internal.h"
 #include "delegates.h"
 
-#if defined(__x86_64__)
-#include "../tools/mtouch/monotouch-fixes.c"
-#endif
+static char original_working_directory_path [MAXPATHLEN];
 
-static unsigned char *
+const char *
+xamarin_get_original_working_directory_path ()
+{
+	return original_working_directory_path;
+}
+
+#if !defined (CORECLR_RUNTIME)
+unsigned char *
 xamarin_load_aot_data (MonoAssembly *assembly, int size, gpointer user_data, void **out_handle)
 {
-	// COOP: This is a callback called by the AOT runtime, I believe we don't have to change the GC mode here (even though it accesses managed memory).
 	*out_handle = NULL;
 
 	char path [1024];
@@ -57,7 +64,7 @@ xamarin_load_aot_data (MonoAssembly *assembly, int size, gpointer user_data, voi
 		return NULL;
 	}
 
-	void *ptr = mmap (NULL, size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
+	void *ptr = mmap (NULL, (size_t) size, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
 	if (ptr == MAP_FAILED) {
 		LOG (PRODUCT ": Could not map the aot file for %s: %s\n", aname, strerror (errno));
 		close (fd);
@@ -73,20 +80,18 @@ xamarin_load_aot_data (MonoAssembly *assembly, int size, gpointer user_data, voi
 	return (unsigned char *) ptr;
 }
 
-static void
+void
 xamarin_free_aot_data (MonoAssembly *assembly, int size, gpointer user_data, void *handle)
 {
-	// COOP: This is a callback called by the AOT runtime, I belive we don't have to change the GC mode here.
-	munmap (handle, size);
+	munmap (handle, (size_t) size);
 }
 
 /*
 This hook avoids the gazillion of filesystem probes we do as part of assembly loading.
 */
-static MonoAssembly*
-assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* user_data)
+MonoAssembly*
+xamarin_assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* user_data)
 {
-	// COOP: This is a callback called by the AOT runtime, I belive we don't have to change the GC mode here.
 	char filename [1024];
 	char path [1024];
 	const char *name = mono_assembly_name_get_name (aname);
@@ -94,7 +99,9 @@ assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* us
 
 	// LOG (PRODUCT ": Looking for assembly '%s' (culture: '%s')\n", name, culture);
 
-	int len = strlen (name);
+	size_t len = strnlen (name, sizeof (filename));
+	if (len == sizeof (filename))
+		return NULL;
 	int has_extension = len > 3 && name [len - 4] == '.' && (!strcmp ("exe", name + (len - 3)) || !strcmp ("dll", name + (len - 3)));
 	bool dual_check = false;
 
@@ -104,7 +111,10 @@ assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* us
 		// Figure out if we need to append 'dll' or 'exe'
 		if (xamarin_executable_name != NULL) {
 			// xamarin_executable_name already has the ".exe", so only compare the rest of the filename.
-			if (culture == NULL && !strncmp (xamarin_executable_name, filename, strlen (xamarin_executable_name) - 4)) {
+			size_t exe_len = strnlen (name, PATH_MAX);
+			if (exe_len == PATH_MAX)
+				return NULL;
+			if (culture == NULL && !strncmp (xamarin_executable_name, filename, exe_len - 4)) {
 				strlcat (filename, ".exe", sizeof (filename));
 			} else {
 				strlcat (filename, ".dll", sizeof (filename));
@@ -122,7 +132,10 @@ assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* us
 
 	bool found = xamarin_locate_assembly_resource_for_name (aname, filename, path, sizeof (path));
 	if (!found && dual_check) {
-		filename [strlen (filename) - 4] = 0;
+		size_t flen = strnlen (filename, sizeof (filename));
+		if (flen == sizeof (filename))
+			return NULL;
+		filename [flen - 4] = 0;
 		strlcat (filename, ".exe", sizeof (filename));
 		found = xamarin_locate_assembly_resource_for_name (aname, filename, path, sizeof (path));
 	}
@@ -136,32 +149,37 @@ assembly_preload_hook (MonoAssemblyName *aname, char **assemblies_path, void* us
 
 	return mono_assembly_open (path, NULL);
 }
+#endif // !defined (CORECLR_RUNTIME)
 
-#ifdef DEBUG_LAUNCH_TIME
-uint64_t startDate = 0;
-uint64_t date = 0;
-void debug_launch_time_print (const char *msg)
+static uint64_t xamarin_launch_startDate = 0;
+static uint64_t xamarin_launch_date = 0;
+static int xamarin_launch_time_enabled = -1;
+
+void xamarin_launch_time_print (const char *msg)
 {
+	if (xamarin_launch_time_enabled == -1) {
+		const char *env = getenv ("DEBUG_LAUNCH_TIME");
+		xamarin_launch_time_enabled = (env != NULL && env[0] == '1') ? 1 : 0;
+	}
+
+	if (!xamarin_launch_time_enabled)
+		return;
+
 	uint64_t unow;
 	struct timeval now;
 
 	gettimeofday (&now, NULL);
-	unow = now.tv_sec * 1000000ULL + now.tv_usec;
+	unow = (uint64_t) now.tv_sec * 1000000ULL + (uint64_t) now.tv_usec;
 
-	if (startDate == 0) {
-		startDate = unow;
-		date = startDate;
+	if (xamarin_launch_startDate == 0) {
+		xamarin_launch_startDate = unow;
+		xamarin_launch_date = xamarin_launch_startDate;
 	}
 
-	PRINT ("%s: %llu us Total: %llu us", msg, unow - date, unow - startDate);
+	PRINT ("%s: %llu us Total: %llu us", msg, unow - xamarin_launch_date, unow - xamarin_launch_startDate);
 
-	date = unow;
+	xamarin_launch_date = unow;
 }
-#else
-inline void debug_launch_time_print (const char *msg)
-{
-}
-#endif
 
 /*
  * This class will listen for memory warnings and when received, force
@@ -171,8 +189,10 @@ inline void debug_launch_time_print (const char *msg)
  * in release builds.
  */
 
-#if defined (__arm__) || defined(__aarch64__)
+#if defined(__aarch64__)
+#if !defined (CORECLR_RUNTIME)
 extern void mono_gc_init_finalizer_thread (void);
+#endif
 #endif
 
 @interface XamarinGCSupport : NSObject {
@@ -185,13 +205,10 @@ extern void mono_gc_init_finalizer_thread (void);
 - (id) init
 {
 	if (self = [super init]) {
-#if defined (__arm__) || defined(__aarch64__)
+#if defined(__aarch64__)
 		[self start];
 #endif
-#if TARGET_OS_WATCH
-		// I haven't found a way to listen for memory warnings on watchOS.
-		// fprintf (stderr, "Need to listen for memory warnings on the watch\n");
-#else
+#if !TARGET_OS_OSX
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarning:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 #endif
 	}
@@ -201,16 +218,18 @@ extern void mono_gc_init_finalizer_thread (void);
 
 - (void) start
 {
-	// COOP: ?
-#if defined (__arm__) || defined(__aarch64__)
+#if defined(__aarch64__)
+#if !defined (CORECLR_RUNTIME)
 	mono_gc_init_finalizer_thread ();
+#endif
 #endif
 }
 
 - (void) memoryWarning: (NSNotification *) sender
 {
-	// COOP: ?
-	mono_gc_collect (mono_gc_max_generation ());
+	GCHandle exception_gchandle = INVALID_GCHANDLE;
+	xamarin_gc_collect (&exception_gchandle);
+	xamarin_process_managed_exception_gchandle (exception_gchandle);
 }
 
 @end
@@ -222,61 +241,52 @@ extern void mono_gc_init_finalizer_thread (void);
 int
 xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 {
-	// COOP: ?
+#ifdef DEBUG
+	monotouch_start_launch_timer ();
+#endif
+
 	// + 1 for the initial "monotouch" +1 for the final NULL = +2.
 	// This is not an exact number (it will most likely be lower, since there
 	// are other arguments besides --app-arg), but it's a guaranteed and bound
 	// upper limit.
-	const char *managed_argv [argc + 2];
-	int managed_argc = 1;
-
-#if defined(__x86_64__)
-	patch_sigaction ();
-#endif
+	const char **managed_argv = (const char **) alloca (sizeof (char *) * (unsigned long) (argc + 2));
+	int managed_argc = 0;
 
 	xamarin_launch_mode = launch_mode;
 
-	memset (managed_argv, 0, sizeof (char*) * (argc + 2));
-	managed_argv [0] = "monotouch";
+	memset (managed_argv, 0, sizeof (char*) * (unsigned long) (argc + 2));
 
-	DEBUG_LAUNCH_TIME_PRINT ("Main entered");
+#if !(TARGET_OS_OSX || TARGET_OS_MACCATALYST)
+	managed_argv [managed_argc++] = "monotouch";
+#endif
+
+	XAMARIN_LAUNCH_TIME_PRINT ("Main entered");
 
 	xamarin_setup ();
-	DEBUG_LAUNCH_TIME_PRINT ("MonoTouch setup time");
+	XAMARIN_LAUNCH_TIME_PRINT ("MonoTouch setup time");
 
 	MonoAssembly *assembly;
-	guint32 exception_gchandle = 0;
-	
-	const char *c_bundle_path = xamarin_get_bundle_path ();
+	GCHandle exception_gchandle = NULL;
 
+	// Get the original working directory, and store it somewhere.
+	if (getcwd (original_working_directory_path, sizeof (original_working_directory_path)) == NULL)
+		original_working_directory_path [0] = '\0';
+
+	// For legacy Xamarin.Mac, we used to chdir to $appdir/Contents/Resources (I'm not sure where this comes from, earliest commit I could find was this: https://github.com/xamarin/maccore/commit/20045dd7f85cb038cea673a9281bb6131711069c)
+	// For mobile platforms, we chdir to $appdir
+	// In .NET, we always chdir to $appdir, so that we're consistent
+	const char *c_bundle_path = xamarin_get_app_bundle_path ();
 	chdir (c_bundle_path);
-	setenv ("MONO_PATH", c_bundle_path, 1);
 
-	setenv ("MONO_XMLSERIALIZER_THS", "no", 1);
 	setenv ("DYLD_BIND_AT_LAUNCH", "1", 1);
-	setenv ("MONO_REFLECTION_SERIALIZER", "yes", 1);
 
-#if TARGET_OS_WATCH
-	// watchOS can raise signals just fine...
-	// we might want to move this inside mono at some point.
-	signal (SIGPIPE, SIG_IGN);
-#endif
+	xamarin_bridge_setup ();
 
-#if TARGET_OS_WATCH || TARGET_OS_TV
-	mini_parse_debug_option ("explicit-null-checks");
-#endif
-	// see http://bugzilla.xamarin.com/show_bug.cgi?id=820
-	// take this line out once the bug is fixed
-	mini_parse_debug_option ("no-gdb-backtrace");
-
-	DEBUG_LAUNCH_TIME_PRINT ("Spin-up time");
+	XAMARIN_LAUNCH_TIME_PRINT ("Spin-up time");
 
 	{
 		/*
-		 * Command line arguments:
-		 * -debugtrack: [Simulator only]
-		 *         If we should track zombie NSObjects and aggressively poke the GC to collect
-		 *         every second.
+		 * Command line arguments for mobile targets (iOS / tvOS / macOS / Mac Catalyst):
 		 * -monodevelop-port=<port>
 		 *         The port MonoDevelop is listening on (or we should listen on).
 		 *         Overrides whatever any configuration file says.
@@ -299,9 +309,16 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 		 *         specified multiple times.
 		 * -setenv=<key>=<value>
 		 *         Set the environment variable <key> to the value <value>
+		 *
+		 * For desktop targets (macOS / Mac Catalyst) we pass all the command
+		 * line arguments directly to the managed Main method.
+		 *
 		 */
 		int i = 0;
 		for (i = 0; i < argc; i++) {
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+			managed_argv [managed_argc++] = argv [i];
+#else
 			char *arg = argv [i];
 			char *name;
 			char *value;
@@ -321,7 +338,7 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 			
 			while (*++value) {
 				if (*value == '=' || *value == ':') {
-					name = strndup (arg, value - arg);
+					name = strndup (arg, (size_t) (value - arg));
 					value++;
 					break;
 				}
@@ -334,13 +351,11 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 				value = NULL;
 
 #ifdef DEBUG
-			if (!strcmp (name, "debugtrack")) {
-				xamarin_gc_pump = true;
-			} else if (!strcmp (name, "monodevelop-port")) {
+			if (!strcmp (name, "monodevelop-port")) {
 				if (!value && argc > i + 1)
 					value = argv [++i];
 				if (value) {
-					monotouch_set_monodevelop_port (strtol (value, NULL, 10));
+					monotouch_set_monodevelop_port ((int) strtol (value, NULL, 10));
 				} else {
 					PRINT ("MonoTouch: --%s requires an argument.", name);
 				}
@@ -373,6 +388,7 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 						*v = 0;
 						v++;
 						LOG ("MonoTouch: Setting %s=%s", k, v);
+						// arguments comes from mtouch (and developer), i.e. a trusted source
 						setenv (k, v, 1);
 					}
 					free (k);
@@ -382,62 +398,30 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 			}
 			
 			free (name);
+#endif // TARGET_OS_OSX || TARGET_OS_MACCATALYST
 		}
 	}
 
 #ifdef DEBUG
+	xamarin_capture_debugging_settings ();
 	xamarin_initialize_cocoa_threads (monotouch_configure_debugging);
 #else
 	xamarin_initialize_cocoa_threads (NULL);
 #endif
 
-#if defined (__arm__) || defined(__aarch64__)
-	xamarin_register_modules ();
-#endif
-	DEBUG_LAUNCH_TIME_PRINT ("\tAOT register time");
-
-#ifdef DEBUG
-	monotouch_start_debugging ();
-	DEBUG_LAUNCH_TIME_PRINT ("\tDebug init time");
-#endif
-	
-	if (xamarin_init_mono_debug)
-		mono_debug_init (MONO_DEBUG_FORMAT_MONO);
-	
-	mono_install_assembly_preload_hook (assembly_preload_hook, NULL);
-	mono_install_load_aot_data_hook (xamarin_load_aot_data, xamarin_free_aot_data, NULL);
-
-#ifdef DEBUG
-	monotouch_start_profiling ();
-	DEBUG_LAUNCH_TIME_PRINT ("\tProfiler config time");
-#endif
-
-	mono_set_signal_chaining (TRUE);
-	mono_set_crash_chaining (TRUE);
-	mono_install_unhandled_exception_hook (xamarin_unhandled_exception_handler, NULL);
-	mono_install_ftnptr_eh_callback (xamarin_ftnptr_exception_handler);
-
-	mono_jit_init_version ("MonoTouch", "mobile");
-	/*
-	  As part of mono initialization a preload hook is added that overrides ours, so we need to re-instate it here.
-	  This is wasteful, but there's no way to manipulate the preload hook list except by adding to it.
-	*/
-	mono_install_assembly_preload_hook (assembly_preload_hook, NULL);
-	DEBUG_LAUNCH_TIME_PRINT ("\tJIT init time");
+	xamarin_vm_initialize ();
+	xamarin_bridge_initialize ();
 
 	xamarin_initialize ();
-	DEBUG_LAUNCH_TIME_PRINT ("\tmonotouch init time");
+	XAMARIN_LAUNCH_TIME_PRINT ("\tmonotouch init time");
 
-#if defined (__arm__) || defined(__aarch64__)
-	xamarin_register_assemblies ();
-	assembly = xamarin_open_and_register (xamarin_executable_name, &exception_gchandle);
-	if (exception_gchandle != 0)
-		xamarin_process_managed_exception_gchandle (exception_gchandle);
-#else
+	if (xamarin_register_assemblies != NULL)
+		xamarin_register_assemblies ();
+
+#if !defined (NATIVEAOT)
 	if (xamarin_executable_name) {
 		assembly = xamarin_open_and_register (xamarin_executable_name, &exception_gchandle);
-		if (exception_gchandle != 0)
-			xamarin_process_managed_exception_gchandle (exception_gchandle);
+		xamarin_process_fatal_exception_gchandle (exception_gchandle, "An exception occurred while opening the main executable");
 	} else {
 		const char *last_slash = strrchr (argv [0], '/');
 		const char *basename = last_slash ? last_slash + 1 : argv [0];
@@ -445,51 +429,46 @@ xamarin_main (int argc, char *argv[], enum XamarinLaunchMode launch_mode)
 
 		assembly = xamarin_open_and_register (aname, &exception_gchandle);
 		xamarin_free (aname);
-
-		if (exception_gchandle != 0)
-			xamarin_process_managed_exception_gchandle (exception_gchandle);
+		xamarin_process_fatal_exception_gchandle (exception_gchandle, "An exception occurred while opening an assembly");
 	}
 
 	if (xamarin_supports_dynamic_registration) {
-		xamarin_register_entry_assembly (mono_assembly_get_object (mono_domain_get (), assembly), &exception_gchandle);
-		if (exception_gchandle != 0)
-			xamarin_process_managed_exception_gchandle (exception_gchandle);
+		MonoReflectionAssembly *rassembly = mono_assembly_get_object (mono_domain_get (), assembly);
+		xamarin_register_entry_assembly (rassembly, &exception_gchandle);
+		xamarin_mono_object_release (&rassembly);
+		xamarin_process_fatal_exception_gchandle (exception_gchandle, "An exception occurred while opening the entry assembly");
 	}
-#endif
+#else
+	assembly = NULL;
+	(void)exception_gchandle;
+#endif // !defined (NATIVEAOT)
 
-	DEBUG_LAUNCH_TIME_PRINT ("\tAssembly register time");
+	XAMARIN_LAUNCH_TIME_PRINT ("\tAssembly register time");
 
 	[[[XamarinGCSupport alloc] init] autorelease];
 
-	DEBUG_LAUNCH_TIME_PRINT ("\tGC defer time");
+	XAMARIN_LAUNCH_TIME_PRINT ("\tGC defer time");
 
-	DEBUG_LAUNCH_TIME_PRINT ("Total initialization time");
+	XAMARIN_LAUNCH_TIME_PRINT ("Total initialization time");
 
 	int rv = 0;
 	switch (launch_mode) {
 	case XamarinLaunchModeExtension:
-		char base_dir [1024];
-		char config_file_name [1024];
-
-		snprintf (base_dir, sizeof (base_dir), "%s/" ARCH_SUBDIR, xamarin_get_bundle_path ());
-		snprintf (config_file_name, sizeof (config_file_name), "%s/%s.config", base_dir, xamarin_executable_name); // xamarin_executable_name should never be NULL for extensions.
-
-		mono_domain_set_config (mono_domain_get (), base_dir, config_file_name);
-
-		MONO_ENTER_GC_SAFE;
 		rv = xamarin_extension_main (argc, argv);
-		MONO_EXIT_GC_SAFE;
 		break;
 	case XamarinLaunchModeApp:
 		rv = mono_jit_exec (mono_domain_get (), assembly, managed_argc, managed_argv);
-		break;
-	case XamarinLaunchModeEmbedded:
-		// do nothing
 		break;
 	default:
 		xamarin_assertion_message ("Invalid launch mode: %i.", launch_mode);
 		break;
 	}
+
+	xamarin_mono_object_release (&assembly);
 	
+	xamarin_release_static_dictionaries ();
+
+	xamarin_bridge_shutdown ();
+
 	return rv;
 }

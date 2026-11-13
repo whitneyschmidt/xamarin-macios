@@ -25,175 +25,199 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreVideo {
 
-	// uint32_t -> CVBuffer.h
-	[Watch (4,0)]
-	public enum CVAttachmentMode : uint {
-		ShouldNotPropagate    = 0,
-		ShouldPropagate       = 1,
-	}
-
-	[Flags]
-	[Watch (4,0)]
-#if XAMCORE_4_0
-	public enum CVPixelBufferLock : ulong {
-#else
-	// before iOS10 beta 2 this was an untyped enum -> CVPixelBuffer.h
-	// note: used as a CVOptionFlags uint64_t (CVBase.h) in the API
-	public enum CVPixelBufferLock : uint {
-#endif
-		None = 0x00000000,
-		ReadOnly = 0x00000001,
-	}	
-
 	// CVPixelBuffer.h
-	[Watch (4,0)]
+	/// <summary>A struct that describes planar components.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVPlanarComponentInfo {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public /* int32_t */ int Offset;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public /* uint32_t */ uint RowBytes;
 	}
 
 	// CVPixelBuffer.h
-	[Watch (4,0)]
+	/// <summary>A struct that holds the <see cref="CoreVideo.CVPlanarComponentInfo" />s of a planar buffer.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVPlanarPixelBufferInfo {
-		public CVPlanarComponentInfo[] ComponentInfo;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CVPlanarComponentInfo [] ComponentInfo;
 	}
 
 	// CVPixelBuffer.h
-	[Watch (4,0)]
+	/// <summary>A struct that defines the <see cref="CoreVideo.CVPlanarComponentInfo" />s of a YCbCr planar buffer.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVPlanarPixelBufferInfo_YCbCrPlanar {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPlanarComponentInfo ComponentInfoY;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPlanarComponentInfo ComponentInfoCb;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPlanarComponentInfo ComponentInfoCr;
 	}
 
-	[Watch (4,0)]
+	/// <summary>Implements a YCbCr biplanar buffer description.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVPlanarPixelBufferInfo_YCbCrBiPlanar {
+		/// <summary>A descriptor for the Y buffer.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPlanarComponentInfo ComponentInfoY;
+		/// <summary>A descriptor for the Cb/CR buffer.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPlanarComponentInfo ComponentInfoCbCr;
 	}
 
-	// int32_t -> CVReturn.h
-	[Watch (4,0)]
-	public enum CVReturn : int {
-		Success = 0,
-		First = -6660,
-		Error = First,
-		InvalidArgument = -6661,
-		AllocationFailed = -6662,
-		Unsupported = -6663,
-		InvalidDisplay = -6670,
-		DisplayLinkAlreadyRunning = -6671,
-		DisplayLinkNotRunning = -6672,
-		DisplayLinkCallbacksNotSet = -6673,
-		InvalidPixelFormat = -6680,
-		InvalidSize = -6681,
-		InvalidPixelBufferAttributes = -6682,
-		PixelBufferNotOpenGLCompatible = -6683,
-		PixelBufferNotMetalCompatible = -6684,
-		WouldExceedAllocationThreshold = -6689,
-		PoolAllocationFailed = -6690,
-		InvalidPoolAttributes = -6691,
-		Retry = -6692,
-		Last = -6699,
-	}
-
-
-	// uint64_t -> CVBase.h
-	[Watch (4,0)]
-	public enum CVOptionFlags : long {
-		None = 0,
-	}
-
-	[Watch (4,0)]
+	/// <summary>A struct that describes a display timestamp.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVTimeStamp {
-		public UInt32		Version;
-		public Int32 		VideoTimeScale;
-		public Int64 		VideoTime;
-		public UInt64 		HostTime;
-		public double 		RateScalar;
-		public Int64 		VideoRefreshPeriod;
-		public CVSMPTETime 	SMPTETime;
-		public UInt64 		Flags;
-		public UInt64 		Reserved;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt32 Version;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int32 VideoTimeScale;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int64 VideoTime;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt64 HostTime;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public double RateScalar;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int64 VideoRefreshPeriod;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CVSMPTETime SMPTETime;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt64 Flags;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt64 Reserved;
 	}
-        
-	[Watch (4,0)]
+
+	/// <summary>Encodes an SMPTE timestamp.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVSMPTETime {
-		public Int16	Subframes;
-		public Int16	SubframeDivisor;
-		public UInt32	Counter;
-		public UInt32	Type;
-		public UInt32	Flags;
-		public Int16	Hours;
-		public Int16	Minutes;
-		public Int16	Seconds;
-		public Int16	Frames;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 Subframes;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 SubframeDivisor;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt32 Counter;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt32 Type;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UInt32 Flags;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 Hours;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 Minutes;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 Seconds;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public Int16 Frames;
 	}
 
-	[Flags]
-	[Watch (4,0)]
-	public enum CVTimeFlags : int {
-		IsIndefinite = 1 << 0
-	}
-
-	[Flags]
-	[Watch (4,0)]
-#if XAMCORE_2_0
-	public enum CVTimeStampFlags : ulong {
-#else
-	public enum CVTimeStampFlags {
-#endif
-		VideoTimeValid              = (1 << 0),
-		HostTimeValid               = (1 << 1),
-		SMPTETimeValid              = (1 << 2),
-		VideoRefreshPeriodValid     = (1 << 3),
-		RateScalarValid             = (1 << 4),
-		TopField                    = (1 << 16),
-		BottomField                 = (1 << 17),
-		VideoHostTimeValid          = (VideoTimeValid | HostTimeValid),
-		IsInterlaced                = (TopField | BottomField)
-	}	
-
-	[Flags]
-	[Watch (4,0)]
-	public enum CVSMPTETimeFlags : uint {
-		Valid     = (1 << 0),
-		Running   = (1 << 1)
-	}
-
-	[Watch (4,0)]
-	public enum CVSMPTETimeType : uint {
-		Type24        = 0,
-		Type25        = 1,
-		Type30Drop    = 2,
-		Type30        = 3,
-		Type2997      = 4,
-		Type2997Drop  = 5,
-		Type60        = 6,
-		Type5994      = 7
-	}
-
-	[Watch (4,0)]
+#if !XAMCORE_5_0
+	/// <summary>Encapsulates the description of a custom extended-pixel fill algorithm.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreVideo.CVFillExtendedPixelsCallBack" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public struct CVFillExtendedPixelsCallBackData {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public nint /* CFIndex */ Version;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVFillExtendedPixelsCallBack FillCallBack;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public IntPtr UserInfo;
-	} 
-
-	[Watch (4,0)]
-	public delegate bool CVFillExtendedPixelsCallBack (IntPtr pixelBuffer, IntPtr refCon);
-
-	// CVOptionFlags (uint64_t) -> CVPixelBufferPool.h
-	[Watch (4,0)]
-	[iOS (9,0)][Mac (10,11)]
-	public enum CVPixelBufferPoolFlushFlags : ulong {
-		FlushExcessBuffers = 1,
 	}
+
+	/// <param name="pixelBuffer">To be added.</param>
+	///     <param name="refCon">To be added.</param>
+	///     <summary>A delegate that defines the function used to pad buffers that use a custom pixel format.</summary>
+	///     <returns>To be added.</returns>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreVideo.CVFillExtendedPixelsCallBackData" />
+	public delegate bool CVFillExtendedPixelsCallBack (IntPtr pixelBuffer, IntPtr refCon);
+#endif // !XAMCORE_5_0
+
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+#if XAMCORE_5_0
+	public unsafe struct CVFillExtendedPixelsCallBackData {
+#else
+	[NativeName ("CVFillExtendedPixelsCallBackData")]
+	public unsafe struct CVFillExtendedPixelsCallBackDataStruct {
+#endif
+		public nint /* CFIndex */ Version;
+		public delegate* unmanaged<IntPtr, IntPtr, byte> FillCallBack;
+		public IntPtr UserInfo;
+#if !COREBUILD
+		public unsafe bool CallFillCallback (CVPixelBuffer buffer)
+		{
+			if (FillCallBack is null)
+				throw new InvalidOperationException ($"The callback is null.");
+			var rv = FillCallBack (buffer.GetCheckedHandle (), UserInfo);
+			GC.KeepAlive (buffer);
+			return rv != 0;
+		}
+#endif
+	}
+
 }

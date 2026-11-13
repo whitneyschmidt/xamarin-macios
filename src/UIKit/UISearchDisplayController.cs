@@ -1,24 +1,13 @@
-#if !TVOS && !WATCH // __TVOS_PROHIBITED, doesn't show up in WatchOS headers
-using System;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
-using CoreAnimation;
-using CoreLocation;
-using MapKit;
-using UIKit;
-using CoreGraphics;
+#if !TVOS && !__MACCATALYST__ // __TVOS_PROHIBITED
+
+#nullable enable
 
 namespace UIKit {
 	public partial class UISearchDisplayController {
-		public UITableViewSource SearchResultsSource {
+		/// <summary>Gets or sets the <see cref="UITableViewSource" /> holding the search results.</summary>
+		public UITableViewSource? SearchResultsSource {
 			get {
-				var d = SearchResultsWeakDelegate as UITableViewSource;
-				if (d != null)
-					return d;
-				return null;
+				return SearchResultsWeakDelegate as UITableViewSource;
 			}
 
 			set {
@@ -29,4 +18,4 @@ namespace UIKit {
 	}
 }
 
-#endif // !TVOS && !WATCH
+#endif // !TVOS && !__MACCATALYST__

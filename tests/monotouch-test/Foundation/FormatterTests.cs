@@ -1,33 +1,15 @@
-﻿using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
+using System.Drawing;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-
-namespace MonoTouchFixtures.Foundation
-{
+namespace MonoTouchFixtures.Foundation {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class FormatterTests	{
+	public class FormatterTests {
 
 		NSDateComponentsFormatter dateComponentsFormatter;
 		NSEnergyFormatter energyFormatter;
@@ -35,24 +17,22 @@ namespace MonoTouchFixtures.Foundation
 		void RequiresIos8 ()
 		{
 			TestRuntime.AssertXcodeVersion (6, 0);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
 
-			if (dateComponentsFormatter == null)
+			if (dateComponentsFormatter is null)
 				dateComponentsFormatter = new NSDateComponentsFormatter ();
-			if (energyFormatter == null)
+			if (energyFormatter is null)
 				energyFormatter = new NSEnergyFormatter ();
 		}
 
 		static void TestFormattedString (string formattedString, string testName)
 		{
-			Assert.IsNotNull (formattedString, testName);
-			Assert.IsTrue (formattedString.Length > 0, testName + " length");
+			Assert.That (formattedString, Is.Not.Null, testName);
+			Assert.That (formattedString.Length > 0, Is.True, testName + " length");
 		}
 
-		public NSDateComponents NowComponents
-		{
-			get
-			{
+		public NSDateComponents NowComponents {
+			get {
 				return NSCalendar.CurrentCalendar.Components (NSCalendarUnit.Era | NSCalendarUnit.Day | NSCalendarUnit.Month | NSCalendarUnit.Year | NSCalendarUnit.WeekOfMonth, NSDate.Now);
 			}
 		}
@@ -65,35 +45,35 @@ namespace MonoTouchFixtures.Foundation
 			RequiresIos8 ();
 
 			dateComponentsFormatter.UnitsStyle = NSDateComponentsFormatterUnitsStyle.Full;
-			Assert.AreEqual (NSDateComponentsFormatterUnitsStyle.Full, dateComponentsFormatter.UnitsStyle, "UnitsStyle");
+			Assert.That (dateComponentsFormatter.UnitsStyle, Is.EqualTo (NSDateComponentsFormatterUnitsStyle.Full), "UnitsStyle");
 
 			dateComponentsFormatter.AllowedUnits = NSCalendarUnit.Month | NSCalendarUnit.Day;
-			Assert.AreEqual (NSCalendarUnit.Month | NSCalendarUnit.Day, dateComponentsFormatter.AllowedUnits, "AllowedUnits");
+			Assert.That (dateComponentsFormatter.AllowedUnits, Is.EqualTo (NSCalendarUnit.Month | NSCalendarUnit.Day), "AllowedUnits");
 
 			dateComponentsFormatter.ZeroFormattingBehavior = NSDateComponentsFormatterZeroFormattingBehavior.Pad;
-			Assert.AreEqual (NSDateComponentsFormatterZeroFormattingBehavior.Pad, dateComponentsFormatter.ZeroFormattingBehavior, "ZeroFormattingBehavior");
+			Assert.That (dateComponentsFormatter.ZeroFormattingBehavior, Is.EqualTo (NSDateComponentsFormatterZeroFormattingBehavior.Pad), "ZeroFormattingBehavior");
 
 			NSCalendar c = new NSCalendar (NSCalendarType.Buddhist);
-			Assert.IsNotNull (dateComponentsFormatter.Calendar);
+			Assert.That (dateComponentsFormatter.Calendar, Is.Not.Null);
 			dateComponentsFormatter.Calendar = c;
-			Assert.AreEqual (c.Identifier, dateComponentsFormatter.Calendar.Identifier, "Calendar");
+			Assert.That (dateComponentsFormatter.Calendar.Identifier, Is.EqualTo (c.Identifier), "Calendar");
 
 			dateComponentsFormatter.AllowsFractionalUnits = true;
-			Assert.IsTrue (dateComponentsFormatter.AllowsFractionalUnits, "AllowsFractionalUnits");
+			Assert.That (dateComponentsFormatter.AllowsFractionalUnits, Is.True, "AllowsFractionalUnits");
 
 			dateComponentsFormatter.MaximumUnitCount = 50;
-			Assert.AreEqual (50, dateComponentsFormatter.MaximumUnitCount, "MaximumUnitCount");
+			Assert.That (dateComponentsFormatter.MaximumUnitCount, Is.EqualTo ((nint) 50), "MaximumUnitCount");
 
 			dateComponentsFormatter.CollapsesLargestUnit = true;
-			Assert.IsTrue (dateComponentsFormatter.CollapsesLargestUnit, "CollapsesLargestUnit");
+			Assert.That (dateComponentsFormatter.CollapsesLargestUnit, Is.True, "CollapsesLargestUnit");
 
 			dateComponentsFormatter.IncludesApproximationPhrase = true;
-			Assert.IsTrue (dateComponentsFormatter.IncludesApproximationPhrase, "IncludesApproximationPhrase");
+			Assert.That (dateComponentsFormatter.IncludesApproximationPhrase, Is.True, "IncludesApproximationPhrase");
 
 			dateComponentsFormatter.IncludesTimeRemainingPhrase = true;
-			Assert.IsTrue (dateComponentsFormatter.IncludesTimeRemainingPhrase, "IncludesTimeRemainingPhrase");
+			Assert.That (dateComponentsFormatter.IncludesTimeRemainingPhrase, Is.True, "IncludesTimeRemainingPhrase");
 
-			Assert.IsNotNull (dateComponentsFormatter.FormattingContext);
+			Assert.That (dateComponentsFormatter.FormattingContext, Is.Not.Null);
 			dateComponentsFormatter.FormattingContext = new NSFormattingContext ();
 		}
 
@@ -153,7 +133,7 @@ namespace MonoTouchFixtures.Foundation
 			NSObject o;
 			string e;
 			bool value = dateComponentsFormatter.GetObjectValue (out o, string.Empty, out e);
-			Assert.IsFalse (value, "DateGetObjectValueTest"); // If this ever returns true, we need to write a better test
+			Assert.That (value, Is.False, "DateGetObjectValueTest"); // If this ever returns true, we need to write a better test
 		}
 
 		#endregion
@@ -195,7 +175,7 @@ namespace MonoTouchFixtures.Foundation
 			NSEnergyFormatterUnit unit;
 			string formattedString = energyFormatter.UnitStringFromJoules (2.0, out unit);
 			TestFormattedString (formattedString, "UnitStringFromJoules");
-			Assert.IsTrue ((int)unit > 0); // We got some value from the API
+			Assert.That ((int) unit > 0, Is.True); // We got some value from the API
 		}
 
 		[Test]
@@ -207,7 +187,7 @@ namespace MonoTouchFixtures.Foundation
 			NSObject o;
 			string e;
 			bool value = energyFormatter.GetObjectValue (out o, string.Empty, out e);
-			Assert.IsFalse (value, "EnergyGetObjectValue"); // If this ever returns true, we need to write a better test
+			Assert.That (value, Is.False, "EnergyGetObjectValue"); // If this ever returns true, we need to write a better test
 		}
 
 		#endregion
@@ -228,4 +208,4 @@ namespace MonoTouchFixtures.Foundation
 		#endregion
 	}
 }
-	
+

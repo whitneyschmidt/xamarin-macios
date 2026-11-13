@@ -24,144 +24,194 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
-using CoreGraphics;
 
-using CGGlyph     = System.UInt16;
+using CGGlyph = System.UInt16;
 using CGFontIndex = System.UInt16;
 
 namespace CoreText {
 
-#region Glyph Info Values
+	#region Glyph Info Values
+	/// <summary>A class whose static fields specify character collections.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum CTCharacterCollection : ushort {
+		/// <summary>The character identifier is the same as the glyph index.</summary>
 		IdentityMapping = 0,
-		AdobeCNS1       = 1,
-		AdobeGB1        = 2,
-		AdobeJapan1     = 3,
-		AdobeJapan2     = 4,
-		AdobeKorea1     = 5,
+		/// <summary>The Adobe-CNS1 character collection.</summary>
+		AdobeCNS1 = 1,
+		/// <summary>The Adobe-GB1 character collection.</summary>
+		AdobeGB1 = 2,
+		/// <summary>The Adobe-Japan1 character collection.</summary>
+		AdobeJapan1 = 3,
+		/// <summary>The Adobe-Japan2 character collection.</summary>
+		AdobeJapan2 = 4,
+		/// <summary>The Adobe-Korea1 mapping.</summary>
+		AdobeKorea1 = 5,
 	}
-#endregion
+	#endregion
 
-	public class CTGlyphInfo : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		internal CTGlyphInfo (IntPtr handle, bool owns)
+	/// <summary>Provides the ability to override the Unicode-to-glyph mapping for a <see cref="CoreText.CTFont" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CTGlyphInfo : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CTGlyphInfo (NativeHandle handle, bool owns)
+			: base (handle, owns, true)
 		{
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.ArgumentNull (this, "handle");
-
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
-		}
-		
-		public IntPtr Handle {
-			get {return handle;}
 		}
 
-		~CTGlyphInfo ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
+		#region Glyph Info Creation
+		[DllImport (Constants.CoreTextLibrary)]
+		static extern IntPtr CTGlyphInfoCreateWithGlyphName (IntPtr glyphName, IntPtr font, IntPtr baseString);
 
-		protected virtual void Dispose (bool disposing)
+		static IntPtr Create (string glyphName, CTFont font, string baseString)
 		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
+			if (glyphName is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (glyphName));
+			if (font is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (font));
+			if (baseString is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (baseString));
+
+			var gnHandle = CFString.CreateNative (glyphName);
+			var bsHandle = CFString.CreateNative (baseString);
+			try {
+				IntPtr result = CTGlyphInfoCreateWithGlyphName (gnHandle, font.Handle, bsHandle);
+				GC.KeepAlive (font);
+				return result;
+			} finally {
+				CFString.ReleaseNative (gnHandle);
+				CFString.ReleaseNative (bsHandle);
 			}
 		}
 
-#region Glyph Info Creation
-		[DllImport (Constants.CoreTextLibrary)]
-		static extern IntPtr CTGlyphInfoCreateWithGlyphName (IntPtr glyphName, IntPtr font, IntPtr baseString);
+		/// <param name="glyphName">To be added.</param>
+		///         <param name="font">To be added.</param>
+		///         <param name="baseString">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTGlyphInfo (string glyphName, CTFont font, string baseString)
+			: base (Create (glyphName, font, baseString), true, verify: true)
 		{
-			if (glyphName == null)
-				throw ConstructorError.ArgumentNull (this, "glyphName");
-			if (font == null)
-				throw ConstructorError.ArgumentNull (this, "font");
-			if (baseString == null)
-				throw ConstructorError.ArgumentNull (this, "baseString");
-
-			using (var gn = new NSString (glyphName))
-			using (var bs = new NSString (baseString))
-				handle = CTGlyphInfoCreateWithGlyphName (gn.Handle, font.Handle, bs.Handle);
-
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTGlyphInfoCreateWithGlyph (CGGlyph glyph, IntPtr font, IntPtr baseString);
-		public CTGlyphInfo (CGGlyph glyph, CTFont font, string baseString)
+
+		static IntPtr Create (CGGlyph glyph, CTFont font, string baseString)
 		{
-			if (font == null)
-				throw ConstructorError.ArgumentNull (this, "font");
-			if (baseString == null)
-				throw ConstructorError.ArgumentNull (this, "baseString");
+			if (font is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (font));
+			if (baseString is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (baseString));
 
-			using (var bs = new NSString (baseString))
-				handle = CTGlyphInfoCreateWithGlyph (glyph, font.Handle, bs.Handle);
+			var bsHandle = CFString.CreateNative (baseString);
+			try {
+				IntPtr result = CTGlyphInfoCreateWithGlyph (glyph, font.Handle, bsHandle);
+				GC.KeepAlive (font);
+				return result;
+			} finally {
+				CFString.ReleaseNative (bsHandle);
+			}
+		}
 
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
+		/// <param name="glyph">To be added.</param>
+		///         <param name="font">To be added.</param>
+		///         <param name="baseString">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CTGlyphInfo (CGGlyph glyph, CTFont font, string baseString)
+			: base (Create (glyph, font, baseString), true, verify: true)
+		{
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTGlyphInfoCreateWithCharacterIdentifier (CGFontIndex cid, CTCharacterCollection collection, IntPtr baseString);
-		public CTGlyphInfo (CGFontIndex cid, CTCharacterCollection collection, string baseString)
+
+		static IntPtr Create (CGFontIndex cid, CTCharacterCollection collection, string baseString)
 		{
-			if (baseString == null)
-				throw ConstructorError.ArgumentNull (this, "baseString");
+			if (baseString is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (baseString));
 
-			using (var bs = new NSString (baseString))
-				handle = CTGlyphInfoCreateWithCharacterIdentifier (cid, collection, bs.Handle);
-
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
+			var bsHandle = CFString.CreateNative (baseString);
+			try {
+				return CTGlyphInfoCreateWithCharacterIdentifier (cid, collection, bsHandle);
+			} finally {
+				CFString.ReleaseNative (bsHandle);
+			}
 		}
-#endregion
 
-#region Glyph Info Access
+		/// <param name="cid">To be added.</param>
+		///         <param name="collection">To be added.</param>
+		///         <param name="baseString">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CTGlyphInfo (CGFontIndex cid, CTCharacterCollection collection, string baseString)
+			: base (Create (cid, collection, baseString), true, true)
+		{
+		}
+		#endregion
+
+		#region Glyph Info Access
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTGlyphInfoGetGlyphName (IntPtr glyphInfo);
-		public string GlyphName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public string? GlyphName {
 			get {
-				var cfStringRef = CTGlyphInfoGetGlyphName (handle);
-				return CFString.FetchString (cfStringRef);
+				var cfStringRef = CTGlyphInfoGetGlyphName (Handle);
+				return CFString.FromHandle (cfStringRef);
 			}
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern CGFontIndex CTGlyphInfoGetCharacterIdentifier (IntPtr glyphInfo);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CGFontIndex CharacterIdentifier {
-			get {return CTGlyphInfoGetCharacterIdentifier (handle);}
+			get { return CTGlyphInfoGetCharacterIdentifier (Handle); }
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern CTCharacterCollection CTGlyphInfoGetCharacterCollection (IntPtr glyphInfo);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTCharacterCollection CharacterCollection {
-			get {return CTGlyphInfoGetCharacterCollection (handle);}
+			get { return CTGlyphInfoGetCharacterCollection (Handle); }
 		}
-#endregion
 
-		public override string ToString ()
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreTextLibrary)]
+		static extern ushort /* CGGlyph */ CTGlyphInfoGetGlyph (IntPtr /* CTGlyphInfoRef */ glyphInfo);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CGGlyph GetGlyph ()
+		{
+			return CTGlyphInfoGetGlyph (Handle);
+		}
+		#endregion
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override string? ToString ()
 		{
 			return GlyphName;
 		}
 	}
 }
-

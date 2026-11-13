@@ -1,59 +1,42 @@
 // Copyright 2011-2013 Xamarin Inc. All rights reserved
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class WindowTest {
-		
+
 		[Test]
 		public void InitWithFrame ()
 		{
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (UIWindow w = new UIWindow (frame)) {
 				Assert.That (w.Frame, Is.EqualTo (frame), "Frame");
 			}
 		}
-		
+
 		[Test]
 		public void Convert_Null ()
 		{
 			using (UIWindow w = new UIWindow ()) {
-				Assert.That (w.ConvertPointFromWindow (PointF.Empty, null), Is.EqualTo (PointF.Empty), "ConvertPointFromWindow");
-				Assert.That (w.ConvertPointToWindow (PointF.Empty, null), Is.EqualTo (PointF.Empty), "ConvertPointToWindow");
-				Assert.That (w.ConvertRectFromWindow (RectangleF.Empty, null), Is.EqualTo (RectangleF.Empty), "ConvertRectFromWindow");
-				Assert.That (w.ConvertRectToWindow (RectangleF.Empty, null), Is.EqualTo (RectangleF.Empty), "ConvertRectToWindow");
+				Assert.That (w.ConvertPointFromWindow (CGPoint.Empty, null), Is.EqualTo (CGPoint.Empty), "ConvertPointFromWindow");
+				Assert.That (w.ConvertPointToWindow (CGPoint.Empty, null), Is.EqualTo (CGPoint.Empty), "ConvertPointToWindow");
+				Assert.That (w.ConvertRectFromWindow (CGRect.Empty, null), Is.EqualTo (CGRect.Empty), "ConvertRectFromWindow");
+				Assert.That (w.ConvertRectToWindow (CGRect.Empty, null), Is.EqualTo (CGRect.Empty), "ConvertRectToWindow");
 			}
 		}
-		
+
 		[Test]
 		public void IsKeyWindow_5199 ()
 		{
 			using (UIWindow w = new UIWindow ()) {
-				Assert.False (w.IsKeyWindow, "IsKeyWindow");
+				Assert.That (w.IsKeyWindow, Is.False, "IsKeyWindow");
 			}
 		}
 
@@ -75,4 +58,4 @@ namespace MonoTouchFixtures.UIKit {
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

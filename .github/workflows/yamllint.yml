@@ -1,0 +1,28 @@
+# yamllint disable rule:line-length rule:document-start rule:truthy
+name: PR yamllint check
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  rebase:
+    name: yamllint check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML pipeline files
+        working-directory: ./tools/devops/automation
+        run: |
+            yamllint . -f github

@@ -1,4 +1,4 @@
-﻿//
+//
 // NSProxy.cs
 //
 // Authors:
@@ -14,10 +14,7 @@
 // NSProxy responds to far less selectors hence doing it internal so it is not a breaking change
 // when we provide the correct fix.
 
-using System;
 using System.ComponentModel;
-using Foundation;
-using ObjCRuntime;
 
 namespace Foundation {
 	[EditorBrowsable (EditorBrowsableState.Never)]
@@ -26,7 +23,7 @@ namespace Foundation {
 	}
 }
 
-#if !XAMCORE_4_0 || (__IOS__ || __MACOS__)
+#if __IOS__ || __MACOS__
 namespace WebKit {
 	// We need to keep NSProxy if WKNavigationDelegate or IWKNavigationDelegate are used
 	// This cannot be done on an interface but the protocol won't be used without a WKWebView

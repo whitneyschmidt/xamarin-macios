@@ -20,25 +20,27 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using ObjCRuntime;
 
-#if XAMCORE_2_0
 namespace MediaLibrary {
+	/// <summary>A bitmask specifying the kinds of media provided by a media source.</summary>
 	[Native]
-	public enum MLMediaSourceType : ulong
-	{
+	public enum MLMediaSourceType : ulong {
+		/// <summary>The source provides audio media.</summary>
 		Audio = 1 << 0,
+		/// <summary>The source provides image media.</summary>
 		Image = 1 << 1,
-		Movie = 1 << 2
+		/// <summary>The source provides movie media.</summary>
+		Movie = 1 << 2,
 	}
 
+	/// <summary>A bitmask specifying one or more kinds of media objects.</summary>
 	[Native]
-	public enum MLMediaType : ulong
-	{
+	public enum MLMediaType : ulong {
+		/// <summary>Audio media.</summary>
 		Audio = 1 << 0,
+		/// <summary>Image media.</summary>
 		Image = 1 << 1,
-		Movie = 1 << 2
+		/// <summary>Movie media.</summary>
+		Movie = 1 << 2,
 	}
 }
-#endif

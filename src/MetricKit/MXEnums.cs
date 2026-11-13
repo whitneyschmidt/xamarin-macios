@@ -1,0 +1,22 @@
+//
+// MetricKit enumerations
+//
+// Copyright 2022 Microsoft Inc.
+//
+
+using System.ComponentModel;
+using CoreFoundation;
+
+namespace MetricKit {
+	[NoMac, iOS (16, 0), MacCatalyst (16, 0), NoTV]
+	[ErrorDomain ("MXErrorDomain")]
+	[Native]
+	public enum MXErrorCode : long {
+		InvalidId,
+		MaxCount,
+		PastDeadline,
+		Duplicated,
+		Unknown,
+		InternalFailure,
+	}
+}

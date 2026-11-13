@@ -22,25 +22,38 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 //
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
-
-	[iOS (9,0), Mac (10,11)]
+	/// <summary>Audio conversion priming information.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVAudioConverterPrimeInfo {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public uint LeadingFrames;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public uint TrailingFrames;
 
+		/// <param name="leadingFrames">To be added.</param>
+		///         <param name="trailingFrames">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AVAudioConverterPrimeInfo (uint leadingFrames, uint trailingFrames)
 		{
 			LeadingFrames = leadingFrames;
 			TrailingFrames = trailingFrames;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override string ToString ()
 		{
 			return $"({LeadingFrames}:{TrailingFrames})";
@@ -56,22 +69,33 @@ namespace AVFoundation {
 			return !left.Equals (right);
 		}
 
-		public override bool Equals (object obj)
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override bool Equals (object? obj)
 		{
 			if (!(obj is AVAudioConverterPrimeInfo))
 				return false;
 
-			return this.Equals ((AVAudioConverterPrimeInfo)obj);
+			return this.Equals ((AVAudioConverterPrimeInfo) obj);
 		}
 
+		/// <param name="other">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Equals (AVAudioConverterPrimeInfo other)
 		{
 			return LeadingFrames == other.LeadingFrames && TrailingFrames == other.TrailingFrames;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override int GetHashCode ()
 		{
-			return LeadingFrames.GetHashCode () ^ TrailingFrames.GetHashCode ();
+			return HashCode.Combine (LeadingFrames, TrailingFrames);
 		}
 	}
 }

@@ -28,37 +28,72 @@
 //
 //
 
-#if !WATCH
-
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace AVFoundation {
-
+#if __TVOS__
+	/// <summary>Provides data for the <see cref="AVFoundation.AVAudioPlayer.DecoderError" /> event.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+#else
+	/// <summary>Provides data for the <see cref="AVFoundation.AVAudioRecorder.EncoderError" /> and <see cref="AVFoundation.AVAudioPlayer.DecoderError" /> events.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class AVErrorEventArgs : EventArgs {
+		/// <param name="error">To be added.</param>
+		///         <summary>Initializes a new instance of the AVErrorEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public AVErrorEventArgs (NSError error)
 		{
 			Error = error;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NSError Error { get; private set; }
 	}
-	
+
+#if __TVOS__
+	/// <summary>Provides data for the <see cref="AVAudioPlayer.FinishedPlaying" /> event.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+#elif __MACOS__
+	/// <summary>Provides data for the <see cref="AVAudioPlayer.FinishedPlaying" /> and <see cref="AVAudioRecorder.FinishedRecording" /> events.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+#else
+	/// <summary>Provides data for the <see cref="AVAudioPlayer.FinishedPlaying" />, <see cref="AVAudioRecorder.FinishedRecording" /> and <see cref="AVAudioSession.InputAvailabilityChanged" /> events.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class AVStatusEventArgs : EventArgs {
+		/// <param name="status">To be added.</param>
+		///         <summary>Initializes a new instance of the AVStatusEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public AVStatusEventArgs (bool status)
 		{
 			Status = status;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool Status { get; private set; }
 	}
 
-	#pragma warning disable 672
+#pragma warning disable 672
 	sealed class InternalAVAudioPlayerDelegate : AVAudioPlayerDelegate {
-		internal EventHandler cbEndInterruption, cbBeginInterruption;
-		internal EventHandler<AVStatusEventArgs> cbFinishedPlaying;
-		internal EventHandler<AVErrorEventArgs> cbDecoderError;
+		internal EventHandler? cbEndInterruption;
+		internal EventHandler? cbBeginInterruption;
+		internal EventHandler<AVStatusEventArgs>? cbFinishedPlaying;
+		internal EventHandler<AVErrorEventArgs?>? cbDecoderError;
 
 		public InternalAVAudioPlayerDelegate ()
 		{
@@ -68,95 +103,111 @@ namespace AVFoundation {
 		[Preserve (Conditional = true)]
 		public override void FinishedPlaying (AVAudioPlayer player, bool flag)
 		{
-			if (cbFinishedPlaying != null)
+			if (cbFinishedPlaying is not null)
 				cbFinishedPlaying (player, new AVStatusEventArgs (flag));
 			if (player.Handle == IntPtr.Zero)
 				throw new ObjectDisposedException ("player", "the player object was Dispose()d during the callback, this has corrupted the state of the program");
+			GC.KeepAlive (player);
 		}
-	
+
 		[Preserve (Conditional = true)]
-		public override void DecoderError (AVAudioPlayer player, NSError  error)
+		public override void DecoderError (AVAudioPlayer player, NSError? error)
 		{
-			if (cbDecoderError != null)
-				cbDecoderError (player, new AVErrorEventArgs (error));
+			if (cbDecoderError is not null)
+				cbDecoderError (player, error is not null ? new AVErrorEventArgs (error) : null);
 		}
-#if !MONOMAC	
+#if !MONOMAC
 		[Preserve (Conditional = true)]
-		public override void BeginInterruption (AVAudioPlayer  player)
+		public override void BeginInterruption (AVAudioPlayer player)
 		{
-			if (cbBeginInterruption != null)
+			if (cbBeginInterruption is not null)
 				cbBeginInterruption (player, EventArgs.Empty);
 		}
-	
+
 		[Preserve (Conditional = true)]
 		public override void EndInterruption (AVAudioPlayer player)
 		{
-			if (cbEndInterruption != null)
+			if (cbEndInterruption is not null)
 				cbEndInterruption (player, EventArgs.Empty);
 		}
 #endif
 	}
-	#pragma warning restore 672
-	
+#pragma warning restore 672
+
+	/// <summary>An audio player that can play audio from memory or the local file system.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/AVTouchSample/">avTouch</related>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/avfaudio/avaudioplayer">Apple documentation for <c>AVAudioPlayer</c></related>
 	public partial class AVAudioPlayer {
 		InternalAVAudioPlayerDelegate EnsureEventDelegate ()
 		{
 			var del = WeakDelegate as InternalAVAudioPlayerDelegate;
-			if (del == null){
+			if (del is null) {
 				del = new InternalAVAudioPlayerDelegate ();
 				WeakDelegate = del;
 			}
 			return del;
 		}
 
+		/// <summary>Raised when the player finishes playing the audio to the end.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVStatusEventArgs.Status" /> is <see langword="true" /> if playback completed successfully, or <see langword="false" /> if it stopped because a decoding error occurred. This event is not raised when playback is stopped explicitly.</remarks>
 		public event EventHandler<AVStatusEventArgs> FinishedPlaying {
 			add {
 				EnsureEventDelegate ().cbFinishedPlaying += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbFinishedPlaying -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbFinishedPlaying -= value;
 			}
 		}
 
+		/// <summary>Raised when decoding an audio buffer fails while the sound is playing.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVErrorEventArgs.Error" /> describes the decoding error that occurred.</remarks>
 		public event EventHandler<AVErrorEventArgs> DecoderError {
 			add {
 				EnsureEventDelegate ().cbDecoderError += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbDecoderError -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbDecoderError -= value;
 			}
 		}
 
+		/// <summary>Raised when an audio session interruption begins, typically because another app or the system has taken over audio playback (for example, an incoming phone call). Playback is paused for the duration of the interruption.</summary>
 		public event EventHandler BeginInterruption {
 			add {
 				EnsureEventDelegate ().cbBeginInterruption += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbBeginInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbBeginInterruption -= value;
 			}
 		}
 
+		/// <summary>Raised when a prior audio session interruption ends, indicating that the app may resume audio playback.</summary>
 		public event EventHandler EndInterruption {
 			add {
 				EnsureEventDelegate ().cbEndInterruption += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbEndInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbEndInterruption -= value;
 			}
 		}
 	}
 
 #if !TVOS
 	internal class InternalAVAudioRecorderDelegate : AVAudioRecorderDelegate {
-		internal EventHandler cbEndInterruption, cbBeginInterruption;
-		internal EventHandler<AVStatusEventArgs> cbFinishedRecording;
-		internal EventHandler<AVErrorEventArgs> cbEncoderError;
+		internal EventHandler? cbEndInterruption;
+		internal EventHandler? cbBeginInterruption;
+		internal EventHandler<AVStatusEventArgs>? cbFinishedRecording;
+		internal EventHandler<AVErrorEventArgs?>? cbEncoderError;
 
-		public InternalAVAudioRecorderDelegate ()	
+		public InternalAVAudioRecorderDelegate ()
 		{
 			IsDirectBinding = false;
 		}
@@ -164,28 +215,28 @@ namespace AVFoundation {
 		[Preserve (Conditional = true)]
 		public override void FinishedRecording (AVAudioRecorder recorder, bool flag)
 		{
-			if (cbFinishedRecording != null)
+			if (cbFinishedRecording is not null)
 				cbFinishedRecording (recorder, new AVStatusEventArgs (flag));
 		}
-	
+
 		[Preserve (Conditional = true)]
-		public override void EncoderError (AVAudioRecorder recorder, NSError error)
+		public override void EncoderError (AVAudioRecorder recorder, NSError? error)
 		{
-			if (cbEncoderError != null)
-				cbEncoderError (recorder, new AVErrorEventArgs (error));
+			if (cbEncoderError is not null)
+				cbEncoderError (recorder, error is not null ? new AVErrorEventArgs (error) : null);
 		}
-#if !MONOMAC	
+#if !MONOMAC
 		[Preserve (Conditional = true)]
-		public override void BeginInterruption (AVAudioRecorder  recorder)
+		public override void BeginInterruption (AVAudioRecorder recorder)
 		{
-			if (cbBeginInterruption != null)
+			if (cbBeginInterruption is not null)
 				cbBeginInterruption (recorder, EventArgs.Empty);
 		}
-	
+
 		[Preserve (Conditional = true)]
 		public override void EndInterruption (AVAudioRecorder recorder)
 		{
-			if (cbEndInterruption != null)
+			if (cbEndInterruption is not null)
 				cbEndInterruption (recorder, EventArgs.Empty);
 		}
 #endif
@@ -195,205 +246,338 @@ namespace AVFoundation {
 		InternalAVAudioRecorderDelegate EnsureEventDelegate ()
 		{
 			var del = WeakDelegate as InternalAVAudioRecorderDelegate;
-			if (del == null){
+			if (del is null) {
 				del = new InternalAVAudioRecorderDelegate ();
 				WeakDelegate = del;
 			}
 			return del;
 		}
 
+		/// <summary>An event indicating that recording has ended (not paused).</summary>
+		/// <remarks>
+		///           <para>This event is raised when a recording has been stopped programmatically or has ended due to reaching its time limit. This event is not raised when the recording has been paused.</para>
+		///         </remarks>
 		public event EventHandler<AVStatusEventArgs> FinishedRecording {
 			add {
 				EnsureEventDelegate ().cbFinishedRecording += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbFinishedRecording -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbFinishedRecording -= value;
 			}
 		}
 
+		/// <summary>Event indicating an error during encoding.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<AVErrorEventArgs> EncoderError {
 			add {
 				EnsureEventDelegate ().cbEncoderError += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbEncoderError -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbEncoderError -= value;
 			}
 		}
 
+		/// <summary>Event raised when an interruption begins.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler BeginInterruption {
 			add {
 				EnsureEventDelegate ().cbBeginInterruption += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbBeginInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbBeginInterruption -= value;
 			}
 		}
 
+		/// <summary>An event indicating an interruption has ended.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler EndInterruption {
 			add {
 				EnsureEventDelegate ().cbEndInterruption += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbEndInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbEndInterruption -= value;
 			}
 		}
 	}
 #endif // !TVOS
 
+#if !(XAMCORE_5_0 && (__TVOS__ || __MACOS__))
+#if !__TVOS__ && !__MACOS__
+	/// <summary>Provides data for the <see cref="AVFoundation.AVAudioSession.SampleRateChanged" /> event.</summary>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+#if XAMCORE_5_0
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("macos")
+#else
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+#endif
 	public class AVSampleRateEventArgs : EventArgs {
+		/// <param name="sampleRate">To be added.</param>
+		///         <summary>Initializes a new instance of the AVSampleRateEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public AVSampleRateEventArgs (double sampleRate)
 		{
 			SampleRate = sampleRate;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double SampleRate { get; private set; }
 	}
 
+#if !__TVOS__ && !__MACOS__
+	/// <summary>Provides data for the <see cref="AVFoundation.AVAudioSession.OutputChannelsChanged" /> and <see cref="AVFoundation.AVAudioSession.OutputChannelsChanged" /> events.</summary>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+#if XAMCORE_5_0
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("macos")
+#else
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+#endif
 	public class AVChannelsEventArgs : EventArgs {
+		/// <param name="numberOfChannels">To be added.</param>
+		///         <summary>Initializes a new instance of the AVChannelsEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public AVChannelsEventArgs (int numberOfChannels)
 		{
 			NumberOfChannels = numberOfChannels;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public int NumberOfChannels { get; private set; }
 	}
 
+#if !__TVOS__ && !__MACOS__
+	/// <summary>Provides data for the <see cref="AVFoundation.AVAudioSession.CategoryChanged" /> event.</summary>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+#if XAMCORE_5_0
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("macos")
+#else
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+#endif
 	public class AVCategoryEventArgs : EventArgs {
+		/// <param name="category">To be added.</param>
+		///         <summary>Initializes a new instance of the AVCategoryEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public AVCategoryEventArgs (string category)
 		{
 			Category = category;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public string Category { get; private set; }
 	}
-	
+#endif // !(XAMCORE_5_0 && (__TVOS__ || __MACOS__)
+
 #if !MONOMAC && !TVOS
 	internal class InternalAVAudioSessionDelegate : AVAudioSessionDelegate {
-		internal EventHandler cbEndInterruption, cbBeginInterruption;
-		internal EventHandler<AVCategoryEventArgs> cbCategoryChanged;
-		internal EventHandler<AVStatusEventArgs> cbInputAvailabilityChanged;
-		internal EventHandler<AVSampleRateEventArgs> cbSampleRateChanged;
-		internal EventHandler<AVChannelsEventArgs> cbInputChanged;
-		internal EventHandler<AVChannelsEventArgs> cbOutputChanged;
+		internal EventHandler? cbEndInterruption;
+		internal EventHandler? cbBeginInterruption;
+		internal EventHandler<AVCategoryEventArgs>? cbCategoryChanged;
+		internal EventHandler<AVStatusEventArgs>? cbInputAvailabilityChanged;
+		internal EventHandler<AVSampleRateEventArgs>? cbSampleRateChanged;
+		internal EventHandler<AVChannelsEventArgs>? cbInputChanged;
+		internal EventHandler<AVChannelsEventArgs>? cbOutputChanged;
 
 		AVAudioSession session;
-		
+
 		[Preserve (Conditional = true)]
 		public InternalAVAudioSessionDelegate (AVAudioSession session)
 		{
 			this.session = session;
 		}
-		
+
 		[Preserve (Conditional = true)]
 		public override void BeginInterruption ()
 		{
-			if (cbBeginInterruption != null)
+			if (cbBeginInterruption is not null)
 				cbBeginInterruption (session, EventArgs.Empty);
 		}
-	
+
 		[Preserve (Conditional = true)]
 		public override void EndInterruption ()
 		{
-			if (cbEndInterruption != null)
+			if (cbEndInterruption is not null)
 				cbEndInterruption (session, EventArgs.Empty);
 		}
 
 		[Preserve (Conditional = true)]
 		public override void InputIsAvailableChanged (bool isInputAvailable)
 		{
-			if (cbInputAvailabilityChanged != null)
+			if (cbInputAvailabilityChanged is not null)
 				cbInputAvailabilityChanged (session, new AVStatusEventArgs (isInputAvailable));
-		}		
-	
+		}
+
 	}
 
+	/// <include file="../../docs/api/AVFoundation/AVAudioSession.xml" path="/Documentation/Docs[@DocId='T:AVFoundation.AVAudioSession']/*" />
 	public partial class AVAudioSession {
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		InternalAVAudioSessionDelegate EnsureEventDelegate ()
 		{
 			var del = WeakDelegate as InternalAVAudioSessionDelegate;
-			if (del == null){
+			if (del is null) {
 				del = new InternalAVAudioSessionDelegate (this);
 				WeakDelegate = del;
 			}
 			return del;
 		}
 
-		[Obsolete ("Deprecated since iOS 6, Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
+		/// <summary>Raised when an audio session interruption begins, typically because another app or the system has taken over the audio session (for example, an incoming phone call). Audio is paused for the duration of the interruption.</summary>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
 		public event EventHandler BeginInterruption {
 			add {
 				EnsureEventDelegate ().cbBeginInterruption += value;
 			}
 			remove {
-				EnsureEventDelegate ().cbBeginInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbBeginInterruption -= value;
 			}
 		}
 
-		[Obsolete ("Deprecated since iOS 6, Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
+		/// <summary>Raised when a prior audio session interruption ends, indicating that the app may reactivate its audio session and resume audio.</summary>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveInterruption' instead.")]
 		public event EventHandler EndInterruption {
 			add {
 				EnsureEventDelegate ().cbEndInterruption += value;
 			}
 			remove {
-				EnsureEventDelegate ().cbBeginInterruption -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbEndInterruption -= value;
 			}
 		}
 
-		[Obsolete ("Deprecated since iOS 6, Use 'AVAudioSession.Notification.ObserveAudioRouteChange'.")]
+		/// <summary>Raised when the audio session category changes, altering how the app's audio interacts with other audio on the device.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVCategoryEventArgs.Category" /> reports the new category.</remarks>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		public event EventHandler<AVCategoryEventArgs> CategoryChanged {
 			add {
 				EnsureEventDelegate ().cbCategoryChanged += value;
 			}
 			remove {
-				EnsureEventDelegate ().cbCategoryChanged -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbCategoryChanged -= value;
 			}
 		}
 
-		[Obsolete ("Deprecated since iOS 6, Use 'AVAudioSession.Notification.ObserveAudioRouteChange'.")]
+		/// <summary>Raised when the availability of audio input on the current route changes, for example when a headset with a microphone is connected or disconnected.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVStatusEventArgs.Status" /> is <see langword="true" /> when input became available.</remarks>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		public event EventHandler<AVStatusEventArgs> InputAvailabilityChanged {
 			add {
 				EnsureEventDelegate ().cbInputAvailabilityChanged += value;
 			}
 			remove {
-				EnsureEventDelegate ().cbInputAvailabilityChanged -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbInputAvailabilityChanged -= value;
 			}
 		}
 
-		[Obsolete ("Deprecated since iOS 6, Use 'AVAudioSession.Notification.ObserveAudioRouteChange'.")]
+		/// <summary>Raised when the hardware sample rate used by the audio session changes, for example after an audio route change.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVSampleRateEventArgs.SampleRate" /> reports the new sample rate, in hertz.</remarks>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		public event EventHandler<AVSampleRateEventArgs> SampleRateChanged {
 			add {
 				EnsureEventDelegate ().cbSampleRateChanged += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbSampleRateChanged -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbSampleRateChanged -= value;
 			}
 		}
 
-		[Obsolete ("Use 'AVAudioSession.Notification.ObserveAudioRouteChange', this event does nothing.")]
+		/// <summary>Raised when the number of audio input channels available to the audio session changes, for example after an audio route change.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVChannelsEventArgs.NumberOfChannels" /> reports the new input channel count.</remarks>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		public event EventHandler<AVChannelsEventArgs> InputChannelsChanged {
 			add {
 				EnsureEventDelegate ().cbInputChanged += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbInputChanged += value;
+				if (value is not null)
+					EnsureEventDelegate ().cbInputChanged -= value;
 			}
 		}
 
-		[Obsolete ("Use 'AVAudioSession.Notification.ObserveAudioRouteChange', this event does nothing.")]
+		/// <summary>Raised when the number of audio output channels available to the audio session changes, for example after an audio route change.</summary>
+		/// <remarks>The event argument's <see cref="AVFoundation.AVChannelsEventArgs.NumberOfChannels" /> reports the new output channel count.</remarks>
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'AVAudioSession.Notification.ObserveAudioRouteChange' instead.")]
 		public event EventHandler<AVChannelsEventArgs> OutputChannelsChanged {
 			add {
 				EnsureEventDelegate ().cbOutputChanged += value;
 			}
 
 			remove {
-				EnsureEventDelegate ().cbOutputChanged -= value;
+				if (value is not null)
+					EnsureEventDelegate ().cbOutputChanged -= value;
 			}
 		}
 	}
 #endif
 }
-
-#endif

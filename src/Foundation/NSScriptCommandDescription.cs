@@ -1,22 +1,20 @@
 // Copyright 2015 Xamarin, Inc.
 
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace Foundation {
 
-#if MONOMAC
+#if MONOMAC || __MACCATALYST__
 
-	// The kyes are not found in any of the public headers from apple. That is the reason
+	// The keys are not found in any of the public headers from Apple. That is the reason
 	// to use this technique.
 	static class NSScriptCommonKeys {
-		private static NSString appEventCode = new NSString ("AppleEventCode"); 
+		static readonly NSString appEventCode = new NSString ("AppleEventCode");
 		public static NSString AppleEventCodeKey {
 			get { return appEventCode; }
 		}
-		
-		private static NSString typeKey = new NSString ("Type");
+
+		static readonly NSString typeKey = new NSString ("Type");
 		public static NSString TypeKey {
 			get { return typeKey; }
 		}
@@ -24,37 +22,34 @@ namespace Foundation {
 
 	public partial class NSScriptCommandDescription {
 
-		NSScriptCommandDescriptionDictionary description = null;
+		NSScriptCommandDescriptionDictionary? description;
 
-		static string ToFourCCString (int value)
-		{
-			return new string (new char [] {
-				(char) (byte) (value >> 24),
-				(char) (byte) (value >> 16),
-				(char) (byte) (value >> 8),
-				(char) (byte) value });
-		}
-		
 		static int ToIntValue (string fourCC)
 		{
 			if (fourCC.Length != 4)
-				throw new FormatException (string.Format ("{0} must have a lenght of 4", nameof (fourCC)));
+				throw new FormatException (string.Format ("{0} must have a length of 4", nameof (fourCC)));
 			int ret = 0;
 			for (int i = 0; i < 4; i++) {
 				ret <<= 8;
-				ret |= fourCC[i];
+				ret |= fourCC [i];
 			}
 			return ret;
 		}
 
+		/// <summary>Creates a new <see cref="NSScriptCommandDescription" /> with the specified suite name, command name, and command declaration.</summary>
+		/// <param name="suiteName">The name of the suite to which the command belongs.</param>
+		/// <param name="commandName">The name of the command.</param>
+		/// <param name="commandDeclaration">A dictionary containing the command declaration.</param>
+		/// <returns>A new <see cref="NSScriptCommandDescription" /> instance.</returns>
+		/// <exception cref="ArgumentException">Thrown when <paramref name="suiteName" /> or <paramref name="commandName" /> is null or empty, or when the command declaration is malformed.</exception>
+		/// <exception cref="ArgumentNullException">Thrown when <paramref name="commandDeclaration" /> is <see langword="null" />.</exception>
 		public static NSScriptCommandDescription Create (string suiteName, string commandName, NSScriptCommandDescriptionDictionary commandDeclaration)
 		{
 			if (String.IsNullOrEmpty (suiteName))
 				throw new ArgumentException ("suiteName cannot be null or empty");
 			if (String.IsNullOrEmpty (commandName))
 				throw new ArgumentException ("commandName cannot be null or empty");
-			if (commandDeclaration == null)
-				throw new ArgumentNullException ("commandDeclaration");
+			ArgumentNullException.ThrowIfNull (commandDeclaration);
 
 			// ensure that the passed description is well formed
 			if (String.IsNullOrEmpty (commandDeclaration.CommandClass))
@@ -67,9 +62,9 @@ namespace Foundation {
 				throw new ArgumentException ("eventClass");
 			if (commandDeclaration.AppleEventClassCode.Length != 4)
 				throw new ArgumentException ("eventClass must be a four characters string.");
-			if (commandDeclaration.ResultAppleEventCode != null && commandDeclaration.ResultAppleEventCode.Length != 4)
+			if (commandDeclaration.ResultAppleEventCode is not null && commandDeclaration.ResultAppleEventCode.Length != 4)
 				throw new ArgumentException ("resultAppleEvent must be a four characters string.");
-			
+
 			using (var nsSuitName = new NSString (suiteName))
 			using (var nsCommandName = new NSString (commandName)) {
 				try {
@@ -90,53 +85,72 @@ namespace Foundation {
 			}
 		}
 
+		/// <summary>Gets the Apple event class code for the command.</summary>
+		/// <value>A four-character string representing the Apple event class code.</value>
 		public string AppleEventClassCode {
-			get { return ToFourCCString (FCCAppleEventClassCode); }
+			get { return Runtime.ToFourCCString (FCCAppleEventClassCode); }
 		}
 
+		/// <summary>Gets the Apple event code for the command.</summary>
+		/// <value>A four-character string representing the Apple event code.</value>
 		public string AppleEventCode {
-			get { return ToFourCCString (FCCAppleEventCode); }
+			get { return Runtime.ToFourCCString (FCCAppleEventCode); }
 		}
 
-		public string GetTypeForArgument (string name)
+		/// <summary>Gets the type for the specified argument.</summary>
+		/// <param name="name">The name of the argument.</param>
+		/// <returns>The type of the argument, or <see langword="null" /> if the argument is not found.</returns>
+		/// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> is <see langword="null" />.</exception>
+		public string? GetTypeForArgument (string name)
 		{
-			if (name == null)
-				throw new ArgumentNullException ("name");
-				
-			using (var nsName = new NSString(name))
+			ArgumentNullException.ThrowIfNull (name);
+
+			using (var nsName = new NSString (name))
 			using (var nsType = GetNSTypeForArgument (nsName)) {
 				return nsType?.ToString ();
 			}
 		}
 
+		/// <summary>Gets the Apple event code for the specified argument.</summary>
+		/// <param name="name">The name of the argument.</param>
+		/// <returns>A four-character string representing the Apple event code for the argument.</returns>
+		/// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> is <see langword="null" />.</exception>
 		public string GetAppleEventCodeForArgument (string name)
 		{
-			if (name == null)
-				throw new ArgumentNullException (name);
+			ArgumentNullException.ThrowIfNull (name);
 
 			using (var nsName = new NSString (name)) {
-				return ToFourCCString (FCCAppleEventCodeForArgument (nsName));
+				return Runtime.ToFourCCString (FCCAppleEventCodeForArgument (nsName));
 			}
 		}
-		
-		public bool IsOptionalArgument (string name) 
+
+		/// <summary>Determines whether the specified argument is optional.</summary>
+		/// <param name="name">The name of the argument.</param>
+		/// <returns><see langword="true" /> if the argument is optional; otherwise, <see langword="false" />.</returns>
+		public bool IsOptionalArgument (string name)
 		{
 			using (var nsName = new NSString (name)) {
 				return NSIsOptionalArgument (nsName);
 			}
 		}
 
+		/// <summary>Gets the Apple event code for the return type.</summary>
+		/// <value>A four-character string representing the Apple event code for the return type.</value>
 		public string AppleEventCodeForReturnType {
-			get { return ToFourCCString (FCCAppleEventCodeForReturnType); }
+			get { return Runtime.ToFourCCString (FCCAppleEventCodeForReturnType); }
 		}
 
+		/// <summary>Creates a new <see cref="NSScriptCommand" /> instance for this command description.</summary>
+		/// <returns>A new <see cref="NSScriptCommand" /> instance.</returns>
 		public NSScriptCommand CreateCommand ()
 		{
 			return new NSScriptCommand (CreateCommandInstancePtr ());
 		}
 
-		public NSDictionary Dictionary {
-			get { return description.Dictionary; }
+		/// <summary>Gets the dictionary containing the command description.</summary>
+		/// <value>An <see cref="NSDictionary" /> containing the command description.</value>
+		public NSDictionary? Dictionary {
+			get { return description?.Dictionary; }
 		}
 	}
 #endif

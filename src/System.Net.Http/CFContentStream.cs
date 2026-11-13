@@ -32,33 +32,24 @@ using System.IO;
 using System.Net;
 using System.Runtime.ExceptionServices;
 
-#if XAMCORE_4_0
 using CFNetwork;
 using CoreFoundation;
-#elif XAMCORE_2_0 || SYSTEM_NET_HTTP
-using CoreServices;
-using CoreFoundation;
-#else
-using MonoTouch.CoreServices;
-using MonoTouch.CoreFoundation;
-#endif
 
-namespace System.Net.Http
-{
-	class BufferData 
-	{
-		public byte[] Buffer;
+#nullable enable
+
+namespace System.Net.Http {
+	class BufferData {
+		public required byte [] Buffer;
 		public int Length;
 	}
 
-	class CFContentStream : HttpContent
-	{
+	class CFContentStream : HttpContent {
 		readonly CFHTTPStream http_stream;
-		BufferData data;
+		BufferData? data;
 		Mutex data_mutex;
 		AutoResetEvent data_event;
 		AutoResetEvent data_read_event;
-		ExceptionDispatchInfo http_exception;
+		ExceptionDispatchInfo? http_exception;
 
 		// The requirements are:
 		// * We must read at least one byte from the stream every time
@@ -91,13 +82,18 @@ namespace System.Net.Http
 			data_mutex = new Mutex ();
 		}
 
-		void HandleErrorEvent (object sender, CFStream.StreamEventArgs e)
+		void HandleErrorEvent (object? sender, CFStream.StreamEventArgs e)
 		{
+			if (sender is null)
+				return;
 			var gotMutex = data_mutex.WaitOne ();
 			if (gotMutex) {
-				var stream = (CFHTTPStream)sender;
-				if (e.EventType == CFStreamEventType.ErrorOccurred)
-					Volatile.Write (ref http_exception, ExceptionDispatchInfo.Capture (stream.GetError ()));
+				var stream = (CFHTTPStream) sender;
+				if (e.EventType == CFStreamEventType.ErrorOccurred) {
+					var error = stream.GetError ();
+					if (error is not null)
+						Volatile.Write (ref http_exception, ExceptionDispatchInfo.Capture (error));
+				}
 				data_mutex.ReleaseMutex ();
 			}
 		}
@@ -107,7 +103,8 @@ namespace System.Net.Http
 			data_read_event.WaitOne (); // make sure there's no pending data.
 
 			data_mutex.WaitOne ();
-			data.Length = (int) http_stream.Read (data.Buffer, 0, data.Buffer.Length);
+			if (data is not null)
+				data.Length = (int) http_stream.Read (data.Buffer, 0, data.Buffer.Length);
 			data_mutex.ReleaseMutex ();
 
 			data_event.Set ();
@@ -125,16 +122,16 @@ namespace System.Net.Http
 			data_event.Set ();
 		}
 
-		protected internal override async Task SerializeToStreamAsync (Stream stream, TransportContext context)
+		protected override async Task SerializeToStreamAsync (Stream stream, TransportContext? context)
 		{
 			while (data_event.WaitOne ()) {
 				data_mutex.WaitOne ();
-				if (http_exception != null) {
+				if (http_exception is not null) {
 					http_exception.Throw ();
 					data_mutex.ReleaseMutex ();
 					break;
 				}
-				if (data == null || data.Length <= 0) {
+				if (data is null || data.Length <= 0) {
 					data_mutex.ReleaseMutex ();
 					data_read_event.Set ();
 					break;
@@ -147,7 +144,7 @@ namespace System.Net.Http
 			}
 		}
 
-		protected internal override bool TryComputeLength (out long length)
+		protected override bool TryComputeLength (out long length)
 		{
 			length = 0;
 			return false;

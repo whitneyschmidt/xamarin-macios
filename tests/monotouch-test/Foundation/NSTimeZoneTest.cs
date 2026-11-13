@@ -7,23 +7,14 @@
 // Copyright 2011 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.IO;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class NSTimeZoneTest {
-		
+
 		[Test]
 		public void KnownTimeZoneNames ()
 		{
@@ -40,7 +31,7 @@ namespace MonoTouchFixtures.Foundation {
 		public void AbbreviationTest ()
 		{
 			var timezone = NSTimeZone.LocalTimeZone;
-			Assert.NotNull (timezone.Abbreviation ());
+			Assert.That (timezone.Abbreviation (), Is.Not.Null);
 		}
 
 		[Test]
@@ -49,17 +40,17 @@ namespace MonoTouchFixtures.Foundation {
 			foreach (var name in NSTimeZone.KnownTimeZoneNames) {
 				// simulator uses OSX to get timezones which might have some holes,
 				// e.g. @"Pacific/Bougainville" does not seems to be available in Mavericks
-#if !MONOMAC
+#if !MONOMAC && !__MACCATALYST__
 				if (Runtime.Arch == Arch.SIMULATOR) {
 					if (!File.Exists (Path.Combine ("/usr/share/zoneinfo/", name)))
 						continue;
 				}
 #endif
 				TimeZoneInfo tzi = TimeZoneInfo.FindSystemTimeZoneById (name);
-				Assert.NotNull (tzi.GetUtcOffset (DateTime.Now), name);
+				Assert.That (tzi.GetUtcOffset (DateTime.Now), Is.Not.Null, name);
 			}
 
-			Assert.NotNull (TimeZoneInfo.Local.GetUtcOffset (DateTime.Now), "Local");
+			Assert.That (TimeZoneInfo.Local.GetUtcOffset (DateTime.Now), Is.Not.Null, "Local");
 		}
 	}
 }

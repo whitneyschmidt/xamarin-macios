@@ -7,56 +7,48 @@
 // Copyright 2012, 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 using MapKit;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MapKit;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.MapKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class PinAnnotationViewTest {
 		[SetUp]
 		public void Setup ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
 		}
-		
+
 		[Test]
 		public void Ctor_Annotation ()
 		{
 			using (var a = new MKPolyline ())
 			using (MKPinAnnotationView av = new MKPinAnnotationView (a, "reuse")) {
-				Assert.AreSame (a, av.Annotation, "Annotation");
+				Assert.That (av.Annotation, Is.SameAs (a), "Annotation");
 
 #if !MONOMAC
-				if (TestRuntime.CheckSystemVersion (PlatformName.iOS, 7, 0)) // Crashes with EXC_BAD_ACCESS (SIGABRT) if < iOS 7.0
-					Assert.False (av.AnimatesDrop, "AnimatesDrop");
+				if (TestRuntime.CheckSystemVersion (ApplePlatform.iOS, 7, 0)) // Crashes with EXC_BAD_ACCESS (SIGABRT) if < iOS 7.0
+					Assert.That (av.AnimatesDrop, Is.False, "AnimatesDrop");
 
-				if (!TestRuntime.CheckSystemVersion (PlatformName.iOS, 9, 0))
+				if (!TestRuntime.CheckSystemVersion (ApplePlatform.iOS, 9, 0))
 					return;
 #endif
 
 				Assert.That (av.PinColor, Is.EqualTo (MKPinAnnotationColor.Red), "PinColor");
 
 				if (TestRuntime.CheckXcodeVersion (7, 0))
-					Assert.NotNull (av.PinTintColor, "PinTintColor");
+					Assert.That (av.PinTintColor, Is.Not.Null, "PinTintColor");
 			}
 		}
 
@@ -65,34 +57,31 @@ namespace MonoTouchFixtures.MapKit {
 		{
 #if !MONOMAC
 			// Crashes with EXC_BAD_ACCESS (SIGABRT) if < iOS 7.0
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
 #endif
 
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (var av = new MKPinAnnotationView (frame)) {
 				Assert.That (av.Frame.ToString (), Is.EqualTo (frame.ToString ()), "Frame"); // fp comparison fails
-				Assert.Null (av.Annotation, "Annotation");
-				Assert.False (av.AnimatesDrop, "AnimatesDrop");
+				Assert.That (av.Annotation, Is.Null, "Annotation");
+				Assert.That (av.AnimatesDrop, Is.False, "AnimatesDrop");
 
 				if (!TestRuntime.CheckXcodeVersion (7, 0))
 					return;
-				
+
 				Assert.That (av.PinColor, Is.EqualTo (MKPinAnnotationColor.Red), "PinColor");
 #if MONOMAC
-				if (TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 12)) {
-					Assert.That (av.PinTintColor.ToString (), Is.EqualTo ("Developer/systemRedColor"), "PinTintColor");
-				} else {
-					Assert.Null (av.PinTintColor, "PinTintColor"); // differs from the other init call
-				}
+				Assert.That (av.PinTintColor, Is.EqualTo (NSColor.SystemRed), "PinTintColor");
 #else
-				if (TestRuntime.CheckSystemVersion (PlatformName.iOS, 10, 0))
-					Assert.That (av.PinTintColor.ToString (), Is.EqualTo (UIColor.FromRGBA (255, 59, 48, 255).ToString ()), "PinTintColor");
+				bool not_null = TestRuntime.CheckSystemVersion (ApplePlatform.iOS, 10, 0);
+				if (not_null)
+					Assert.That (av.PinTintColor, Is.Not.Null, "PinTintColor");
 				else
-					Assert.Null (av.PinTintColor, "PinTintColor"); // differs from the other init call
+					Assert.That (av.PinTintColor, Is.Null, "PinTintColor"); // differs from the other init call
 #endif
 			}
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

@@ -1,16 +1,15 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 
-#if !WATCH
-
-using System;
-using ObjCRuntime;
+#nullable enable
 
 namespace UIKit {
 
 	public partial class UIPopoverController {
 
 		// cute helper to avoid using `Class` in the public API
-		public virtual Type PopoverBackgroundViewType {
+		/// <summary>Gets or sets the type used to display the background of the popover.</summary>
+		/// <remarks>The popover controller uses an instance of this type to draw the background of the popover.</remarks>
+		public virtual Type? PopoverBackgroundViewType {
 			get {
 				IntPtr p = PopoverBackgroundViewClass;
 				if (p == IntPtr.Zero)
@@ -18,11 +17,8 @@ namespace UIKit {
 				return Class.Lookup (p);
 			}
 			set {
-				PopoverBackgroundViewClass =  (value == null) ? IntPtr.Zero : 
-					Class.GetHandle (value);
+				PopoverBackgroundViewClass = Class.GetHandle (value);
 			}
 		}
 	}
 }
-
-#endif // !WATCH

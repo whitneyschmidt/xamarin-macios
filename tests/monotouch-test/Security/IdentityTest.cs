@@ -5,17 +5,10 @@
 //	Sebastien Pouliot  <sebastien@xamarin.com>
 //
 // Copyright 2012-2014 Xamarin Inc.
+// Copyright 2019 Microsoft Corporation
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using Security;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Security {
 
@@ -26,31 +19,63 @@ namespace MonoTouchFixtures.Security {
 
 		static public SecIdentity GetIdentity ()
 		{
-			using (var options = NSDictionary.FromObjectAndKey (new NSString ("farscape"), SecImportExport.Passphrase)) {
-				NSDictionary[] array;
-				if (SecImportExport.ImportPkcs12 (ImportExportTest.farscape_pfx, options, out array) != SecStatusCode.Success)
-					Assert.Fail ("ImportPkcs12");
-				return new SecIdentity (array [0].LowlevelObjectForKey (SecImportExport.Identity.Handle));
-			}
+			return SecIdentity.Import (ImportExportTest.farscape_pfx, "farscape");
+		}
+
+		[Test]
+		public void Create ()
+		{
+			TestRuntime.AssertXcodeVersion (26, 0);
+
+			using var identity = GetIdentity ();
+			using var newIdentity = SecIdentity.Create (identity.Certificate, identity.PrivateKey);
+			Assert.That (newIdentity, Is.Not.Null, "new identity");
 		}
 
 		[Test]
 		public void Identity ()
 		{
 			using (SecIdentity id = GetIdentity ()) {
-				Assert.NotNull (id.PrivateKey, "PrivateKey");
-				Assert.NotNull (id.Certificate, "Certificate");
+				Assert.That (id.PrivateKey, Is.Not.Null, "PrivateKey");
+				Assert.That (id.Certificate, Is.Not.Null, "Certificate");
 			}
 		}
 
 		[Test]
 		public void I2 ()
 		{
-			TestRuntime.AssertXcodeVersion (10,0);
-			using (var i1 = GetIdentity ()) 
+			TestRuntime.AssertXcodeVersion (10, 0);
+			using (var i1 = GetIdentity ())
 			using (var i2 = new SecIdentity2 (i1)) {
 				Assert.That (i1.Certificate.GetCommonName (), Is.EqualTo (i2.Identity.Certificate.GetCommonName ()), "GetCommonName");
 			}
+		}
+
+		[Test]
+		public void AccessCertificates ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using (var i1 = GetIdentity ())
+			using (var i2 = new SecIdentity2 (i1, i1.Certificate)) {
+				int call = 0;
+				Assert.That (i2.AccessCertificates ((c) => {
+					Assert.That (i1.Certificate.GetCommonName (), Is.EqualTo (c.Certificate.GetCommonName ()), "GetCommonName");
+					call++;
+
+				}), Is.True, "Access");
+				Assert.That (call, Is.EqualTo (1), "call");
+			}
+		}
+
+		[Test]
+		public void Certificates ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using var i1 = GetIdentity ();
+			using var i2 = new SecIdentity2 (i1, i1.Certificate);
+			var certs = i2.Certificates;
+			Assert.That (certs, Is.Not.Null, "Certificates");
+			Assert.That (certs!.Length, Is.GreaterThanOrEqualTo (1), "Certificates/length");
 		}
 	}
 }

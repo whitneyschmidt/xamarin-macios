@@ -23,23 +23,27 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if XAMCORE_2_0 && IOS
+#if IOS
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
+#nullable enable
+
 namespace AVFoundation {
 	public partial class AVMetadataMachineReadableCodeObject {
-		public CGPoint[] Corners {
+		/// <summary>If not <see langword="null" />, an array of <see cref="CoreGraphics.CGPoint" /> objects of the detected corners.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		public CGPoint []? Corners {
 			get {
 				var arr = WeakCorners;
-				if (arr == null)
+				if (arr is null)
 					return null;
-				var rv = new CGPoint[arr.Length];
+				var rv = new CGPoint [arr.Length];
 				for (int i = 0; i < rv.Length; i++) {
 					var dict = arr [i];
 					CGPoint pnt;

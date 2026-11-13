@@ -1,0 +1,6 @@
+<Documentation>
+  <Docs DocId="T:UIKit.UITextField">
+    <summary>A text entry control.</summary>
+    <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/UIKit/Reference/UITextField_Class/index.html">Apple documentation for <c>UITextField</c></related>
+  </Docs>
+</Documentation>

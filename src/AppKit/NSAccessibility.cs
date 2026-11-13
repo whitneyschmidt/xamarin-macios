@@ -6,225 +6,348 @@
 //
 // Copyright 2016 Xamarin Inc. (http://xamarin.com)
 
+#if !__MACCATALYST__
 
-using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
 
+using CoreFoundation;
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
 
-namespace AppKit
-{
-	[Mac (10,10)]
-	[Native]
-	public enum NSAccessibilityOrientation : long
-	{
-		Unknown = 0,
-		Vertical = 1,
-		Horizontal = 2
-	}
+#nullable enable
 
-	[Mac (10,10)]
-	[Native]
-	public enum NSAccessibilitySortDirection : long
-	{
-		Unknown = 0,
-		Ascending = 1,
-		Descending = 2
-	}
+namespace AppKit {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	public partial interface INSAccessibility { }
 
-	[Mac (10,10)]
-	[Native]
-	public enum NSAccessibilityRulerMarkerType : long
-	{
-		Unknown = 0,
-		TabStopLeft = 1,
-		TabStopRight = 2,
-		TabStopCenter = 3,
-		TabStopDecimal = 4,
-		IndentHead = 5,
-		IndentTail = 6,
-		IndentFirstLine = 7
-	}
-
-	[Mac (10,10)]
-	[Native]
-	public enum NSAccessibilityUnits : long
-	{
-		Unknown = 0,
-		Inches = 1,
-		Centimeters = 2,
-		Points = 3,
-		Picas = 4
-	}
-
-	[Mac (10,9)]
-	[Native]
-	public enum NSAccessibilityPriorityLevel : long
-	{
-		Low = 10,
-		Medium = 50,
-		High = 90
-	}
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("macos")]
+	public partial class NSAccessibility {
 #if !COREBUILD
-	public partial class NSAccessibility
-	{
-		[Mac (10,10)]
 		[DllImport (Constants.AppKitLibrary)]
-		static extern CGRect NSAccessibilityFrameInView (NSView parentView, CGRect frame);
+		static extern CGRect NSAccessibilityFrameInView (NativeHandle parentView, CGRect frame);
 
+		/// <param name="parentView">To be added.</param>
+		///         <param name="frame">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static CGRect GetFrameInView (NSView parentView, CGRect frame)
 		{
-			return NSAccessibilityFrameInView (parentView, frame);
+			CGRect result = NSAccessibilityFrameInView (parentView.GetHandle (), frame);
+			GC.KeepAlive (parentView);
+			return result;
 		}
 
-		[Mac (10,10)]
 		[DllImport (Constants.AppKitLibrary)]
-		static extern CGPoint NSAccessibilityPointInView (NSView parentView, CGPoint point);
+		static extern CGPoint NSAccessibilityPointInView (NativeHandle parentView, CGPoint point);
 
+		/// <param name="parentView">To be added.</param>
+		///         <param name="point">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static CGPoint GetPointInView (NSView parentView, CGPoint point)
 		{
-			return NSAccessibilityPointInView (parentView, point);
+			CGPoint result = NSAccessibilityPointInView (parentView.GetHandle (), point);
+			GC.KeepAlive (parentView);
+			return result;
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern void NSAccessibilityPostNotificationWithUserInfo (IntPtr element, IntPtr notification, IntPtr userInfo);
 
-		public static void PostNotification (NSObject element, NSString notification, NSDictionary userInfo)
+		/// <param name="element">To be added.</param>
+		///         <param name="notification">To be added.</param>
+		///         <param name="userInfo">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void PostNotification (NSObject element, NSString notification, NSDictionary? userInfo)
 		{
-			if (element == null)
+			if (element is null)
 				throw new ArgumentNullException ("element");
 
-			if (notification == null)
+			if (notification is null)
 				throw new ArgumentNullException ("notification");
 
-			IntPtr userInfoHandle;
-			if (userInfo == null)
-				userInfoHandle = IntPtr.Zero;
-			else
-				userInfoHandle = userInfo.Handle;
-
-			NSAccessibilityPostNotificationWithUserInfo (element.Handle, notification.Handle, userInfoHandle);
+			NSAccessibilityPostNotificationWithUserInfo (element.Handle, notification.Handle, userInfo.GetHandle ());
+			GC.KeepAlive (element);
+			GC.KeepAlive (notification);
+			GC.KeepAlive (userInfo);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern void NSAccessibilityPostNotification (IntPtr element, IntPtr notification);
 
+		/// <param name="element">To be added.</param>
+		///         <param name="notification">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static void PostNotification (NSObject element, NSString notification)
 		{
-			if (element == null)
+			if (element is null)
 				throw new ArgumentNullException ("element");
 
-			if (notification == null)
+			if (notification is null)
 				throw new ArgumentNullException ("notification");
 
 			NSAccessibilityPostNotification (element.Handle, notification.Handle);
+			GC.KeepAlive (element);
+			GC.KeepAlive (notification);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityRoleDescription (IntPtr role, IntPtr subrole);
 
-		public static string GetRoleDescription (NSString role, NSString subrole)
+		/// <param name="role">To be added.</param>
+		///         <param name="subrole">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? GetRoleDescription (NSString role, NSString? subrole)
 		{
-			if (role == null)
+			if (role is null)
 				throw new ArgumentNullException ("role");
 
-			IntPtr subroleHandle;
-			if (subrole == null)
-				subroleHandle = IntPtr.Zero;
-			else
-				subroleHandle = subrole.Handle;
-
-			IntPtr handle = NSAccessibilityRoleDescription (role.Handle, subroleHandle);
-			return NSString.FromHandle (handle);
+			IntPtr handle = NSAccessibilityRoleDescription (role.Handle, subrole.GetHandle ());
+			GC.KeepAlive (role);
+			GC.KeepAlive (subrole);
+			return CFString.FromHandle (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityRoleDescriptionForUIElement (IntPtr element);
 
-		public static string GetRoleDescription (NSObject element)
+		/// <param name="element">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? GetRoleDescription (NSObject element)
 		{
-			if (element == null)
+			if (element is null)
 				throw new ArgumentNullException ("element");
 
 			IntPtr handle = NSAccessibilityRoleDescriptionForUIElement (element.Handle);
-			return NSString.FromHandle (handle);
+			GC.KeepAlive (element);
+			return CFString.FromHandle (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityActionDescription (IntPtr action);
 
-		public static string GetActionDescription (NSString action)
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? GetActionDescription (NSString action)
 		{
-			if (action == null)
+			if (action is null)
 				throw new ArgumentNullException ("action");
 
 			IntPtr handle = NSAccessibilityActionDescription (action.Handle);
-			return NSString.FromHandle (handle);
+			GC.KeepAlive (action);
+			return CFString.FromHandle (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityUnignoredAncestor (IntPtr element);
 
-		public static NSObject GetUnignoredAncestor (NSObject element)
+		/// <param name="element">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSObject? GetUnignoredAncestor (NSObject element)
 		{
-			if (element == null)
+			if (element is null)
 				throw new ArgumentNullException ("element");
 
 			var handle = NSAccessibilityUnignoredAncestor (element.Handle);
+			GC.KeepAlive (element);
 			return Runtime.GetNSObject (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityUnignoredDescendant (IntPtr element);
 
-		public static NSObject GetUnignoredDescendant (NSObject element)
+		/// <param name="element">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSObject? GetUnignoredDescendant (NSObject element)
 		{
-			if (element == null)
+			if (element is null)
 				throw new ArgumentNullException ("element");
 
 			var handle = NSAccessibilityUnignoredDescendant (element.Handle);
-
+			GC.KeepAlive (element);
 			return Runtime.GetNSObject (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityUnignoredChildren (IntPtr originalChildren);
 
-		public static NSObject[] GetUnignoredChildren (NSArray originalChildren)
+		/// <param name="originalChildren">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSObject []? GetUnignoredChildren (NSArray originalChildren)
 		{
-			if (originalChildren == null)
+			if (originalChildren is null)
 				throw new ArgumentNullException ("originalChildren");
 
 			var handle = NSAccessibilityUnignoredChildren (originalChildren.Handle);
-
-			return NSArray.ArrayFromHandle<NSObject> (handle);
+			GC.KeepAlive (originalChildren);
+			return NSArray.ArrayFromHandleDropNullElements<NSObject> (handle);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
 		static extern IntPtr NSAccessibilityUnignoredChildrenForOnlyChild (IntPtr originalChild);
 
-		public static NSObject[] GetUnignoredChildren (NSObject originalChild)
+		/// <param name="originalChild">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSObject []? GetUnignoredChildren (NSObject originalChild)
 		{
-			if (originalChild == null)
+			if (originalChild is null)
 				throw new ArgumentNullException ("originalChild");
 
 			var handle = NSAccessibilityUnignoredChildrenForOnlyChild (originalChild.Handle);
-
-			return NSArray.ArrayFromHandle<NSObject> (handle);
+			GC.KeepAlive (originalChild);
+			return NSArray.ArrayFromHandleDropNullElements<NSObject> (handle);
 		}
 
-		[Mac (10, 9)]
 		[DllImport (Constants.AppKitLibrary)]
-		static extern bool NSAccessibilitySetMayContainProtectedContent (bool flag);
+		static extern byte NSAccessibilitySetMayContainProtectedContent (byte flag);
 
+		/// <param name="flag">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static bool SetMayContainProtectedContent (bool flag)
 		{
-			return NSAccessibilitySetMayContainProtectedContent (flag);
+			return NSAccessibilitySetMayContainProtectedContent (flag ? (byte) 1 : (byte) 0) != 0;
+		}
+#endif
+	}
+
+#if !XAMCORE_5_0
+#if !COREBUILD
+	partial interface INSAccessibility {
+		/// <summary>Use <see cref="AccessibilityChildrenInNavigationOrder2" /> instead.</summary>
+		/// <remarks>This property is declared with the wrong property type (it's declared using the <see cref="NSAccessibilityElement" /> type instead of the <see cref="INSAccessibilityElementProtocol" /> interface). The property accessors for this property will try to convert between the type and the interface, and if unsuccessful an exception will be thrown at runtime.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => _AccessibilityChildrenInNavigationOrder;
+			set => _AccessibilityChildrenInNavigationOrder = value;
+		}
+
+		internal NSAccessibilityElement []? _AccessibilityChildrenInNavigationOrder {
+			get {
+				var result = AccessibilityChildrenInNavigationOrder2;
+				if (result is null)
+					return null;
+				return Array.ConvertAll (result, element => (NSAccessibilityElement) element);
+			}
+			set {
+				AccessibilityChildrenInNavigationOrder2 = value is null ? null : Array.ConvertAll (value, element => (INSAccessibilityElementProtocol) element);
+			}
+		}
+	}
+
+	partial class NSApplication {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSCell {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSMenuItem {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSView {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSWindow {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSAccessibilityElement {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSDrawer {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSMenu {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSPopover {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
+		}
+	}
+
+	partial class NSSliderAccessory {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'AccessibilityChildrenInNavigationOrder2' instead.")]
+		public virtual NSAccessibilityElement []? AccessibilityChildrenInNavigationOrder {
+			get => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder;
+			set => ((INSAccessibility) this)._AccessibilityChildrenInNavigationOrder = value;
 		}
 	}
 #endif
+#endif // XAMCORE_5_0
 }
+#endif // !__MACCATALYST__

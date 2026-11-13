@@ -24,39 +24,47 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-#if XAMCORE_2_0 || !MONOMAC
 
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Accounts {
 
 	// XI specific, not part of ObjC (NSString mapping)
-	public enum ACFacebookAudience
-	{
+	/// <summary>Specifies target audience for Facebook posts.</summary>
+	public enum ACFacebookAudience {
+		/// <summary>Posts are visible to everyone.</summary>
 		Everyone = 1,
+		/// <summary>Posts are visible to friends only.</summary>
 		Friends,
-		OnlyMe
+		/// <summary>Posts are visible to the user only.</summary>
+		OnlyMe,
 	}
 
-	[iOS (6,0)]
-	public class AccountStoreOptions : DictionaryContainer
-	{
+	/// <summary>Options available when requesting Facebook access.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	public class AccountStoreOptions : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>Initializes a new instance of the <see cref="AccountStoreOptions" /> class.</summary>
 		public AccountStoreOptions ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <param name="dictionary">The dictionary containing account store options.</param>
+		/// <summary>Initializes a new instance of the <see cref="AccountStoreOptions" /> class from the specified dictionary.</summary>
 		public AccountStoreOptions (NSDictionary dictionary)
 			: base (dictionary)
 		{
 		}
 
-		public string FacebookAppId {
+		/// <summary>Represents Facebook App ID.</summary>
+		/// <value>The Facebook application identifier.</value>
+		/// <remarks>The property uses constant ACFacebookAppIdKey value to access the underlying dictionary.</remarks>
+		public string? FacebookAppId {
 			set {
 				SetStringValue (ACFacebookKey.AppId, value);
 			}
@@ -65,12 +73,15 @@ namespace Accounts {
 			}
 		}
 
-		public void SetPermissions (ACFacebookAudience audience, params string[] permissions)
+		/// <param name="audience">Target audience.</param>
+		/// <param name="permissions">One or more requested permissions.</param>
+		/// <summary>Sets message posting permissions.</summary>
+		public void SetPermissions (ACFacebookAudience audience, params string [] permissions)
 		{
-			if (permissions == null)
-				throw new ArgumentNullException ("permissions");
+			if (permissions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (permissions));
 			if (permissions.Length == 0)
-				throw new ArgumentException ("permissions");
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (nameof (permissions));
 
 			SetArrayValue (ACFacebookKey.Permissions, permissions);
 
@@ -84,16 +95,18 @@ namespace Accounts {
 				v = ACFacebookAudienceValue.Friends;
 				break;
 			case ACFacebookAudience.OnlyMe:
-				v = ACFacebookAudienceValue.Friends;
+				v = ACFacebookAudienceValue.OnlyMe;
 				break;
 			default:
-				throw new ArgumentOutOfRangeException ("audience");				
+				throw new ArgumentOutOfRangeException ("audience");
 			}
 
 			SetNativeValue (ACFacebookKey.Audience, v);
 		}
 
-		public string TencentWeiboAppId {
+		/// <summary>Gets or sets the Tencent Weibo application identifier.</summary>
+		/// <value>The Tencent Weibo application identifier.</value>
+		public string? TencentWeiboAppId {
 			set {
 				SetStringValue (ACTencentWeiboKey.AppId, value);
 			}
@@ -104,4 +117,3 @@ namespace Accounts {
 #endif
 	}
 }
-#endif

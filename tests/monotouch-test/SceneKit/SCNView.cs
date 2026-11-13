@@ -1,0 +1,22 @@
+#if __MACOS__
+using System.Threading.Tasks;
+
+using AppKit;
+using CoreAnimation;
+using CoreGraphics;
+using SceneKit;
+
+namespace Xamarin.Mac.Tests {
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class SCNViewTests {
+		[Test]
+		public void SCNView_TechniqueSetterTest ()
+		{
+			SCNView v = new SCNView (new CGRect (), (NSDictionary) null);
+			SCNTechnique t = SCNTechnique.Create (new NSDictionary ());
+			v.Technique = t;
+		}
+	}
+}
+#endif // __MACOS__

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for UITableViewController
 //
 // Authors:
@@ -7,18 +7,10 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
 
@@ -32,15 +24,15 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			using (var rc = new UIRefreshControl ())
 			using (var tvc = new UITableViewController ()) {
-				Assert.Null (tvc.RefreshControl, "default");
+				Assert.That (tvc.RefreshControl, Is.Null, "default");
 				tvc.RefreshControl = rc;
-				Assert.AreSame (tvc.RefreshControl, rc, "same");
+				Assert.That (rc, Is.SameAs (tvc.RefreshControl), "same");
 				tvc.RefreshControl = null;
-				Assert.Null (tvc.RefreshControl, "nullable");
+				Assert.That (tvc.RefreshControl, Is.Null, "nullable");
 			}
 		}
 #endif // !__TVOS__
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

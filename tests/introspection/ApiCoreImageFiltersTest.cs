@@ -19,31 +19,17 @@
 // limitations under the License.
 //
 
-#if !__WATCHOS__
-
-using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 
-using NUnit.Framework;
-
-#if XAMCORE_2_0
 using CoreImage;
-using Foundation;
-using ObjCRuntime;
 #if !MONOMAC
 using UIKit;
 #endif
-#elif MONOMAC
-using MonoMac.CoreImage;
-using MonoMac.Foundation;
-#else
-using MonoTouch.CoreImage;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
+
+#nullable enable
 
 namespace Introspection {
 
@@ -54,6 +40,12 @@ namespace Introspection {
 
 		static Type CIFilterType = typeof (CIFilter);
 
+#if false
+		static TextWriter BindingOutput;
+#else
+		static TextWriter BindingOutput = Console.Out;
+#endif
+
 		protected virtual bool Skip (Type type)
 		{
 			return Skip (type.Name) || SkipDueToAttribute (type);
@@ -62,6 +54,8 @@ namespace Introspection {
 		protected virtual bool Skip (string nativeName)
 		{
 			switch (nativeName) {
+			case "CIRawFilter":
+				return true;
 			// Both reported in radar #21548819
 			//  NSUnknownKeyException [<CIDepthOfField 0x158586970> valueForUndefinedKey:]: this class is not key value coding-compliant for the key inputPoint2.
 			case "CIDepthOfField":
@@ -70,7 +64,26 @@ namespace Introspection {
 			// uncomment calls to `GenerateBinding` to use introspection code to generate the skeleton binding code and complete it
 			// e.g. picking better types like `bool` instead of `NSNumber'
 			default:
- 				return false;
+				return false;
+			case "CIConvertLabToRGB":
+			case "CIConvertRGBtoLab":
+				return true;
+			case "CIAreaAlphaWeightedHistogram": // not in Xcode 16 b1 or b2 headers.
+				return true;
+			// The iOS and tvOS 27 runtimes started exposing these barcode generator filters, but they are
+			// undocumented (not declared in CIFilterBuiltins.h on any platform), so - like the other undocumented
+			// filters above - we don't bind them and skip them here.
+			case "CICodabarBarcodeGenerator":
+			case "CICode39BarcodeGenerator":
+			case "CIEAN13BarcodeGenerator":
+			case "CIInterleaved2of5BarcodeGenerator":
+			case "CISeimensStarGenerator":
+				return true;
+#if __TVOS__
+			case "CIPersonSegmentation": // removed in Xcode 26?
+			case "CISaliencyMapFilter": // removed in Xcode 26?
+				return TestRuntime.CheckXcodeVersion (26, 0);
+#endif
 			}
 		}
 
@@ -78,30 +91,32 @@ namespace Introspection {
 		// this test checks that all native filters have a managed peer, i.e. against missing filters
 		public void CheckNativeFilters ()
 		{
-			List<string> filters = new List<string> ();
+			Errors = 0;
+			var filters = new List<string> ();
 			int n = 0;
-			string qname = CIFilterType.AssemblyQualifiedName;
+			var qname = CIFilterType.AssemblyQualifiedName;
 			// that will give us only the list of filters supported by the executing version of iOS
-			foreach (var filter_name in CIFilter.FilterNamesInCategories (null)) {
+			foreach (var filter_name in CIFilter.FilterNamesInCategories ()) {
 				if (Skip (filter_name))
 					continue;
-				string type_name = qname.Replace ("CIFilter", filter_name);
-				if (Type.GetType (type_name, false, true) == null) {
+				var type_name = qname!.Replace ("CIFilter", filter_name);
+				if (Type.GetType (type_name, false, true) is null) {
 					filters.Add (filter_name);
-					// uncomment to generate bindings for any new native filter
-//					GenerateBinding (CIFilter.FromName (filter_name), Console.Out);
+					if (BindingOutput is not null)
+						GenerateBinding (CIFilter.FromName (filter_name)!, BindingOutput);
 				}
 				n++;
 			}
-			Assert.That (filters.Count, Is.EqualTo (0), "{0} native filters missing: {1}", filters.Count, String.Join (", ", filters));
+			Assert.That (filters.Count, Is.EqualTo (0), $"{filters.Count} native filters missing: {String.Join (", ", filters)}");
 		}
 
 		[Test]
 		// this test checks that all managed filters have a native peer, i.e. against extra filters
 		public void CheckManagedFilters ()
 		{
+			Errors = 0;
 			ContinueOnFailure = true;
-			List<string> filters = new List<string> (CIFilter.FilterNamesInCategories (null));
+			var filters = new List<string> (CIFilter.FilterNamesInCategories ());
 			var superFilters = new List<string> ();
 			var nspace = CIFilterType.Namespace;
 			var types = CIFilterType.Assembly.GetTypes ();
@@ -114,13 +129,13 @@ namespace Introspection {
 
 				// we need to skip the filters that are not supported by the executing version of iOS
 				if (Skip (t))
-					continue; 
-
-				var ctor = t.GetConstructor (Type.EmptyTypes);
-				if ((ctor == null) || ctor.IsAbstract)
 					continue;
 
-				NSObject obj = ctor.Invoke (null) as NSObject;
+				var ctor = t.GetConstructor (Type.EmptyTypes);
+				if ((ctor is null) || ctor.IsAbstract)
+					continue;
+
+				var obj = ctor.Invoke (null) as NSObject;
 #if false
 				// check base type - we might have our own base type or different names, so it's debug only (not failure)
 				var super = new Class (obj.Class.SuperClass).Name;
@@ -130,7 +145,7 @@ namespace Introspection {
 					if (!superFilters.Contains (super)) {
 						superFilters.Add (super);
 						Console.WriteLine ("[GENERATED] {0}", super);
-						GenerateBinding (CIFilter.FromName (super), Console.Out);
+						GenerateBinding (CIFilter.FromName (super), BindingOutput);
 					}
 				}
 #endif
@@ -143,20 +158,23 @@ namespace Introspection {
 				if (Skip (filters [i]))
 					filters.RemoveAt (i);
 			}
-			Assert.That (filters.Count, Is.EqualTo (0), "Managed filters not found for {0}", String.Join (", ", filters));
+			Assert.That (filters.Count, Is.EqualTo (0), $"Managed filters not found for {String.Join (", ", filters)}");
 		}
 
 		static void GenerateBinding (NSObject filter, TextWriter writer)
 		{
-			NSObject value;
-			var attributes = (filter as CIFilter).Attributes;
+			var f = (CIFilter) filter;
+			var attributes = f.Attributes;
 
 			writer.WriteLine ("[CoreImageFilter]");
+			writer.WriteLine ($"/* Attributes for this filter REMOVE-ME:\n\n{attributes}\n\n */");
+			writer.WriteLine ($"/* Input Keys for this filter: {string.Join (", ", f.InputKeys.Select (v => v.ToString ()).OrderBy (v => v))} */");
+			writer.WriteLine ($"/* Output Keys for this filter: {string.Join (", ", f.OutputKeys.Select (v => v.ToString ()).OrderBy (v => v))} */");
 
-			if (!attributes.TryGetValue ((NSString)"CIAttributeFilterAvailable_iOS", out value)) {
+			if (!attributes.TryGetValue ((NSString) "CIAttributeFilterAvailable_iOS", out var value)) {
 				writer.WriteLine ("[NoiOS]");
 			} else {
-				var v = value.ToString ();
+				var v = value.ToString ()!;
 				// in the (quite common) case we get "5" for iOS 5.0
 				if (v.IndexOf ('.') == -1)
 					v += ".0";
@@ -166,52 +184,372 @@ namespace Introspection {
 					writer.WriteLine ("[iOS ({0},{1})]", ios.Major, ios.Minor);
 			}
 
-			if (!attributes.TryGetValue ((NSString)"CIAttributeFilterAvailable_Mac", out value)) {
+			if (!attributes.TryGetValue ((NSString) "CIAttributeFilterAvailable_Mac", out value)) {
 				writer.WriteLine ("[NoMac]");
 			} else {
 				try {
-					var mac = Version.Parse (value.ToString ());
+					var v = value.ToString ()!;
+					// just like the iOS attribute above, recent macOS versions report a single number
+					// (e.g. "27" for macOS 27.0), and System.Version requires at least "major.minor".
+					if (v.IndexOf ('.') == -1)
+						v += ".0";
+					var mac = Version.Parse (v);
 					// we only document availability for 10.7+
 					if (mac.Minor > 6)
 						writer.WriteLine ("[Mac ({0},{1})]", mac.Major, mac.Minor);
-				}
-				catch (FormatException) {
+				} catch (FormatException) {
 					// 10.? is not a valid version - we'll assume it was added a long time ago (in a galaxy far away)
 					writer.WriteLine ("// incorrect version string for OSX: '{0}' Double-check documentation", value);
 				}
 			}
 			writer.WriteLine ("[BaseType (typeof (CIFilter))]");
-			var fname = attributes [(NSString)"CIAttributeFilterName"].ToString ();
+			var fname = attributes [(NSString) "CIAttributeFilterName"]?.ToString ();
 			writer.WriteLine ("interface {0} {{", fname);
 			foreach (var k in attributes.Keys) {
-				var key = k.ToString ();
+				var key = k.ToString ()!;
 				if (key.StartsWith ("CIAttribute", StringComparison.Ordinal))
 					continue;
-				// CIFilter defines it for all filters
-				if (key == "inputImage")
-					continue;
-				
+
 				writer.WriteLine ();
 				var dict = attributes [k] as NSDictionary;
-				var type = dict [(NSString) "CIAttributeClass"];
-				writer.WriteLine ("\t[CoreImageFilterProperty (\"{0}\")]", key);
+				var type = dict! [(NSString) "CIAttributeClass"];
+				writer.WriteLine ($"\t[CoreImageFilterProperty (\"{key}\")]");
 
-				// by default we drop the "input" prefix, but keep the "output" prefix to avoid confusion
-				if (key.StartsWith ("input", StringComparison.Ordinal))
+				// by default we drop the "input" prefix, but keep the "output" prefix to avoid confusion, except for 'inputImage'
+				if (key.StartsWith ("input", StringComparison.Ordinal) && key != "inputImage")
 					key = Char.ToUpperInvariant (key [5]) + key.Substring (6);
-				
-				var ptype = type.ToString ();
-				// Too many things ends up in NSNumber but we do a better job in our bindings
-				if (ptype == "NSNumber") {
-					ptype = "float";
-					writer.WriteLine ("\t// TODO: this was an NSNumber transformed to float, but maybe an int or bool is more appropriate");
-				}
-				writer.WriteLine ("\t{0} {1} {{ get; set; }}", ptype, key);
+
+				writer.WriteLine ("\t/* REMOVE-ME");
+				writer.WriteLine (dict);
+				writer.WriteLine ("\t*/");
+				writer.WriteLine ($"\t{type} {key} {{ get; set; }}");
 			}
 			writer.WriteLine ("}");
 			writer.WriteLine ();
+			writer.Flush ();
+		}
+
+		[Test]
+		public void Protocols ()
+		{
+			Errors = 0;
+			var to_confirm_manually = new StringBuilder ();
+			ContinueOnFailure = true;
+			var nspace = CIFilterType.Namespace;
+			var types = CIFilterType.Assembly.GetTypes ();
+			foreach (Type t in types) {
+				if (t.Namespace != nspace)
+					continue;
+
+				// e.g. FooProtocolWrapper
+				if (!t.IsPublic)
+					continue;
+
+				switch (t.Name) {
+				// we are interested in subclasses (real) filters
+				case "CIFilter":
+					continue;
+				// no protocol has been added (yet?) you can confirm with `grep` that it does not report anything in the terminal
+				case "CIAdditionCompositing":
+				case "CIAreaAverage":
+				case "CIAreaHistogram":
+				case "CIAreaMaximum":
+				case "CIAreaMaximumAlpha":
+				case "CIAreaMinimum":
+				case "CIAreaMinimumAlpha":
+				case "CIAreaMinMax":
+				case "CIAreaMinMaxRed":
+				case "CIBlendFilter":
+				case "CIBumpDistortion":
+				case "CIBumpDistortionLinear":
+				case "CICameraCalibrationLensCorrection":
+				case "CICircleSplashDistortion":
+				case "CICircularWrap":
+				case "CIClamp":
+				case "CICodeGenerator":
+				case "CIColorBlendMode":
+				case "CIColorBurnBlendMode":
+				case "CIColorDodgeBlendMode":
+				case "CIColumnAverage":
+				case "CICompositingFilter":
+				case "CIConstantColorGenerator":
+				case "CIConvolution3X3":
+				case "CIConvolution5X5":
+				case "CIConvolution7X7":
+				case "CIConvolution9Horizontal":
+				case "CIConvolution9Vertical":
+				case "CIConvolutionCore":
+				case "CICoreMLModelFilter":
+				case "CICrop":
+				case "CIDarkenBlendMode":
+				case "CIDepthBlurEffect":
+				case "CIDepthDisparityConverter":
+				case "CIDifferenceBlendMode":
+				case "CIDisplacementDistortion":
+				case "CIDistortionFilter":
+				case "CIDivideBlendMode":
+				case "CIDroste":
+				case "CIExclusionBlendMode":
+				case "CIFaceBalance":
+				case "CIGlassDistortion":
+				case "CIGlassLozenge":
+				case "CIGuidedFilter":
+				case "CIHardLightBlendMode":
+				case "CIHistogramDisplayFilter":
+				case "CIHoleDistortion":
+				case "CIHueBlendMode":
+				case "CIImageGenerator":
+				case "CIKeystoneCorrection":
+				case "CIKMeans":
+				case "CILightenBlendMode":
+				case "CILightTunnel":
+				case "CILinearBlur":
+				case "CILinearBurnBlendMode":
+				case "CILinearDodgeBlendMode":
+				case "CILuminosityBlendMode":
+				case "CIMaximumCompositing":
+				case "CIMinimumCompositing":
+				case "CIMorphology":
+				case "CIMorphologyRectangle":
+				case "CIMultiplyBlendMode":
+				case "CIMultiplyCompositing":
+				case "CINinePartStretched":
+				case "CINinePartTiled":
+				case "CIOverlayBlendMode":
+				case "CIPinchDistortion":
+				case "CIPinLightBlendMode":
+				case "CIReductionFilter":
+				case "CIRowAverage":
+				case "CISampleNearest":
+				case "CISaturationBlendMode":
+				case "CIScreenBlendMode":
+				case "CIScreenFilter":
+				case "CISoftLightBlendMode":
+				case "CISourceAtopCompositing":
+				case "CISourceInCompositing":
+				case "CISourceOutCompositing":
+				case "CISourceOverCompositing":
+				case "CIStretchCrop":
+				case "CISubtractBlendMode":
+				case "CITileFilter":
+				case "CITorusLensDistortion":
+				case "CITwirlDistortion":
+				case "CIVortexDistortion":
+					// this list is likely to change with newer Xcode - uncomment if you want to the script to check the list
+					//to_confirm_manually.AppendLine ($"grep {t.Name} `xcode-select -p`/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreImage.framework/Headers/*.h");
+					// since xtro will report the missing protocols this is a 2nd layer of safety :)
+					continue;
+				}
+
+				bool assign = typeof (ICIFilterProtocol).IsAssignableFrom (t);
+				bool suffix = t.Name.EndsWith ("Protocol", StringComparison.Ordinal);
+
+				if (t.IsInterface) {
+					if (assign) {
+						// check that `IFooProtocol` has a [Protocol (Name = "Foo")] attribute
+						var ca = t.GetCustomAttribute<ProtocolAttribute> (false);
+						if (ca is null) {
+							ReportError ($"Managed {t.Name} should have a '[Protocol (Name=\"{t.Name.Replace ("Protocol", "")}\")]' attribute");
+						}
+						// check that the managed name ends with Protocol, so we can have the _normal_ name to be a concrete type (like our historic, strongly typed filters)
+						if (!suffix) {
+							ReportError ($"Managed {t.Name} should have a 'Protocol' suffix");
+						}
+					} else if (suffix) {
+						ReportError ($"Managed {t.Name} should implement 'ICIFilterProtocol' interface.");
+					}
+				} else if (suffix) {
+					ReportError ($"Managed {t.Name} should be an interface since it represent a protocol");
+				} else if (assign) {
+					// all CIFilter should map to a `ICI*Protocol` interface / protocol
+					bool found = false;
+					foreach (var inft in t.GetInterfaces ()) {
+						if (inft.Namespace == nspace && inft.Name.EndsWith ("Protocol", StringComparison.Ordinal)) {
+							found = true;
+							break;
+						}
+					}
+					if (!found)
+						ReportError ($"Managed CIFilter '{t.Name}' does not conform to any CoreImage filter protocol.");
+				} else if (CIFilterType.IsAssignableFrom (t)) {
+					// missing ICIFilterProtocol
+					to_confirm_manually.AppendLine ($"grep \"protocol {t.Name} \" `xcode-select -p`/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreImage.framework/Headers/*.h");
+					ReportError ($"Managed CIFilter '{t.Name}' does not conform to 'ICIFilterProtocol' protocol. Confirm with generated `grep` script on console.");
+				}
+			}
+			if (to_confirm_manually.Length > 0) {
+				Console.WriteLine (to_confirm_manually);
+			}
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found:\n{ErrorData}\n");
+		}
+
+		[Test]
+		public void Keys ()
+		{
+			Errors = 0;
+			ContinueOnFailure = true;
+			var nspace = CIFilterType.Namespace;
+			var types = CIFilterType.Assembly.GetTypes ();
+			foreach (Type t in types) {
+				if (t.Namespace != nspace)
+					continue;
+
+				if (t.IsAbstract || !CIFilterType.IsAssignableFrom (t))
+					continue;
+
+				// we need to skip the filters that are not supported by the executing version of iOS
+				if (Skip (t))
+					continue;
+
+				var ctor = t.GetConstructor (Type.EmptyTypes);
+				if ((ctor is null) || ctor.IsAbstract)
+					continue;
+
+				var f = (CIFilter) ctor.Invoke (null);
+				var attributes = f.Attributes;
+
+				// first check that every property can be mapped to an input key - except if it starts with "Output"
+				foreach (var p in t.GetProperties (BindingFlags.Public | BindingFlags.Instance)) {
+					var pt = p.DeclaringType;
+					if (!CIFilterType.IsAssignableFrom (pt) || (pt == CIFilterType))
+						continue;
+
+					if (SkipDueToAttribute (p))
+						continue;
+
+					var getter = p.GetGetMethod ()!;
+					var ea = getter.GetCustomAttribute<ExportAttribute> (false);
+					// only properties coming (inlined) from protocols have an [Export] attribute
+					if (ea is null)
+						continue;
+					var key = ea.Selector!;
+					// 'output' is always explicit
+					if (key.StartsWith ("output", StringComparison.Ordinal)) {
+						if (Array.IndexOf (f.OutputKeys, key) < 0) {
+							ReportError ($"{t.Name}: Property `{p.Name}` mapped to key `{key}` is not part of `OutputKeys`.");
+							//GenerateBinding (f, Console.Out);
+						}
+					} else {
+						// special cases (protocol names are better)
+						switch (t.Name) {
+						case "CIBicubicScaleTransform":
+							switch (key) {
+							case "parameterB":
+								key = "inputB";
+								break;
+							case "parameterC":
+								key = "inputC";
+								break;
+							}
+							break;
+						case "CICmykHalftone":
+							switch (key) {
+							case "grayComponentReplacement":
+								key = "inputGCR";
+								break;
+							case "underColorRemoval":
+								key = "inputUCR";
+								break;
+							}
+							break;
+						case "CIGlassDistortion":
+							switch (key) {
+							case "textureImage":
+								key = "texture";
+								break;
+							}
+							break;
+						}
+						// 'input' is implied (generally) and explicit (in a few cases)
+						if (!key.StartsWith ("input", StringComparison.Ordinal))
+							key = "input" + Char.ToUpperInvariant (key [0]) + key.Substring (1);
+
+						var inputKeys = f.InputKeys;
+						Assert.That (inputKeys, Is.Not.Null, $"InputKeys for {t.FullName} is null");
+
+						if (Array.IndexOf (f.InputKeys, key) < 0) {
+							ReportError ($"{t.Name}: Property `{p.Name}` mapped to key `{key}` is not part of `InputKeys`.");
+							//GenerateBinding (f, Console.Out);
+						}
+					}
+				}
+
+				// second check that every input key is mapped to an property
+				foreach (var key in f.InputKeys) {
+					if (!attributes.ContainsKey ((NSString) key)) {
+						// We're assuming that if an input key doesn't have an entry in the attributes, then it shouldn't really be used.
+						// Also, we don't know how to bind it anyway, because the (missing) entry in the attributes is where Apple describes the property type.
+						/// Console.WriteLine ($"{t.Name}: Input key '{key}' does not have a corresponding entry in the attributes");
+						continue;
+					}
+
+					string cap = Char.ToUpperInvariant (key [0]) + key.Substring (1);
+					// special cases (protocol names are better)
+					switch (t.Name) {
+					case "CICmykHalftone":
+						switch (key) {
+						case "inputGCR":
+							cap = "GrayComponentReplacement";
+							break;
+						case "inputUCR":
+							cap = "UnderColorRemoval";
+							break;
+						}
+						break;
+					case "CIAccordionFoldTransition":
+						switch (key) {
+						case "inputNumberOfFolds":
+							cap = "FoldCount";
+							break;
+						}
+						break;
+					case "CIBicubicScaleTransform":
+						switch (key) {
+						case "inputB":
+							cap = "ParameterB";
+							break;
+						case "inputC":
+							cap = "ParameterC";
+							break;
+						}
+						break;
+					}
+					// IgnoreCase because there are acronyms (more than 2 letters) that naming convention force us to change
+					var pi = t.GetProperty (cap, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+					if (pi is null) {
+						// 2nd chance: some, but not all, property are prefixed by `Input`
+						if (key.StartsWith ("input", StringComparison.Ordinal)) {
+							cap = Char.ToUpperInvariant (key [5]) + key.Substring (6);
+							pi = t.GetProperty (cap, BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+						}
+					}
+					if (pi is null) {
+						ReportError ($"{t.Name}: Input Key `{key}` is NOT mapped to a `{cap}` property.");
+						//GenerateBinding (f, Console.Out);
+					} else if (pi.GetSetMethod () is null)
+						ReportError ($"{t.Name}: Property `{pi.Name}` MUST have a setter.");
+				}
+
+				// third check that every output key is mapped to an property
+				foreach (var key in f.OutputKeys) {
+					if (key != "outputImage" && !attributes.ContainsKey ((NSString) key)) {
+						// We're assuming that if an output key doesn't have an entry in the attributes, then it shouldn't really be used.
+						// Also, we don't know how to bind it anyway, because the (missing) entry in the attributes is where Apple describes the property type.
+						// Console.WriteLine ($"{t.Name}: Output key '{key}' does not have a corresponding entry in the attributes");
+						continue;
+					}
+
+					var cap = Char.ToUpperInvariant (key [0]) + key.Substring (1);
+					// IgnoreCase because there are acronyms (more than 2 letters) that naming convention force us to change
+					var po = t.GetProperty (cap, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+					if (po is null) {
+						ReportError ($"{t.Name}: Output Key `{key}` is NOT mapped to a `{cap}` property.");
+						//GenerateBinding (f, Console.Out);
+					} else if (po.GetSetMethod () is not null)
+						ReportError ($"{t.Name}: Property `{po.Name}` should NOT have a setter.");
+				}
+			}
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found:\n{ErrorData}\n");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

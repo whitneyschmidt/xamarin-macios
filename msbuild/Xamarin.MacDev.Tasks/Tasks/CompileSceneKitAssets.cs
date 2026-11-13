@@ -1,0 +1,205 @@
+using System;
+using System.IO;
+using System.Diagnostics;
+using System.Collections.Generic;
+using Task = System.Threading.Tasks.Task;
+
+using Microsoft.Build.Framework;
+using TaskItem = Microsoft.Build.Utilities.TaskItem;
+
+using Xamarin.MacDev;
+using Xamarin.Utils;
+using Xamarin.Localization.MSBuild;
+using Xamarin.Messaging.Build.Client;
+
+#nullable enable
+
+namespace Xamarin.MacDev.Tasks {
+	public class CompileSceneKitAssets : XamarinTask, ICancelableTask, IHasProjectDir, IHasResourcePrefix {
+		#region Inputs
+
+		[Required]
+		public string AppBundleName { get; set; } = "";
+
+		public string CopySceneKitAssetsPath { get; set; } = "";
+
+		[Required]
+		public string IntermediateOutputPath { get; set; } = "";
+
+		public bool IsWatchApp { get; set; }
+
+		[Required]
+		public string ProjectDir { get; set; } = "";
+
+		[Required]
+		public string ResourcePrefix { get; set; } = "";
+
+		[Required]
+		public ITaskItem [] SceneKitAssets { get; set; } = Array.Empty<ITaskItem> ();
+
+		[Required]
+		public string SdkPlatform { get; set; } = "";
+
+		[Required]
+		public string SdkRoot { get; set; } = "";
+
+		[Required]
+		public string SdkVersion { get; set; } = "";
+
+		#endregion
+
+		#region Outputs
+
+		[Output]
+		public ITaskItem [] BundleResources { get; set; } = [];
+
+		#endregion
+
+		const string ToolName = "copySceneKitAssets";
+
+		protected virtual string OperatingSystem {
+			get {
+				return PlatformFrameworkHelper.GetOperatingSystem (TargetFrameworkMoniker);
+			}
+		}
+
+		Task CopySceneKitAssets (string scnassets, string output, string intermediate)
+		{
+			var environment = new Dictionary<string, string?> ();
+			var args = new List<string> ();
+
+			args.Add (Path.GetFullPath (scnassets));
+			args.Add ("-o");
+			args.Add (Path.GetFullPath (output));
+			args.Add ($"--sdk-root={SdkRoot}");
+
+			var platform = PlatformUtils.GetTargetPlatform (SdkPlatform, IsWatchApp);
+			if (platform is not null)
+				args.Add ($"--target-platform={platform}");
+
+			args.Add ($"--target-version={SdkVersion}");
+
+			args.Add ($"--target-build-dir={Path.GetFullPath (intermediate)}");
+			args.Add ($"--resources-folder-path={AppBundleName}");
+
+			var executable = GetExecutable (args, ToolName, CopySceneKitAssetsPath);
+			return ExecuteAsync (executable, args, environment: environment, showErrorIfFailure: true);
+		}
+
+		static bool TryGetScnAssetsPath (string file, out string scnassets)
+		{
+			scnassets = file;
+			while (scnassets.Length > 0 && Path.GetExtension (scnassets).ToLowerInvariant () != ".scnassets")
+				scnassets = Path.GetDirectoryName (scnassets)!;
+			return scnassets.Length > 0;
+		}
+
+		public override bool Execute ()
+		{
+			if (ShouldExecuteRemotely ()) {
+				return ExecuteRemotely (out var _, (taskRunner) => {
+					taskRunner.FixReferencedItems (this, SceneKitAssets);
+					FixUpRootedPaths (SceneKitAssets);
+				});
+			}
+
+			var intermediate = Path.Combine (IntermediateOutputPath, ToolName, AppBundleName);
+			var bundleResources = new List<ITaskItem> ();
+			var modified = new HashSet<string> ();
+			var items = new List<ITaskItem> ();
+			var sceneKitAssets = CollectBundleResources.ComputeLogicalNameAndDetectDuplicates (this, SceneKitAssets, ProjectDir, ResourcePrefix, "SceneKitAsset");
+
+			foreach (var asset in sceneKitAssets) {
+				if (!File.Exists (asset.ItemSpec))
+					continue;
+
+				// get the .scnassets directory path
+				if (!TryGetScnAssetsPath (asset.ItemSpec, out var scnassets))
+					continue;
+
+				var logicalName = asset.GetMetadata ("LogicalName");
+				var bundleName = logicalName;
+				var output = new TaskItem (Path.Combine (intermediate, logicalName));
+
+				if (!modified.Contains (scnassets) && (!File.Exists (output.ItemSpec) || File.GetLastWriteTimeUtc (asset.ItemSpec) > File.GetLastWriteTimeUtc (output.ItemSpec))) {
+					// Base the new item on @asset, to get the `DefiningProject*` metadata too
+					var scnassetsItem = new TaskItem (asset);
+
+					// .. but we really want it to be for @scnassets, so set ItemSpec accordingly
+					scnassetsItem.ItemSpec = scnassets;
+
+					// .. and set LogicalName, the original one is for @asset
+					if (!TryGetScnAssetsPath (logicalName, out var logicalScnAssetsPath)) {
+						Log.LogError (null, null, null, asset.ItemSpec, MSBStrings.E7136 /* Unable to compute the path of the *.scnassets path from the item's LogicalName '{0}'. */ , bundleName);
+						continue;
+					}
+					scnassetsItem.SetMetadata ("LogicalName", logicalScnAssetsPath);
+
+					// .. and remove the @OriginalItemSpec which is for @asset
+					scnassetsItem.RemoveMetadata ("OriginalItemSpec");
+
+					// The Link metadata is for the asset, but 'scnassetsItem' is the containing *.scnasset directory,
+					// so we need to update the Link metadata accordingly (if it exists).
+					var link = scnassetsItem.GetMetadata ("Link");
+					if (!string.IsNullOrEmpty (link)) {
+						var newLinkLength = link.Length - (asset.ItemSpec.Length - scnassets.Length);
+						if (newLinkLength > 0 && newLinkLength < link.Length) {
+							link = link.Substring (0, newLinkLength);
+							scnassetsItem.SetMetadata ("Link", link);
+						}
+					}
+
+					var assetMetadata = asset.GetMetadata ("DefiningProjectFullPath");
+					if (assetMetadata != scnassetsItem.GetMetadata ("DefiningProjectFullPath")) {
+						// xbuild doesn't set this, so we'll do it
+						//
+						// `DefiningProjectFullPath` is a reserved metadata for msbuild, so
+						// setting this is not allowed anyway
+						scnassetsItem.SetMetadata ("DefiningProjectFullPath", assetMetadata);
+					}
+
+					modified.Add (scnassets);
+					items.Add (scnassetsItem);
+				}
+
+				output.SetMetadata ("LogicalName", bundleName);
+				output.SetMetadata ("Optimize", "false");
+				bundleResources.Add (output);
+			}
+
+			if (modified.Count == 0) {
+				BundleResources = bundleResources.ToArray ();
+				return !Log.HasLoggedErrors;
+			}
+
+			if (!Directory.Exists (intermediate))
+				Directory.CreateDirectory (intermediate);
+
+			var tasks = new List<Task> ();
+			foreach (var item in items) {
+				var bundleDir = BundleResource.GetLogicalName (this, new TaskItem (item));
+				var output = Path.Combine (intermediate, bundleDir);
+
+				tasks.Add (CopySceneKitAssets (item.ItemSpec, output, intermediate));
+			}
+			Task.WaitAll (tasks.ToArray ());
+
+			BundleResources = bundleResources.ToArray ();
+
+			return !Log.HasLoggedErrors;
+		}
+
+		public void Cancel ()
+		{
+			if (ShouldExecuteRemotely ())
+				BuildConnection.CancelAsync (BuildEngine4).Wait ();
+		}
+
+		void FixUpRootedPaths (ITaskItem [] sceneKitAssets)
+		{
+			foreach (var item in sceneKitAssets) {
+				item.ItemSpec = item.ItemSpec.Replace (":", "");
+			}
+		}
+	}
+}

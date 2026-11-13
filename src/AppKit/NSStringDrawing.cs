@@ -1,42 +1,80 @@
-using System;
+#if !__MACCATALYST__
 using AppKit;
-using Foundation;
 using CoreGraphics;
 
+#nullable enable
+
 namespace AppKit {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("macos")]
+	[UnsupportedOSPlatform ("ios")]
+	[UnsupportedOSPlatform ("tvos")]
+	[UnsupportedOSPlatform ("maccatalyst")]
 	// Manual bindings, easier than make the generator support extension methods on non-NSObject-derived types (string in this case).
-	public unsafe static partial class NSStringDrawing  {
-		public static void DrawAtPoint (this string This, CGPoint point, NSDictionary attributes)
+	public unsafe static partial class NSStringDrawing {
+		/// <param name="This">To be added.</param>
+		///         <param name="point">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void DrawAtPoint (this string This, CGPoint point, NSDictionary? attributes)
 		{
 			using (var self = ((NSString) This))
 				self.DrawAtPoint (point, attributes);
 		}
 
-		public static void DrawAtPoint (this string This, CGPoint point, NSStringAttributes attributes)
+		/// <param name="This">To be added.</param>
+		///         <param name="point">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void DrawAtPoint (this string This, CGPoint point, NSStringAttributes? attributes)
 		{
-			This.DrawAtPoint (point, attributes == null ? null : attributes.Dictionary);
+			This.DrawAtPoint (point, attributes is null ? null : attributes.Dictionary);
 		}
 
-		public static void DrawInRect (this string This, CGRect rect, NSDictionary attributes)
+		/// <param name="This">To be added.</param>
+		///         <param name="rect">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void DrawInRect (this string This, CGRect rect, NSDictionary? attributes)
 		{
 			using (var self = ((NSString) This))
 				self.DrawInRect (rect, attributes);
 		}
 
-		public static void DrawInRect (this string This, CGRect rect, NSStringAttributes attributes)
+		/// <param name="This">To be added.</param>
+		///         <param name="rect">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void DrawInRect (this string This, CGRect rect, NSStringAttributes? attributes)
 		{
-			This.DrawInRect (rect, attributes == null ? null : attributes.Dictionary);
+			This.DrawInRect (rect, attributes is null ? null : attributes.Dictionary);
 		}
 
-		public static CGSize StringSize (this string This, NSDictionary attributes)
+		/// <param name="This">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CGSize StringSize (this string This, NSDictionary? attributes)
 		{
 			using (var self = ((NSString) This))
 				return self.StringSize (attributes);
 		}
 
-		public static CGSize StringSize (this string This, NSStringAttributes attributes)
+		/// <param name="This">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CGSize StringSize (this string This, NSStringAttributes? attributes)
 		{
-			return This.StringSize (attributes == null ? null : attributes.Dictionary);
+			return This.StringSize (attributes is null ? null : attributes.Dictionary);
 		}
 	}
 }
+#endif // !__MACCATALYST__

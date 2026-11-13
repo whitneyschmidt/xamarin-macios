@@ -19,35 +19,16 @@
 // limitations under the License.
 //
 
-using System;
 using System.IO;
-using System.Collections.Generic;
 using System.Reflection;
 
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 
 	[Preserve (AllMembers = true)]
 	public abstract class ApiFieldTest : ApiBaseTest {
-#if XAMCORE_2_0
 		const string NSStringType = "Foundation.NSString";
-#elif MONOMAC
-		const string NSStringType = "MonoMac.Foundation.NSString";
-#else
-		const string NSStringType = "MonoTouch.Foundation.NSString";
-#endif
 
 		/// <summary>
 		/// Override if you want to skip testing the specified type.
@@ -55,6 +36,13 @@ namespace Introspection {
 		/// <param name="type">Type to be tested</param>
 		protected virtual bool Skip (Type type)
 		{
+			switch (type.Namespace) {
+			case "SensorKit": // SensorKit doesn't exist on iPads
+				if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+					return true;
+				break;
+			}
+
 			return false;
 		}
 
@@ -64,6 +52,33 @@ namespace Introspection {
 		/// <param name="property">Property to be tested</param>
 		protected virtual bool Skip (PropertyInfo property)
 		{
+			if (SkipMissingSimulatorField (property))
+				return true;
+
+			switch (property.DeclaringType?.Name) {
+			case "AVPlayerInterstitialEventObserver":
+				switch (property.Name) { // deprecated
+				case "CurrentEventDidChangeNotification":
+				case "EventsDidChangeNotification":
+					return true;
+				default:
+					return false;
+				}
+			case "SWHighlight":
+				switch (property.Name) {
+				case "MetadataTypeIdentifier":
+					return TestRuntime.IsSimulatorOrDesktop;
+				default:
+					return false;
+				}
+			case "NKIssue":
+				switch (property.Name) {
+				case "DownloadCompletedNotification": // NewstandKit is removed from Xcode 15
+					return TestRuntime.CheckXcodeVersion (15, 0);
+				default:
+					return false;
+				}
+			}
 			return SkipDueToAttribute (property);
 		}
 
@@ -71,7 +86,7 @@ namespace Introspection {
 		/// Override if you want to skip testing the specified constant.
 		/// </summary>
 		/// <param name="constantName">Constant name to ignore.</param>
-		protected virtual bool Skip (string constantName, string libraryName)
+		protected virtual bool Skip (string constantName, string? libraryName)
 		{
 			return false;
 		}
@@ -81,7 +96,7 @@ namespace Introspection {
 		/// </summary>
 		/// <param name="declaredType">Type declaring said notification.</param>
 		/// <param name="notificationName">Name of notification.</param>
-		protected virtual bool SkipNotification (Type declaredType, string notificationName)
+		protected virtual bool SkipNotification (Type? declaredType, string notificationName)
 		{
 			return false;
 		}
@@ -92,33 +107,32 @@ namespace Introspection {
 		bool CheckAgainstNull (PropertyInfo p, out string name)
 		{
 			name = String.Empty;
-			var g = p.GetGetMethod (true);
+			var g = p.GetGetMethod (true)!;
 			if (!g.IsStatic)
 				return true;
 
 			if (Skip (p))
 				return true;
-			
+
 			try {
 				// if it return nulls then it could be a typo...
 				// or something not available in the executing version of iOS
-				bool result = g.Invoke (null, null) != null;
+				bool result = g.Invoke (null, null) is not null;
 				if (!result)
-					name = p.DeclaringType.FullName + "." + p.Name;
+					name = p.DeclaringType?.FullName + "." + p.Name;
 				return result;
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				Console.WriteLine ("[FAIL] Exception on '{0}' : {1}", p, e);
-				name = p.DeclaringType.FullName + "." + p.Name;
+				name = p.DeclaringType?.FullName + "." + p.Name;
 				return false;
 			}
 		}
 
-		static List<PropertyInfo> properties;
+		static List<PropertyInfo>? properties;
 
 		IEnumerable<PropertyInfo> AllProperties ()
 		{
-			if (properties != null)
+			if (properties is not null)
 				return properties;
 
 			properties = new List<PropertyInfo> ();
@@ -130,7 +144,7 @@ namespace Introspection {
 					// looking for properties with getters only
 					if (p.CanWrite || !p.CanRead)
 						continue;
-					if (SkipDueToAttribute (p))
+					if (Skip (p) || SkipDueToAttribute (p))
 						continue;
 
 					properties.Add (p);
@@ -146,24 +160,25 @@ namespace Introspection {
 			var failed_fields = new List<string> ();
 
 			Errors = 0;
-			int c = 0, n = 0;
+			int n = 0;
 			foreach (var p in AllProperties ()) {
 				if (p.PropertyType.FullName != NSStringType)
 					continue;
-				
+
 				var f = p.GetCustomAttribute<FieldAttribute> ();
-				if (f == null)
+				if (f is null)
 					continue;
 
-				var name = f.SymbolName;
+				if (f.SymbolName is not string name)
+					continue;
 				if (!name.EndsWith ("Notification", StringComparison.Ordinal))
 					continue;
 
 				if (SkipNotification (p.DeclaringType, name))
 					continue;
 
-				var nested = p.DeclaringType.GetNestedTypes ();
-				if (nested.Length == 0) {
+				var nested = p.DeclaringType?.GetNestedTypes ();
+				if (nested is null || nested.Length == 0) {
 					ReportError (name);
 					failed_fields.Add (name);
 				} else {
@@ -183,15 +198,15 @@ namespace Introspection {
 						}
 					}
 					if (!found) {
-						ReportError (name);
+						ReportError ($"Could not find the method '{name}' for the notification '{p.DeclaringType?.FullName}.{p.Name}'. Most likely the field is missing a [Notification] attribute.");
 						failed_fields.Add (name);
 					}
 				}
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} fields validated: {2}", Errors, n, string.Join (", ", failed_fields));
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} fields validated: {string.Join (", ", failed_fields)}");
 		}
-		
+
 		[Test]
 		public void NonNullNSStringFields ()
 		{
@@ -203,6 +218,9 @@ namespace Introspection {
 				if (p.PropertyType.FullName != NSStringType)
 					continue;
 
+				if (MemberHasObsolete (p))
+					continue;
+
 				string name;
 				bool result = CheckAgainstNull (p, out name);
 				if (!result) {
@@ -211,7 +229,7 @@ namespace Introspection {
 				}
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} fields validated: {2}", Errors, n, string.Join (", ", failed_fields));
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} fields validated: {string.Join (", ", failed_fields)}");
 		}
 
 		[Test]
@@ -223,26 +241,35 @@ namespace Introspection {
 			int n = 0;
 			foreach (var p in AllProperties ()) {
 				var f = p.GetCustomAttribute<FieldAttribute> ();
-				if (f == null)
+				if (f is null)
 					continue;
 
-				string name = f.SymbolName;
+				if (f.SymbolName is not string name)
+					continue;
 				if (Skip (name, f.LibraryName))
 					continue;
 
-				string path = FindLibrary (f.LibraryName);
+				string path = FindLibrary (f.LibraryName!);
 				IntPtr lib = Dlfcn.dlopen (path, 0);
 				if (lib == IntPtr.Zero) {
 					ReportError ("Could not open the library '{0}' to find the field '{1}': {2}", path, name, Dlfcn.dlerror ());
 					failed_fields.Add (name);
 				} else if (Dlfcn.GetIndirect (lib, name) == IntPtr.Zero) {
+#if __IOS__
+					switch (name) {
+					case "CPMaximumListItemImageSize":
+						if (TestRuntime.CheckXcodeVersion (12, 0))
+							continue;
+						break;
+					}
+#endif
 					ReportError ("Could not find the field '{0}' in {1}", name, path);
 					failed_fields.Add (name);
 				}
 				Dlfcn.dlclose (lib);
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} fields validated: {2}", Errors, n, string.Join (", ", failed_fields));
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} fields validated: {string.Join (", ", failed_fields)}");
 		}
 	}
 }

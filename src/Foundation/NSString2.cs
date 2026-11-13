@@ -23,94 +23,58 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Foundation {
 
-	public partial class NSString {
+	public partial class NSString : IComparable<NSString> {
 		const string selDataUsingEncodingAllow = "dataUsingEncoding:allowLossyConversion:";
 
 #if MONOMAC
 		static IntPtr selDataUsingEncodingAllowHandle = Selector.GetHandle (selDataUsingEncodingAllow);
 #endif
 
-#if !XAMCORE_2_0
-		[Advice ("Use 'Encode' instead.")]
-		public NSData DataUsingEncoding (NSStringEncoding enc)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, 0));
-#endif
-		}
-
-		[Advice ("Use 'Encode' instead.")]
-		public NSData DataUsingEncoding (NSStringEncoding enc, bool allowLossyConversion)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, allowLossyConversion ? 1 : 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, allowLossyConversion ? 1 : 0));
-#endif
-		}
-
-		public NSData Encode (NSStringEncoding enc)
-		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, selDataUsingEncodingAllowHandle, (int) enc, 0));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_int_int (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (int) enc, 0));
-#endif
-		}
-
-		public NSData Encode (NSStringEncoding enc, bool allowLossyConversion)
-#else
+		/// <param name="enc">To be added.</param>
+		///         <param name="allowLossyConversion">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public NSData Encode (NSStringEncoding enc, bool allowLossyConversion = false)
-#endif // XAMCORE_2_0
 		{
-#if MONOMAC
-			return new NSData (Messaging.IntPtr_objc_msgSend_IntPtr_bool (Handle, selDataUsingEncodingAllowHandle, (IntPtr) (int) enc, allowLossyConversion));
-#else
-			return new NSData (Messaging.IntPtr_objc_msgSend_IntPtr_bool (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (IntPtr) (int) enc, allowLossyConversion));
-#endif
+			return new NSData (Messaging.NativeHandle_objc_msgSend_NativeHandle_bool (Handle, Selector.GetHandle (selDataUsingEncodingAllow), (IntPtr) (int) enc, allowLossyConversion ? (byte) 1 : (byte) 0));
 		}
 
-		public static NSString FromData (NSData data, NSStringEncoding encoding)
+		/// <param name="data">The byte buffer.</param>
+		///         <param name="encoding">Use this encoding to intepret the byte buffer.</param>
+		///         <summary>Creates an NSString from an NSData source.</summary>
+		///         <returns>An NSString created by parsing the byte buffer using the specified encoding.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSString? FromData (NSData data, NSStringEncoding encoding)
 		{
-			if (data == null) 
-				throw new ArgumentNullException ("data");
-			NSString ret = null;
-			try { 
+			if (data is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data));
+			NSString? ret = null;
+			try {
 				ret = new NSString (data, encoding);
 			} catch (Exception) {
-			
+
 			}
 			return ret;
 		}
 
-		// [Export ("initWithContentsOfURL:encoding:error")]
-		// IntPtr Constructor (NSUrl url, NSStringEncoding encoding, out NSError error);
-		// 
-		// [Export ("initWithContentsOfURL:usedEncoding:error:")]
-		// IntPtr Constructor (NSUrl url, out NSStringEncoding encoding, out NSError error);
-		// 
-		// [Export ("initWithBytes:length:encoding")]
-		// IntPtr Constructor (IntPtr bytes, int length, NSStringEncoding encoding);
-		
+		public int CompareTo (NSString? other)
+		{
+			// `compare:` behavior is undefined if `nil` is provided, so we need to handle that case.
+			if (other is null)
+				return -1;
+			return (int) Compare (other);
+		}
+
 		public char this [nint idx] {
 			get {
 				return _characterAtIndex (idx);
 			}
 		}
-
-#if !XAMCORE_4_0 && !MONOMAC
-		[Obsolete ("Use 'GetLocalizedUserNotificationString' that takes 'NSString' to preserve localization.")]
-		public static string GetLocalizedUserNotificationString (string key, params NSObject[] arguments) {
-			return GetLocalizedUserNotificationString ((NSString) key, arguments);
-		}
-#endif
 	}
 }

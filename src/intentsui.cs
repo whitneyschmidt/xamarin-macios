@@ -1,4 +1,4 @@
-﻿//
+//
 // IntentsUI bindings
 //
 // Authors:
@@ -7,77 +7,114 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 // The IntentsUI framework relies on Intents which is only available in Unified
-
-using System;
 using CoreGraphics;
-using Foundation;
 using Intents;
-using ObjCRuntime;
+#if MONOMAC
+using AppKit;
+#else
 using UIKit;
+#endif
 
 namespace IntentsUI {
 
-	[iOS (10, 0)]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum INUIHostedViewContext : ulong {
+		/// <summary>To be added.</summary>
 		SiriSnippet,
-		MapsCard
+		/// <summary>To be added.</summary>
+		MapsCard,
 	}
 
-	[iOS (11,0)]
+	[NoMac]
 	[Native]
 	public enum INUIInteractiveBehavior : ulong {
+		/// <summary>To be added.</summary>
 		None,
+		/// <summary>To be added.</summary>
 		NextView,
+		/// <summary>To be added.</summary>
 		Launch,
+		/// <summary>To be added.</summary>
 		GenericAction,
 	}
 
-	[NoWatch, NoTV, NoMac, iOS (12,0)]
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum INUIAddVoiceShortcutButtonStyle : ulong {
+		/// <summary>To be added.</summary>
 		White = 0,
+		/// <summary>To be added.</summary>
 		WhiteOutline,
+		/// <summary>To be added.</summary>
 		Black,
+		/// <summary>To be added.</summary>
 		BlackOutline,
+		[MacCatalyst (13, 1)]
+		Automatic,
+		[MacCatalyst (13, 1)]
+		AutomaticOutLine,
 	}
 
-	[iOS (11,0)]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	delegate void INUIHostedViewControllingConfigureViewHandler (bool success, NSSet<INParameter> configuredParameters, CGSize desiredSize);
 
-	[iOS (10, 0)]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface INUIHostedViewControlling {
-
-#if !XAMCORE_4_0 // Apple made this member optional in iOS 11
-		[Abstract]
-#endif
+		/// <param name="interaction">To be added.</param>
+		/// <param name="context">To be added.</param>
+		/// <param name="completion">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("configureWithInteraction:context:completion:")]
 		void Configure (INInteraction interaction, INUIHostedViewContext context, Action<CGSize> completion);
 
-		[iOS (11,0)]
+		/// <param name="parameters">To be added.</param>
+		/// <param name="interaction">To be added.</param>
+		/// <param name="interactiveBehavior">To be added.</param>
+		/// <param name="context">To be added.</param>
+		/// <param name="completionHandler">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("configureViewForParameters:ofInteraction:interactiveBehavior:context:completion:")]
 		void ConfigureView (NSSet<INParameter> parameters, INInteraction interaction, INUIInteractiveBehavior interactiveBehavior, INUIHostedViewContext context, INUIHostedViewControllingConfigureViewHandler completionHandler);
 	}
 
-	[iOS (10, 0)]
+	/// <summary>Interface for presenting custom map and Siri content.</summary>
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[Category]
 	[BaseType (typeof (NSExtensionContext))]
 	interface NSExtensionContext_INUIHostedViewControlling {
 
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("hostedViewMinimumAllowedSize")]
 		CGSize GetHostedViewMinimumAllowedSize ();
 
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("hostedViewMaximumAllowedSize")]
 		CGSize GetHostedViewMaximumAllowedSize ();
 
-		[iOS (11,0)]
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("interfaceParametersDescription")]
 		string GetInterfaceParametersDescription ();
 	}
 
-	[iOS (10, 0)]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface INUIHostedViewSiriProviding {
 
@@ -91,11 +128,22 @@ namespace IntentsUI {
 		bool DisplaysPaymentTransaction { get; }
 	}
 
-	[iOS (12,0)]
+	[MacCatalyst (13, 1)]
+#if MONOMAC
+	[BaseType (typeof (NSViewController))]
+#else
 	[BaseType (typeof (UIViewController))]
+#endif
 	[DisableDefaultCtor]
 	interface INUIAddVoiceShortcutViewController {
 
+		/// <summary>An instance of the IntentsUI.IINUIAddVoiceShortcutViewControllerDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the IntentsUI.IINUIAddVoiceShortcutViewControllerDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
 		[NullAllowed]
 		IINUIAddVoiceShortcutViewControllerDelegate Delegate { get; set; }
@@ -103,31 +151,51 @@ namespace IntentsUI {
 		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
 		NSObject WeakDelegate { get; set; }
 
+		[MacCatalyst (13, 4)]
 		[Export ("initWithShortcut:")]
-		IntPtr Constructor (INShortcut shortcut);
+		NativeHandle Constructor (INShortcut shortcut);
 	}
 
 	interface IINUIAddVoiceShortcutViewControllerDelegate { }
 
-	[iOS (12,0)]
-	[Protocol, Model (AutoGeneratedName = true)]
+	[MacCatalyst (13, 1)]
+	[Protocol, Model]
 	[BaseType (typeof (NSObject))]
 	interface INUIAddVoiceShortcutViewControllerDelegate {
 
+		/// <param name="controller">To be added.</param>
+		/// <param name="voiceShortcut">To be added.</param>
+		/// <param name="error">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("addVoiceShortcutViewController:didFinishWithVoiceShortcut:error:")]
 		void DidFinish (INUIAddVoiceShortcutViewController controller, [NullAllowed] INVoiceShortcut voiceShortcut, [NullAllowed] NSError error);
 
+		/// <param name="controller">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("addVoiceShortcutViewControllerDidCancel:")]
 		void DidCancel (INUIAddVoiceShortcutViewController controller);
 	}
 
-	[iOS (12,0)]
+	[MacCatalyst (13, 1)]
+#if MONOMAC
+	[BaseType (typeof (NSViewController))]
+#else
 	[BaseType (typeof (UIViewController))]
+#endif
 	[DisableDefaultCtor]
 	interface INUIEditVoiceShortcutViewController {
 
+		/// <summary>An instance of the IntentsUI.IINUIEditVoiceShortcutViewControllerDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the IntentsUI.IINUIEditVoiceShortcutViewControllerDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
 		[NullAllowed]
 		IINUIEditVoiceShortcutViewControllerDelegate Delegate { get; set; }
@@ -135,41 +203,65 @@ namespace IntentsUI {
 		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
 		NSObject WeakDelegate { get; set; }
 
+		[MacCatalyst (13, 4)]
 		[Export ("initWithVoiceShortcut:")]
-		IntPtr Constructor (INVoiceShortcut voiceShortcut);
+		NativeHandle Constructor (INVoiceShortcut voiceShortcut);
 	}
 
 	interface IINUIEditVoiceShortcutViewControllerDelegate { }
 
-	[iOS (12,0)]
-	[Protocol, Model (AutoGeneratedName = true)]
+	[MacCatalyst (13, 1)]
+	[Protocol, Model]
 	[BaseType (typeof (NSObject))]
 	interface INUIEditVoiceShortcutViewControllerDelegate {
 
+		/// <param name="controller">To be added.</param>
+		/// <param name="voiceShortcut">To be added.</param>
+		/// <param name="error">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("editVoiceShortcutViewController:didUpdateVoiceShortcut:error:")]
 		void DidUpdate (INUIEditVoiceShortcutViewController controller, [NullAllowed] INVoiceShortcut voiceShortcut, [NullAllowed] NSError error);
 
+		/// <param name="controller">To be added.</param>
+		/// <param name="deletedVoiceShortcutIdentifier">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("editVoiceShortcutViewController:didDeleteVoiceShortcutWithIdentifier:")]
 		void DidDelete (INUIEditVoiceShortcutViewController controller, NSUuid deletedVoiceShortcutIdentifier);
 
+		/// <param name="controller">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("editVoiceShortcutViewControllerDidCancel:")]
 		void DidCancel (INUIEditVoiceShortcutViewController controller);
 	}
 
-	[NoWatch, NoTV, NoMac, iOS (12,0)]
+	/// <summary>A button that is used to add a Siri shortcut.</summary>
+	[NoTV]
+	[MacCatalyst (13, 1)]
+#if MONOMAC
+	[BaseType (typeof (NSButton))]
+#else
 	[BaseType (typeof (UIButton))]
+#endif
 	[DisableDefaultCtor]
 	interface INUIAddVoiceShortcutButton {
 
+		[MacCatalyst (13, 4)]
 		[Export ("initWithStyle:")]
-		IntPtr Constructor (INUIAddVoiceShortcutButtonStyle style);
+		[DesignatedInitializer]
+		NativeHandle Constructor (INUIAddVoiceShortcutButtonStyle style);
 
 		[Export ("style")]
 		INUIAddVoiceShortcutButtonStyle Style { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Wrap ("WeakDelegate")]
 		[NullAllowed]
 		IINUIAddVoiceShortcutButtonDelegate Delegate { get; set; }
@@ -180,26 +272,37 @@ namespace IntentsUI {
 		[NullAllowed, Export ("shortcut", ArgumentSemantic.Strong)]
 		INShortcut Shortcut { get; set; }
 
-		[iOS (12,2)]
+		[MacCatalyst (13, 1)]
 		[Export ("cornerRadius", ArgumentSemantic.Assign)]
 		nfloat CornerRadius { get; set; }
+
+		[MacCatalyst (13, 1)]
+		[Export ("setStyle:")]
+		void SetStyle (INUIAddVoiceShortcutButtonStyle style);
 	}
 
-	interface IINUIAddVoiceShortcutButtonDelegate {}
+	interface IINUIAddVoiceShortcutButtonDelegate { }
 
-	[NoWatch, NoTV, NoMac, iOS (12,0)]
-	[Protocol, Model (AutoGeneratedName = true)]
-	[BaseType (typeof(NSObject))]
+	[NoTV]
+	[MacCatalyst (13, 1)]
+	[Protocol, Model]
+	[BaseType (typeof (NSObject))]
 	interface INUIAddVoiceShortcutButtonDelegate {
 
+		/// <param name="addVoiceShortcutViewController">To be added.</param>
+		/// <param name="addVoiceShortcutButton">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("presentAddVoiceShortcutViewController:forAddVoiceShortcutButton:")]
 		void PresentAddVoiceShortcut (INUIAddVoiceShortcutViewController addVoiceShortcutViewController, INUIAddVoiceShortcutButton addVoiceShortcutButton);
 
+		/// <param name="editVoiceShortcutViewController">To be added.</param>
+		/// <param name="addVoiceShortcutButton">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("presentEditVoiceShortcutViewController:forAddVoiceShortcutButton:")]
 		void PresentEditVoiceShortcut (INUIEditVoiceShortcutViewController editVoiceShortcutViewController, INUIAddVoiceShortcutButton addVoiceShortcutButton);
 	}
 }
-
-#endif

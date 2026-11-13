@@ -1,0 +1,27 @@
+<!--
+***********************************************************************************************
+Xamarin.Mac.Common.props
+
+WARNING:  DO NOT MODIFY this file unless you are knowledgeable about MSBuild and have
+  created a backup copy.  Incorrect changes to this file will make it
+  impossible to load or build your projects from the command-line or the IDE.
+
+This file defines default properties for iOS projects.
+
+Copyright (C) 2013-2014 Xamarin. All rights reserved.
+***********************************************************************************************
+-->
+
+<!-- Unlike Xamarin.Mac.Common.targets, which is not shared by the ObjC Bindings targets (yet), 
+     Xamarin.Mac.Common.props is shared and truely common. -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.props"
+			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.props')"/>
+
+	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Shared.props" />
+
+	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.props"
+			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.props')"/>
+
+</Project>

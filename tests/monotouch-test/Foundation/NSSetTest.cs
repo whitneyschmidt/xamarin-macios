@@ -1,26 +1,17 @@
 
-using System;
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
-	public class NSSetTest
-	{
+	[Preserve (AllMembers = true)]
+	public class NSSetTest {
 		[Test]
-		public void SetCtors()
+		public void SetCtors ()
 		{
 			// The NSSet (params object [] args)
 			var s = new NSSet (1);
-			Assert.AreEqual (s.Count, 1);
+			Assert.That (s.Count, Is.EqualTo ((nuint) 1));
 			s = new NSSet (1, 2, 3);
-			Assert.AreEqual (s.Count, 3);
+			Assert.That (s.Count, Is.EqualTo ((nuint) 3));
 
 			// The NSSet (params [] NSObject args)
 			var objs = new NSObject [5];
@@ -28,11 +19,11 @@ namespace MonoTouchFixtures.Foundation {
 				objs [i] = new NSNumber (i);
 
 			s = new NSSet (objs [0], objs [1], objs [2], objs [3], objs [4]);
-			Assert.AreEqual (s.Count, 5);
+			Assert.That (s.Count, Is.EqualTo ((nuint) 5));
 
 			// Repeat the values
 			s = new NSSet (objs [0], objs [1], objs [2], objs [0], objs [1]);
-			Assert.AreEqual (s.Count, 3);
+			Assert.That (s.Count, Is.EqualTo ((nuint) 3));
 		}
 
 		[Test]
@@ -41,32 +32,32 @@ namespace MonoTouchFixtures.Foundation {
 			var one = new NSSet (1, 2, 3);
 			var two = new NSSet (4, 5, 6);
 			var sum = one + two;
-			Assert.AreEqual (sum.Count, 6);
+			Assert.That (sum.Count, Is.EqualTo ((nuint) 6));
 
 			var objs = new NSObject [5];
 			for (int i = 0; i < objs.Length; i++)
-				objs [i] = new NSNumber (i*100);
+				objs [i] = new NSNumber (i * 100);
 
 			sum = new NSSet (objs) + one + two;
-			Assert.AreEqual (sum.Count, 11);
+			Assert.That (sum.Count, Is.EqualTo ((nuint) 11));
 			sum = new NSSet (objs) + new NSSet (objs);
-			Assert.AreEqual (sum.Count, 5);
+			Assert.That (sum.Count, Is.EqualTo ((nuint) 5));
 
-			Assert.AreEqual ((one + one).Count, 3);
+			Assert.That ((one + one).Count, Is.EqualTo ((nuint) 3));
 			var sub = one - one;
-			Assert.AreEqual (sub.Count, 0);
+			Assert.That (sub.Count, Is.EqualTo ((nuint) 0));
 
 			var three = new NSSet (1, 2, 3, 4, 5, 6);
 			var subt = three - two;
-			Assert.AreEqual (subt.Count, 3);
-			Assert.True (three.Contains (1));
-			Assert.True (three.Contains (2));
-			Assert.True (three.Contains (3));
+			Assert.That (subt.Count, Is.EqualTo ((nuint) 3));
+			Assert.That (three.Contains (1), Is.True);
+			Assert.That (three.Contains (2), Is.True);
+			Assert.That (three.Contains (3), Is.True);
 			subt = three - one;
-			Assert.AreEqual (subt.Count, 3);
-			Assert.True (three.Contains (4));
-			Assert.True (three.Contains (5));
-			Assert.True (three.Contains (6));
+			Assert.That (subt.Count, Is.EqualTo ((nuint) 3));
+			Assert.That (three.Contains (4), Is.True);
+			Assert.That (three.Contains (5), Is.True);
+			Assert.That (three.Contains (6), Is.True);
 
 		}
 
@@ -81,8 +72,8 @@ namespace MonoTouchFixtures.Foundation {
 			using (var sum3 = one + two) {
 
 			}
-			Assert.AreNotEqual (IntPtr.Zero, one.Handle, "Handle must be != IntPtr.Zero");
-			Assert.AreNotEqual (IntPtr.Zero, two.Handle, "Handle must be != IntPtr.Zero");
+			Assert.That (one.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle must be != IntPtr.Zero");
+			Assert.That (two.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle must be != IntPtr.Zero");
 		}
 
 		[Test]
@@ -95,10 +86,10 @@ namespace MonoTouchFixtures.Foundation {
 			using (var set1 = new NSSet (str1))
 			using (var set2 = new NSOrderedSet (str2, str3))
 			using (var result = set1 + set2) {
-				Assert.AreEqual (3, result.Count, "AddTest Count");
-				Assert.IsTrue (result.Contains (str1), "AddTest Contains 1");
-				Assert.IsTrue (result.Contains (str2), "AddTest Contains 2");
-				Assert.IsTrue (result.Contains (str3), "AddTest Contains 3");
+				Assert.That (result.Count, Is.EqualTo ((nuint) 3), "AddTest Count");
+				Assert.That (result.Contains (str1), Is.True, "AddTest Contains 1");
+				Assert.That (result.Contains (str2), Is.True, "AddTest Contains 2");
+				Assert.That (result.Contains (str3), Is.True, "AddTest Contains 3");
 			}
 		}
 
@@ -112,10 +103,10 @@ namespace MonoTouchFixtures.Foundation {
 			using (var set1 = new NSSet (str1))
 			using (var set2 = new NSMutableOrderedSet (str2, str3))
 			using (var result = set1 + set2) {
-				Assert.AreEqual (3, result.Count, "AddTest Count");
-				Assert.IsTrue (result.Contains (str1), "AddTest Contains 1");
-				Assert.IsTrue (result.Contains (str2), "AddTest Contains 2");
-				Assert.IsTrue (result.Contains (str3), "AddTest Contains 3");
+				Assert.That (result.Count, Is.EqualTo ((nuint) 3), "AddTest Count");
+				Assert.That (result.Contains (str1), Is.True, "AddTest Contains 1");
+				Assert.That (result.Contains (str2), Is.True, "AddTest Contains 2");
+				Assert.That (result.Contains (str3), Is.True, "AddTest Contains 3");
 			}
 		}
 
@@ -131,11 +122,11 @@ namespace MonoTouchFixtures.Foundation {
 			using (var second = new NSOrderedSet (str3, str4))
 			using (var third = first - second) {
 
-				Assert.AreEqual (2, third.Count, "OperatorSubtract Count");
-				Assert.IsTrue (third.Contains (str1), "OperatorSubtract 1");
-				Assert.IsTrue (third.Contains (str2), "OperatorSubtract 2");
-				Assert.IsFalse (third.Contains (str3), "OperatorSubtract 3");
-				Assert.IsFalse (third.Contains (str4), "OperatorSubtract 4");
+				Assert.That (third.Count, Is.EqualTo ((nuint) 2), "OperatorSubtract Count");
+				Assert.That (third.Contains (str1), Is.True, "OperatorSubtract 1");
+				Assert.That (third.Contains (str2), Is.True, "OperatorSubtract 2");
+				Assert.That (third.Contains (str3), Is.False, "OperatorSubtract 3");
+				Assert.That (third.Contains (str4), Is.False, "OperatorSubtract 4");
 			}
 		}
 
@@ -151,11 +142,11 @@ namespace MonoTouchFixtures.Foundation {
 			using (var second = new NSMutableOrderedSet (str3, str4))
 			using (var third = first - second) {
 
-				Assert.AreEqual (2, third.Count, "OperatorSubtract Count");
-				Assert.IsTrue (third.Contains (str1), "OperatorSubtract 1");
-				Assert.IsTrue (third.Contains (str2), "OperatorSubtract 2");
-				Assert.IsFalse (third.Contains (str3), "OperatorSubtract 3");
-				Assert.IsFalse (third.Contains (str4), "OperatorSubtract 4");
+				Assert.That (third.Count, Is.EqualTo ((nuint) 2), "OperatorSubtract Count");
+				Assert.That (third.Contains (str1), Is.True, "OperatorSubtract 1");
+				Assert.That (third.Contains (str2), Is.True, "OperatorSubtract 2");
+				Assert.That (third.Contains (str3), Is.False, "OperatorSubtract 3");
+				Assert.That (third.Contains (str4), Is.False, "OperatorSubtract 4");
 			}
 		}
 	}

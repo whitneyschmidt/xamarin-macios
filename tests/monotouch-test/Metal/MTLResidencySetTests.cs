@@ -1,0 +1,45 @@
+using System.IO;
+
+using Metal;
+
+namespace MonoTouchFixtures.Metal {
+	[Preserve (AllMembers = true)]
+	public class MTLResidencySetTests {
+		[Test]
+		public void AddOrRemoveAllocations ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			var device = MTLDevice.SystemDefault;
+			// some older hardware won't have a default
+			if (device is null)
+				Assert.Inconclusive ("Metal is not supported");
+
+			var supportsResidencySets = device.SupportsFamily (MTLGpuFamily.Apple6);
+			if (!supportsResidencySets)
+				Assert.Inconclusive ("Residency sets are not supported on this device.");
+
+			using var heapDescriptor = new MTLHeapDescriptor () {
+				Size = 1024,
+			};
+			using var heap = device.CreateHeap (heapDescriptor);
+			using var residencySetDescriptor = new MTLResidencySetDescriptor () {
+				Label = "Label",
+				InitialCapacity = 3
+			};
+			using var residencySet = device.CreateResidencySet (residencySetDescriptor, out var error);
+			Assert.That (error, Is.Null, "Error #1");
+			Assert.That (residencySet, Is.Not.Null, "ResidencySet #1");
+
+			residencySet.AddAllocations (heap);
+			Assert.That ((int) residencySet.AllocationCount, Is.EqualTo (1), "AllocationCount #1");
+			residencySet.RemoveAllocations (heap);
+			Assert.That ((int) residencySet.AllocationCount, Is.EqualTo (0), "AllocationCount #2");
+
+			residencySet.AddAllocations (new IMTLAllocation [] { heap });
+			Assert.That ((int) residencySet.AllocationCount, Is.EqualTo (1), "AllocationCount #3");
+			residencySet.RemoveAllocations (new IMTLAllocation [] { heap });
+			Assert.That ((int) residencySet.AllocationCount, Is.EqualTo (0), "AllocationCount #4");
+		}
+	}
+}

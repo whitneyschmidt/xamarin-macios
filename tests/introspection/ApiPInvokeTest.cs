@@ -7,30 +7,15 @@
 //
 // Copyright 2013-2014 Xamarin, Inc.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using Xamarin.Tests;
 
-using NUnit.Framework;
+#nullable enable
 
-#if XAMCORE_2_0
-using ObjCRuntime;
-using Foundation;
-#elif MONOMAC
-using MonoMac.ObjCRuntime;
-using MonoMac.Foundation;
-#else
-using MonoTouch.ObjCRuntime;
-using MonoTouch.Foundation;
-#endif
-
-namespace Introspection
-{
+namespace Introspection {
 	[Preserve (AllMembers = true)]
 	public abstract class ApiPInvokeTest : ApiBaseTest {
 		IEnumerable pinvokeQuery;
@@ -41,18 +26,21 @@ namespace Introspection
 			LogProgress = false;
 
 			pinvokeQuery = from type in Assembly.GetTypes ()
-					where !Skip (type)
-				from mi in type.GetMethods (
-					BindingFlags.NonPublic |
-					BindingFlags.Public |
-					BindingFlags.Static)
-				let attr = mi.GetCustomAttribute<DllImportAttribute> ()
-					where attr != null && !Skip (mi)
-				select mi;
+						   where !Skip (type)
+						   from mi in type.GetMethods (
+							   BindingFlags.NonPublic |
+							   BindingFlags.Public |
+							   BindingFlags.Static)
+						   let attr = mi.GetCustomAttribute<DllImportAttribute> ()
+						   where attr is not null && !Skip (mi)
+						   select mi;
 		}
 
 		protected virtual bool Skip (Type type)
 		{
+			if (SkipDueToDeviceCapabilities (type))
+				return true;
+
 			return SkipDueToAttribute (type);
 		}
 
@@ -107,12 +95,12 @@ namespace Introspection
 			// `ref` is fine but it can hide the droids we're looking for
 			var pt = pi.ParameterType;
 			if (pt.IsByRef)
-				pt = pt.GetElementType ();
+				pt = pt.GetElementType ()!;
 			// we don't want generics in p/invokes except for delegates like Func<> and Action<> which we know how to deal with
 			// ref: https://bugzilla.xamarin.com/show_bug.cgi?id=42699
 			if (pt.IsGenericType && !pt.IsSubclassOf (typeof (Delegate))) {
 				AddErrorLine ("[FAIL] {0}.{1} has a generic parameter in its signature: {2} {3}",
-					mi.DeclaringType.FullName, mi.Name, pt, pi.Name);
+					mi.DeclaringType?.FullName, mi.Name, pt, pi.Name);
 				result = false;
 			}
 			result &= CheckForEnumParameter (mi, pi);
@@ -121,9 +109,9 @@ namespace Introspection
 
 		protected virtual bool CheckForEnumParameter (MethodInfo mi, ParameterInfo pi)
 		{
-			if (pi.ParameterType.IsEnum && pi.ParameterType.GetCustomAttribute<NativeAttribute> () != null) {
+			if (pi.ParameterType.IsEnum && pi.ParameterType.GetCustomAttribute<NativeAttribute> () is not null) {
 				AddErrorLine ("[FAIL] {0}.{1} has a [Native] enum parameter in its signature: {2} {3}",
-					mi.DeclaringType.FullName, mi.Name, pi.ParameterType, pi.Name);
+					mi.DeclaringType?.FullName, mi.Name, pi.ParameterType, pi.Name);
 				return false;
 			}
 
@@ -132,10 +120,17 @@ namespace Introspection
 
 		protected virtual bool Skip (string symbolName)
 		{
+			switch (symbolName) {
+			// it's not needed for ARM64/ARM64_32 and Apple does not have stubs for them in libobjc.dylib
+			// also the linker normally removes them (unreachable due to other optimizations)
+			case "objc_msgSend_stret":
+			case "objc_msgSendSuper_stret":
+				return true;
+			}
 			return false;
 		}
 
-		protected virtual bool SkipLibrary (string libraryName)
+		protected virtual bool SkipLibrary (string? libraryName)
 		{
 			return false;
 		}
@@ -151,29 +146,23 @@ namespace Introspection
 				if (LogProgress)
 					Console.WriteLine ("{0}. {1}", c++, mi);
 
-				var dllimport = mi.GetCustomAttribute<DllImportAttribute> ();
+				var dllimport = mi.GetCustomAttribute<DllImportAttribute> ()!;
 
-				string libname = dllimport.Value;
+				var libname = dllimport.Value;
 				switch (libname) {
 				case "__Internal":
 					continue;
 				case "System.Native":
 				case "System.Security.Cryptography.Native.Apple":
 				case "System.Net.Security.Native":
-					if (MonoNativeConfig.LinkMode == MonoNativeLinkMode.None)
-						continue;
-#if __IOS__
-					libname = MonoNativeConfig.GetPInvokeLibraryName (MonoNativeFlavor.Compat, MonoNativeConfig.LinkMode);
-#else
 					libname = null;
-#endif
 					break;
 				}
 
 				if (SkipLibrary (libname))
 					continue;
 
-				string path = FindLibrary (libname, requiresFullPath: true);
+				string path = FindLibrary (libname!, requiresFullPath: true);
 
 				string name = dllimport.EntryPoint ?? mi.Name;
 				if (Skip (name))
@@ -181,13 +170,24 @@ namespace Introspection
 
 				IntPtr lib = Dlfcn.dlopen (path, 0);
 				if (Dlfcn.GetIndirect (lib, name) == IntPtr.Zero && !failed_api.Contains (name)) {
-					ReportError ("Could not find the field '{0}' in {1}", name, path);
+					ReportError ("Could not find the symbol '{0}' in {1}", name, path);
 					failed_api.Add (name);
 				}
 				Dlfcn.dlclose (lib);
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} functions validated: {2}", Errors, n, string.Join (", ", failed_api));
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} functions validated: {string.Join (", ", failed_api)}");
+		}
+
+		bool SkipDueToDeviceCapabilities (Type type)
+		{
+			switch (type.Namespace) {
+			case "SensorKit": // SensorKit doesn't exist on iPads
+				if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+					return true;
+				break;
+			}
+			return false;
 		}
 
 		// we just want to confirm the symbol exists so `dlsym` can be disabled
@@ -197,11 +197,15 @@ namespace Introspection
 			ErrorData.Clear ();
 			int n = 0;
 			foreach (var t in a.GetTypes ()) {
+
+				if (SkipDueToDeviceCapabilities (t))
+					continue;
+
 				foreach (var m in t.GetMethods (BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)) {
 					if ((m.Attributes & MethodAttributes.PinvokeImpl) == 0)
 						continue;
 
-					var dllimport = m.GetCustomAttribute<DllImportAttribute> ();
+					var dllimport = m.GetCustomAttribute<DllImportAttribute> ()!;
 
 					string name = dllimport.EntryPoint ?? m.Name;
 					switch (name) {
@@ -212,11 +216,34 @@ namespace Introspection
 						continue;
 					}
 
-					string path = dllimport.Value;
+					string? path = dllimport.Value;
 					switch (path) {
 					case "__Internal":
 						// load from executable
 						path = null;
+						break;
+					case "libSystem.Globalization.Native":
+						// load from executable (like __Internal above since it's part of the static library)
+						path = null;
+						break;
+					case "libSystem.Native":
+						var staticallyLinked = false;
+#if __MACCATALYST__
+						// always statically linked
+						staticallyLinked = true;
+#elif __IOS__ || __TVOS__
+						// statically linked on device
+						staticallyLinked = Runtime.Arch == Arch.DEVICE;
+#elif __MACOS__
+						// never statically linked (by default)
+#else
+#error Unknown platform
+#endif
+						if (staticallyLinked) {
+							path = null;
+						} else {
+							path += ".dylib";
+						}
 						break;
 					case "libc":
 						// we still have some rogue/not-fully-qualified DllImport
@@ -225,32 +252,138 @@ namespace Introspection
 					case "System.Native":
 					case "System.Security.Cryptography.Native.Apple":
 					case "System.Net.Security.Native":
-						if (MonoNativeConfig.LinkMode == MonoNativeLinkMode.None)
-							continue;
-#if __IOS__
-						path = MonoNativeConfig.GetPInvokeLibraryName (MonoNativeFlavor.Compat, MonoNativeConfig.LinkMode);
-#else
 						path = null;
-#endif
 						break;
+					case "QCall":
+						// These symbols are inside libcoreclr.dylib, but they're private, so dlsym won't see them.
+						continue;
 					}
 
 					var lib = Dlfcn.dlopen (path, 0);
 					var h = Dlfcn.dlsym (lib, name);
-					if (h == IntPtr.Zero)
-						ReportError ("Could not find the symbol '{0}' in {1}", name, path);
+					if (h == IntPtr.Zero) {
+						ReportError ("Could not find the symbol '{0}' in {1} for the P/Invoke {2}.{3} in {4}", name, path, t.FullName, m.Name, a.GetName ().Name);
+					} else if (path is not null) {
+						// Verify that the P/Invoke points to the right library.
+						var info = default (Dl_info);
+						var found = dladdr (h, out info);
+						if (found != 0) {
+							// Resolve symlinks in both cases
+							var dllImportPath = ResolveLibrarySymlinks (path);
+							var foundLibrary = ResolveLibrarySymlinks (Marshal.PtrToStringAuto (info.dli_fname) ?? "");
+							if (Skip (name, ref dllImportPath, ref foundLibrary)) {
+								// Skipped
+							} else if (foundLibrary != dllImportPath) {
+								ReportError ($"Found the symbol '{name}' in the library '{foundLibrary}', but the P/Invoke {t.FullName}.{m.Name} in {a.GetName ().Name} claims it's in '{dllimport.Value}'.");
+							}
+						} else {
+							Console.WriteLine ($"Unable to find the library for the symbol '{name}' claimed to be in {path} for the P/Invoke {t.FullName}.{m.Name} in {a.GetName ().Name} (rv: {found})");
+						}
+					}
+
 					Dlfcn.dlclose (lib);
 					n++;
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} symbol lookups{2}", Errors, n, Errors == 0 ? string.Empty : ":\n" + ErrorData.ToString () + "\n");
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} symbol lookups:\n{ErrorData}\n");
+		}
+
+		protected string ResolveLibrarySymlinks (string path)
+		{
+			var resolved = ((NSString) path).ResolveSymlinksInPath ().ToString ();
+			// ResolveSymlinksInPath will return the input if something goes wrong.
+			// Something usually goes wrong with system libraries: they don't actually exist on disk :/
+			// So add some custom logic to handle those cases.
+			resolved = resolved.Replace ("/Versions/A/", "/");
+			resolved = resolved.Replace ("/Versions/C/", "/");
+			resolved = resolved.Replace (".A.dylib", ".dylib");
+			return resolved;
+		}
+
+		protected virtual bool Skip (string symbol, ref string dllImportLibrary, ref string nativeLibrary)
+		{
+			// We only care about system libraries for this test.
+			if (!nativeLibrary.StartsWith ("/System", StringComparison.Ordinal))
+				return true;
+
+			// Assume that if the symbol is in a private framework, then the DllImport is pointing
+			// to the corresponding public/official location, and that we're just running into an
+			// implementation detail.
+			if (nativeLibrary.Contains ("/PrivateFrameworks/", StringComparison.Ordinal))
+				return true;
+
+			// System libraries in /usr/lib/system/ have public/official entry points in other
+			// libraries, so skip those too.
+			if (nativeLibrary.StartsWith ("/usr/lib/system/", StringComparison.Ordinal))
+				return true;
+
+			switch (nativeLibrary) {
+			case "/usr/lib/libnetwork.dylib":
+				return dllImportLibrary == "/System/Library/Frameworks/Network.framework/Network";
+			case "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/LaunchServices":
+				switch (dllImportLibrary) {
+				case "/System/Library/Frameworks/MobileCoreServices.framework/MobileCoreServices":
+				case "/System/Library/Frameworks/CoreServices.framework/CoreServices":
+					return true;
+
+				}
+				break;
+			case "/System/Library/Frameworks/MobileCoreServices.framework/MobileCoreServices":
+				switch (dllImportLibrary) {
+				case "/System/Library/Frameworks/CoreServices.framework/CoreServices":
+					return true;
+
+				}
+				break;
+			case "/System/Library/Frameworks/CoreServices.framework/CoreServices":
+				switch (dllImportLibrary) {
+				case "/System/Library/Frameworks/MobileCoreServices.framework/MobileCoreServices":
+					return true;
+
+				}
+				break;
+			case "/System/Library/Frameworks/CoreServices.framework/Frameworks/FSEvents.framework/FSEvents":
+				return dllImportLibrary == "/System/Library/Frameworks/CoreServices.framework/CoreServices";
+
+			case "/System/Library/Frameworks/_LocationEssentials.framework/_LocationEssentials":
+				switch (dllImportLibrary) {
+				case "/System/Library/Frameworks/CoreLocation.framework/CoreLocation":
+					return true;
+				}
+				break;
+			case "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib":
+				return dllImportLibrary == "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+			case "/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/CarbonCore":
+				return dllImportLibrary == "/System/Library/Frameworks/Carbon.framework/Versions/Current/Carbon";
+			case "/System/Library/Frameworks/MetalPerformanceShaders.framework/Frameworks/MPSCore.framework/MPSCore":
+				// Check the umbrella framework
+				nativeLibrary = "/System/Library/Frameworks/MetalPerformanceShaders.framework/MetalPerformanceShaders";
+				return false;
+			}
+
+#if __MACCATALYST__
+			if (nativeLibrary.StartsWith ("/System/iOSSupport/", StringComparison.Ordinal))
+				nativeLibrary = nativeLibrary.Substring ("/System/iOSSupport".Length);
+#endif
+
+			return false;
+		}
+
+		[DllImport (Constants.libcLibrary)]
+		static extern int dladdr (IntPtr addr, out Dl_info info);
+
+		struct Dl_info {
+			internal IntPtr dli_fname; /* Pathname of shared object */
+			internal IntPtr dli_fbase; /* Base address of shared object */
+			internal IntPtr dli_sname; /* Name of nearest symbol */
+			internal IntPtr dli_saddr; /* Address of nearest symbol */
 		}
 
 		protected abstract bool SkipAssembly (Assembly a);
 
 		// Note: this looks very similar to the "SymbolExists" test above (and it is)
 		// except that we never skip based on availability attributes or __Internal...
-		// since this is a test to ensure thigns will work at native link time (e.g. 
+		// since this is a test to ensure things will work at native link time (e.g.
 		// for devices) when dlsym is disabled
 
 		[Test]
@@ -285,14 +418,6 @@ namespace Introspection
 		public void SystemCore ()
 		{
 			var a = typeof (Enumerable).Assembly;
-			if (!SkipAssembly (a))
-				Check (a);
-		}
-
-		[Test]
-		public void SystemData ()
-		{
-			var a = typeof (System.Data.SqlClient.SqlCredential).Assembly;
 			if (!SkipAssembly (a))
 				Check (a);
 		}

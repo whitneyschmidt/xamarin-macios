@@ -7,24 +7,15 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.Diagnostics;
 using System.Threading;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.ObjCRuntime;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class NotificationCenterTest {
-		
+
 		[Test]
 		[Ignore ("This test is 'randomly' failing the first time it's executed with debugging disabled (if executed with the rest of the tests) - CWLS show that the TestNotification instance is freed at the end of the test run.")]
 		public void Free ()
@@ -39,9 +30,9 @@ namespace MonoTouchFixtures.Foundation {
 				GC.Collect (GC.MaxGeneration);
 				Thread.Sleep (10);
 			}
-			Assert.True (a, "a");
-			Assert.True (b, "b");
-			Assert.True (freed, "freed");
+			Assert.That (a, Is.True, "a");
+			Assert.That (b, Is.True, "b");
+			Assert.That (freed, Is.True, "freed");
 		}
 
 		void FreeLeaf (Action<TestNotification> destroyedCallback)
@@ -54,8 +45,7 @@ namespace MonoTouchFixtures.Foundation {
 			testNotification.StopObserving ();
 		}
 
-		public class TestNotification : NSObject 
-		{
+		public class TestNotification : NSObject {
 			public bool A;
 			public bool B;
 			Action<TestNotification> destroyed_callback;
@@ -64,42 +54,42 @@ namespace MonoTouchFixtures.Foundation {
 			{
 				destroyed_callback = destroyedCallback;
 
-				NSNotificationCenter.DefaultCenter.AddObserver(this,
-				                                               new Selector("a:"),
-				                                               new NSString("notifyA"),
-				                                               null);
-				
-				NSNotificationCenter.DefaultCenter.AddObserver(this,
-				                                               new Selector("b:"),
-				                                               new NSString("notifyB"),
-				                                               null);
+				NSNotificationCenter.DefaultCenter.AddObserver (this,
+															   new Selector ("a:"),
+															   new NSString ("notifyA"),
+															   null);
+
+				NSNotificationCenter.DefaultCenter.AddObserver (this,
+															   new Selector ("b:"),
+															   new NSString ("notifyB"),
+															   null);
 			}
-			
+
 			[Export ("a:")]
 			public void a (NSNotification notification)
 			{
 				A = true;
 			}
-			
+
 			[Export ("b:")]
 			public void b (NSNotification notification)
 			{
 				B = true;
 			}
-			
+
 			public void StopObserving ()
 			{
 				NSNotificationCenter.DefaultCenter.RemoveObserver (this);
 			}
-	
-			~TestNotification() 
+
+			~TestNotification ()
 			{
 				destroyed_callback (this);
 			}
-	
+
 		}
 
-#if XAMCORE_2_0 && __IOS__
+#if __IOS__
 		[Test]
 		public void TargetedNotificationsTest ()
 		{
@@ -107,10 +97,10 @@ namespace MonoTouchFixtures.Foundation {
 			using (var txt = new global::UIKit.UITextField ())
 			using (var notification = global::UIKit.UITextField.Notifications.ObserveTextFieldTextDidChange (txt, (sender, e) => called = true)) {
 				NSNotificationCenter.DefaultCenter.PostNotificationName (global::UIKit.UITextField.TextFieldTextDidChangeNotification, null);
-				Assert.False (called, "Notification should not be called");
+				Assert.That (called, Is.False, "Notification should not be called");
 
 				NSNotificationCenter.DefaultCenter.PostNotificationName (global::UIKit.UITextField.TextFieldTextDidChangeNotification, txt);
-				Assert.True (called,  "Notification should have been called");
+				Assert.That (called, Is.True, "Notification should have been called");
 			}
 		}
 #endif
@@ -150,9 +140,9 @@ namespace MonoTouchFixtures.Foundation {
 			// OK, we're done now, time to stop.
 			stopSignal.Set ();
 			for (var i = 0; i < threadCount; i++) {
-				threads [i].Join ();
+				Assert.That (threads [i].Join (TimeSpan.FromSeconds (5)), Is.True, $"Thread {i} failed to join within 5 seconds");
 			}
-			Assert.IsNull (ex, "Exception");
+			Assert.That (ex, Is.Null, "Exception");
 		}
 	}
 }

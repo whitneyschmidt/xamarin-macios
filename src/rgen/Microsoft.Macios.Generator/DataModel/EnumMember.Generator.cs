@@ -1,0 +1,72 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using Microsoft.Macios.Generator.Attributes;
+using Microsoft.Macios.Generator.Availability;
+using ObjCBindings;
+
+namespace Microsoft.Macios.Generator.DataModel;
+
+readonly partial struct EnumMember {
+
+	/// <summary>
+	/// The data of the field attribute used to mark the value as a binding.
+	/// </summary>
+	public FieldInfo<EnumValue>? FieldInfo { get; }
+
+	/// <summary>
+	/// Return the native selector that references the enum value.
+	/// </summary>
+	public string? Selector => FieldInfo?.FieldData.SymbolName;
+
+	/// <summary>
+	/// The location of the attribute in source code.
+	/// </summary>
+	public Location? Location { get; init; }
+
+	/// <summary>
+	/// Create a new change that happened on a member.
+	/// </summary>
+	/// <param name="name">The name of the changed member.</param>
+	/// <param name="index">The position of the enum member starting at 0.</param>
+	/// <param name="libraryName">The library name of the smart enum.</param>
+	/// <param name="libraryPath">The library path to the library, null if it is a known frameworl.</param>
+	/// <param name="fieldData">The binding data attached to this enum value.</param>
+	/// <param name="symbolAvailability">The symbol availability of the member.</param>
+	/// <param name="attributes">The list of attribute changes in the member.</param>
+	public EnumMember (string name,
+		uint index,
+		string libraryName,
+		string? libraryPath,
+		FieldData<EnumValue>? fieldData,
+		SymbolAvailability symbolAvailability,
+		ImmutableArray<AttributeCodeChange> attributes) : this (StructState.Initialized, name)
+	{
+		Index = index;
+		FieldInfo = fieldData is null ? null : new (fieldData.Value, libraryName, libraryPath);
+		SymbolAvailability = symbolAvailability;
+		Attributes = attributes;
+	}
+
+	/// <summary>
+	/// Create a new change that happened on a member.
+	/// </summary>
+	/// <param name="name">The name of the changed member.</param>
+	/// <param name="index">The position of the enum member starting at 0.</param>
+	/// <param name="libraryName">The library name of the smart enum.</param>
+	/// <param name="libraryPath">The library path to the library, null if it is a known frameworl.</param>
+	public EnumMember (string name, uint index, string libraryName, string? libraryPath)
+		: this (
+			name: name,
+			index: index,
+			libraryName: libraryName,
+			libraryPath: libraryPath,
+			fieldData: null,
+			symbolAvailability: new SymbolAvailability (),
+			attributes: ImmutableArray<AttributeCodeChange>.Empty)
+	{
+	}
+
+}

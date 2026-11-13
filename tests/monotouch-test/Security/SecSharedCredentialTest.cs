@@ -1,20 +1,11 @@
 #if __IOS__
-using System;
 using System.Threading;
 
-#if XAMCORE_2_0
-using Foundation;
 using Security;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Security {
-	
+
 	[TestFixture]
 	// we want the test to be availble if we use the linker
 	[Preserve (AllMembers = true)]
@@ -35,71 +26,71 @@ namespace MonoTouchFixtures.Security {
 		}
 
 		[Test]
-		[ExpectedException (typeof (ArgumentNullException))]
 		public void AddSharedWebCredentialNullDomain ()
 		{
 			domainName = null;
-			Action<NSError> handler = (NSError e) =>  {
-				Assert.IsNull (e);
-				waitEvent.Set ();
+			Action<NSError> handler = (NSError e) => {
 			};
-			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler); 
-			waitEvent.WaitOne ();
-			Assert.Pass ("Block was correctly executed.");
+			Assert.Throws<ArgumentNullException> (() => SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler));
 		}
 
 		[Test]
-		[ExpectedException (typeof (ArgumentNullException))]
 		public void AddSharedWebCredentialNullAccount ()
 		{
 			account = null;
-			Action<NSError> handler = (NSError e) =>  {
-				Assert.IsNull (e);
-				waitEvent.Set ();
+			Action<NSError> handler = (NSError e) => {
 			};
-			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler); 
-			waitEvent.WaitOne ();
-			Assert.Pass ("Block was correctly executed.");
+			Assert.Throws<ArgumentNullException> (() => SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler));
 		}
 
 		[Test]
-		// We do not want to block for a long period of time if the event is not set.
 		// We are testing the fact that the trampoline works.
-		[Timeout (5000)]
 		public void AddSharedWebCredentialNotNullPassword ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-
-			Action<NSError> handler = (NSError e) =>  {
+			Action<NSError> handler = (NSError e) => {
 				// we do nothing, if we did block the test should be interactive because a dialog is shown.
 			};
-			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler); 
+			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler);
 		}
 
 		[Test]
-		// We do not want to block for a long period of time if the event is not set.
 		// We are testing the fact that the trampoline works.
-		[Timeout (5000)]
 		public void AddSharedWebCredentialNullPassword ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-
 			password = null;
-			Action<NSError> handler = (NSError e) =>  {
+			Action<NSError> handler = (NSError e) => {
 				// we do nothing, if we did block the test should be interactive because a dialog is shown.
 			};
-			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler); 
+			SecSharedCredential.AddSharedWebCredential (domainName, account, password, handler);
+		}
+
+		[Test]
+		// We are testing the fact that the trampoline works.
+		public void RequestSharedWebCredentialTest ()
+		{
+			Action<SecSharedCredentialInfo [], NSError> handler = (SecSharedCredentialInfo [] creds, NSError e) => {
+				// we do nothing, if we did block the test should be interactive because a dialog is shown.
+			};
+			SecSharedCredential.RequestSharedWebCredential (domainName, account, handler);
+		}
+
+		[Test]
+		// We are testing the fact that the trampoline works.
+		public void RequestSharedWebCredentialNullDomainAndAccountTest ()
+		{
+			Action<SecSharedCredentialInfo [], NSError> handler = (SecSharedCredentialInfo [] creds, NSError e) => {
+				// we do nothing, if we did block the test should be interactive because a dialog is shown.
+			};
+			SecSharedCredential.RequestSharedWebCredential (null, null, handler);
 		}
 
 		[Test]
 		public void CreateSharedWebCredentialPassword ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-
 			var pwd = SecSharedCredential.CreateSharedWebCredentialPassword ();
-			Assert.IsNotNull (pwd);
+			Assert.That (pwd, Is.Not.Null);
 		}
 
- 	}
+	}
 }
 #endif // __IOS__

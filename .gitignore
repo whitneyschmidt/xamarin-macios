@@ -1,8 +1,12 @@
+Build.props
 Make.config.inc
+Make.config.inc.tmp.*
 Make.config.local
 configure.inc
+dotnet.config
 _ios-build
 _mac-build
+_build
 *.userprefs
 *.user
 *.suo
@@ -13,11 +17,16 @@ _mac-build
 bin
 obj
 packages
-~.pmcs*
 .DS_Store
 jenkins-results
 .vs
 *.raw
-bcl-test-importer
-tests/bcl-test/BCLTests/generated
-tests/xharness/System.ValueTuple.xml
+global.json
+.idea
+mono_crash.*.json
+*.binlog
+.vscode
+*.lscache
+# Xcode
+xcuserdata/
+.build/

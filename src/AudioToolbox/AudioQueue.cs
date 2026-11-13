@@ -28,122 +28,163 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#nullable enable
+
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
 
-using OSStatus = System.Int32;
 using AudioQueueParameterValue = System.Single;
 using AudioQueueRef = System.IntPtr;
 using AudioQueueTimelineRef = System.IntPtr;
 
 namespace AudioToolbox {
 
+	/// <summary>An enumeration whose values specify the status of an audio queue.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum AudioQueueStatus { // Implictly cast to OSType 
-		Ok =  0,
-		InvalidBuffer        = -66687,
-		BufferEmpty          = -66686,
-		DisposalPending      = -66685,
-		InvalidProperty      = -66684,
-		InvalidPropertySize  = -66683,
-		InvalidParameter     = -66682,
-		CannotStart          = -66681,
-		InvalidDevice        = -66680,
-		BufferInQueue        = -66679,
-		InvalidRunState      = -66678,
-		InvalidQueueType     = -66677,
-		Permissions          = -66676,
+		/// <summary>To be added.</summary>
+		Ok = 0,
+		/// <summary>To be added.</summary>
+		InvalidBuffer = -66687,
+		/// <summary>To be added.</summary>
+		BufferEmpty = -66686,
+		/// <summary>To be added.</summary>
+		DisposalPending = -66685,
+		/// <summary>To be added.</summary>
+		InvalidProperty = -66684,
+		/// <summary>To be added.</summary>
+		InvalidPropertySize = -66683,
+		/// <summary>To be added.</summary>
+		InvalidParameter = -66682,
+		/// <summary>To be added.</summary>
+		CannotStart = -66681,
+		/// <summary>To be added.</summary>
+		InvalidDevice = -66680,
+		/// <summary>To be added.</summary>
+		BufferInQueue = -66679,
+		/// <summary>To be added.</summary>
+		InvalidRunState = -66678,
+		/// <summary>To be added.</summary>
+		InvalidQueueType = -66677,
+		/// <summary>To be added.</summary>
+		Permissions = -66676,
+		/// <summary>To be added.</summary>
 		InvalidPropertyValue = -66675,
-		PrimeTimedOut        = -66674,
-		CodecNotFound        = -66673,
-		InvalidCodecAccess   = -66672,
-		QueueInvalidated     = -66671,
-		TooManyTaps          = -66670,
-		InvalidTapContext    = -66669,
-		RecordUnderrun       = -66668,
-		InvalidTapType       = -66667,		
-		EnqueueDuringReset   = -66632,
-		InvalidOfflineMode   = -66626,
-		BufferEnqueuedTwice  = -66666,
-		[iOS (10,0), Mac (10,12, onlyOn64: true)]
-		CannotStartYet       = -66665,
-		
+		/// <summary>To be added.</summary>
+		PrimeTimedOut = -66674,
+		/// <summary>To be added.</summary>
+		CodecNotFound = -66673,
+		/// <summary>To be added.</summary>
+		InvalidCodecAccess = -66672,
+		/// <summary>To be added.</summary>
+		QueueInvalidated = -66671,
+		/// <summary>To be added.</summary>
+		TooManyTaps = -66670,
+		/// <summary>To be added.</summary>
+		InvalidTapContext = -66669,
+		/// <summary>To be added.</summary>
+		RecordUnderrun = -66668,
+		/// <summary>To be added.</summary>
+		InvalidTapType = -66667,
+		/// <summary>To be added.</summary>
+		EnqueueDuringReset = -66632,
+		/// <summary>To be added.</summary>
+		InvalidOfflineMode = -66626,
+		/// <summary>To be added.</summary>
+		BufferEnqueuedTwice = -66666,
+		/// <summary>To be added.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		CannotStartYet = -66665,
+
 		// There is countless of not well documented error codes returned
-		QueueStopped         = 0x73746f70,	// 'stop'
-		DataFormatError      = 0x666d743f,	// 'fmt?'
-		UnsupportedProperty  = 0x70726F70,  // 'prop'
+		/// <summary>To be added.</summary>
+		QueueStopped = 0x73746f70,  // 'stop'
+		/// <summary>To be added.</summary>
+		DataFormatError = 0x666d743f,   // 'fmt?'
+		/// <summary>To be added.</summary>
+		UnsupportedProperty = 0x70726F70,  // 'prop'
 
 		// From kAudio_
-		GeneralParamError    = -50
+		/// <summary>To be added.</summary>
+		GeneralParamError = -50,
 	}
 
+	/// <summary>An exception thrown by the AudioQueue class if there is a problem with the configuration parameters.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class AudioQueueException : Exception {
 		static string Lookup (int k)
 		{
-			var status = (AudioQueueStatus)k;
+			var status = (AudioQueueStatus) k;
 			switch (status) {
 			case AudioQueueStatus.InvalidBuffer:
 				return "The specified audio queue buffer does not belong to this audio queue";
-				
+
 			case AudioQueueStatus.BufferEmpty:
 				return "The audio buffer is empty (AudioDataByteSize is zero)";
-				
+
 			case AudioQueueStatus.DisposalPending:
 				return "This audio queue is being asynchronously disposed";
-				
+
 			case AudioQueueStatus.InvalidProperty:
 				return "Invalid property specified";
-				
+
 			case AudioQueueStatus.InvalidPropertySize:
 				return "Invalid property size";
-				
+
 			case AudioQueueStatus.InvalidParameter:
 				return "The specified parameter is invalid";
-				
+
 			case AudioQueueStatus.CannotStart:
 				return "The queue has encountered a problem and can not start";
-				
+
 			case AudioQueueStatus.InvalidDevice:
 				return "The specified hardware device can not be located";
-				
+
 			case AudioQueueStatus.BufferInQueue:
 				return "The specified buffer can not be disposed while it is on an active queue";
-				
+
 			case AudioQueueStatus.InvalidRunState:
 				return "The operation can not be performed in the current queue state (running or stopped)";
-				
+
 			case AudioQueueStatus.InvalidQueueType:
 				return "Invalid queue type (input operation attempted on output or output operation on input";
-			
+
 			case AudioQueueStatus.Permissions:
 				return "No permissions to access that function";
-				
+
 			case AudioQueueStatus.InvalidPropertyValue:
 				return "The property value is invalid";
-				
+
 			case AudioQueueStatus.PrimeTimedOut:
 				return "Timeout during Prime operation";
-				
+
 			case AudioQueueStatus.CodecNotFound:
 				return "The requested codec was not found";
-				
+
 			case AudioQueueStatus.InvalidCodecAccess:
 				return "The codec could not be accessed";
-				
+
 			case AudioQueueStatus.QueueInvalidated:
 				return "The audio server has terminated, the queue has been invalidated";
 
 			case AudioQueueStatus.RecordUnderrun:
 				return "Recording lost data because enqueued buffer was not available";
-				
+
 			case AudioQueueStatus.EnqueueDuringReset:
 				return "You tried to enqueue a buffer during a Reset, Stop or Dispose methods";
-			
+
 			case AudioQueueStatus.InvalidOfflineMode:
 				return "Offline mode is either required or not required for the operation";
 
@@ -155,122 +196,267 @@ namespace AudioToolbox {
 			}
 		}
 
-		internal AudioQueueException (AudioQueueStatus k) : base (Lookup ((int)k))
+		internal AudioQueueException (AudioQueueStatus k) : base (Lookup ((int) k))
 		{
 			ErrorCode = k;
 		}
-		
+
 		internal AudioQueueException (int k) : base (Lookup (k))
 		{
 			ErrorCode = (AudioQueueStatus) k;
 		}
 
+		/// <summary>The underlying AudioToolbox error code.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus ErrorCode { get; private set; }
 	}
-	
+
+	/// <summary>An enumeration whose values specify properties of audio queues.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum AudioQueueProperty : uint // UInt32 AudioQueuePropertyID
-	{ 
+	{
+		/// <summary>To be added.</summary>
 		IsRunning = 0x6171726e,
-		DeviceSampleRate = 0x61717372,			// 'aqsr'
+		/// <summary>To be added.</summary>
+		DeviceSampleRate = 0x61717372,          // 'aqsr'
+		/// <summary>To be added.</summary>
 		DeviceNumberChannels = 0x61716463,
+		/// <summary>To be added.</summary>
 		CurrentDevice = 0x61716364,
+		/// <summary>To be added.</summary>
 		MagicCookie = 0x61716d63,
-		MaximumOutputPacketSize = 0x786f7073,	// 'xops'
-		StreamDescription = 0x61716674,			// 'aqft'
-		ChannelLayout = 0x6171636c,				// 'aqcl'
+		/// <summary>To be added.</summary>
+		MaximumOutputPacketSize = 0x786f7073,   // 'xops'
+		/// <summary>To be added.</summary>
+		StreamDescription = 0x61716674,         // 'aqft'
+		/// <summary>To be added.</summary>
+		ChannelLayout = 0x6171636c,             // 'aqcl'
+		/// <summary>To be added.</summary>
 		EnableLevelMetering = 0x61716d65,
+		/// <summary>To be added.</summary>
 		CurrentLevelMeter = 0x61716d76,
+		/// <summary>To be added.</summary>
 		CurrentLevelMeterDB = 0x61716d64,
-		DecodeBufferSizeFrames = 0x64636266, 
-		ConverterError = 0x71637665,			// 'qcve'
-		EnableTimePitch         = 0x715f7470,	// 'q_tp'
-		TimePitchAlgorithm      = 0x71747061,	// 'qtpa'
-		TimePitchBypass         = 0x71747062,	// 'qtpb'
+		/// <summary>To be added.</summary>
+		DecodeBufferSizeFrames = 0x64636266,
+		/// <summary>To be added.</summary>
+		ConverterError = 0x71637665,            // 'qcve'
+		/// <summary>To be added.</summary>
+		EnableTimePitch = 0x715f7470,   // 'q_tp'
+		/// <summary>To be added.</summary>
+		TimePitchAlgorithm = 0x71747061,    // 'qtpa'
+		/// <summary>To be added.</summary>
+		TimePitchBypass = 0x71747062,   // 'qtpb'
 #if !MONOMAC
-		HardwareCodecPolicy		= 0x61716370,	// 'aqcp'
-		ChannelAssignments		= 0x61716361,	// 'aqca'
+		/// <summary>To be added.</summary>
+		HardwareCodecPolicy = 0x61716370,   // 'aqcp'
+		/// <summary>To be added.</summary>
+		ChannelAssignments = 0x61716361,    // 'aqca'
 #endif
 	}
 
+	/// <summary>An enumeration whose values specify the Time Pitch algorithm. Used with <see cref="AudioToolbox.AudioQueueProperty.TimePitchAlgorithm" />.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum AudioQueueTimePitchAlgorithm : uint {
-		Spectral = 0x73706563,					// spec
-		TimeDomain = 0x7469646f,				// tido
+		/// <summary>To be added.</summary>
+		Spectral = 0x73706563,                  // spec
+		/// <summary>To be added.</summary>
+		TimeDomain = 0x7469646f,                // tido
 #if !MONOMAC
-		LowQualityZeroLatency = 0x6c717a6c,		// lqzl
+		/// <summary>To be added.</summary>
+		LowQualityZeroLatency = 0x6c717a6c,     // lqzl
 #endif
-		Varispeed = 0x76737064					// vspd
+		/// <summary>To be added.</summary>
+		Varispeed = 0x76737064,                 // vspd
 	}
 
+#if !(XAMCORE_5_0 && __MACOS__)
+#if !__MACOS__
+	/// <summary>An enumeration whose values are used for the <see cref="AudioToolbox.AudioQueue.HardwareCodecPolicy" /> property.</summary>
+#endif
+#if XAMCORE_5_0
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("macos")]
+#endif // XAMCORE_5_0
 	public enum AudioQueueHardwareCodecPolicy { // A AudioQueuePropertyID (UInt32)
+		/// <summary>To be added.</summary>
 		Default = 0,
+		/// <summary>To be added.</summary>
 		UseSoftwareOnly = 1,
+		/// <summary>To be added.</summary>
 		UseHardwareOnly = 2,
+		/// <summary>To be added.</summary>
 		PreferSoftware = 3,
-		PreferHardware = 4
+		/// <summary>To be added.</summary>
+		PreferHardware = 4,
 	}
+#endif // !(XAMCORE_5_0 && __MACOS__)
 
+	/// <summary>An enumeration whose values specify various parameters of an audio queue.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum AudioQueueParameter : uint // UInt32 AudioQueueParameterID
 	{
+		/// <summary>To be added.</summary>
 		Volume = 1,
+		/// <summary>To be added.</summary>
 		PlayRate = 2,
+		/// <summary>To be added.</summary>
 		Pitch = 3,
+		/// <summary>To be added.</summary>
 		VolumeRampTime = 4,
+		/// <summary>To be added.</summary>
 		Pan = 13,
 	}
-	
+
+	/// <summary>An enumeration whose values specify properties of an audio queue device (number of channels and sample rate).</summary>
+	///     <remarks>To be added.</remarks>
 	public enum AudioQueueDeviceProperty { // UInt32 AudioQueueParameterID
+		/// <summary>To be added.</summary>
 		SampleRate = 0x61717372,
-		NumberChannels = 0x61716463
+		/// <summary>To be added.</summary>
+		NumberChannels = 0x61716463,
 	}
 
+	/// <summary>Flags used when an AudioQueue tap is created, and used by the tap processor callback.</summary>
+	///     <remarks>
+	///       <para>
+	/// 	The PostEffects, PreEffects, Siphon values are used both when
+	/// 	creating a audio queue tap (using <see cref="AudioToolbox.AudioQueue.CreateProcessingTap(AudioToolbox.AudioQueueProcessingTapDelegate,AudioToolbox.AudioQueueProcessingTapFlags,out AudioToolbox.AudioQueueStatus)" />)
+	/// 	and are provided to the tap callback (of type <see cref="AudioToolbox.AudioQueueProcessingTapDelegate" />).
+	///
+	///       </para>
+	///       <para>
+	/// 	The StartOfStream and EndOfStream are returned by <see cref="AudioToolbox.AudioQueueProcessingTap" />'s
+	/// 	GetSourceAudio method.
+	///
+	///       </para>
+	///     </remarks>
 	[Flags]
 	public enum AudioQueueProcessingTapFlags : uint // UInt32 in AudioQueueProcessingTapNew
 	{
-		PreEffects         = (1 << 0),
-		PostEffects        = (1 << 1),
-		Siphon             = (1 << 2),
+		/// <summary>The tap is executed before any effects have run.</summary>
+		PreEffects = (1 << 0),
+		/// <summary>The tap is executed after any effects have run.</summary>
+		PostEffects = (1 << 1),
+		/// <summary>The tap is a siphon tap, it can only examine the AudioBuffers provided to the callback, but should not modify its contents.</summary>
+		Siphon = (1 << 2),
 
-		StartOfStream      = (1 << 8),
-		EndOfStream        = (1 << 9),
+		/// <summary>Indicates the start of audio and is returned by GetSourceAudio.  As a flag passed to a tap processor, this indicates a discontinuity in the audio.   Either because it is starting, or because there is a playback gap.  For the tap processor this means  that the data being requested should correspond to the first frame in the audio source.   This should reset any internal state in the tap processor that might have been saved from previous invocations to the tap handler.</summary>
+		StartOfStream = (1 << 8),
+		/// <summary>Indicates the end of the audio stream, it happens when the queue is being stopped asynchronosuly and is returned by a call to GetSourceAudio.  You must propagate this value to the caller.</summary>
+		EndOfStream = (1 << 9),
 	}
-	
-	[StructLayout(LayoutKind.Sequential)]
+
+	/// <summary>Represents an audio queue buffer.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	[StructLayout (LayoutKind.Sequential)]
 	public struct AudioQueueBuffer {
+		/// <summary>The size, in bytes, of the audio data for this buffer (<see cref="AudioData" />).</summary>
 		public uint AudioDataBytesCapacity;
+
+		/// <summary>Pointer to the audio data.</summary>
 		public IntPtr AudioData;
+
+		/// <summary>The number of valid bytes in the audio data (<see cref="AudioData" />).</summary>
 		public uint AudioDataByteSize;
+
+		/// <summary>A custom value, not used by the system.</summary>
 		public IntPtr UserData;
 
+		/// <summary>The capacity, in number of elements, of the array of packet descriptions.</summary>
 		public uint PacketDescriptionCapacity;
+
+		/// <summary>A C-style array of packet descriptions.</summary>
 		public IntPtr IntPtrPacketDescriptions;
+
+		/// <summary>The number of valid elements in the array of packet descriptions.</summary>
 		public int PacketDescriptionCount;
 
-		public AudioStreamPacketDescription [] PacketDescriptions {
+		/// <summary>An array of valid packet descriptions.</summary>
+		public AudioStreamPacketDescription []? PacketDescriptions {
 			get {
 				return AudioFile.PacketDescriptionFrom (PacketDescriptionCount, IntPtrPacketDescriptions);
 			}
+			set {
+				if (value is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
+
+				if (value.Length > PacketDescriptionCapacity)
+					throw new ArgumentOutOfRangeException ("Too many elements for this audio queue buffer.", nameof (value));
+
+				unsafe {
+					fixed (AudioStreamPacketDescription* aspd = value)
+						NativeMemory.Copy ((void*) aspd, (void*) IntPtrPacketDescriptions, (nuint) (sizeof (AudioStreamPacketDescription) * value.Length));
+					PacketDescriptionCount = value.Length;
+				}
+			}
 		}
 
+		/// <summary>Copies the specified buffer's <see cref="AudioData" /> buffer.</summary>
+		/// <param name="source">Pointer to the data to copy.</param>
+		/// <param name="size">Number of bytes to copy.</param>
 		public unsafe void CopyToAudioData (IntPtr source, int size)
 		{
-			byte *t = (byte *) AudioData;
-			byte *s = (byte *) source;
-			Runtime.memcpy (t, s, size);
+			CopyToAudioData (new ReadOnlySpan<byte> ((void*) source, size));
+		}
+
+		/// <summary>Copies the specified buffer's <see cref="AudioData" /> buffer.</summary>
+		/// <param name="source">The data to copy.</param>
+		public void CopyToAudioData (ReadOnlySpan<byte> source)
+		{
+			source.CopyTo (AsSpan ());
+			AudioDataByteSize = (uint) source.Length;
+		}
+
+		/// <summary>Creates a new span over the valid audio data for this buffer (<see cref="AudioData" />, <see cref="AudioDataByteSize" />).</summary>
+		public unsafe Span<byte> AsSpanOfValidData ()
+		{
+			return new Span<byte> ((void*) AudioData, (int) AudioDataByteSize);
+		}
+
+		/// <summary>Creates a new span over the entire audio data buffer (<see cref="AudioData" />, <see cref="AudioDataBytesCapacity" />).</summary>
+		public unsafe Span<byte> AsSpan ()
+		{
+			return new Span<byte> ((void*) AudioData, (int) AudioDataBytesCapacity);
 		}
 	}
 
-	[StructLayout(LayoutKind.Explicit)]
+	/// <summary>A class that encapsulates values used as <c>parameterEvents</c> in calls to the <see cref="AudioToolbox.InputAudioQueue.EnqueueBuffer(AudioToolbox.AudioQueueBuffer*)" /> method. </summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	[StructLayout (LayoutKind.Explicit)]
 	public struct AudioQueueParameterEvent {
-		[FieldOffset(0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[FieldOffset (0)]
 		[Advice ("Use Parameter.")]
 		public uint ID;
 
-		[FieldOffset(0)] 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[FieldOffset (0)]
 		public AudioQueueParameter Parameter;
 
-		[FieldOffset(4)] 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[FieldOffset (4)]
 		public float Value;
 
+		/// <param name="parameter">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueParameterEvent (AudioQueueParameter parameter, float value)
 		{
 			this.ID = (uint) parameter;
@@ -279,85 +465,159 @@ namespace AudioToolbox {
 		}
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
+	/// <summary>Represents the level meter information on an audio channel.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	[StructLayout (LayoutKind.Sequential)]
 	public struct AudioQueueLevelMeterState {
+		/// <summary>The audio channel average root mean square power.</summary>
+		///         <remarks>
+		///         </remarks>
 		public float AveragePower;
+		/// <summary>The audio channel peak root mean square power.</summary>
+		///         <remarks>
+		///         </remarks>
 		public float PeakPower;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
-	public struct AudioQueueChannelAssignment
-	{
+#if !(XAMCORE_5_0 && __MACOS__)
+#if !__MACOS__
+	/// <summary>Channel assignments used as a parameter to the <see cref="AudioToolbox.AudioQueue.SetChannelAssignments(AudioToolbox.AudioQueueChannelAssignment[])" /> method.</summary>
+#endif
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+#if XAMCORE_5_0
+	[UnsupportedOSPlatform ("macos")]
+#else
+	[SupportedOSPlatform ("macos")]
+#endif
+	[SupportedOSPlatform ("tvos")]
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AudioQueueChannelAssignment {
 		IntPtr deviceUID; // CFString
 		uint channelNumber;
 
+		/// <param name="deviceUID">To be added.</param>
+		///         <param name="channelNumber">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueChannelAssignment (CFString deviceUID, uint channelNumber)
 		{
 			this.deviceUID = deviceUID.Handle;
 			this.channelNumber = channelNumber;
+			GC.KeepAlive (deviceUID);
 		}
 	}
+#endif // !(XAMCORE_5_0 && __MACOS__)
 
-	delegate void AudioQueueOutputCallback (IntPtr userData, IntPtr AQ, IntPtr audioQueueBuffer);
-	unsafe delegate void AudioQueueInputCallback (IntPtr userData, IntPtr AQ, IntPtr audioQueueBuffer,
-						      AudioTimeStamp *startTime, int descriptors, IntPtr AudioStreamPacketDescription_inPacketDesc);
-	delegate void AudioQueuePropertyListener (IntPtr userData, IntPtr AQ,  AudioQueueProperty id);
+	delegate void AudioQueuePropertyListener (IntPtr userData, IntPtr AQ, AudioQueueProperty id);
 
-#if XAMCORE_2_0
+	/// <summary>Provides data for the <see cref="AudioToolbox.OutputAudioQueue.BufferCompleted" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class BufferCompletedEventArgs : EventArgs {
+		/// <param name="audioQueueBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public BufferCompletedEventArgs (IntPtr audioQueueBuffer)
 		{
 			IntPtrBuffer = audioQueueBuffer;
 		}
 
-		public unsafe BufferCompletedEventArgs (AudioQueueBuffer *audioQueueBuffer)
+		/// <param name="audioQueueBuffer">To be added.</param>
+		///         <summary>Initializes a new instance of the BufferCompletedEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
+		public unsafe BufferCompletedEventArgs (AudioQueueBuffer* audioQueueBuffer)
 		{
 			IntPtrBuffer = (IntPtr) audioQueueBuffer;
 		}
-#else
-	public class OutputCompletedEventArgs : EventArgs {
-		public OutputCompletedEventArgs (IntPtr audioQueueBuffer)
-		{
-			IntPtrBuffer = audioQueueBuffer;
-		}
 
-		public unsafe OutputCompletedEventArgs (AudioQueueBuffer *audioQueueBuffer)
-		{
-			IntPtrBuffer = (IntPtr) audioQueueBuffer;
-		}
-#endif
-
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public IntPtr IntPtrBuffer { get; private set; }
-		public unsafe AudioQueueBuffer *UnsafeBuffer {
-			get { return (AudioQueueBuffer *) IntPtrBuffer; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public unsafe AudioQueueBuffer* UnsafeBuffer {
+			get { return (AudioQueueBuffer*) IntPtrBuffer; }
 			set { IntPtrBuffer = (IntPtr) value; }
 		}
 	}
 
+	/// <summary>Provides data for the <see cref="AudioToolbox.InputAudioQueue.InputCompleted" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class InputCompletedEventArgs : EventArgs {
-		public unsafe InputCompletedEventArgs (IntPtr audioQueueBuffer, AudioTimeStamp timeStamp, AudioStreamPacketDescription [] pdec)
+		/// <param name="audioQueueBuffer">To be added.</param>
+		///         <param name="timeStamp">To be added.</param>
+		///         <param name="pdec">To be added.</param>
+		///         <summary>Initializes a new instance of the InputCompletedEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
+		public unsafe InputCompletedEventArgs (IntPtr audioQueueBuffer, AudioTimeStamp timeStamp, AudioStreamPacketDescription []? pdec)
 		{
 			IntPtrBuffer = audioQueueBuffer;
 			TimeStamp = timeStamp;
 			PacketDescriptions = pdec;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public IntPtr IntPtrBuffer { get; private set; }
-		public unsafe AudioQueueBuffer *UnsafeBuffer {
-			get { return (AudioQueueBuffer *) IntPtrBuffer; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public unsafe AudioQueueBuffer* UnsafeBuffer {
+			get { return (AudioQueueBuffer*) IntPtrBuffer; }
 			set { IntPtrBuffer = (IntPtr) value; }
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public unsafe AudioQueueBuffer Buffer {
-			get { return *(AudioQueueBuffer *) IntPtrBuffer; }
+			get { return *(AudioQueueBuffer*) IntPtrBuffer; }
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AudioTimeStamp TimeStamp { get; private set; }
-		public AudioStreamPacketDescription [] PacketDescriptions { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public AudioStreamPacketDescription []? PacketDescriptions { get; private set; }
 	}
 
+	/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='T:AudioToolbox.AudioQueue']/*" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public abstract class AudioQueue : IDisposable {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		internal protected IntPtr handle;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		internal protected GCHandle gch;
 
+		/// <summary>Handle (pointer) to the unmanaged object representation.</summary>
+		///         <value>A pointer</value>
+		///         <remarks>This IntPtr is a handle to the underlying unmanaged representation for this object.</remarks>
 		public IntPtr Handle { get { return handle; } }
 
 		internal AudioQueue ()
@@ -368,88 +628,123 @@ namespace AudioToolbox {
 		{
 			Dispose (false, true);
 		}
-		
+
+		/// <summary>Releases the resources used by the AudioQueue object.</summary>
+		///         <remarks>
+		///           <para>The Dispose method releases the resources used by the AudioQueue class.</para>
+		///           <para>Calling the Dispose method when the application is finished using the AudioQueue ensures that all external resources used by this managed object are released as soon as possible.  Once developers have invoked the Dispose method, the object is no longer useful and developers should no longer make any calls to it.  For more information on releasing resources see ``Cleaning up Unmananaged Resources'' at https://msdn.microsoft.com/en-us/library/498928w2.aspx</para>
+		///         </remarks>
 		public void Dispose ()
 		{
 			Dispose (true, true);
 			GC.SuppressFinalize (this);
 		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void QueueDispose ()
 		{
 			Dispose (true, false);
 		}
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static OSStatus AudioQueueDispose (IntPtr AQ, bool immediate);
 
-#if XAMCORE_2_0
+		[DllImport (Constants.AudioToolboxLibrary)]
+		extern static OSStatus AudioQueueDispose (IntPtr AQ, byte immediate);
+
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueue.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
 		{
 			Dispose (disposing, true);
 		}
 
 		void Dispose (bool disposing, bool immediate)
-#else
-		public virtual void Dispose (bool disposing, bool immediate)
-#endif
 		{
-			if (handle != IntPtr.Zero){
-				if (disposing){
-					if (listeners != null){
-						foreach (AudioQueueProperty prop in listeners.Keys){
-							AudioQueueRemovePropertyListener (handle, prop, property_changed, GCHandle.ToIntPtr (gch));
+			if (handle != IntPtr.Zero) {
+				if (disposing) {
+					if (listeners is not null) {
+						foreach (AudioQueueProperty prop in listeners.Keys) {
+							unsafe {
+								AudioQueueRemovePropertyListener (handle, prop, &property_changed, GCHandle.ToIntPtr (gch));
+							}
 						}
 					}
 				}
-			
-				AudioQueueDispose (handle, immediate);
+
+				AudioQueueDispose (handle, immediate ? (byte) 1 : (byte) 0);
 				handle = IntPtr.Zero;
 			}
-			
+
 			if (gch.IsAllocated)
 				gch.Free ();
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueStart (IntPtr AQ, ref AudioTimeStamp startTime);
+		unsafe extern static AudioQueueStatus AudioQueueStart (IntPtr AQ, AudioTimeStamp* startTime);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueStart (IntPtr AQ, IntPtr startTime);
-		
+
+		/// <param name="startTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Start (AudioTimeStamp startTime)
 		{
-			return AudioQueueStart (handle, ref startTime);
+			unsafe {
+				return AudioQueueStart (handle, &startTime);
+			}
 		}
 
+		/// <summary>Starts the audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Start ()
 		{
 			return AudioQueueStart (handle, IntPtr.Zero);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueuePrime (IntPtr AQ, int toPrepare, out int prepared);
+		unsafe extern static AudioQueueStatus AudioQueuePrime (IntPtr AQ, int toPrepare, int* prepared);
+		/// <param name="toPrepare">Number of frames to process.  If you pass zero, this will process all the frames.</param>
+		///         <param name="prepared">Returns the number of frames actually processed</param>
+		///         <summary>Used to prepare the audio buffers to play back and ensure that there is data ready to be played by the audio hardware.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus Prime (int toPrepare, out int prepared)
 		{
-			return AudioQueuePrime (handle, toPrepare, out prepared);
+			prepared = 0;
+			unsafe {
+				fixed (int* preparedPtr = &prepared)
+					return AudioQueuePrime (handle, toPrepare, preparedPtr);
+			}
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueFlush (IntPtr aq);
+		/// <summary>To be added.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Flush ()
 		{
 			return AudioQueueFlush (handle);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueStop (IntPtr aq, bool immediate);
+		unsafe extern static AudioQueueStatus AudioQueueStop (IntPtr aq, byte immediate);
+		/// <param name="immediate">If true, by the time the function returns, audio would have stopped playing.   Otherwise the pending buffers are flushed and audio continues to play or be recorded until then.</param>
+		///         <summary>Stops the AudioQueue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Stop (bool immediate)
 		{
-			return AudioQueueStop (handle, immediate);
+			return AudioQueueStop (handle, immediate ? (byte) 1 : (byte) 0);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueuePause (IntPtr aq);
+		/// <summary>To be added.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Pause ()
 		{
 			return AudioQueuePause (handle);
@@ -457,198 +752,351 @@ namespace AudioToolbox {
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueReset (IntPtr aq);
+		/// <summary>To be added.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueStatus Reset ()
 		{
 			return AudioQueueReset (handle);
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueAllocateBuffer (AudioQueueRef AQ, int bufferSize, out IntPtr audioQueueBuffer);
+		unsafe extern static AudioQueueStatus AudioQueueAllocateBuffer (AudioQueueRef AQ, int bufferSize, IntPtr* audioQueueBuffer);
+
+#if !XAMCORE_5_0
+		/// <summary>Allocates an audio buffer associated with this <see cref="AudioQueue" />, used for fixed bit rate buffers.</summary>
+		/// <param name="bufferSize">The audio buffer size to allocate (in bytes).</param>
+		/// <param name="audioQueueBuffer">The allocated buffer on return. Cast this to a pointer to a <see cref="AudioQueueBuffer" /> to use it.</param>
+		/// <returns><see cref="AudioQueueStatus.Ok" /> on success and the <paramref name="audioQueueBuffer" /> pointing to the buffer, otherwise the error code.</returns>
+		/// <remarks>
+		///   <para>Use the <see cref="AllocateBuffer(int,int,out AudioQueueBuffer*)" /> to allocate buffers that will be used with variable bit rate encodings.</para>
+		///   <para>Use <see cref="FreeBuffer(System.IntPtr)" /> to dispose the buffer.</para>
+		/// </remarks>
+		[Obsolete ("Call 'AllocateBuffer(int, out AudioQueueBuffer*)' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
 		public AudioQueueStatus AllocateBuffer (int bufferSize, out IntPtr audioQueueBuffer)
 		{
-			return AudioQueueAllocateBuffer (handle, bufferSize, out audioQueueBuffer);
+			audioQueueBuffer = default (IntPtr);
+			unsafe {
+				fixed (IntPtr* audioQueueBufferPtr = &audioQueueBuffer) {
+					return AudioQueueAllocateBuffer (handle, bufferSize, audioQueueBufferPtr);
+				}
+			}
 		}
+#endif
 
+		/// <summary>Allocates an audio buffer associated with this <see cref="AudioQueue" />, used for fixed bit rate buffers.</summary>
+		/// <param name="bufferSize">The audio buffer size to allocate (in bytes).</param>
+		/// <param name="audioQueueBuffer">Returns the allocated buffer as an unsafe <see cref="AudioQueueBuffer" /> pointer.</param>
+		/// <returns><see cref="AudioQueueStatus.Ok" /> on success and the <paramref name="audioQueueBuffer" /> pointing to the buffer, otherwise the error code.</returns>
+		/// <remarks>
+		///   <para>Use the <see cref="AllocateBuffer(int,int,out AudioQueueBuffer*)" /> to allocate buffers that will be used with variable bit rate encodings.</para>
+		///   <para>Use <see cref="FreeBuffer(AudioQueueBuffer*)" /> to dispose the buffer.</para>
+		/// </remarks>
 		public unsafe AudioQueueStatus AllocateBuffer (int bufferSize, out AudioQueueBuffer* audioQueueBuffer)
 		{
 			IntPtr buf;
 			AudioQueueStatus result;
-			result = AudioQueueAllocateBuffer (handle, bufferSize, out buf);
-			audioQueueBuffer = (AudioQueueBuffer *) buf;
+			result = AudioQueueAllocateBuffer (handle, bufferSize, &buf);
+			audioQueueBuffer = (AudioQueueBuffer*) buf;
 			return result;
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueAllocateBufferWithPacketDescriptions(IntPtr AQ, int bufferSize, int nPackets, out IntPtr audioQueueBuffer);
+		unsafe extern static AudioQueueStatus AudioQueueAllocateBufferWithPacketDescriptions (IntPtr AQ, int bufferSize, int nPackets, IntPtr* audioQueueBuffer);
+
+#if !XAMCORE_5_0
+		/// <summary>Allocates an audio queue object for variable-bit-rate buffers.</summary>
+		/// <param name="bufferSize">Size of the audio data in the allocated buffer, in bytes.</param>
+		/// <param name="nPackets">The number of elements in the packet descriptions array in the returned buffer.</param>
+		/// <param name="audioQueueBuffer">The allocated buffer on return. Cast this to a pointer to a <see cref="AudioQueueBuffer" /> to use it.</param>
+		/// <returns><see cref="AudioQueueStatus.Ok" /> on success and the <paramref name="audioQueueBuffer" /> pointing to the buffer, otherwise the error code.</returns>
+		/// <remarks>
+		///   <para>Use the <see cref="AllocateBuffer(int,out AudioQueueBuffer*)" /> to allocate buffers that will be used with fixed bit rate encodings.</para>
+		///   <para>Use <see cref="FreeBuffer(System.IntPtr)" /> to free the buffer (if not it will be freed when this audio queue is disposed).</para>
+		/// </remarks>
+		[Obsolete ("Call 'AllocateBuffer(int, int, out AudioQueueBuffer*)' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
 		public AudioQueueStatus AllocateBufferWithPacketDescriptors (int bufferSize, int nPackets, out IntPtr audioQueueBuffer)
 		{
-			return AudioQueueAllocateBufferWithPacketDescriptions (handle, bufferSize, nPackets, out audioQueueBuffer);
+			audioQueueBuffer = default (IntPtr);
+			unsafe {
+				fixed (IntPtr* audioQueueBufferPtr = &audioQueueBuffer) {
+					return AudioQueueAllocateBufferWithPacketDescriptions (handle, bufferSize, nPackets, audioQueueBufferPtr);
+				}
+			}
 		}
-		
+#endif
+
+		/// <summary>Allocates an audio queue object for variable-bit-rate buffers.</summary>
+		/// <param name="bufferSize">Size of the audio data in the allocated buffer, in bytes.</param>
+		/// <param name="numberOfPacketDescriptions">The number of elements in the packet descriptions array in the returned buffer.</param>
+		/// <param name="audioQueueBuffer">The allocated buffer on return.</param>
+		/// <returns><see cref="AudioQueueStatus.Ok" /> on success and the <paramref name="audioQueueBuffer" /> pointing to the buffer, otherwise the error code.</returns>
+		/// <remarks>
+		///   <para>Use the <see cref="AllocateBuffer(int,out AudioQueueBuffer*)" /> to allocate buffers that will be used with fixed bit rate encodings.</para>
+		///   <para>Use <see cref="FreeBuffer(AudioQueueBuffer*)" /> to free the buffer (if not it will be freed when this audio queue is disposed).</para>
+		/// </remarks>
+		public unsafe AudioQueueStatus AllocateBuffer (int bufferSize, int numberOfPacketDescriptions, out AudioQueueBuffer* audioQueueBuffer)
+		{
+			fixed (AudioQueueBuffer** audioQueueBufferPtr = &audioQueueBuffer)
+				return AudioQueueAllocateBufferWithPacketDescriptions (GetCheckedHandle (), bufferSize, numberOfPacketDescriptions, (IntPtr*) audioQueueBufferPtr);
+		}
+
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueFreeBuffer (IntPtr AQ, IntPtr audioQueueBuffer);
-		public void FreeBuffer (IntPtr audioQueueBuffer)
+
+		/// <summary>Releases an AudioQueue buffer.</summary>
+		/// <param name="audioQueueBuffer">AudioQueue buffer previously allocated with AllocateBuffer.</param>
+		public unsafe void FreeBuffer (IntPtr audioQueueBuffer)
 		{
-			if (audioQueueBuffer == IntPtr.Zero)
-				throw new ArgumentNullException ("audioQueueBuffer");
-			AudioQueueFreeBuffer (handle, audioQueueBuffer);
+			FreeBuffer ((AudioQueueBuffer*) audioQueueBuffer);
 		}
-		
+
+		/// <summary>Releases an AudioQueue buffer.</summary>
+		/// <param name="audioQueueBuffer">AudioQueue buffer previously allocated with AllocateBuffer.</param>
+		public unsafe AudioQueueStatus FreeBuffer (AudioQueueBuffer* audioQueueBuffer)
+		{
+			if (audioQueueBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
+			return AudioQueueFreeBuffer (GetCheckedHandle (), (IntPtr) audioQueueBuffer);
+		}
+
+		IntPtr GetCheckedHandle ()
+		{
+			var h = handle;
+			if (h == NativeHandle.Zero)
+				ObjCRuntime.ThrowHelper.ThrowObjectDisposedException (this);
+			return h;
+		}
+
 		public static void FillAudioData (IntPtr audioQueueBuffer, int offset, IntPtr source, int sourceOffset, nint size)
 		{
 			IntPtr target = Marshal.ReadIntPtr (audioQueueBuffer, IntPtr.Size);
 			unsafe {
-				byte *targetp = (byte *) target;
-				byte *sourcep = (byte *) source;
-				Runtime.memcpy (targetp + offset, sourcep + sourceOffset, size);
+				Buffer.MemoryCopy ((void*) (source + sourceOffset), (void*) (target + offset), size, size);
 			}
 		}
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		internal extern unsafe static AudioQueueStatus AudioQueueEnqueueBuffer (IntPtr AQ, AudioQueueBuffer* audioQueueBuffer, int nPackets, AudioStreamPacketDescription [] desc);
 
+		[DllImport (Constants.AudioToolboxLibrary)]
+		internal extern unsafe static AudioQueueStatus AudioQueueEnqueueBuffer (IntPtr AQ, AudioQueueBuffer* audioQueueBuffer, int nPackets, AudioStreamPacketDescription* desc);
+
+		/// <param name="audioQueueBuffer">The audio queue buffer to add to the buffer queue.</param>
+		///         <param name="bytes">The number of bytes from the queue buffer to add to the buffer queue. The audioQueueBuffer parameter will be updated with this value.</param>
+		///         <param name="desc">An array of packet descriptors for the packets that will be added to the queue.</param>
+		///         <summary>Adds a buffer to the buffer queue of an audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus EnqueueBuffer (IntPtr audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc)
 		{
 			if (audioQueueBuffer == IntPtr.Zero)
-				throw new ArgumentNullException ("audioQueueBuffer");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
 
 			unsafe {
-				AudioQueueBuffer *buffer = (AudioQueueBuffer *) audioQueueBuffer;
+				AudioQueueBuffer* buffer = (AudioQueueBuffer*) audioQueueBuffer;
 				buffer->AudioDataByteSize = (uint) bytes;
 				return EnqueueBuffer (buffer, desc);
 			}
 		}
 
+		/// <param name="audioQueueBuffer">The audio queue buffer to add to the buffer queue.</param>
+		///         <param name="desc">An array of packet descriptors for the packets that will be added to the queue.</param>
+		///         <summary>Adds a buffer to the buffer queue of an audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
 		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer* audioQueueBuffer, AudioStreamPacketDescription [] desc)
 		{
-			if (audioQueueBuffer == null)
-				throw new ArgumentNullException ("audioQueueBuffer");
+			if (audioQueueBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
 
-			return AudioQueueEnqueueBuffer (handle, audioQueueBuffer, desc == null ? 0 : desc.Length, desc);
+			fixed (AudioStreamPacketDescription* descPtr = desc) {
+				return AudioQueueEnqueueBuffer (handle, audioQueueBuffer, desc?.Length ?? 0, descPtr);
+			}
 		}
 
+		/// <param name="audioQueueBuffer">To be added.</param>
+		///         <param name="desc">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public unsafe AudioQueueStatus EnqueueBuffer (IntPtr audioQueueBuffer, AudioStreamPacketDescription [] desc)
 		{
 			if (audioQueueBuffer == IntPtr.Zero)
-				throw new ArgumentNullException ("audioQueueBuffer");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
 
-			return AudioQueueEnqueueBuffer (handle, (AudioQueueBuffer *) audioQueueBuffer, desc == null ? 0 : desc.Length, desc);
+			fixed (AudioStreamPacketDescription* descPtr = desc) {
+				return AudioQueueEnqueueBuffer (handle, (AudioQueueBuffer*) audioQueueBuffer, desc?.Length ?? 0, descPtr);
+			}
 		}
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern unsafe static AudioQueueStatus AudioQueueEnqueueBufferWithParameters (
-			IntPtr AQ,
-			AudioQueueBuffer *audioQueueBuffer,
-			int nPackets,
-			AudioStreamPacketDescription [] desc,
-			int trimFramesAtStart,
-			int trimFramesAtEnd,
-			int nParam,
-			AudioQueueParameterEvent      [] parameterEvents,
-			ref AudioTimeStamp  startTime,
-			out AudioTimeStamp actualStartTime);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern unsafe static AudioQueueStatus AudioQueueEnqueueBufferWithParameters (
 			IntPtr AQ,
-			AudioQueueBuffer *audioQueueBuffer,
+			AudioQueueBuffer* audioQueueBuffer,
 			int nPackets,
-			AudioStreamPacketDescription [] desc,
+			AudioStreamPacketDescription* desc,
 			int trimFramesAtStart,
 			int trimFramesAtEnd,
 			int nParam,
-			AudioQueueParameterEvent      [] parameterEvents,
-			AudioTimeStamp *startTime,
-			out AudioTimeStamp actualStartTime);
+			AudioQueueParameterEvent* parameterEvents,
+			AudioTimeStamp* startTime,
+			AudioTimeStamp* actualStartTime);
 
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueue.EnqueueBuffer(System.IntPtr,System.Int32,AudioToolbox.AudioStreamPacketDescription[],System.Int32,System.Int32,AudioToolbox.AudioQueueParameterEvent[],AudioToolbox.AudioTimeStamp@,AudioToolbox.AudioTimeStamp@)']/*" />
 		public AudioQueueStatus EnqueueBuffer (IntPtr audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
-						       int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
-						       ref AudioTimeStamp startTime, out AudioTimeStamp actualStartTime)
+								   int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
+								   ref AudioTimeStamp startTime, out AudioTimeStamp actualStartTime)
 		{
 			if (audioQueueBuffer == IntPtr.Zero)
-				throw new ArgumentNullException ("audioQueueBuffer");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
+
+			actualStartTime = default (AudioTimeStamp);
 
 			unsafe {
-				AudioQueueBuffer *buffer = (AudioQueueBuffer *) audioQueueBuffer;
+				AudioQueueBuffer* buffer = (AudioQueueBuffer*) audioQueueBuffer;
 				buffer->AudioDataByteSize = (uint) bytes;
 
-				return AudioQueueEnqueueBufferWithParameters (
-					handle, buffer, desc == null ? 0 : desc.Length, desc,
-					trimFramesAtStart, trimFramesAtEnd, parameterEvents == null ? 0 : parameterEvents.Length,
-					parameterEvents,
-					ref startTime,
-					out actualStartTime);
+				fixed (AudioStreamPacketDescription* descPtr = desc)
+				fixed (AudioQueueParameterEvent* parameterEventsPtr = parameterEvents) {
+					fixed (AudioTimeStamp* startTimePtr = &startTime, actualStartTimePtr = &actualStartTime) {
+						return AudioQueueEnqueueBufferWithParameters (
+							handle, buffer, desc?.Length ?? 0, descPtr,
+							trimFramesAtStart, trimFramesAtEnd, parameterEvents?.Length ?? 0,
+							parameterEventsPtr,
+							startTimePtr,
+							actualStartTimePtr);
+					}
+				}
 			}
 		}
+		/// <param name="audioQueueBuffer">The audio queue buffer to add to the buffer queue.</param>
+		///         <param name="bytes">The number of bytes from the queue buffer to add to the buffer queue. The audioQueueBuffer parameter will be updated with this value.</param>
+		///         <param name="desc">An array of packet descriptors for the packets that will be added to the queue.</param>
+		///         <param name="trimFramesAtStart">The number of frames to skip at the start of the buffer. </param>
+		///         <param name="trimFramesAtEnd">The number of frames to skip at the end of the buffer.</param>
+		///         <param name="parameterEvents">An array of parameter events for the buffer.</param>
+		///         <param name="actualStartTime">The time when the buffer will start playing.</param>
+		///         <summary>Adds a buffer that should play as soon as possible to the buffer queue of a playback audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus EnqueueBuffer (IntPtr audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
-						       int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
-						       out AudioTimeStamp actualStartTime)
+							   int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
+							   out AudioTimeStamp actualStartTime)
 		{
 			if (audioQueueBuffer == IntPtr.Zero)
-				throw new ArgumentNullException ("audioQueueBuffer");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
+
+			actualStartTime = default (AudioTimeStamp);
 
 			unsafe {
-				AudioQueueBuffer *buffer = (AudioQueueBuffer *) audioQueueBuffer;
+				AudioQueueBuffer* buffer = (AudioQueueBuffer*) audioQueueBuffer;
 				buffer->AudioDataByteSize = (uint) bytes;
 
-				return AudioQueueEnqueueBufferWithParameters (
-					handle, buffer, desc == null ? 0 : desc.Length, desc,
-					trimFramesAtStart, trimFramesAtEnd, parameterEvents == null ? 0 : parameterEvents.Length,
-					parameterEvents,
-					null,
-					out actualStartTime);
+				fixed (AudioStreamPacketDescription* descPtr = desc)
+				fixed (AudioQueueParameterEvent* parameterEventsPtr = parameterEvents) {
+					fixed (AudioTimeStamp* actualStartTimePtr = &actualStartTime) {
+						return AudioQueueEnqueueBufferWithParameters (
+							handle, buffer, desc?.Length ?? 0, descPtr,
+							trimFramesAtStart, trimFramesAtEnd, parameterEvents?.Length ?? 0,
+							parameterEventsPtr,
+							null,
+							actualStartTimePtr);
+					}
+				}
 			}
 		}
-		
-		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer *audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
-						       int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
-						       ref AudioTimeStamp startTime, out AudioTimeStamp actualStartTime)
-		{
-			if (audioQueueBuffer == null)
-				throw new ArgumentNullException ("audioQueueBuffer");
 
-			return AudioQueueEnqueueBufferWithParameters (
-				handle, audioQueueBuffer, desc == null ? 0 : desc.Length, desc,
-				trimFramesAtStart, trimFramesAtEnd, parameterEvents == null ? 0 : parameterEvents.Length,
-				parameterEvents,
-				ref startTime,
-				out actualStartTime);
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueue.EnqueueBuffer(AudioToolbox.AudioQueueBuffer*,System.Int32,AudioToolbox.AudioStreamPacketDescription[],System.Int32,System.Int32,AudioToolbox.AudioQueueParameterEvent[],AudioToolbox.AudioTimeStamp@,AudioToolbox.AudioTimeStamp@)']/*" />
+		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer* audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
+								   int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
+								   ref AudioTimeStamp startTime, out AudioTimeStamp actualStartTime)
+		{
+			if (audioQueueBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
+
+			fixed (AudioStreamPacketDescription* descPtr = desc)
+			fixed (AudioQueueParameterEvent* parameterEventsPtr = parameterEvents) {
+				startTime = default;
+				actualStartTime = default;
+				fixed (AudioTimeStamp* startTimePtr = &startTime, actualStartTimePtr = &actualStartTime) {
+					return AudioQueueEnqueueBufferWithParameters (
+						handle, audioQueueBuffer, desc?.Length ?? 0, descPtr,
+						trimFramesAtStart, trimFramesAtEnd, parameterEvents?.Length ?? 0,
+						parameterEventsPtr,
+						startTimePtr,
+						actualStartTimePtr);
+				}
+			}
 		}
-		
-		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer *audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
-						       int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
-						       out AudioTimeStamp actualStartTime)
-		{
-			if (audioQueueBuffer == null)
-				throw new ArgumentNullException ("audioQueueBuffer");
 
-			return AudioQueueEnqueueBufferWithParameters (
-				handle, audioQueueBuffer, desc == null ? 0 : desc.Length, desc,
-				trimFramesAtStart, trimFramesAtEnd, parameterEvents == null ? 0 : parameterEvents.Length,
-				parameterEvents,
-				null,
-				out actualStartTime);
+		/// <param name="audioQueueBuffer">The audio queue buffer to add to the buffer queue.</param>
+		///         <param name="bytes">The number of bytes from the queue buffer to add to the buffer queue. The audioQueueBuffer parameter will be updated with this value.</param>
+		///         <param name="desc">An array of packet descriptors for the packets that will be added to the queue.</param>
+		///         <param name="trimFramesAtStart">The number of frames to skip at the start of the buffer. </param>
+		///         <param name="trimFramesAtEnd">The number of frames to skip at the end of the buffer.</param>
+		///         <param name="parameterEvents">An array of parameter events for the buffer.</param>
+		///         <param name="actualStartTime">The time when the buffer will start playing.</param>
+		///         <summary>Adds a buffer that should play as soon as possible to the buffer queue of a playback audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
+		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer* audioQueueBuffer, int bytes, AudioStreamPacketDescription [] desc,
+							   int trimFramesAtStart, int trimFramesAtEnd, AudioQueueParameterEvent [] parameterEvents,
+							   out AudioTimeStamp actualStartTime)
+		{
+			if (audioQueueBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
+
+			fixed (AudioStreamPacketDescription* descPtr = desc)
+			fixed (AudioQueueParameterEvent* parameterEventsPtr = parameterEvents) {
+				actualStartTime = default;
+				fixed (AudioTimeStamp* actualStartTimePtr = &actualStartTime) {
+					return AudioQueueEnqueueBufferWithParameters (
+						handle, audioQueueBuffer, desc?.Length ?? 0, descPtr,
+						trimFramesAtStart, trimFramesAtEnd, parameterEvents?.Length ?? 0,
+						parameterEventsPtr,
+						null,
+						actualStartTimePtr);
+				}
+			}
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueCreateTimeline (IntPtr AQ, out IntPtr timeline);
+		unsafe extern static AudioQueueStatus AudioQueueCreateTimeline (IntPtr AQ, IntPtr* timeline);
 
-		public AudioQueueTimeline CreateTimeline ()
+		/// <summary>Creates a timeline object that can be used to track discontinuities in the audio queue's audio.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
+		public AudioQueueTimeline? CreateTimeline ()
 		{
 			IntPtr thandle;
-			
-			if (AudioQueueCreateTimeline (handle, out thandle) == AudioQueueStatus.Ok)
-				return new AudioQueueTimeline (handle, thandle);
+
+			unsafe {
+				if (AudioQueueCreateTimeline (handle, &thandle) == AudioQueueStatus.Ok)
+					return new AudioQueueTimeline (handle, thandle);
+			}
 			return null;
 		}
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueGetCurrentTime (IntPtr AQ, IntPtr timelineHandle, ref AudioTimeStamp time, ref bool discontinuty);
 
-		public AudioQueueStatus GetCurrentTime (AudioQueueTimeline timeline, ref AudioTimeStamp time, ref bool timelineDiscontinuty)
+		[DllImport (Constants.AudioToolboxLibrary)]
+		unsafe extern static AudioQueueStatus AudioQueueGetCurrentTime (IntPtr AQ, IntPtr timelineHandle, AudioTimeStamp* time, byte* discontinuty);
+
+		/// <param name="timeline">Timeline object to track discontinuities, or null if you do not need it.</param>
+		///         <param name="time">The time</param>
+		///         <param name="timelineDiscontinuty">On return, if true, it means that there was an audio discontinuity.</param>
+		///         <summary>Returns the current time for the audio queue.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error.</returns>
+		///         <remarks>
+		///         </remarks>
+		public AudioQueueStatus GetCurrentTime (AudioQueueTimeline? timeline, ref AudioTimeStamp time, ref bool timelineDiscontinuty)
 		{
 			IntPtr arg;
-			if (timeline == null)
+			if (timeline is null)
 				arg = IntPtr.Zero;
 			else {
 				arg = timeline.timelineHandle;
@@ -656,20 +1104,34 @@ namespace AudioToolbox {
 					throw new ObjectDisposedException ("timeline");
 			}
 
-			return AudioQueueGetCurrentTime (handle, arg, ref time, ref timelineDiscontinuty);
+			byte timelineDiscontinuityPtr;
+			AudioQueueStatus rv;
+			unsafe {
+				fixed (AudioTimeStamp* timePtr = &time) {
+					rv = AudioQueueGetCurrentTime (handle, arg, timePtr, &timelineDiscontinuityPtr);
+				}
+			}
+			timelineDiscontinuty = timelineDiscontinuityPtr != 0;
+			return rv;
 		}
 
-
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueDeviceGetCurrentTime (IntPtr AQ, ref AudioTimeStamp time);
+		unsafe extern static AudioQueueStatus AudioQueueDeviceGetCurrentTime (IntPtr AQ, AudioTimeStamp* time);
 
+		/// <summary>Returns the current time for the hardware device.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public AudioTimeStamp CurrentTime {
 			get {
 				AudioTimeStamp stamp = new AudioTimeStamp ();
-				
-				if (AudioQueueDeviceGetCurrentTime (handle, ref stamp) != AudioQueueStatus.Ok){
-					// Set no values as valid
-					stamp.Flags = 0;
+
+				unsafe {
+					if (AudioQueueDeviceGetCurrentTime (handle, &stamp) != AudioQueueStatus.Ok) {
+						// Set no values as valid
+						stamp.Flags = 0;
+					}
 				}
 
 				return stamp;
@@ -677,41 +1139,59 @@ namespace AudioToolbox {
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueDeviceGetNearestStartTime (IntPtr AQ, ref AudioTimeStamp data, int flags);
+		unsafe extern static AudioQueueStatus AudioQueueDeviceGetNearestStartTime (IntPtr AQ, AudioTimeStamp* data, int flags);
 
+		/// <param name="requestedStartTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioTimeStamp GetNearestStartTime (AudioTimeStamp requestedStartTime)
 		{
-			var k = AudioQueueDeviceGetNearestStartTime (handle, ref requestedStartTime, 0);
-			if (k != 0)
-				throw new AudioQueueException (k);
+			unsafe {
+				var k = AudioQueueDeviceGetNearestStartTime (handle, &requestedStartTime, 0);
+				if (k != 0)
+					throw new AudioQueueException (k);
+			}
 
 			return requestedStartTime;
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueDeviceTranslateTime (IntPtr AQ, ref AudioTimeStamp inTime, out AudioTimeStamp translatedTime);
+		unsafe extern static AudioQueueStatus AudioQueueDeviceTranslateTime (IntPtr AQ, AudioTimeStamp* inTime, AudioTimeStamp* translatedTime);
 
+		/// <param name="timeToTranslate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public AudioTimeStamp TranslateTime (AudioTimeStamp timeToTranslate)
 		{
 			AudioTimeStamp ret;
-			
-			AudioQueueDeviceTranslateTime (handle, ref timeToTranslate, out ret);
+
+			unsafe {
+				AudioQueueDeviceTranslateTime (handle, &timeToTranslate, &ret);
+			}
 			return ret;
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static OSStatus AudioQueueGetParameter (IntPtr AQ, AudioQueueParameter parameterId, out float result);
-			
+		unsafe extern static OSStatus AudioQueueGetParameter (IntPtr AQ, AudioQueueParameter parameterId, float* result);
+
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static OSStatus AudioQueueSetParameter (IntPtr AQ, AudioQueueParameter parameterId, float value);
 
+		/// <summary>The volume</summary>
+		///         <value>Value between 0.0 and 1.0.</value>
+		///         <remarks>
+		///         </remarks>
 		public float Volume {
 			get {
 				float r;
-				var res = AudioQueueGetParameter (handle, AudioQueueParameter.Volume, out r);
-				if (res != 0)
-					throw new AudioQueueException (res);
-				
+				unsafe {
+					var res = AudioQueueGetParameter (handle, AudioQueueParameter.Volume, &r);
+					if (res != 0)
+						throw new AudioQueueException (res);
+				}
+
 				return r;
 			}
 
@@ -722,13 +1202,18 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public float VolumeRampTime {
 			get {
 				float r;
-				var res = AudioQueueGetParameter (handle, AudioQueueParameter.VolumeRampTime, out r);
-				if (res != 0)
-					throw new AudioQueueException (res);
-				
+				unsafe {
+					var res = AudioQueueGetParameter (handle, AudioQueueParameter.VolumeRampTime, &r);
+					if (res != 0)
+						throw new AudioQueueException (res);
+				}
+
 				return r;
 			}
 
@@ -739,13 +1224,18 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public float Pan {
 			get {
 				float r;
-				var res = AudioQueueGetParameter (handle, AudioQueueParameter.Pan, out r);
-				if (res != 0)
-					throw new AudioQueueException (res);
-				
+				unsafe {
+					var res = AudioQueueGetParameter (handle, AudioQueueParameter.Pan, &r);
+					if (res != 0)
+						throw new AudioQueueException (res);
+				}
+
 				return r;
 			}
 
@@ -756,39 +1246,48 @@ namespace AudioToolbox {
 			}
 		}
 
-		delegate void AudioQueuePropertyListenerProc (IntPtr userData, IntPtr AQ, AudioQueueProperty id);
+		Hashtable? listeners;
 
-		Hashtable listeners;
-		
-		[MonoPInvokeCallback(typeof(AudioQueuePropertyListenerProc))]
+		[UnmanagedCallersOnly]
 		static void property_changed (IntPtr userData, IntPtr AQ, AudioQueueProperty id)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (userData);
 			var aq = gch.Target as AudioQueue;
-			lock (aq.listeners){
-				ArrayList a = (ArrayList)aq.listeners [id];
-				if (a == null)
+			lock (aq!.listeners!) {
+				ArrayList a = (ArrayList) aq.listeners [id]!;
+				if (a is null)
 					return;
-				foreach (AudioQueuePropertyChanged cback in a){
+				foreach (AudioQueuePropertyChanged cback in a) {
 					cback (id);
 				}
 			}
 		}
 
+		/// <param name="property">To be added.</param>
+		///     <summary>The delegate to be used with the <see cref="AudioToolbox.AudioQueue.AddListener(AudioToolbox.AudioQueueProperty,AudioToolbox.AudioQueue.AudioQueuePropertyChanged)" /> and <see cref="AudioToolbox.AudioQueue.RemoveListener(AudioToolbox.AudioQueueProperty,AudioToolbox.AudioQueue.AudioQueuePropertyChanged)" /> methods.</summary>
+		///     <remarks>To be added.</remarks>
 		public delegate void AudioQueuePropertyChanged (AudioQueueProperty property);
-		
+
+		/// <param name="property">ID of the property to listen to.</param>
+		///         <param name="callback">The method to invoke when the specified AudioQueue property changes.</param>
+		///         <summary>Use this method to track changes to the audio queue properties.</summary>
+		///         <returns>Status code.</returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus AddListener (AudioQueueProperty property, AudioQueuePropertyChanged callback)
 		{
-			if (callback == null)
-				throw new ArgumentNullException ("callback");
-			if (listeners == null)
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
+			if (listeners is null)
 				listeners = new Hashtable ();
-			
+
 			AudioQueueStatus res = AudioQueueStatus.Ok;
-			lock (listeners){
-				var a = (ArrayList) listeners [property];
-				if (a == null){
-					res = AudioQueueAddPropertyListener (handle, property, property_changed, GCHandle.ToIntPtr (gch));
+			lock (listeners) {
+				var a = (ArrayList) listeners [property]!;
+				if (a is null) {
+					unsafe {
+						res = AudioQueueAddPropertyListener (handle, property, &property_changed, GCHandle.ToIntPtr (gch));
+					}
 					if (res != AudioQueueStatus.Ok)
 						return res;
 
@@ -800,56 +1299,103 @@ namespace AudioToolbox {
 			return res;
 		}
 
+		/// <param name="property">To be added.</param>
+		///         <param name="callback">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void RemoveListener (AudioQueueProperty property, AudioQueuePropertyChanged callback)
 		{
-			if (callback == null)
-				throw new ArgumentNullException ("callback");
-			if (listeners == null)
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
+			if (listeners is null)
 				return;
-			lock (listeners){
-				var a = (ArrayList) listeners [property];
-				if (a == null)
+			lock (listeners) {
+				var a = (ArrayList) listeners [property]!;
+				if (a is null)
 					return;
 				a.Remove (callback);
-				if (a.Count == 0){
-					AudioQueueRemovePropertyListener (handle, property, property_changed, GCHandle.ToIntPtr (gch));
+				if (a.Count == 0) {
+					unsafe {
+						AudioQueueRemovePropertyListener (handle, property, &property_changed, GCHandle.ToIntPtr (gch));
+					}
 				}
 			}
 		}
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueAddPropertyListener (IntPtr AQ, AudioQueueProperty id, AudioQueuePropertyListenerProc proc, IntPtr data);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static OSStatus AudioQueueRemovePropertyListener (IntPtr AQ, AudioQueueProperty id, AudioQueuePropertyListenerProc proc, IntPtr data);
-		
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueGetProperty (IntPtr AQ, uint id, IntPtr outdata, ref int dataSize);
+		extern unsafe static AudioQueueStatus AudioQueueAddPropertyListener (IntPtr AQ, AudioQueueProperty id, delegate* unmanaged<IntPtr, IntPtr, AudioQueueProperty, void> proc, IntPtr data);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueGetPropertySize (IntPtr AQ, uint id, out int size);
+		extern unsafe static OSStatus AudioQueueRemovePropertyListener (IntPtr AQ, AudioQueueProperty id, delegate* unmanaged<IntPtr, IntPtr, AudioQueueProperty, void> proc, IntPtr data);
+
+		[DllImport (Constants.AudioToolboxLibrary)]
+		unsafe extern static AudioQueueStatus AudioQueueGetProperty (IntPtr AQ, uint id, IntPtr outdata, int* dataSize);
+
+		[DllImport (Constants.AudioToolboxLibrary)]
+		unsafe extern static AudioQueueStatus AudioQueueGetPropertySize (IntPtr AQ, uint id, int* size);
+
+		unsafe static AudioQueueStatus AudioQueueGetPropertySize (IntPtr AQ, uint id, out int size)
+		{
+			size = 0;
+			fixed (int* sizePtr = &size) {
+				return AudioQueueGetPropertySize (AQ, id, sizePtr);
+			}
+		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueSetProperty (
 			IntPtr AQ, AudioQueueProperty id, IntPtr data, int size);
 
 		// Should be private
+		/// <param name="property">Property ID to retrieve.</param>
+		///         <param name="dataSize">Expected size of the property.</param>
+		///         <param name="outdata">Pointers to the data.</param>
+		///         <summary>Low-level API to fetch AudioQueue properties. </summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		/// 	  MonoTouch provides a high-level interface to the AudioQueue
+		/// 	  properties.  This API is here in case a new property is
+		/// 	  added and you have not updated your code to the latest
+		/// 	  version of MonoTouch.
+		/// 	</remarks>
 		public bool GetProperty (AudioQueueProperty property, ref int dataSize, IntPtr outdata)
 		{
 			if (outdata == IntPtr.Zero)
-				throw new ArgumentNullException ("outdata");
-			return AudioQueueGetProperty (handle, (uint) property, outdata, ref dataSize) == 0;
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (outdata));
+			unsafe {
+				fixed (int* dataSizePtr = &dataSize) {
+					return AudioQueueGetProperty (handle, (uint) property, outdata, dataSizePtr) == 0;
+				}
+			}
 		}
 
 		// Should be private
+		/// <param name="property">To be added.</param>
+		///         <param name="dataSize">To be added.</param>
+		///         <param name="propertyData">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool SetProperty (AudioQueueProperty property, int dataSize, IntPtr propertyData)
 		{
 			if (propertyData == IntPtr.Zero)
-				throw new ArgumentNullException ("propertyData");
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (propertyData));
 			return AudioQueueSetProperty (handle, property, propertyData, dataSize) == 0;
 		}
 
 		// Should be private
+		/// <param name="property">Property ID to retrieve.</param>
+		///         <param name="size">Expected size of the property.</param>
+		///         <summary>Low-level API to fetch AudioQueue properties. </summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		/// 	  MonoTouch provides a high-level interface to the AudioQueue
+		/// 	  properties.  This API is here in case a new property is
+		/// 	  added and you have not updated your code to the latest
+		/// 	  version of MonoTouch.
+		/// 	</remarks>
 		public IntPtr GetProperty (AudioQueueProperty property, out int size)
 		{
 			var r = AudioQueueGetPropertySize (handle, (uint) property, out size);
@@ -860,7 +1406,11 @@ namespace AudioToolbox {
 			if (buffer == IntPtr.Zero)
 				return IntPtr.Zero;
 
-			r = AudioQueueGetProperty (handle, (uint) property, buffer, ref size);
+			unsafe {
+				fixed (int* sizePtr = &size) {
+					r = AudioQueueGetProperty (handle, (uint) property, buffer, sizePtr);
+				}
+			}
 			if (r == 0)
 				return buffer;
 			Marshal.FreeHGlobal (buffer);
@@ -868,31 +1418,23 @@ namespace AudioToolbox {
 		}
 
 		// Should be private
-		public unsafe T GetProperty<T> (AudioQueueProperty property) where T:struct
-		{
-			int size;
-
-			var r = AudioQueueGetPropertySize (handle, (uint) property, out size);
-			if (r != 0)
-				throw new AudioQueueException (r);
-
-			var buffer = Marshal.AllocHGlobal (size);
-			if (buffer == IntPtr.Zero)
-				return default(T);
-			try {
-				r = AudioQueueGetProperty (handle, (uint) property, buffer, ref size);
-				if (r == 0){
-					T result = (T) Marshal.PtrToStructure (buffer, typeof (T));
-					return result;
-				}
-
-				throw new AudioQueueException (r);
-			} finally {
-				Marshal.FreeHGlobal (buffer);
-			}
-		}
-
-		unsafe T GetProperty<T> (AudioConverterPropertyID property) where T : struct
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="property">Property ID to retrieve.</param>
+		///         <summary>Low-level API to fetch AudioQueue properties. </summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///           <para>
+		/// 	    This version returns the value of the property based on the provided generic type.
+		/// 	  </para>
+		///           <para>
+		/// 	    MonoTouch provides a high-level interface to the AudioQueue
+		/// 	    properties.  This API is here in case a new property is
+		/// 	    added and you have not updated your code to the latest
+		/// 	    version of MonoTouch.
+		/// 	  </para>
+		///         </remarks>
+		public unsafe T GetProperty<[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T> (AudioQueueProperty property) where T : struct
 		{
 			int size;
 
@@ -904,9 +1446,33 @@ namespace AudioToolbox {
 			if (buffer == IntPtr.Zero)
 				return default (T);
 			try {
-				r = AudioQueueGetProperty (handle, (uint) property, buffer, ref size);
-				if (r == 0){
-					T result = (T) Marshal.PtrToStructure (buffer, typeof (T));
+				r = AudioQueueGetProperty (handle, (uint) property, buffer, &size);
+				if (r == 0) {
+					T result = Marshal.PtrToStructure<T> (buffer)!;
+					return result;
+				}
+
+				throw new AudioQueueException (r);
+			} finally {
+				Marshal.FreeHGlobal (buffer);
+			}
+		}
+
+		unsafe T GetProperty<[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T> (AudioConverterPropertyID property) where T : struct
+		{
+			int size;
+
+			var r = AudioQueueGetPropertySize (handle, (uint) property, out size);
+			if (r != 0)
+				throw new AudioQueueException (r);
+
+			var buffer = Marshal.AllocHGlobal (size);
+			if (buffer == IntPtr.Zero)
+				return default (T);
+			try {
+				r = AudioQueueGetProperty (handle, (uint) property, buffer, &size);
+				if (r == 0) {
+					T result = Marshal.PtrToStructure<T> (buffer)!;
 					return result;
 				}
 
@@ -921,7 +1487,7 @@ namespace AudioToolbox {
 			unsafe {
 				int val = 0;
 				int size = 4;
-				var k = AudioQueueGetProperty (handle, (uint) property, (IntPtr) (&val), ref size);
+				var k = AudioQueueGetProperty (handle, (uint) property, (IntPtr) (&val), &size);
 				if (k == 0)
 					return val;
 				throw new AudioQueueException (k);
@@ -944,7 +1510,7 @@ namespace AudioToolbox {
 			unsafe {
 				double val = 0;
 				int size = 8;
-				var k = AudioQueueGetProperty (handle, (uint) property, (IntPtr) (&val), ref size);
+				var k = AudioQueueGetProperty (handle, (uint) property, (IntPtr) (&val), &size);
 				if (k == 0)
 					return val;
 				throw new AudioQueueException (k);
@@ -952,27 +1518,41 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool IsRunning {
 			get {
 				return GetInt (AudioQueueProperty.IsRunning) != 0;
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double SampleRate {
 			get {
 				return GetDouble (AudioQueueProperty.DeviceSampleRate);
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public int DeviceChannels {
 			get {
 				return GetInt (AudioQueueProperty.DeviceNumberChannels);
 			}
 		}
 
-		public string CurrentDevice {
+		/// <summary>Unique identifier for the device associated with this Audio Queue.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		public string? CurrentDevice {
 			get {
-				return CFString.FetchString ((IntPtr) GetInt (AudioQueueProperty.CurrentDevice));
+				return CFString.FromHandle ((IntPtr) GetInt (AudioQueueProperty.CurrentDevice));
 			}
 
 			set {
@@ -982,44 +1562,65 @@ namespace AudioToolbox {
 		}
 
 #pragma warning disable 612
-		
+
+		/// <summary>Audio metadata required by certain formats.</summary>
+		///         <value>Opaque byte array with a codec-specific token.</value>
+		///         <remarks>
+		///
+		/// 	  Certain file format produce a MagicCookie that
+		/// 	  contains audio metadata.  When playing back or recording, you need to copy
+		/// 	  this magic cookie from the AudioQueue to the <see cref="AudioToolbox.AudioFileStream" /> by copying this property to the 
+		/// 	  <see cref="AudioToolbox.AudioFileStream.MagicCookie" />
+		/// 	  property.   
+		/// 	</remarks>
 		public byte [] MagicCookie {
 			get {
 				int size;
 				var h = GetProperty (AudioQueueProperty.MagicCookie, out size);
 				if (h == IntPtr.Zero)
-					return new byte [0];
-				
+					return Array.Empty<byte> ();
+
 				byte [] cookie = new byte [size];
-				for (int i = 0; i < cookie.Length; i++)
-					cookie [i] = Marshal.ReadByte (h, i);
+				Marshal.Copy (h, cookie, 0, size);
 				Marshal.FreeHGlobal (h);
 
 				return cookie;
 			}
 
 			set {
-				if (value == null)
-					throw new ArgumentNullException ("value");
+				if (value is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
 
 				if (value.Length == 0)
 					return;
-				
+
 				unsafe {
-					fixed (byte *bp = &value [0]){
+					fixed (byte* bp = value) {
 						SetProperty (AudioQueueProperty.MagicCookie, value.Length, (IntPtr) bp);
 					}
 				}
 			}
 		}
 
-		public AudioChannelLayout ChannelLayout {
+		/// <summary>The audio queue channel layout.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>
+		///           <para>
+		/// 	    The ChannelLayout must match the number of channels in the
+		/// 	    audio format. 
+		/// 	  </para>
+		///           <para>
+		/// 	    This property is used to configure the channel layout in
+		/// 	    complex scenarios like 5.1 surround sound.
+		/// 	  </para>
+		///         </remarks>
+		public AudioChannelLayout? ChannelLayout {
 			get {
 				int size;
 				var h = GetProperty (AudioQueueProperty.ChannelLayout, out size);
 				if (h == IntPtr.Zero)
 					return null;
-				
+
 				var layout = AudioChannelLayout.FromHandle (h);
 				Marshal.FreeHGlobal (h);
 
@@ -1027,8 +1628,8 @@ namespace AudioToolbox {
 			}
 
 			set {
-				if (value == null)
-					throw new ArgumentNullException ("value"); // TODO: enable ?
+				if (value is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value)); // TODO: enable ?
 
 				int size;
 				var h = value.ToBlock (out size);
@@ -1037,6 +1638,14 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <summary>Enables level metering on the audio queue.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///           <para>
+		/// 	    Enable level metering in your audio queue if you want to read the level meters with the <see cref="AudioToolbox.AudioQueue.CurrentLevelMeter" /> or <see cref="AudioToolbox.AudioQueue.CurrentLevelMeterDB" /> properties.n
+		/// 	  </para>
+		///         </remarks>
 		public bool EnableLevelMetering {
 			get {
 				return GetInt (AudioQueueProperty.EnableLevelMetering) != 0;
@@ -1046,37 +1655,38 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public int MaximumOutputPacketSize {
 			get {
 				return GetInt (AudioQueueProperty.MaximumOutputPacketSize);
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public int DecodeBufferSizeFrames {
 			get {
 				return GetInt (AudioQueueProperty.DecodeBufferSizeFrames);
 			}
 		}
 
-#if !XAMCORE_3_0
-		[Obsolete ("Use 'AudioStreamDescription' instead.")]
-		public AudioStreamBasicDescription AudioStreamPacketDescription {
-			get {
-				return AudioStreamDescription;
-			}
-		}
-#endif
-
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AudioStreamBasicDescription AudioStreamDescription {
 			get {
 #if !MONOMAC
-				return GetProperty <AudioStreamBasicDescription> (AudioQueueProperty.StreamDescription);
+				return GetProperty<AudioStreamBasicDescription> (AudioQueueProperty.StreamDescription);
 #else
-				return GetProperty <AudioStreamBasicDescription> (AudioConverterPropertyID.CurrentInputStreamDescription);
+				return GetProperty<AudioStreamBasicDescription> (AudioConverterPropertyID.CurrentInputStreamDescription);
 #endif
 			}
 		}
 
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='P:AudioToolbox.AudioQueue.CurrentLevelMeter']/*" />
 		public AudioQueueLevelMeterState [] CurrentLevelMeter {
 			get {
 				unsafe {
@@ -1086,7 +1696,7 @@ namespace AudioToolbox {
 					if (buffer == IntPtr.Zero)
 						return new AudioQueueLevelMeterState [0];
 					var ret = new AudioQueueLevelMeterState [n];
-					AudioQueueLevelMeterState *ptr = (AudioQueueLevelMeterState *) buffer;
+					AudioQueueLevelMeterState* ptr = (AudioQueueLevelMeterState*) buffer;
 					for (int i = 0; i < n; i++)
 						ret [i] = ptr [i];
 					return ret;
@@ -1094,6 +1704,7 @@ namespace AudioToolbox {
 			}
 		}
 
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='P:AudioToolbox.AudioQueue.CurrentLevelMeterDB']/*" />
 		public AudioQueueLevelMeterState [] CurrentLevelMeterDB {
 			get {
 				unsafe {
@@ -1103,7 +1714,7 @@ namespace AudioToolbox {
 					if (buffer == IntPtr.Zero)
 						return new AudioQueueLevelMeterState [0];
 					var ret = new AudioQueueLevelMeterState [n];
-					AudioQueueLevelMeterState *ptr = (AudioQueueLevelMeterState *) buffer;
+					AudioQueueLevelMeterState* ptr = (AudioQueueLevelMeterState*) buffer;
 					for (int i = 0; i < n; i++)
 						ret [i] = ptr [i];
 					return ret;
@@ -1113,6 +1724,11 @@ namespace AudioToolbox {
 
 #pragma warning restore 612
 
+		/// <summary>Contains the most recent error generated in the audio queue's encoding or decoding process.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public uint ConverterError {
 			get {
 				return (uint) GetInt (AudioQueueProperty.ConverterError);
@@ -1120,20 +1736,26 @@ namespace AudioToolbox {
 		}
 
 #if !MONOMAC
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AudioQueueHardwareCodecPolicy HardwareCodecPolicy {
 			get {
 				return (AudioQueueHardwareCodecPolicy) GetInt (AudioQueueProperty.HardwareCodecPolicy);
 			}
 			set {
-				SetInt (AudioQueueProperty.HardwareCodecPolicy, (int)value);
+				SetInt (AudioQueueProperty.HardwareCodecPolicy, (int) value);
 			}
 		}
 
-		[iOS (6,0)]
-		public AudioQueueStatus SetChannelAssignments (params AudioQueueChannelAssignment[] channelAssignments)
+		/// <param name="channelAssignments">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public AudioQueueStatus SetChannelAssignments (params AudioQueueChannelAssignment [] channelAssignments)
 		{
-			if (channelAssignments == null)
-				throw new ArgumentNullException ("channelAssignments");
+			if (channelAssignments is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (channelAssignments));
 
 			int length;
 			var ptr = MarshalArray (ref channelAssignments, out length);
@@ -1144,46 +1766,37 @@ namespace AudioToolbox {
 			}
 		}
 
-		unsafe static IntPtr MarshalArray (ref AudioQueueChannelAssignment[] array, out int totalSize)
+		unsafe static IntPtr MarshalArray (ref AudioQueueChannelAssignment [] array, out int totalSize)
 		{
 			int elementSize = sizeof (AudioQueueChannelAssignment);
 			totalSize = elementSize * array.Length;
 			var array_ptr = (AudioQueueChannelAssignment*) Marshal.AllocHGlobal (totalSize);
-			
+
 			for (int i = 0; i < array.Length; i++)
 				array_ptr [i] = array [i];
-			
+
 			return (IntPtr) array_ptr;
-		}	
-#endif
-
-		[iOS (6,0)]
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueProcessingTapNew (IntPtr inAQ, AudioQueueProcessingTapCallbackShared inCallback,
-			IntPtr inClientData, AudioQueueProcessingTapFlags inFlags, out uint outMaxFrames,
-			out AudioStreamBasicDescription outProcessingFormat, out IntPtr outAQTap);
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'CreateProcessingTap (AudioQueueProcessingTapDelegate, AudioQueueProcessingTapFlags, out AudioQueueStatus)' instead.", true)]
-		[iOS (6,0)]
-		public AudioQueueProcessingTap CreateProcessingTap (AudioQueueProcessingTapCallback processingCallback, AudioQueueProcessingTapFlags flags,
-		                                                    out AudioQueueStatus status)
-		{
-			throw new NotSupportedException ();
 		}
 #endif
 
-		[iOS (6,0)]
-		public AudioQueueProcessingTap CreateProcessingTap (AudioQueueProcessingTapDelegate processingCallback, AudioQueueProcessingTapFlags flags,
-		                                                    out AudioQueueStatus status)
-		{		
+		[DllImport (Constants.AudioToolboxLibrary)]
+		extern unsafe static AudioQueueStatus AudioQueueProcessingTapNew (IntPtr inAQ, delegate* unmanaged<IntPtr, IntPtr, uint, AudioTimeStamp*, AudioQueueProcessingTapFlags*, uint*, IntPtr, void> inCallback,
+			IntPtr inClientData, AudioQueueProcessingTapFlags inFlags, uint* outMaxFrames,
+			AudioStreamBasicDescription* outProcessingFormat, IntPtr* outAQTap);
+
+		/// <include file="../../docs/api/AudioToolbox/AudioQueue.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueue.CreateProcessingTap(AudioToolbox.AudioQueueProcessingTapDelegate,AudioToolbox.AudioQueueProcessingTapFlags,AudioToolbox.AudioQueueStatus@)']/*" />
+		public AudioQueueProcessingTap? CreateProcessingTap (AudioQueueProcessingTapDelegate processingCallback, AudioQueueProcessingTapFlags flags,
+																out AudioQueueStatus status)
+		{
 			var aqpt = new AudioQueueProcessingTap (processingCallback);
 			uint maxFrames;
 			AudioStreamBasicDescription processingFormat;
 			IntPtr tapHandle;
 
-			status = AudioQueueProcessingTapNew (handle, AudioQueueProcessingTap.CreateTapCallback, GCHandle.ToIntPtr (aqpt.Handle), flags, out maxFrames,
-			                                     out processingFormat, out tapHandle);
+			unsafe {
+				status = AudioQueueProcessingTapNew (handle, &AudioQueueProcessingTap.TapCallback, GCHandle.ToIntPtr (aqpt.Handle), flags, &maxFrames,
+						 &processingFormat, &tapHandle);
+			}
 
 			if (status != AudioQueueStatus.Ok) {
 				aqpt.Dispose ();
@@ -1197,27 +1810,32 @@ namespace AudioToolbox {
 		}
 	}
 
-	delegate void AudioQueueProcessingTapCallbackShared (IntPtr clientData, IntPtr tap, uint numberOfFrames,
-	                                                     ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
-	                                                     out uint outNumberFrames, IntPtr data);
-
-#if !XAMCORE_2_0
-	[Obsolete ("Use 'AudioQueueProcessingTapDelegate'.")]
-	public delegate uint AudioQueueProcessingTapCallback (AudioQueueProcessingTap audioQueueTap, uint numberOfFrames,
-	                                                      ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
-	                                                      AudioBufferList data);
-#endif
-
+	/// <include file="../../docs/api/AudioToolbox/AudioQueueProcessingTapDelegate.xml" path="/Documentation/Docs[@DocId='T:AudioToolbox.AudioQueueProcessingTapDelegate']/*" />
 	public delegate uint AudioQueueProcessingTapDelegate (AudioQueueProcessingTap audioQueueTap, uint numberOfFrames,
-	                                                      ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
-	                                                      AudioBuffers data);
+														  ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
+														  AudioBuffers data);
 
-	[iOS (6,0)]
-	public class AudioQueueProcessingTap : IDisposable
-	{
-		internal static readonly AudioQueueProcessingTapCallbackShared CreateTapCallback = TapCallback;
-
-		AudioQueueProcessingTapDelegate callback;
+	/// <summary>Holds the state for an AudioQueue processing tap.</summary>
+	///     <remarks>
+	///       <para>
+	/// 	Instances of this class are returned by the <see cref="AudioToolbox.AudioQueue.CreateProcessingTap(AudioToolbox.AudioQueueProcessingTapDelegate,AudioToolbox.AudioQueueProcessingTapFlags,out AudioToolbox.AudioQueueStatus)" />
+	/// 	from AudioQueue and hold the state to the audio processing tap that was created as well as containing information like MaxFrames and the ProcessingFormat.
+	///       </para>
+	///       <para>
+	/// 	You can terminate the processing tap by calling the Dispose
+	/// 	method or by releasing the AudioQueue that created it.
+	///       </para>
+	///       <example>
+	///         <code lang="c#">
+	///         </code>
+	///       </example>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class AudioQueueProcessingTap : IDisposable {
+		AudioQueueProcessingTapDelegate? callback;
 		readonly GCHandle gc_handle;
 
 		internal AudioQueueProcessingTap (AudioQueueProcessingTapDelegate callback)
@@ -1231,22 +1849,37 @@ namespace AudioToolbox {
 			Dispose (false);
 		}
 
-		internal GCHandle Handle { 
+		internal GCHandle Handle {
 			get {
 				return gc_handle;
 			}
 		}
 
 		internal IntPtr TapHandle { get; set; }
+		/// <summary>Maximum number of sample frames per tap.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>Apple lists this as being "50 msec of audio, 2048 samples at 44.1Khz".</remarks>
 		public uint MaxFrames { get; internal set; }
+		/// <summary>The format of the data that will be provided to the tap render function.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public AudioStreamBasicDescription ProcessingFormat { get; internal set; }
 
+		/// <summary>Releases the resources used by the AudioQueueProcessingTap object.</summary>
+		///         <remarks>
+		///           <para>The Dispose method releases the resources used by the AudioQueueProcessingTap class.</para>
+		///           <para>Calling the Dispose method when the application is finished using the AudioQueueProcessingTap ensures that all external resources used by this managed object are released as soon as possible.  Once developers have invoked the Dispose method, the object is no longer useful and developers should no longer make any calls to it.  For more information on releasing resources see ``Cleaning up Unmananaged Resources'' at https://msdn.microsoft.com/en-us/library/498928w2.aspx</para>
+		///         </remarks>
 		public void Dispose ()
 		{
 			Dispose (true);
 			GC.SuppressFinalize (this);
 		}
 
+		/// <include file="../../docs/api/AudioToolbox/AudioQueueProcessingTap.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueueProcessingTap.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
 		{
 			if (disposing) {
@@ -1262,118 +1895,160 @@ namespace AudioToolbox {
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static OSStatus AudioQueueProcessingTapDispose (IntPtr inAQTap);
 
-#if !XAMCORE_2_0
-		[Obsolete]
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueProcessingTapGetSourceAudio (IntPtr inAQTap, uint inNumberFrames, ref AudioTimeStamp ioTimeStamp,
-		                                                               out AudioQueueProcessingTapFlags outFlags, out uint outNumberFrames,
-		                                                               AudioBufferList ioData);
+		unsafe extern static AudioQueueStatus AudioQueueProcessingTapGetSourceAudio (IntPtr inAQTap, uint inNumberFrames, AudioTimeStamp* ioTimeStamp,
+																	   AudioQueueProcessingTapFlags* outFlags, uint* outNumberFrames,
+																	   IntPtr ioData);
 
-		[Obsolete ("Use overload with 'AudioBuffers'.")]
+		/// <include file="../../docs/api/AudioToolbox/AudioQueueProcessingTap.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueueProcessingTap.GetSourceAudio(System.UInt32,AudioToolbox.AudioTimeStamp@,AudioToolbox.AudioQueueProcessingTapFlags@,System.UInt32@,AudioToolbox.AudioBuffers)']/*" />
 		public AudioQueueStatus GetSourceAudio (uint numberOfFrames, ref AudioTimeStamp timeStamp,
-		                                        out AudioQueueProcessingTapFlags flags, out uint parentNumberOfFrames, AudioBufferList data)
+													out AudioQueueProcessingTapFlags flags, out uint parentNumberOfFrames, AudioBuffers data)
 		{
-			if (data == null)
-				throw new ArgumentNullException ("data");
+			if (data is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data));
 
-			return AudioQueueProcessingTapGetSourceAudio (TapHandle, numberOfFrames, ref timeStamp,
-		                                                  out flags, out parentNumberOfFrames, data);
-		}
-#endif
-
-		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueProcessingTapGetSourceAudio (IntPtr inAQTap, uint inNumberFrames, ref AudioTimeStamp ioTimeStamp,
-		                                                               out AudioQueueProcessingTapFlags outFlags, out uint outNumberFrames,
-		                                                               IntPtr ioData);
-
-		public AudioQueueStatus GetSourceAudio (uint numberOfFrames, ref AudioTimeStamp timeStamp,
-		                                        out AudioQueueProcessingTapFlags flags, out uint parentNumberOfFrames, AudioBuffers data)
-		{
-			if (data == null)
-				throw new ArgumentNullException ("data");
-
-			return AudioQueueProcessingTapGetSourceAudio (TapHandle, numberOfFrames, ref timeStamp,
-		                                                  out flags, out parentNumberOfFrames, (IntPtr) data);
+			parentNumberOfFrames = 0;
+			flags = default (AudioQueueProcessingTapFlags);
+			unsafe {
+				fixed (AudioTimeStamp* timeStampPtr = &timeStamp) {
+					fixed (AudioQueueProcessingTapFlags* flagsPtr = &flags) {
+						fixed (uint* parentNumberOfFramesPtr = &parentNumberOfFrames) {
+							return AudioQueueProcessingTapGetSourceAudio (TapHandle, numberOfFrames,
+																		 timeStampPtr,
+																		 flagsPtr,
+																		 parentNumberOfFramesPtr,
+																		 (IntPtr) data);
+						}
+					}
+				}
+			}
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueProcessingTapGetQueueTime (IntPtr inAQTap, out double outQueueSampleTime, out uint outQueueFrameCount);
+		unsafe extern static AudioQueueStatus AudioQueueProcessingTapGetQueueTime (IntPtr inAQTap, double* outQueueSampleTime, uint* outQueueFrameCount);
 
+		/// <param name="sampleTime">Returns the sample time for the output queue.</param>
+		///         <param name="frameCount">Frame count for the audio being processed by the tap..</param>
+		///         <summary>Get the current Queue Time.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///           <para>
+		/// 	    This method should only be called from the AudioProcessingTap callback.
+		/// 	  </para>
+		///         </remarks>
 		public AudioQueueStatus GetQueueTime (out double sampleTime, out uint frameCount)
 		{
-			return AudioQueueProcessingTapGetQueueTime (TapHandle, out sampleTime, out frameCount);
+			sampleTime = 0;
+			frameCount = 0;
+			unsafe {
+				fixed (double* sampleTimePtr = &sampleTime) {
+					fixed (uint* frameCountPtr = &frameCount) {
+						return AudioQueueProcessingTapGetQueueTime (TapHandle, sampleTimePtr, frameCountPtr);
+					}
+				}
+			}
 		}
 
-		[MonoPInvokeCallback (typeof (AudioQueueProcessingTapCallbackShared))]
-		static void TapCallback (IntPtr clientData, IntPtr tap, uint numberFrames, ref AudioTimeStamp timeStamp, ref AudioQueueProcessingTapFlags flags,
-		                         out uint outNumberFrames, IntPtr data)
+		[UnmanagedCallersOnly]
+		internal unsafe static void TapCallback (IntPtr clientData, IntPtr tap,
+			uint numberFrames, AudioTimeStamp* timeStamp,
+			AudioQueueProcessingTapFlags* flags, uint* outNumberFrames,
+			IntPtr data)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (clientData);
-			var aqpt = (AudioQueueProcessingTap) gch.Target;
+			var aqpt = (AudioQueueProcessingTap) gch.Target!;
 
 			using (var buffers = new AudioBuffers (data)) {
-				outNumberFrames = aqpt.callback (aqpt, numberFrames, ref timeStamp, ref flags, buffers);
+				var localTimeStamp = *timeStamp;
+				var localFlags = *flags;
+				*outNumberFrames = aqpt.callback! (aqpt, numberFrames, ref localTimeStamp, ref localFlags, buffers);
+				*timeStamp = localTimeStamp;
+				*flags = localFlags;
 			}
 		}
 	}
 
+	/// <summary>The output AudioQueue.</summary>
+	///     <remarks>
+	///       <para>Use this class to playback audio.</para>
+	///       <para>
+	/// You will usually create an OutputAudioQueue instance and allocate a number of buffers that you will use to fill in with data.   Once a buffer is filled, the buffer is enqueued and when the OutputAudioQueue has finished playing it back, the OutputCompleted event will be raised.
+	/// </para>
+	///       <para>
+	/// See the StreamingAudio sample program in monotouch-samples for an example program.
+	/// </para>
+	///     </remarks>
+	///     <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/StreamingAudio/">StreamingAudio</related>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class OutputAudioQueue : AudioQueue {
-		static readonly AudioQueueOutputCallback dOutputCallback = output_callback;
-						
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static OSStatus AudioQueueNewOutput (ref AudioStreamBasicDescription format, AudioQueueOutputCallback callback,
-							    IntPtr userData, IntPtr cfrunLoop_callbackRunloop, IntPtr cfstr_runMode,
-							    uint flags, out IntPtr audioQueue);
+		extern unsafe static OSStatus AudioQueueNewOutput (AudioStreamBasicDescription* format, delegate* unmanaged<IntPtr, IntPtr, IntPtr, void> callback,
+			IntPtr userData, IntPtr cfrunLoop_callbackRunloop, IntPtr cfstr_runMode,
+			uint flags, IntPtr* audioQueue);
 
-		[MonoPInvokeCallback(typeof(AudioQueueOutputCallback))]
+		[UnmanagedCallersOnly]
 		static void output_callback (IntPtr userData, IntPtr AQ, IntPtr audioQueueBuffer)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (userData);
 			var aq = gch.Target as OutputAudioQueue;
-#if XAMCORE_2_0
-			aq.OnBufferCompleted (audioQueueBuffer);
-#else
-			aq.OnOutputCompleted (audioQueueBuffer);
-#endif
+			aq!.OnBufferCompleted (audioQueueBuffer);
 		}
 
-#if XAMCORE_2_0
-		public event EventHandler<BufferCompletedEventArgs> BufferCompleted;
+		/// <summary>Raised when the output audio queue has finished playing a buffer, making it available to be refilled with more audio data and re-enqueued.</summary>
+		/// <remarks>The completed buffer is provided in the event arguments. Handlers typically fill the buffer with the next chunk of audio and enqueue it again with one of the <c>EnqueueBuffer</c> methods to keep playback going.</remarks>
+		public event EventHandler<BufferCompletedEventArgs>? BufferCompleted;
 
+		/// <param name="audioQueueBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		protected virtual void OnBufferCompleted (IntPtr audioQueueBuffer)
 		{
 			var h = BufferCompleted;
-			if (h != null)
+			if (h is not null)
 				h (this, new BufferCompletedEventArgs (audioQueueBuffer));
 		}
-#else
-		public event EventHandler<OutputCompletedEventArgs> OutputCompleted;
-		
-		protected virtual void OnOutputCompleted (IntPtr audioQueueBuffer)
-		{
-			var h = OutputCompleted;
-			if (h != null)
-				h (this, new OutputCompletedEventArgs (audioQueueBuffer));
-		}
-#endif
 
-		public OutputAudioQueue (AudioStreamBasicDescription desc) : this (desc, null, (CFString) null)
+		/// <param name="desc">Stream description.</param>
+		///         <summary>Creates an OutputAudioQueue.</summary>
+		///         <remarks>Usually the stream description is fetched from an AudioFile or an AudioStreamFile</remarks>
+		public OutputAudioQueue (AudioStreamBasicDescription desc) : this (desc, null, (CFString) null!)
 		{
 		}
 
+		/// <param name="desc">Stream description.</param>
+		///         <param name="runLoop">The run loop in which the OnOutputCompleted method and the OutputCompleted event are raised, if you pass null, this uses an internal thread.</param>
+		///         <param name="runMode">The run mode for the run loop.</param>
+		///         <summary>Creates an OutputAudioQueue, specifying on which run loop events are delivered.</summary>
+		///         <remarks>Usually the stream description is fetched from an AudioFile or an AudioStreamFile.</remarks>
 		public OutputAudioQueue (AudioStreamBasicDescription desc, CFRunLoop runLoop, string runMode)
-			: this (desc, runLoop, runMode == null ? null : new CFString (runMode))
+			: this (desc, runLoop, runMode is null ? null : new CFString (runMode))
 		{
 		}
 
-		public OutputAudioQueue (AudioStreamBasicDescription desc, CFRunLoop runLoop, CFString runMode)
+		/// <param name="desc">Stream description.</param>
+		///         <param name="runLoop">The run loop in which the OnOutputCompleted method and the OutputCompleted event are raised, if you pass null, this uses an internal thread.</param>
+		///         <param name="runMode">The run mode for the run loop.</param>
+		///         <summary>Creates an OutputAudioQueue, specifying on which run loop events are delivered.</summary>
+		///         <remarks>Usually the stream description is fetched from an AudioFile or an AudioStreamFile.</remarks>
+		public OutputAudioQueue (AudioStreamBasicDescription desc, CFRunLoop? runLoop, CFString? runMode)
 		{
 			IntPtr h;
 			GCHandle gch = GCHandle.Alloc (this);
 
-			var code = AudioQueueNewOutput (ref desc, dOutputCallback, GCHandle.ToIntPtr (gch),
-							runLoop == null ? IntPtr.Zero : runLoop.Handle,
-							runMode == null ? IntPtr.Zero : runMode.Handle, 0, out h);
+			OSStatus code = 0;
+			unsafe {
+				code = AudioQueueNewOutput (&desc,
+					&output_callback,
+					GCHandle.ToIntPtr (gch),
+					runLoop.GetHandle (),
+					runMode.GetHandle (), 0, &h);
+				GC.KeepAlive (runLoop);
+				GC.KeepAlive (runMode);
+			}
 
 			if (code != 0) {
 				gch.Free ();
@@ -1384,93 +2059,158 @@ namespace AudioToolbox {
 			handle = h;
 		}
 
-		[DllImport (Constants.AudioToolboxLibrary, EntryPoint="AudioQueueSetOfflineRenderFormat")]
+		[DllImport (Constants.AudioToolboxLibrary, EntryPoint = "AudioQueueSetOfflineRenderFormat")]
 		extern static AudioQueueStatus AudioQueueSetOfflineRenderFormat2 (IntPtr aq, IntPtr format, IntPtr layout);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static AudioQueueStatus AudioQueueSetOfflineRenderFormat (IntPtr aq, ref AudioStreamBasicDescription format, IntPtr layout);
+		unsafe extern static AudioQueueStatus AudioQueueSetOfflineRenderFormat (IntPtr aq, AudioStreamBasicDescription* format, IntPtr layout);
 
+		/// <param name="desc">The audio format to use for offline rendering.</param>
+		///         <param name="layout">The channel layout to use for offline rendering. Optional.</param>
+		///         <summary>Enables offline rendering by setting the audio format and optionally the channel layout to use when rendering.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error. </returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus SetOfflineRenderFormat (AudioStreamBasicDescription desc, AudioChannelLayout layout)
 		{
 			int size;
-			var h = layout == null ? IntPtr.Zero : layout.ToBlock (out size);
+			var h = layout is null ? IntPtr.Zero : layout.ToBlock (out size);
 			try {
-				return AudioQueueSetOfflineRenderFormat (handle, ref desc, h);
+				unsafe {
+					return AudioQueueSetOfflineRenderFormat (handle, &desc, h);
+				}
 			} finally {
 				Marshal.FreeHGlobal (h);
 			}
 		}
 
+		/// <summary>Disables the offline renderer.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error. </returns>
+		///         <remarks>
+		///         </remarks>
 		public AudioQueueStatus DisableOfflineRender ()
 		{
 			return AudioQueueSetOfflineRenderFormat2 (handle, IntPtr.Zero, IntPtr.Zero);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern unsafe static AudioQueueStatus AudioQueueOfflineRender (IntPtr aq, ref AudioTimeStamp stamp, AudioQueueBuffer* buffer, int frames);
+		extern unsafe static AudioQueueStatus AudioQueueOfflineRender (IntPtr aq, AudioTimeStamp* stamp, AudioQueueBuffer* buffer, int frames);
 
+		/// <param name="timeStamp">The timestamp of the first frame to render.</param>
+		///         <param name="audioQueueBuffer">The audio queue buffer to render to.</param>
+		///         <param name="frameCount">The number of frames to render.</param>
+		///         <summary>Writes audio data to an audio buffer, instead of to a device.</summary>
+		///         <returns>AudioQueueStatus.Ok on success, otherwise the error. </returns>
+		///         <remarks>
+		///         </remarks>
 		public unsafe AudioQueueStatus RenderOffline (double timeStamp, AudioQueueBuffer* audioQueueBuffer, int frameCount)
 		{
-			if (audioQueueBuffer == null)
-				throw new ArgumentNullException ("audioQueueBuffer");
+			if (audioQueueBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (audioQueueBuffer));
 
 			var stamp = new AudioTimeStamp () {
 				SampleTime = timeStamp,
-				Flags = AudioTimeStamp.AtsFlags.SampleTimeValid
+				Flags = AudioTimeStamp.AtsFlags.SampleTimeValid,
 			};
-			return AudioQueueOfflineRender (handle, ref stamp, audioQueueBuffer, frameCount);
+			return AudioQueueOfflineRender (handle, &stamp, audioQueueBuffer, frameCount);
 		}
 	}
 
+	/// <summary>An Input Audio Queue, used for audio capturing and recording.</summary>
+	///     <remarks>
+	///
+	///       To receive input completed notifications, you can either hook up
+	///       to the C# event InputCompleted or you can subclass and override the 
+	///       OnInputCompleted method.   They serve the same purpose.
+	///
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class InputAudioQueue : AudioQueue {
-		static unsafe readonly AudioQueueInputCallback dInputCallback = input_callback;
-
-		[MonoPInvokeCallback(typeof(AudioQueueInputCallback))]
+		[UnmanagedCallersOnly]
 		unsafe static void input_callback (IntPtr userData, IntPtr AQ, IntPtr audioQueueBuffer,
-					    AudioTimeStamp *startTime, int descriptors, IntPtr inPacketDesc)
+						AudioTimeStamp* startTime, int descriptors, IntPtr inPacketDesc)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (userData);
 			var aq = gch.Target as InputAudioQueue;
 
-			aq.OnInputCompleted (audioQueueBuffer, *startTime, AudioFile.PacketDescriptionFrom (descriptors, inPacketDesc));
+			aq!.OnInputCompleted (audioQueueBuffer, *startTime, AudioFile.PacketDescriptionFrom (descriptors, inPacketDesc));
 		}
 
-		public event EventHandler<InputCompletedEventArgs> InputCompleted;
-		protected virtual void OnInputCompleted (IntPtr audioQueueBuffer, AudioTimeStamp timeStamp, AudioStreamPacketDescription [] packetDescriptions)
+		/// <summary>Raised when the input audio queue has captured audio into a buffer, making the recorded samples available for processing.</summary>
+		/// <remarks>The filled buffer, capture time stamp, and packet descriptions are provided in the event arguments. Handlers typically consume the recorded audio and re-enqueue the buffer to continue recording.</remarks>
+		public event EventHandler<InputCompletedEventArgs>? InputCompleted;
+		/// <param name="audioQueueBuffer">.</param>
+		///         <param name="timeStamp">To be added.</param>
+		///         <param name="packetDescriptions">To be added.</param>
+		///         <summary>Method invoked .</summary>
+		///         <remarks>
+		///           <para>
+		/// 	    This method is invoked when the audio system has
+		/// 	    completely filled one of the buffers with audio data.  You
+		/// 	    would override this method to process the data, to either
+		/// 	    save the raw bytes to disk, encode them using the <see cref="AudioToolbox.AudioFile" /> or do some
+		/// 	    real-time processing with the audio packets.  
+		/// 	  </para>
+		///           <para>
+		/// 	    If you override this method, you do not necessarily
+		/// 	    need to call base.OnInputComplete (audioQueueBuffer,
+		/// 	    timeStamp, packetDescriptions) unless you are interested in
+		/// 	    raising the C# events to potential consumers of your class.
+		/// 	  </para>
+		///         </remarks>
+		protected virtual void OnInputCompleted (IntPtr audioQueueBuffer, AudioTimeStamp timeStamp, AudioStreamPacketDescription []? packetDescriptions)
 		{
 			var h = InputCompleted;
-			if (h != null)
+			if (h is not null)
 				h (this, new InputCompletedEventArgs (audioQueueBuffer, timeStamp, packetDescriptions));
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static OSStatus AudioQueueNewInput (
-			ref AudioStreamBasicDescription format,
-			AudioQueueInputCallback callback,
+		extern unsafe static OSStatus AudioQueueNewInput (
+			AudioStreamBasicDescription* format,
+			delegate* unmanaged<IntPtr, IntPtr, IntPtr, AudioTimeStamp*, int, IntPtr, void> callback,
 			IntPtr inUserData,
 			IntPtr cfrunLoop_inCallbackRunLoop,
 			IntPtr cfstringref_inCallbackRunLoopMode,
 			UInt32 inFlags,
-			out IntPtr audioQueue);
+			IntPtr* audioQueue);
 
+		/// <param name="desc">Audio stream description.</param>
+		///         <summary>Creates an AudioQueue for recording, and invokes the notification callback on an internal AudioQueue thread.</summary>
+		///         <remarks>
+		///         </remarks>
 		public InputAudioQueue (AudioStreamBasicDescription desc)
 		 : this (desc, null, null)
 		{
 		}
 
-		public InputAudioQueue (AudioStreamBasicDescription desc, CFRunLoop runLoop, string runMode)
+		/// <param name="desc">Audio stream description.</param>
+		///         <param name="runLoop">If you specify null, InputAudioQueue will invoke the callback on an internal thread.   Otherwise the callback will be invoked on the specified runLoop thread.</param>
+		///         <param name="runMode">The run mode for the run loop.</param>
+		///         <summary>Creates an AudioQueue for recording, specifying on which run loop events are delivered.</summary>
+		///         <remarks>
+		///         </remarks>
+		public InputAudioQueue (AudioStreamBasicDescription desc, CFRunLoop? runLoop, string? runMode)
 		{
 			IntPtr h;
 			GCHandle mygch = GCHandle.Alloc (this);
-			CFString s = runMode == null ? null : new CFString (runMode);
-			
-			var code = AudioQueueNewInput (ref desc, dInputCallback, GCHandle.ToIntPtr (mygch),
-						       runLoop == null ? IntPtr.Zero : runLoop.Handle,
-						       s == null ? IntPtr.Zero : s.Handle, 0, out h);
-			if (s != null)
+			CFString? s = runMode is null ? null : new CFString (runMode);
+
+			OSStatus code = 0;
+			unsafe {
+				code = AudioQueueNewInput (&desc, &input_callback, GCHandle.ToIntPtr (mygch),
+					runLoop.GetHandle (), s.GetHandle (),
+					0, &h);
+				GC.KeepAlive (runLoop);
+				GC.KeepAlive (s);
+			}
+			if (s is not null)
 				s.Dispose ();
-			
-			if (code == 0){
+
+			if (code == 0) {
 				handle = h;
 				gch = mygch;
 				return;
@@ -1479,36 +2219,65 @@ namespace AudioToolbox {
 			throw new AudioQueueException (code);
 		}
 
+		/// <param name="buffer">The buffer to add.</param>
+		///         <summary>Adds the specified buffer to the queue.</summary>
+		///         <returns>Status code</returns>
+		///         <remarks>This is equivalent to calling EnqueueBuffer with an empty AudioStreamPacketDescription (for example, for constant bit rates, or while recording).</remarks>
 		public unsafe AudioQueueStatus EnqueueBuffer (AudioQueueBuffer* buffer)
 		{
 			return AudioQueueEnqueueBuffer (handle, buffer, 0, null);
 		}
 	}
 
+	/// <summary>Objects used to track audio queue timelines</summary>
+	///     <remarks>
+	///       <para>
+	/// 	This object is used to track discontinuities in the Audio Queue's audio.   
+	///       </para>
+	///       <para>
+	/// 	You create these objects by calling <see cref="AudioToolbox.AudioQueue.CreateTimeline" />
+	/// 	method and use them to probe audio discontinuities by calling
+	/// 	the <see cref="AudioToolbox.AudioQueue.GetCurrentTime(AudioToolbox.AudioQueueTimeline,ref AudioToolbox.AudioTimeStamp,ref System.Boolean)" />
+	/// 	method.
+	///       </para>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class AudioQueueTimeline : IDisposable {
-		internal protected IntPtr timelineHandle, queueHandle;
+		/// <summary>Handle to the underlying C timeline object.</summary>
+		///         <remarks>
+		///         </remarks>
+		internal protected IntPtr timelineHandle;
+		/// <summary>The handle to the underlying C queue.</summary>
+		///         <remarks>
+		///         </remarks>
+		internal protected IntPtr queueHandle;
 
 		internal AudioQueueTimeline (IntPtr queueHandle, IntPtr timelineHandle)
 		{
 			this.queueHandle = queueHandle;
 			this.timelineHandle = timelineHandle;
 		}
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static AudioQueueStatus AudioQueueDisposeTimeline (IntPtr AQ, IntPtr timeline);
 
+		/// <summary>Releases the resources used by the AudioQueueTimeline object.</summary>
+		///         <remarks>
+		///           <para>The Dispose method releases the resources used by the AudioQueueTimeline class.</para>
+		///           <para>Calling the Dispose method when the application is finished using the AudioQueueTimeline ensures that all external resources used by this managed object are released as soon as possible.  Once developers have invoked the Dispose method, the object is no longer useful and developers should no longer make any calls to it.  For more information on releasing resources see ``Cleaning up Unmananaged Resources'' at https://msdn.microsoft.com/en-us/library/498928w2.aspx</para>
+		///         </remarks>
 		public void Dispose ()
 		{
 			Dispose (true);
 		}
-	
-#if XAMCORE_2_0
+
+		/// <include file="../../docs/api/AudioToolbox/AudioQueueTimeline.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioQueueTimeline.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
-#else
-		public virtual void Dispose (bool disposing)
-#endif
 		{
-			if (timelineHandle != IntPtr.Zero){
+			if (timelineHandle != IntPtr.Zero) {
 				AudioQueueDisposeTimeline (queueHandle, timelineHandle);
 				timelineHandle = IntPtr.Zero;
 			}

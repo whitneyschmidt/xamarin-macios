@@ -24,109 +24,118 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
 using CoreGraphics;
 
 namespace CoreText {
 
-#region Run Delegate Callbacks
+	#region Run Delegate Callbacks
 	delegate void CTRunDelegateDeallocateCallback (IntPtr refCon);
 	delegate nfloat CTRunDelegateGetCallback (IntPtr refCon);
 
 	[StructLayout (LayoutKind.Sequential)]
-	class CTRunDelegateCallbacks {
+	struct CTRunDelegateCallbacks {
 		public /* CFIndex */ nint version;
-		public CTRunDelegateDeallocateCallback dealloc;
-		public CTRunDelegateGetCallback getAscent;
-		public CTRunDelegateGetCallback getDescent;
-		public CTRunDelegateGetCallback getWidth;
+		public unsafe delegate* unmanaged<IntPtr, void> dealloc;
+		public unsafe delegate* unmanaged<IntPtr, nfloat> getAscent;
+		public unsafe delegate* unmanaged<IntPtr, nfloat> getDescent;
+		public unsafe delegate* unmanaged<IntPtr, nfloat> getWidth;
 	}
-#endregion
+	#endregion
 
+	/// <summary>A class that represents the operations possible on a <see cref="CoreText.CTRunDelegate" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CTRunDelegateOperations : IDisposable {
+		// This instance is kept alive using a GCHandle until the Deallocate callback has been called,
+		// which is called when the corresponding CTRunDelegate is freed (retainCount reaches 0).
+		// This even means that the GCHandle is not freed if Dispose is called manually.
+		GCHandle handle;
 
-		internal GCHandle handle;
+		public IntPtr Handle {
+			get { return GCHandle.ToIntPtr (handle); }
+		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		protected CTRunDelegateOperations ()
 		{
 			handle = GCHandle.Alloc (this);
 		}
 
-#if XAMCORE_2_0
 		~CTRunDelegateOperations ()
 		{
 			Dispose (false);
 		}
 
+		/// <summary>Releases the resources used by the CTRunDelegateOperations object.</summary>
+		///         <remarks>
+		///           <para>The Dispose method releases the resources used by the CTRunDelegateOperations class.</para>
+		///           <para>Calling the Dispose method when the application is finished using the CTRunDelegateOperations ensures that all external resources used by this managed object are released as soon as possible.  Once developers have invoked the Dispose method, the object is no longer useful and developers should no longer make any calls to it.  For more information on releasing resources see ``Cleaning up Unmananaged Resources'' at https://msdn.microsoft.com/en-us/library/498928w2.aspx</para>
+		///         </remarks>
 		public void Dispose ()
 		{
 			Dispose (true);
 			GC.SuppressFinalize (this);
 		}
 
+		/// <include file="../../docs/api/CoreText/CTRunDelegateOperations.xml" path="/Documentation/Docs[@DocId='M:CoreText.CTRunDelegateOperations.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
 		{
 		}
-#else
-		public virtual void Dispose ()
-		{
-		}
-#endif
 
-#if XAMCORE_4_0
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public virtual nfloat GetAscent ()
 		{
 			return 0;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public virtual nfloat GetDescent ()
 		{
 			return 0;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public virtual nfloat GetWidth ()
 		{
 			return 0;
 		}
-#else
-		public virtual float GetAscent ()
-		{
-			return 0.0f;
-		}
 
-		public virtual float GetDescent ()
-		{
-			return 0.0f;
-		}
-
-		public virtual float GetWidth ()
-		{
-			return 0.0f;
-		}
-#endif
-
+		CTRunDelegateCallbacks? callbacks; // prevent GC since they are called from native code
 		internal CTRunDelegateCallbacks GetCallbacks ()
 		{
-			var callbacks = new CTRunDelegateCallbacks () {
-				version = 1, // kCTRunDelegateVersion1
-				dealloc = Deallocate,
-				getAscent = GetAscent,
-				getDescent = GetDescent,
-				getWidth = GetWidth,
-			};
-			return callbacks;
+			if (!callbacks.HasValue) {
+				unsafe {
+					callbacks = new CTRunDelegateCallbacks () {
+						version = 1,
+						dealloc = &Deallocate,
+						getAscent = &GetAscent,
+						getDescent = &GetDescent,
+						getWidth = &GetWidth,
+					};
+				}
+			}
+			return callbacks.Value;
 		}
 
-		[MonoPInvokeCallback (typeof (CTRunDelegateDeallocateCallback))]
+		[UnmanagedCallersOnly]
 		static void Deallocate (IntPtr refCon)
 		{
 			var self = GetOperations (refCon);
-			if (self == null)
+			if (self is null)
 				return;
 
 			self.Dispose ();
@@ -136,105 +145,91 @@ namespace CoreText {
 			self.handle = new GCHandle ();
 		}
 
-		internal static CTRunDelegateOperations GetOperations (IntPtr refCon)
+		internal static CTRunDelegateOperations? GetOperations (IntPtr refCon)
 		{
 			GCHandle c = GCHandle.FromIntPtr (refCon);
 
 			return c.Target as CTRunDelegateOperations;
 		}
 
-		[MonoPInvokeCallback (typeof (CTRunDelegateGetCallback))]
+		[UnmanagedCallersOnly]
 		static nfloat GetAscent (IntPtr refCon)
 		{
 			var self = GetOperations (refCon);
-			if (self == null)
+			if (self is null)
 				return 0;
 			return (nfloat) self.GetAscent ();
 		}
 
-		[MonoPInvokeCallback (typeof (CTRunDelegateGetCallback))]
+		[UnmanagedCallersOnly]
 		static nfloat GetDescent (IntPtr refCon)
 		{
 			var self = GetOperations (refCon);
-			if (self == null)
+			if (self is null)
 				return 0;
 			return (nfloat) self.GetDescent ();
 		}
 
-		[MonoPInvokeCallback (typeof (CTRunDelegateGetCallback))]
+		[UnmanagedCallersOnly]
 		static nfloat GetWidth (IntPtr refCon)
 		{
 			var self = GetOperations (refCon);
-			if (self == null)
+			if (self is null)
 				return 0;
 			return (nfloat) self.GetWidth ();
 		}
 	}
 
-	public class CTRunDelegate : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		internal CTRunDelegate (IntPtr handle, bool owns)
+	/// <summary>A delegate object that can be used to handle <see cref="CoreText.CTRunDelegateOperations" /> on a <see cref="CoreText.CTRun" />.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreText.CTStringAttributes.RunDelegate" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CTRunDelegate : NativeObject, IDisposable {
+		[Preserve (Conditional = true)]
+		internal CTRunDelegate (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ArgumentNullException ("handle");
-
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
-		}
-		
-		public IntPtr Handle {
-			get {return handle;}
 		}
 
-		~CTRunDelegate ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
+		#region RunDelegate Creation
+		[DllImport (Constants.CoreTextLibrary)]
+		unsafe static extern IntPtr CTRunDelegateCreate (CTRunDelegateCallbacks* callbacks, IntPtr refCon);
 
-		protected virtual void Dispose (bool disposing)
+		static IntPtr Create (CTRunDelegateOperations operations)
 		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
+			if (operations is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (operations));
+
+			CTRunDelegateCallbacks callbacks = operations.GetCallbacks ();
+			unsafe {
+				return CTRunDelegateCreate (&callbacks, operations.Handle);
 			}
 		}
 
-#region RunDelegate Creation
-		[DllImport (Constants.CoreTextLibrary)]
-		static extern IntPtr CTRunDelegateCreate (CTRunDelegateCallbacks callbacks, IntPtr refCon);
-
-		CTRunDelegateCallbacks callbacks; // prevent GC since they are called from native code
-
+		/// <param name="operations">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTRunDelegate (CTRunDelegateOperations operations)
+			: base (Create (operations), true)
 		{
-			if (operations == null)
-				throw ConstructorError.ArgumentNull (this, "operations");
-
-			callbacks = operations.GetCallbacks ();
-			handle = CTRunDelegateCreate (callbacks, GCHandle.ToIntPtr (operations.handle));
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
 		}
-#endregion
+		#endregion
 
-#region Run Delegate Access
+		#region Run Delegate Access
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTRunDelegateGetRefCon (IntPtr runDelegate);
 
-		public CTRunDelegateOperations Operations {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CTRunDelegateOperations? Operations {
 			get {
-				return CTRunDelegateOperations.GetOperations (CTRunDelegateGetRefCon (handle));
+				return CTRunDelegateOperations.GetOperations (CTRunDelegateGetRefCon (Handle));
 			}
 		}
-#endregion
+		#endregion
 	}
 }
-

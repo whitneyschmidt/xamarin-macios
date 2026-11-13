@@ -4,12 +4,73 @@ set -o pipefail
 
 cd $(dirname $0)
 
+# Detect if we're running on Linux
+if [[ "$(uname -s)" == "Linux" ]]; then
+	NO_XCODE=1
+	# On Linux, ignore all macOS-specific dependencies
+	IGNORE_OSX=1
+	IGNORE_XCODE=1
+	IGNORE_XCODE_COMPONENTS=1
+	IGNORE_VISUAL_STUDIO=1
+	IGNORE_SIMULATORS=1
+	IGNORE_OLD_SIMULATORS=1
+	IGNORE_7Z=1
+	IGNORE_HOMEBREW=1
+	IGNORE_SHELLCHECK=1
+	IGNORE_YAMLLINT=1
+	IGNORE_PYTHON3=1
+else
+	NO_XCODE=
+fi
+
 FAIL=
 PROVISION_DOWNLOAD_DIR=/tmp/x-provisioning
 SUDO=sudo
+VERBOSE=
+XCODE_PACKAGE_DIRECTORY=
 
-OPTIONAL_SHARPIE=1
 OPTIONAL_SIMULATORS=1
+OPTIONAL_OLD_SIMULATORS=1
+
+if test -f configure.inc; then
+	source configure.inc
+
+	if test -n "$NO_XCODE"; then
+		IGNORE_OSX=1
+		IGNORE_XCODE=1
+		IGNORE_SIMULATORS=1
+		IGNORE_OLD_SIMULATORS=1
+		IGNORE_XCODE_COMPONENTS=1
+	fi
+fi
+
+function get_xcode_developer_root ()
+{
+	local suffix="${1:-}"
+
+	# When we're provisioning Xcode ourselves, Make.config is the only source of truth:
+	# install-xcode.sh reads it directly, so honoring an inherited variable or a stale
+	# configure.inc here would make the rest of this script inspect a different Xcode
+	# than the one we just installed and selected.
+	if test -n "$XCODE_PACKAGE_DIRECTORY" || test -n "${PROVISION_XCODE:-}"; then
+		grep "^XCODE${suffix}_DEVELOPER_ROOT[?:]*=" Make.config | sed 's/^[^=]*=//'
+		return
+	fi
+
+	if test -z "$suffix"; then
+		if test -n "${XCODE_DEVELOPER_ROOT:-}"; then
+			echo "$XCODE_DEVELOPER_ROOT"
+			return
+		fi
+
+		if XCODE_DEVELOPER_ROOT_ASSIGNMENT=$(grep "^XCODE_DEVELOPER_ROOT=" configure.inc 2>/dev/null); then
+			echo "${XCODE_DEVELOPER_ROOT_ASSIGNMENT#*=}"
+			return
+		fi
+	fi
+
+	grep "^XCODE${suffix}_DEVELOPER_ROOT[?:]*=" Make.config | sed 's/^[^=]*=//'
+}
 
 # parse command-line arguments
 while ! test -z $1; do
@@ -21,6 +82,21 @@ while ! test -z $1; do
 		--provision-xcode)
 			PROVISION_XCODE=1
 			unset IGNORE_XCODE
+			shift
+			;;
+		--xcode-package-directory)
+			if [[ $# -lt 2 || -z "$2" ]]; then
+				echo "--xcode-package-directory requires a value."
+				exit 1
+			fi
+			XCODE_PACKAGE_DIRECTORY=$2
+			PROVISION_XCODE=1
+			unset IGNORE_XCODE
+			shift 2
+			;;
+		--provision-xcode-components)
+			PROVISION_XCODE_COMPONENTS=1
+			unset IGNORE_XCODE_COMPONENTS
 			shift
 			;;
 		--provision)
@@ -36,30 +112,19 @@ while ! test -z $1; do
 			unset IGNORE_VISUAL_STUDIO
 			shift
 			;;
-		--provision-mono)
-			PROVISION_MONO=1
-			unset IGNORE_MONO
-			shift
-			;;
-		--provision-cmake)
-			PROVISION_CMAKE=1
-			unset IGNORE_CMAKE
-			shift
-			;;
 		--provision-7z)
 			PROVISION_7Z=1
 			unset IGNORE_7Z
 			shift
 			;;
 		--provision-autotools)
-			PROVISION_AUTOTOOLS=1
-			unset IGNORE_AUTOTOOLS
+			# this is an old argument, just ignore it
 			shift
 			;;
-		--provision-sharpie)
-			PROVISION_SHARPIE=1
-			unset OPTIONAL_SHARPIE
-			unset IGNORE_SHARPIE
+		--provision-python3)
+			# building mono from source requires having python3 installed
+			PROVISION_PYTHON3=1
+			unset IGNORE_PYTHON3
 			shift
 			;;
 		--provision-simulators)
@@ -68,38 +133,64 @@ while ! test -z $1; do
 			unset IGNORE_SIMULATORS
 			shift
 			;;
+		--provision-old-simulators)
+			PROVISION_OLD_SIMULATORS=1
+			unset OPTIONAL_OLD_SIMULATORS
+			unset IGNORE_OLD_SIMULATORS
+			shift
+			;;
+		--provision-dotnet)
+			PROVISION_DOTNET=1
+			unset IGNORE_DOTNET
+			shift
+			;;
+		--provision-shellcheck)
+			PROVISION_SHELLCHECK=1
+			unset IGNORE_SHELLCHECK
+			shift
+			;;
+		--provision-yamllint)
+			PROVISION_YAMLLINT=1
+			unset IGNORE_YAMLLINT
+			shift
+			;;
 		--provision-all)
-			PROVISION_MONO=1
-			unset IGNORE_MONO
 			PROVISION_VS=1
 			unset IGNORE_VISUAL_STUDIO
 			PROVISION_XCODE=1
 			unset IGNORE_XCODE
-			PROVISION_CMAKE=1
-			unset IGNORE_CMAKE
 			PROVISION_7Z=1
 			unset IGNORE_7Z
-			PROVISION_AUTOTOOLS=1
-			unset IGNORE_AUTOTOOLS
 			PROVISION_HOMEBREW=1
 			unset IGNORE_HOMEBREW
-			PROVISION_SHARPIE=1
-			unset IGNORE_SHARPIE
 			PROVISION_SIMULATORS=1
 			unset IGNORE_SIMULATORS
+			PROVISION_OLD_SIMULATORS=1
+			unset IGNORE_OLD_SIMULATORS
+			PROVISION_PYTHON3=1
+			unset IGNORE_PYTHON3
+			PROVISION_DOTNET=1
+			unset IGNORE_DOTNET
+			PROVISION_SHELLCHECK=1
+			unset IGNORE_SHELLCHECK
+			PROVISION_YAMLLINT=1
+			unset IGNORE_YAMLLINT
+			PROVISION_XCODE_COMPONENTS=1
+			unset IGNORE_XCODE_COMPONENTS
 			shift
 			;;
 		--ignore-all)
 			IGNORE_OSX=1
-			IGNORE_MONO=1
 			IGNORE_VISUAL_STUDIO=1
 			IGNORE_XCODE=1
-			IGNORE_CMAKE=1
 			IGNORE_7Z=1
-			IGNORE_AUTOTOOLS=1
 			IGNORE_HOMEBREW=1
-			IGNORE_SHARPIE=1
 			IGNORE_SIMULATORS=1
+			IGNORE_PYTHON3=1
+			IGNORE_DOTNET=1
+			IGNORE_SHELLCHECK=1
+			IGNORE_YAMLLINT=1
+			IGNORE_XCODE_COMPONENTS=1
 			shift
 			;;
 		--ignore-osx)
@@ -110,37 +201,32 @@ while ! test -z $1; do
 			IGNORE_XCODE=1
 			shift
 			;;
+		--ignore-xcode-components)
+			IGNORE_XCODE_COMPONENTS=1
+			shift
+			;;
 		--ignore-*-studio)
 			IGNORE_VISUAL_STUDIO=1
 			shift
 			;;
-		--ignore-mono)
-			IGNORE_MONO=1
-			shift
-			;;
 		--ignore-autotools)
-			IGNORE_AUTOTOOLS=1
+			# this is an old argument, just ignore it
 			shift
 			;;
-		--ignore-cmake)
-			IGNORE_CMAKE=1
+		--ignore-python3)
+			IGNORE_PYTHON3=1
 			shift
 			;;
 		--ignore-7z)
 			IGNORE_7Z=1
 			shift
 			;;
-		--ignore-sharpie)
-			IGNORE_SHARPIE=1
-			shift
-			;;
-		--enforce-sharpie)
-			unset IGNORE_SHARPIE
-			unset OPTIONAL_SHARPIE
-			shift
-			;;
 		--ignore-simulators)
 			IGNORE_SIMULATORS=1
+			shift
+			;;
+		--ignore-old-simulators)
+			IGNORE_OLD_SIMULATORS=1
 			shift
 			;;
 		--enforce-simulators)
@@ -148,9 +234,22 @@ while ! test -z $1; do
 			unset OPTIONAL_SIMULATORS
 			shift
 			;;
+		--ignore-dotnet)
+			IGNORE_DOTNET=1
+			shift
+			;;
+		--ignore-shellcheck)
+			IGNORE_SHELLCHECK=1
+			shift
+			;;
+		--ignore-yamllint)
+			IGNORE_YAMLLINT=1
+			shift
+			;;
 		-v | --verbose)
 			set -x
 			shift
+			VERBOSE=1
 			;;
 		*)
 			echo "Unknown argument: $1"
@@ -159,26 +258,37 @@ while ! test -z $1; do
 	esac
 done
 
+if test -z "${NO_XCODE:-}"; then
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root)
+	export XCODE_DEVELOPER_ROOT
+	export DEVELOPER_DIR="$XCODE_DEVELOPER_ROOT"
+fi
+
 # reporting functions
 COLOR_RED=$(tput setaf 1 2>/dev/null || true)
 COLOR_ORANGE=$(tput setaf 3 2>/dev/null || true)
 COLOR_MAGENTA=$(tput setaf 5 2>/dev/null || true)
+COLOR_BLUE=$(tput setaf 6 2>/dev/null || true)
 COLOR_CLEAR=$(tput sgr0 2>/dev/null || true)
+COLOR_RESET=uniquesearchablestring
+FAILURE_PREFIX=
+if test -z "$COLOR_RED"; then FAILURE_PREFIX="** failure ** "; fi
+
 function fail () {
-	echo "    ${COLOR_RED}$1${COLOR_CLEAR}"
+	echo "    $FAILURE_PREFIX${COLOR_RED}${1//${COLOR_RESET}/${COLOR_RED}}${COLOR_CLEAR}"
 	FAIL=1
 }
 
 function warn () {
-	echo "    ${COLOR_ORANGE}$1${COLOR_CLEAR}"
+	echo "    ${COLOR_ORANGE}${1//${COLOR_RESET}/${COLOR_ORANGE}}${COLOR_CLEAR}"
 }
 
 function ok () {
-	echo "    $1"
+	echo "    ${1//${COLOR_RESET}/${COLOR_CLEAR}}"
 }
 
 function log () {
-	echo "        $1"
+	echo "        ${1//${COLOR_RESET}/${COLOR_CLEAR}}"
 }
 
 # $1: the version to check
@@ -228,57 +338,223 @@ function is_at_least_version () {
 	fi
 }
 
-function install_mono () {
-	local MONO_URL=`grep MIN_MONO_URL= Make.config | sed 's/.*=//'`
-	local MIN_MONO_VERSION=`grep MIN_MONO_VERSION= Make.config | sed 's/.*=//'`
+function delete_all_simulator_runtimes ()
+{
+	log "Executing 'xcrun simctl runtime delete all'..."
+	xcrun simctl runtime delete all
 
-	if test -z $MONO_URL; then
-		fail "No MIN_MONO_URL set in Make.config, cannot provision"
-		return
+	local TMPFILE
+	TMPFILE=$(mktemp)
+
+	local COUNT
+
+	# sadly simulator deletion is done asynchronously, so we have to wait until they're all gone
+	log "Waiting for the simulator runtimes to be deleted..."
+	printf "            "
+	for i in $(seq 1 60); do
+		sleep 1
+		xcrun simctl runtime list -j --json-output="$TMPFILE"
+		COUNT=$(jq "length" -r "$TMPFILE")
+		if [[ "$COUNT" == "0" ]]; then
+			break
+		fi
+		printf "$COUNT"
+	done
+	printf "\n"
+	if [[ "$COUNT" != "0" ]]; then
+		warn "Waited for 60 seconds, but there are still $COUNT simulators waiting to deleted."
 	fi
 
-	mkdir -p $PROVISION_DOWNLOAD_DIR
-	log "Downloading Mono $MIN_MONO_VERSION from $MONO_URL to $PROVISION_DOWNLOAD_DIR..."
-	local MONO_NAME=`basename $MONO_URL`
-	local MONO_PKG=$PROVISION_DOWNLOAD_DIR/$MONO_NAME
-	curl -L $MONO_URL > $MONO_PKG
-
-	log "Installing Mono $MIN_MONO_VERSION from $MONO_URL..."
-	$SUDO installer -pkg $MONO_PKG -target /
-
-	rm -f $MONO_PKG
+	rm -rf "$TMPFILE"
 }
 
-function install_visual_studio () {
-	local VS="/Applications/Visual Studio.app"
-	local VS_URL=`grep MIN_VISUAL_STUDIO_URL= Make.config | sed 's/.*=//'`
-	local MIN_VISUAL_STUDIO_VERSION=`grep MIN_VISUAL_STUDIO_VERSION= Make.config | sed 's/.*=//'`
+# Checks whether a simulator runtime for the given platform is installed and
+# available (this is the same kind of check as in check_old_simulators).
+# $1: the platform (iOS, tvOS, ...)
+# $2: (optional) the version to look for. A runtime matches if its version is
+#     equal to this value or is a patch release of it (e.g. a "$2" of "26.5"
+#     matches both "26.5" and "26.5.1"), because simctl reports a patch version
+#     for the most recent runtimes. If empty, any version of the platform
+#     qualifies.
+# Returns 0 if a matching, available runtime is installed, non-zero otherwise.
+function is_simulator_runtime_installed ()
+{
+	local platform="$1"
+	local version="$2"
+	local tmpfile
+	tmpfile=$(mktemp)
 
-	if test -z $VS_URL; then
-		fail "No MIN_VISUAL_STUDIO_URL set in Make.config, cannot provision"
+	xcrun simctl list runtimes --json --json-output "$tmpfile" >/dev/null 2>&1
+
+	local selector=".platform == \"$platform\" and .isAvailable == true and .isInternal == false"
+	if [[ -n "$version" ]]; then
+		selector="$selector and (.version == \"$version\" or (.version | startswith(\"$version.\")))"
+	fi
+
+	local count
+	count=$(jq "[ .runtimes[] | select($selector) ] | length" < "$tmpfile")
+	rm -f "$tmpfile"
+
+	[[ -n "$count" && "$count" -gt 0 ]]
+}
+
+# Downloads a simulator platform using 'xcodebuild -downloadPlatform', retrying a
+# few times in case of transient network failures.
+#
+# When the requested simulator runtime isn't available through the normal
+# mechanism, xcodebuild falls back to downloading it from Apple's downloadable
+# simulator index, and that transport occasionally stalls until curl fails (e.g.
+# 'curl: (56) Recv failure: Operation timed out'). In that fallback case
+# xcodebuild frequently still exits 0 while only printing the failure to stdout,
+# so instead of trusting xcodebuild's exit code (or its output) we check the
+# desired result directly: is the simulator runtime actually installed afterwards?
+# If not, we retry the download.
+#
+# $1: the platform to download (iOS, tvOS, ...)
+# $2: the expected runtime version, used *only* to verify the install afterwards
+#     (see is_simulator_runtime_installed for how it's matched). If empty, the
+#     download is accepted as long as any runtime for the platform is installed.
+# $3...: the arguments to pass to 'xcodebuild -downloadPlatform' after the
+#     platform (e.g. '-buildVersion 16.0' or '-architectureVariant universal').
+function xcodebuild_download_platform ()
+{
+	local platform="$1"
+	local version="$2"
+	shift 2
+
+	local XCODE_DEVELOPER_ROOT
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root)
+
+	local attempts=5
+	local attempt=1
+	while true; do
+		log "Executing (attempt $attempt of $attempts) '$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -downloadPlatform $platform $*'"
+		# We intentionally ignore xcodebuild's exit code here (see the comment
+		# above) and check whether the runtime got installed instead.
+		set +e
+		"$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -downloadPlatform "$platform" "$@" 2>&1 | sed 's/^/        /'
+		set -e
+
+		if is_simulator_runtime_installed "$platform" "$version"; then
+			return 0
+		fi
+
+		if [[ $attempt -ge $attempts ]]; then
+			warn "The $platform ${version:+$version }simulator runtime was still not installed after $attempts download attempts."
+			return 1
+		fi
+		warn "The $platform ${version:+$version }simulator runtime was not installed (attempt $attempt of $attempts); retrying in 15 seconds..."
+		sleep 15
+		attempt=$((attempt + 1))
+	done
+}
+
+function xcodebuild_download_selected_platforms ()
+{
+	local XCODE_DEVELOPER_ROOT
+	local XCODE_NAME
+	local XCODE_IS_STABLE
+	local XCODE_VERSION
+	local IOS_NUGET_OS_VERSION
+	local IOS_BUILD_VERSION
+	local TVOS_NUGET_OS_VERSION
+	local TVOS_BUILD_VERSION
+
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root)
+	XCODE_NAME=$(basename "$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")")
+	# we use the same logic here as in Make.config to determine whether we're using a stable version of Xcode or not (search for XCODE_IS_STABLE/XCODE_IS_PREVIEW)
+	XCODE_IS_STABLE=$(echo "$XCODE_NAME" | sed -e 's@^Xcode[_0-9.]*[.]app$@YES@')
+	XCODE_VERSION=$(grep ^XCODE_VERSION= Make.config | sed 's/.*=//')
+
+	IOS_BUILD_VERSION=
+	TVOS_BUILD_VERSION=
+	# kept the is_at_least_version "$XCODE_VERSION" 26.0 guard because -architectureVariant only exists in Xcode 26+; on older Xcode it falls back to a plain -downloadPlatform.
+	if is_at_least_version "$XCODE_VERSION" 26.0; then
+		# we always want the arm64 variant (the x64 simulators aren't supported anymore)
+		IOS_BUILD_VERSION=" -architectureVariant arm64"
+		TVOS_BUILD_VERSION=" -architectureVariant arm64"
+	fi
+
+	# The expected simulator runtime versions for the current Xcode, so we can
+	# verify the downloads below actually installed the runtimes we need.
+	IOS_NUGET_OS_VERSION=$(grep ^IOS_NUGET_OS_VERSION= Make.versions | sed 's/.*=//')
+	TVOS_NUGET_OS_VERSION=$(grep ^TVOS_NUGET_OS_VERSION= Make.versions | sed 's/.*=//')
+
+	local TMPFILE
+	TMPFILE=$(mktemp)
+	log "Checking if there are any simulator runtimes that aren't ready..."
+	xcrun simctl runtime list --json "--json-output=$TMPFILE"
+	NOT_READY_COUNT=$(jq 'map({identifier: .identifier, state: .state}) | map(select(.state != "Ready")) | length' "$TMPFILE")
+	if [[ "$NOT_READY_COUNT" != "0" ]]; then
+		log "Found simulator runtimes that aren't ready, will proceed to delete all simulator runtimes:"
+		(
+			export IFS=$'\n'
+			for line in $(jq 'map({identifier: .identifier, state: .state}) | map(select(.state != "Ready"))[] | "\(.identifier): \(.state)"' -r "$TMPFILE"); do
+				log "    $line"
+			done
+		)
+		delete_all_simulator_runtimes
+	else
+		log "    none found."
+	fi
+
+	local RC=0
+	if ! xcodebuild_download_platform iOS "$IOS_NUGET_OS_VERSION" $IOS_BUILD_VERSION; then
+		RC=1
+	fi
+
+	if ! xcodebuild_download_platform tvOS "$TVOS_NUGET_OS_VERSION" $TVOS_BUILD_VERSION; then
+		RC=1
+	fi
+
+	return $RC
+}
+
+function download_xcode_platforms ()
+{
+	if test -n "$IGNORE_SIMULATORS"; then return; fi
+
+	local XCODE_VERSION
+	local XCODE_DEVELOPER_ROOT="$1"
+
+	XCODE_VERSION=$(grep ^XCODE_VERSION= Make.config | sed 's/.*=//')
+
+	if ! is_at_least_version "$XCODE_VERSION" 14.0; then
+		# Nothing to do here
+		log "This version of Xcode ($XCODE_VERSION) does not have any additional platforms to download"
 		return
 	fi
 
-	mkdir -p $PROVISION_DOWNLOAD_DIR
-	log "Downloading Visual Studio $MIN_VISUAL_STUDIO_VERSION from $VS_URL to $PROVISION_DOWNLOAD_DIR..."
-	local VS_NAME=`basename $VS_URL`
-	local VS_DMG=$PROVISION_DOWNLOAD_DIR/$VS_NAME
-	curl -L $VS_URL > $VS_DMG
+	if test -z "$PROVISION_SIMULATORS"; then
+		warn "    Xcode may have additional platforms that must be downloaded. Execute './system-dependencies.sh --provision-simulators' to install those platforms (or alternatively ${COLOR_MAGENTA}export IGNORE_SIMULATORS=1${COLOR_RESET} to skip this check)"
+		return
+	fi
 
-	local VS_MOUNTPOINT=$PROVISION_DOWNLOAD_DIR/$VS_NAME-mount
-	log "Mounting $VS_DMG into $VS_MOUNTPOINT..."
-	hdiutil attach $VS_DMG -mountpoint $VS_MOUNTPOINT -quiet -nobrowse
-	log "Removing previous Visual Studio from $VS"
-	$SUDO rm -Rf "$VS"
-	log "Installing Visual Studio $MIN_VISUAL_STUDIO_VERSION to $VS..."
-	$SUDO cp -R "$VS_MOUNTPOINT/Visual Studio.app" /Applications
-	log "Unmounting $VS_DMG..."
-	hdiutil detach $VS_MOUNTPOINT -quiet
+	log "Xcode has additional platforms that must be downloaded ($MUST_INSTALL_RUNTIMES), so installing those."
 
-	VS_ACTUAL_VERSION=`/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$VS/Contents/Info.plist"`
-	ok "Visual Studio $VS_ACTUAL_VERSION provisioned"
+	log "Executing '$SUDO pkill -9 -f CoreSimulator.framework'"
+	$SUDO pkill -9 -f "CoreSimulator.framework" || true
+	if ! xcodebuild_download_selected_platforms; then
+		log "Executing '$XCODE_DEVELOPER_ROOT/usr/bin/simctl runtime list -v"
+		"$XCODE_DEVELOPER_ROOT/usr/bin/simctl" runtime list -v 2>&1 | sed 's/^/        /'
+		# Don't exit here, just hope for the best instead.
+		(
+			set +x
+			echo "##vso[task.logissue type=warning;sourcepath=system-dependencies.sh]Failed to download all simulator platforms, this may result in problems executing tests in the simulator."
+			set -x
+		)
+	else
+		log "Executing '$XCODE_DEVELOPER_ROOT/usr/bin/simctl runtime list -v"
+		"$XCODE_DEVELOPER_ROOT/usr/bin/simctl" runtime list -v 2>&1 | sed 's/^/        /'
+		log "Executing '$XCODE_DEVELOPER_ROOT/usr/bin/simctl list -v"
+		"$XCODE_DEVELOPER_ROOT/usr/bin/simctl" list -v 2>&1 | sed 's/^/        /'
+	fi
 
-	rm -f $VS_DMG
+	log "Executing '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -runFirstLaunch'"
+	$SUDO "$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -runFirstLaunch
+	log "Executed '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -runFirstLaunch'"
+
+	log "Finished installing Xcode platforms"
 }
 
 function run_xcode_first_launch ()
@@ -291,115 +567,80 @@ function run_xcode_first_launch ()
 		return
 	fi
 
-	# Delete any cached files by xcodebuild, because other branches'
-	# system-dependencies.sh keep installing earlier versions of these
-	# packages manually, which means subsequent first launch checks will
-	# succeed because we've successfully run the first launch tasks once
-	# (and this is cached), while someone else (we!) overwrote with
-	# earlier versions (bypassing the cache).
-	#
-	# Removing the cache will make xcodebuild realize older packages are installed,
-	# and (re-)install any newer packages.
-	#
-	# We'll be able to remove this logic one day, when all branches in use are
-	# using 'xcodebuild -runFirstLaunch' instead of manually installing
-	# packages.
-	find /var/folders -name '*com.apple.dt.Xcode.InstallCheckCache*' -print -delete 2>/dev/null | sed 's/^\(.*\)$/        Deleted Xcode cache file: \1 (this is normal)/' || true
 	if ! "$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -checkFirstLaunchStatus; then
 		if ! test -z "$PROVISION_XCODE"; then
-			# Remove sudo's cache as well, otherwise nothing will happen.
-			$SUDO find /var/folders -name '*com.apple.dt.Xcode.InstallCheckCache*' -print -delete 2>/dev/null | sed 's/^\(.*\)$/        Deleted Xcode cache file: \1 (this is normal)/' || true
 			# Run the first launch tasks
 			log "Executing '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -runFirstLaunch'"
 			$SUDO "$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -runFirstLaunch
 			log "Executed '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -runFirstLaunch'"
 		else
-			fail "Xcode has pending first launch tasks. Execute '$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -runFirstLaunch' to execute those tasks."
+			fail "Xcode has pending first launch tasks. Execute 'make fix-xcode-first-run' to execute those tasks."
 			return
 		fi
 	fi
 }
 
 function install_specific_xcode () {
-	local XCODE_URL=`grep XCODE$1_URL= Make.config | sed 's/.*=//'`
-	local XCODE_VERSION=`grep XCODE$1_VERSION= Make.config | sed 's/.*=//'`
-	local XCODE_DEVELOPER_ROOT="$2"
-	local XCODE_ROOT="$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")"
+	local XCODE_URL
+	local XCODE_VERSION
+	local XCODE_NAME
+	local XCODE_ARCHIVE
+	local INSTALLER_ARGS=(install)
 
-	if test -z $XCODE_URL; then
+	XCODE_URL=$(grep "XCODE$1_URL=" Make.config | sed 's/.*=//')
+	XCODE_VERSION=$(grep "XCODE$1_VERSION=" Make.config | sed 's/.*=//')
+
+	if test -z "$SUDO"; then
+		INSTALLER_ARGS+=(--no-sudo)
+	fi
+
+	# CI downloads an immutable Universal Package from Azure Artifacts and hands us the
+	# directory it was expanded into; install-xcode.sh validates it before installing.
+	if test -n "$XCODE_PACKAGE_DIRECTORY"; then
+		INSTALLER_ARGS+=(--package-directory "$XCODE_PACKAGE_DIRECTORY")
+		"$PWD/tools/devops/automation/scripts/bash/install-xcode.sh" "${INSTALLER_ARGS[@]}"
+		return
+	fi
+
+	if test -z "$XCODE_URL"; then
 		fail "No XCODE$1_URL set in Make.config, cannot provision"
 		return
 	fi
 
-	mkdir -p $PROVISION_DOWNLOAD_DIR
+	# CI must never silently fall back to the storage-account URL: that dependency is
+	# exactly what the Universal Package replaced, and there are no credentials for it
+	# here, so it would fail obscurely much later.
+	if test -n "${TF_BUILD:-}"; then
+		fail "Xcode $XCODE_VERSION is not installed and no Xcode Universal Package was supplied. Re-run the 'Download Xcode Universal Package' step."
+		return
+	fi
+
+	mkdir -p "$PROVISION_DOWNLOAD_DIR"
 	log "Downloading Xcode $XCODE_VERSION from $XCODE_URL to $PROVISION_DOWNLOAD_DIR..."
-	local XCODE_NAME=`basename $XCODE_URL`
-	local XCODE_DMG=$PROVISION_DOWNLOAD_DIR/$XCODE_NAME
+	XCODE_NAME=$(basename "$XCODE_URL")
+	XCODE_ARCHIVE="$PROVISION_DOWNLOAD_DIR/$XCODE_NAME"
 
-	# To test this script with new Xcode versions, copy the downloaded file to $XCODE_DMG,
-	# uncomment the following curl line, and run ./system-dependencies.sh --provision-xcode
+	# To test this script with a local archive, place it in ~/Downloads and run
+	# ./system-dependencies.sh --provision-xcode.
 	if test -f "$HOME/Downloads/$XCODE_NAME"; then
-		log "Found Xcode $XCODE_VERSION in your ~/Downloads folder, copying that version instead."
-		cp "$HOME/Downloads/$XCODE_NAME" "$XCODE_DMG"
+		log "Found $XCODE_NAME in your ~/Downloads folder, copying that version to $XCODE_ARCHIVE instead of re-downloading it."
+		cp "$HOME/Downloads/$XCODE_NAME" "$XCODE_ARCHIVE"
 	else
-		curl -L $XCODE_URL > $XCODE_DMG
+		curl --fail --location --retry 5 --retry-all-errors "$XCODE_URL" > "$XCODE_ARCHIVE"
 	fi
 
-	if [[ ${XCODE_DMG: -4} == ".dmg" ]]; then
-		local XCODE_MOUNTPOINT=$PROVISION_DOWNLOAD_DIR/$XCODE_NAME-mount
-		log "Mounting $XCODE_DMG into $XCODE_MOUNTPOINT..."
-		hdiutil attach $XCODE_DMG -mountpoint $XCODE_MOUNTPOINT -quiet -nobrowse
-		log "Removing previous Xcode from $XCODE_ROOT"
-		rm -Rf $XCODE_ROOT
-		log "Installing Xcode $XCODE_VERSION to $XCODE_ROOT..."
-		cp -R $XCODE_MOUNTPOINT/*.app $XCODE_ROOT
-		log "Unmounting $XCODE_DMG..."
-		hdiutil detach $XCODE_MOUNTPOINT -quiet
-	elif [[ ${XCODE_DMG: -4} == ".xip" ]]; then
-		log "Extracting $XCODE_DMG..."
-		pushd . > /dev/null
-		cd $PROVISION_DOWNLOAD_DIR
-		# make sure there's nothing interfering
-		rm -Rf *.app
-		rm -Rf $XCODE_ROOT
-		# extract
-		/System/Library/CoreServices/Applications/Archive\ Utility.app/Contents/MacOS/Archive\ Utility "$XCODE_DMG"
-		log "Installing Xcode $XCODE_VERSION to $XCODE_ROOT..."
-		mv *.app $XCODE_ROOT
-		popd > /dev/null
+	if [[ "$XCODE_ARCHIVE" == *.xip ]]; then
+		INSTALLER_ARGS+=(--archive "$XCODE_ARCHIVE")
+		"$PWD/tools/devops/automation/scripts/bash/install-xcode.sh" "${INSTALLER_ARGS[@]}"
+	elif [[ "$XCODE_ARCHIVE" == *.dmg ]]; then
+		fail "DMG-based Xcode provisioning is no longer supported. Provide an Apple-signed XIP archive."
+		return
 	else
-		fail "Don't know how to install $XCODE_DMG"
-	fi
-	rm -f $XCODE_DMG
-
-	log "Removing any com.apple.quarantine attributes from the installed Xcode"
-	$SUDO xattr -d -r com.apple.quarantine $XCODE_ROOT
-
-	if is_at_least_version $XCODE_VERSION 5.0; then
-		log "Accepting Xcode license"
-		$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -license accept
+		fail "Don't know how to install $XCODE_ARCHIVE"
+		return
 	fi
 
-	if is_at_least_version "$XCODE_VERSION" 9.0; then
-		run_xcode_first_launch "$XCODE_VERSION" "$XCODE_DEVELOPER_ROOT"
-	elif is_at_least_version $XCODE_VERSION 8.0; then
-		PKGS="MobileDevice.pkg MobileDeviceDevelopment.pkg XcodeSystemResources.pkg"
-		for pkg in $PKGS; do
-			if test -f "$XCODE_DEVELOPER_ROOT/../Resources/Packages/$pkg"; then
-				log "Installing $pkg"
-				$SUDO /usr/sbin/installer -dumplog -verbose -pkg "$XCODE_DEVELOPER_ROOT/../Resources/Packages/$pkg" -target /
-				log "Installed $pkg"
-			else
-				log "Not installing $pkg because it doesn't exist."
-			fi
-		done
-	fi
-
-	log "Executing '$SUDO xcode-select -s $XCODE_DEVELOPER_ROOT'"
-	$SUDO xcode-select -s $XCODE_DEVELOPER_ROOT
-	log "Clearing xcrun cache..."
-	xcrun -k
-
+	rm -f "$XCODE_ARCHIVE"
 	ok "Xcode $XCODE_VERSION provisioned"
 }
 
@@ -412,7 +653,7 @@ function install_coresimulator ()
 	local TARGET_CORESIMULATOR_VERSION
 	local CURRENT_CORESIMULATOR_VERSION
 
-	XCODE_DEVELOPER_ROOT=$(grep XCODE_DEVELOPER_ROOT= Make.config | sed 's/.*=//')
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root)
 	XCODE_ROOT=$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")
 	CORESIMULATOR_PKG=$XCODE_ROOT/Contents/Resources/Packages/XcodeSystemResources.pkg
 
@@ -437,15 +678,22 @@ function install_coresimulator ()
 	local CURRENT_CORESIMULATOR_PATH=/Library/Developer/PrivateFrameworks/CoreSimulator.framework/Versions/A/CoreSimulator
 	local CURRENT_CORESIMULATOR_VERSION=0.0
 	if test -f "$CURRENT_CORESIMULATOR_PATH"; then
-		CURRENT_CORESIMULATOR_VERSION=$(otool -L $CURRENT_CORESIMULATOR_PATH | grep "$CURRENT_CORESIMULATOR_PATH.*current version" | sed -e 's/.*current version//' -e 's/)//' -e 's/[[:space:]]//g')
+		CURRENT_CORESIMULATOR_VERSION=$(otool -L $CURRENT_CORESIMULATOR_PATH | grep "$CURRENT_CORESIMULATOR_PATH.*current version" | sed -e 's/.*current version//' -e 's/)//' -e 's/[[:space:]]//g' | uniq)
 	fi
 
-	# Either version may be composed of either 2 or 3 numbers.
+	# Either version may be composed of either 1, 2 or 3 numbers.
 	# We only care about the first two, so strip off the 3rd number if it exists.
 	# shellcheck disable=SC2001
 	CURRENT_CORESIMULATOR_VERSION=$(echo "$CURRENT_CORESIMULATOR_VERSION" | sed 's/\([0-9]*[.][0-9]*\).*/\1/')
 	# shellcheck disable=SC2001
 	TARGET_CORESIMULATOR_VERSION=$(echo "$TARGET_CORESIMULATOR_VERSION" | sed 's/\([0-9]*[.][0-9]*\).*/\1/')
+	# Add a .0 if we only got one number
+	if [[ "${CURRENT_CORESIMULATOR_VERSION/./}" == "${CURRENT_CORESIMULATOR_VERSION}" ]]; then
+		CURRENT_CORESIMULATOR_VERSION=$CURRENT_CORESIMULATOR_VERSION.0
+	fi
+	if [[ "${TARGET_CORESIMULATOR_VERSION/./}" == "${TARGET_CORESIMULATOR_VERSION}" ]]; then
+		TARGET_CORESIMULATOR_VERSION=$TARGET_CORESIMULATOR_VERSION.0
+	fi
 
 	# Compare versions to see if we got what we need
 	if [[ x"$TARGET_CORESIMULATOR_VERSION" == x"$CURRENT_CORESIMULATOR_VERSION" ]]; then
@@ -471,262 +719,194 @@ function install_coresimulator ()
 }
 
 function check_specific_xcode () {
-	local XCODE_DEVELOPER_ROOT=`grep XCODE$1_DEVELOPER_ROOT= Make.config | sed 's/.*=//'`
-	local XCODE_VERSION=`grep XCODE$1_VERSION= Make.config | sed 's/.*=//'`
-	local XCODE_ROOT=$(dirname `dirname $XCODE_DEVELOPER_ROOT`)
-	local ENABLE_XAMARIN=$(grep -s ^ENABLE_XAMARIN= Make.config.local configure.inc | sed 's/.*=//')
-	
-	if ! test -d $XCODE_DEVELOPER_ROOT; then
+	local XCODE_DEVELOPER_ROOT
+	local XCODE_VERSION
+	local XCODE_ROOT
+	local INSTALLER="$PWD/tools/devops/automation/scripts/bash/install-xcode.sh"
+	local INSTALLER_ARGS=(verify --quiet)
+
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root "$1")
+	XCODE_VERSION=$(grep "XCODE$1_VERSION=" Make.config | sed 's/.*=//')
+	XCODE_ROOT=$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")
+
+	if ! "$INSTALLER" "${INSTALLER_ARGS[@]}"; then
 		if ! test -z $PROVISION_XCODE; then
-			if ! test -z $ENABLE_XAMARIN; then
-				install_specific_xcode "$1" "$XCODE_DEVELOPER_ROOT"
-			else
-				fail "Automatic provisioning of Xcode is only supported for provisioning internal build bots."
-				fail "Please download and install Xcode $XCODE_VERSION here: https://developer.apple.com/downloads/index.action?name=Xcode"
-			fi
+			install_specific_xcode "$1" "$XCODE_DEVELOPER_ROOT"
 		else
+			# The probe above is quiet so that the common "not installed yet" case doesn't
+			# look like an error; repeat it verbosely so the actual reason is visible.
+			"$INSTALLER" verify || true
 			fail "You must install Xcode ($XCODE_VERSION) in $XCODE_ROOT. You can download Xcode $XCODE_VERSION here: https://developer.apple.com/downloads/index.action?name=Xcode"
+			return
 		fi
-		return
-	else
-		if is_at_least_version $XCODE_VERSION 5.0; then
-			if ! $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -license check >/dev/null 2>&1; then
-				if ! test -z $PROVISION_XCODE; then
-					$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild -license accept
-				else
-					fail "The license for Xcode $XCODE_VERSION has not been accepted. Execute '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild' to review the license and accept it."
-					return
-				fi
-			fi
-		fi
-
-		run_xcode_first_launch "$XCODE_VERSION" "$XCODE_DEVELOPER_ROOT"
 	fi
 
-	local XCODE_ACTUAL_VERSION=`/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$XCODE_DEVELOPER_ROOT/../version.plist"`
-	# this is a hard match, having 4.5 when requesting 4.4 is not OK (but 4.4.1 is OK)
-	if [[ ! "x$XCODE_ACTUAL_VERSION" =~ "x$XCODE_VERSION" ]]; then
-		fail "You must install Xcode $XCODE_VERSION in $XCODE_ROOT (found $XCODE_ACTUAL_VERSION).  You can download Xcode $XCODE_VERSION here: https://developer.apple.com/downloads/index.action?name=Xcode";
+	if ! test -z $PROVISION_XCODE; then
+		INSTALLER_ARGS=(reconcile)
+		if test -z "$SUDO"; then
+			INSTALLER_ARGS+=(--no-sudo)
+		fi
+		"$INSTALLER" "${INSTALLER_ARGS[@]}"
+	elif ! "$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -license check >/dev/null 2>&1; then
+		fail "The license for Xcode $XCODE_VERSION has not been accepted. Execute '$SUDO $XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild' to review the license and accept it."
 		return
 	fi
 
-	if test -z "$1"; then
-		local XCODE_SELECT=$(xcode-select -p)
-		if [[ "x$XCODE_SELECT" != "x$XCODE_DEVELOPER_ROOT" ]]; then
-			if ! test -z $PROVISION_XCODE; then
-				log "Executing '$SUDO xcode-select -s $XCODE_DEVELOPER_ROOT'"
-				$SUDO xcode-select -s $XCODE_DEVELOPER_ROOT
-				log "Clearing xcrun cache..."
-				xcrun -k
-			else
-				fail "'xcode-select -p' does not point to $XCODE_DEVELOPER_ROOT, it points to $XCODE_SELECT. Execute '$SUDO xcode-select -s $XCODE_DEVELOPER_ROOT' to fix."
-			fi
-		fi
-	fi
-
-	ok "Found Xcode $XCODE_ACTUAL_VERSION in $XCODE_ROOT"
+	run_xcode_first_launch "$XCODE_VERSION" "$XCODE_DEVELOPER_ROOT"
+	ok "Found Xcode $XCODE_VERSION in $XCODE_ROOT"
 }
 
 function check_xcode () {
 	if ! test -z $IGNORE_XCODE; then return; fi
 
 	# must have latest Xcode in /Applications/Xcode<version>.app
-	check_specific_xcode
+	check_specific_xcode ""
 	install_coresimulator
-	check_specific_xcode "94"
 
-	local XCODE_DEVELOPER_ROOT=`grep ^XCODE_DEVELOPER_ROOT= Make.config | sed 's/.*=//'`
-	local IOS_SDK_VERSION=`grep ^IOS_SDK_VERSION= Make.config | sed 's/.*=//'`
-	local OSX_SDK_VERSION=`grep ^OSX_SDK_VERSION= Make.config | sed 's/.*=//'`
-	local WATCH_SDK_VERSION=`grep ^WATCH_SDK_VERSION= Make.config | sed 's/.*=//'`
-	local TVOS_SDK_VERSION=`grep ^TVOS_SDK_VERSION= Make.config | sed 's/.*=//'`
+	local IOS_SDK_VERSION MACOS_SDK_VERSION TVOS_SDK_VERSION
+	local XCODE_DEVELOPER_ROOT
+
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root)
+	IOS_SDK_VERSION=$(grep ^IOS_NUGET_OS_VERSION= Make.versions | sed -e 's/.*=//')
+	MACOS_SDK_VERSION=$(grep ^MACOS_NUGET_OS_VERSION= Make.versions | sed -e 's/.*=//')
+	TVOS_SDK_VERSION=$(grep ^TVOS_NUGET_OS_VERSION= Make.versions | sed -e 's/.*=//')
+
+	download_xcode_platforms "$XCODE_DEVELOPER_ROOT" "$TVOS_SDK_VERSION"
 
 	local D=$XCODE_DEVELOPER_ROOT/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator${IOS_SDK_VERSION}.sdk
 	if test ! -d $D -a -z "$FAIL"; then
 		fail "The directory $D does not exist. If you've updated the Xcode location it means you also need to update IOS_SDK_VERSION in Make.config."
 	fi
 
-	local D=$XCODE_DEVELOPER_ROOT/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SDK_VERSION}.sdk
+	local D=$XCODE_DEVELOPER_ROOT/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOS_SDK_VERSION}.sdk
 	if test ! -d $D -a -z "$FAIL"; then
-		fail "The directory $D does not exist. If you've updated the Xcode location it means you also need to update OSX_SDK_VERSION in Make.config."
+		fail "The directory $D does not exist. If you've updated the Xcode location it means you also need to update MACOS_SDK_VERSION in Make.config."
 	fi
 
 	local D=$XCODE_DEVELOPER_ROOT/Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS${TVOS_SDK_VERSION}.sdk
 	if test ! -d $D -a -z "$FAIL"; then
 		fail "The directory $D does not exist. If you've updated the Xcode location it means you also need to update TVOS_SDK_VERSION in Make.config."
 	fi
-
-	local D=$XCODE_DEVELOPER_ROOT/Platforms/WatchOS.platform/Developer/SDKs/WatchOS${WATCH_SDK_VERSION}.sdk
-	if test ! -d $D -a -z "$FAIL"; then
-		fail "The directory $D does not exist. If you've updated the Xcode location it means you also need to update WATCH_SDK_VERSION in Make.config."
-	fi
 }
 
-function check_mono () {
-	if ! test -z $IGNORE_MONO; then return; fi
+function check_xcode_components ()
+{
+	if ! test -z "$IGNORE_XCODE_COMPONENTS"; then return; fi
 
-	MONO_VERSION_FILE=/Library/Frameworks/Mono.framework/Versions/Current/VERSION
-	if ! /Library/Frameworks/Mono.framework/Commands/mono --version 2>/dev/null >/dev/null; then
-		if ! test -z $PROVISION_MONO; then
-			install_mono
+	local COMPONENTS=(MetalToolchain)
+
+	for comp in "${COMPONENTS[@]}"; do
+		componentInfo=$(xcrun xcodebuild -showComponent "$comp")
+		local NEEDS_INSTALL=
+		local NEEDS_UPDATE=
+		if [[ "$componentInfo" =~ .*Status:" "installedUpdateAvailable.* ]]; then
+			NEEDS_UPDATE=1
+		elif [[ "$componentInfo" =~ .*Status:" "installed.* ]]; then
+			NEEDS_INSTALL=
 		else
-			fail "You must install the Mono MDK. Download URL: $MIN_MONO_URL"
-			return
+			NEEDS_INSTALL=1
 		fi
-	elif ! test -e $MONO_VERSION_FILE; then
-		if ! test -z $PROVISION_MONO; then
-			install_mono
-		else
-			fail "Could not find Mono's VERSION file, you must install the Mono MDK. Download URL: $MIN_MONO_URL"
-			return
+
+		if test -z "$NEEDS_INSTALL$NEEDS_UPDATE"; then
+			ok "The Xcode component ${COLOR_BLUE}$comp${COLOR_CLEAR} is installed."
+		elif test -z "$PROVISION_XCODE_COMPONENTS"; then
+			if test -n "$NEEDS_UPDATE"; then
+				fail "The Xcode component ${COLOR_BLUE}$comp${COLOR_RESET} is installed, but an update is available. Execute ${COLOR_MAGENTA}xcrun xcodebuild -downloadComponent $comp${COLOR_RESET} or ${COLOR_MAGENTA}./system-dependencies.sh --provision-xcode-components${COLOR_RESET} to install."
+			else
+				fail "The Xcode component ${COLOR_BLUE}$comp${COLOR_RESET} is not installed. Execute ${COLOR_MAGENTA}xcrun xcodebuild -downloadComponent $comp${COLOR_RESET} or ${COLOR_MAGENTA}./system-dependencies.sh --provision-xcode-components${COLOR_RESET} to install."
+			fi
+			fail "Alternatively you can ${COLOR_MAGENTA}export IGNORE_XCODE_COMPONENTS=1${COLOR_RED} to skip this check."
+		elif test -n "$PROVISION_XCODE_COMPONENTS"; then
+			log "Installing the Xcode component ${COLOR_BLUE}$comp${COLOR_CLEAR} by executing ${COLOR_BLUE}xcrun xcodebuild -downloadComponent $comp${COLOR_CLEAR}..."
+			xcrun xcodebuild -downloadComponent "$comp"
+
+			ok "Successfully installed the Xcode component ${COLOR_BLUE}$comp${COLOR_CLEAR}."
 		fi
-	fi
+	done
 
-	MIN_MONO_VERSION=`grep MIN_MONO_VERSION= Make.config | sed 's/.*=//'`
-	MAX_MONO_VERSION=`grep MAX_MONO_VERSION= Make.config | sed 's/.*=//'`
-
-	ACTUAL_MONO_VERSION=`cat $MONO_VERSION_FILE`
-	if ! is_at_least_version $ACTUAL_MONO_VERSION $MIN_MONO_VERSION; then
-		if ! test -z $PROVISION_MONO; then
-			install_mono
-			ACTUAL_MONO_VERSION=`cat $MONO_VERSION_FILE`
-		else
-			MIN_MONO_URL=$(grep ^MIN_MONO_URL= Make.config | sed 's/.*=//')
-			fail "You must have at least Mono $MIN_MONO_VERSION, found $ACTUAL_MONO_VERSION. Download URL: $MIN_MONO_URL"
-			return
-		fi
-	elif [[ "$ACTUAL_MONO_VERSION" == "$MAX_MONO_VERSION" ]]; then
-		: # this is ok
-	elif is_at_least_version $ACTUAL_MONO_VERSION $MAX_MONO_VERSION; then
-		if ! test -z $PROVISION_MONO; then
-			install_mono
-			ACTUAL_MONO_VERSION=`cat $MONO_VERSION_FILE`
-		else
-			fail "Your mono version is too new, max version is $MAX_MONO_VERSION, found $ACTUAL_MONO_VERSION."
-			fail "You may edit Make.config and change MAX_MONO_VERSION to your actual version to continue the"
-			fail "build (unless you're on a release branch). Once the build completes successfully, please"
-			fail "commit the new MAX_MONO_VERSION value."
-			fail "Alternatively you can ${COLOR_MAGENTA}export IGNORE_MONO=1${COLOR_RED} to skip this check."
-			return
-		fi
-	fi
-
-	if ! which mono > /dev/null 2>&1; then
-		fail "Mono is not in PATH. You must add '/Library/Frameworks/Mono.framework/Versions/Current/Commands' to PATH. Current PATH is: $PATH".
-		return
-	fi
-
-	ok "Found Mono $ACTUAL_MONO_VERSION (at least $MIN_MONO_VERSION and not more than $MAX_MONO_VERSION is required)"
+	log "Clearing xcrun cache..."
+	xcrun -k
 }
 
-function install_autoconf () {
+function install_shellcheck () {
 	if ! brew --version >& /dev/null; then
-		fail "Asked to install autoconf, but brew is not installed."
+		fail "Asked to install shellcheck, but brew is not installed."
 		return
 	fi
 
-	brew install autoconf
+	ok "Installing ${COLOR_BLUE}shellcheck${COLOR_RESET}..."
+	brew install shellcheck
 }
 
-function install_libtool () {
+function install_yamllint () {
 	if ! brew --version >& /dev/null; then
-		fail "Asked to install libtool, but brew is not installed."
+		fail "Asked to install yamllint, but brew is not installed."
 		return
 	fi
 
-	brew install libtool
+	ok "Installing ${COLOR_BLUE}yamllint${COLOR_RESET}..."
+	brew install yamllint
 }
 
-function install_automake () {
+function install_python3 () {
 	if ! brew --version >& /dev/null; then
-		fail "Asked to install automake, but brew is not installed."
+		fail "Asked to install python3, but brew is not installed."
 		return
 	fi
 
-	brew install automake
+	ok "Installing ${COLOR_BLUE}python3${COLOR_RESET}..."
+	brew install python3
 }
 
-
-function check_autotools () {
-	if ! test -z $IGNORE_AUTOTOOLS; then return; fi
+function check_shellcheck () {
+	if ! test -z $IGNORE_SHELLCHECK; then return; fi
 
 IFStmp=$IFS
 IFS='
 '
-	if AUTOCONF_VERSION=($(autoconf --version 2>/dev/null)); then
-		ok "Found ${AUTOCONF_VERSION[0]} (no specific version is required)"
-	elif ! test -z $PROVISION_AUTOTOOLS; then
-		install_autoconf
+	if SHELLCHECK_VERSION=($(shellcheck --version 2>/dev/null)); then
+		ok "Found shellcheck ${SHELLCHECK_VERSION[1]} (no specific version is required)"
+	elif ! test -z $PROVISION_SHELLCHECK; then
+		install_shellcheck
 	else
-		fail "You must install autoconf, read the README.md for instructions"
+		fail "You must install shellcheck. The easiest way is to use homebrew, and execute ${COLOR_MAGENTA}brew install shellcheck${COLOR_RESET}."
 	fi
 
-	if ! LIBTOOL=$(which glibtool 2>/dev/null); then
-		LIBTOOL=$(which libtool)
-	fi
-
-	if LIBTOOL_VERSION=($($LIBTOOL --version 2>/dev/null )); then
-		ok "Found ${LIBTOOL_VERSION[0]} (no specific version is required)"
-	elif ! test -z $PROVISION_AUTOTOOLS; then
-		install_libtool
-	else
-		fail "You must install libtool, read the README.md for instructions"
-	fi
-
-	if AUTOMAKE_VERSION=($(automake --version 2>/dev/null)); then
-		ok "Found ${AUTOMAKE_VERSION[0]} (no specific version is required)"
-	elif ! test -z $PROVISION_AUTOTOOLS; then
-		install_automake
-	else
-		fail "You must install automake, read the README.md for instructions"
-	fi
 IFS=$IFS_tmp
 }
 
-function check_visual_studio () {
-	if ! test -z $IGNORE_VISUAL_STUDIO; then return; fi
+function check_yamllint () {
+	if ! test -z $IGNORE_YAMLLINT; then return; fi
 
-	VS="/Applications/Visual Studio.app"
-	local VS_URL=`grep MIN_VISUAL_STUDIO_URL= Make.config | sed 's/.*=//'`
-	if ! test -d "$VS"; then
-		if ! test -z $PROVISION_VS; then
-			install_visual_studio
-		else
-			fail "You must install Visual Studio, from http://www.monodevelop.com/download/"
-		fi
-		return
+IFStmp=$IFS
+IFS='
+'
+	if YAMLLINT_VERSION=($(yamllint --version 2>/dev/null)); then
+		ok "Found ${YAMLLINT_VERSION[0]} (no specific version is required)"
+	elif ! test -z $PROVISION_YAMLLINT; then
+		install_yamllint
+	else
+		fail "You must install yamllint. The easiest way is to use homebrew, and execute ${COLOR_MAGENTA}brew install yamllint${COLOR_RESET}."
 	fi
 
-	MIN_VISUAL_STUDIO_VERSION=`grep MIN_VISUAL_STUDIO_VERSION= Make.config | sed 's/.*=//'`
-	MAX_VISUAL_STUDIO_VERSION=`grep MAX_VISUAL_STUDIO_VERSION= Make.config | sed 's/.*=//'`
-	VS_ACTUAL_VERSION=`/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$VS/Contents/Info.plist"`
-	if ! is_at_least_version $VS_ACTUAL_VERSION $MIN_VISUAL_STUDIO_VERSION; then
-		if ! test -z $PROVISION_VS; then
-			install_visual_studio
-			VS_ACTUAL_VERSION=`/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$VS/Contents/Info.plist"`
-		else
-			fail "You must have at least Visual Studio $MIN_VISUAL_STUDIO_VERSION (found $VS_ACTUAL_VERSION). Download URL: $VS_URL"
-		fi
-		return
-	elif [[ "$VS_ACTUAL_VERSION" == "$MAX_VISUAL_STUDIO_VERSION" ]]; then
-		: # this is ok
-	elif is_at_least_version $VS_ACTUAL_VERSION $MAX_VISUAL_STUDIO_VERSION; then
-		if ! test -z $PROVISION_VS; then
-			install_visual_studio
-			VS_ACTUAL_VERSION=`/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$VS/Contents/Info.plist"`
-		else
-			fail "Your Visual Studio version is too new, max version is $MAX_VISUAL_STUDIO_VERSION, found $VS_ACTUAL_VERSION."
-			fail "You may edit Make.config and change MAX_VISUAL_STUDIO_VERSION to your actual version to continue the"
-			fail "build (unless you're on a release branch). Once the build completes successfully, please"
-			fail "commit the new MAX_VISUAL_STUDIO_VERSION value."
-			fail "Alternatively you can download an older version from:"
-			fail "    $VS_URL,"
-			fail "or you can ${COLOR_MAGENTA}export IGNORE_VISUAL_STUDIO=1${COLOR_RED} to skip this check."
-		fi
-		return
+IFS=$IFS_tmp
+}
+
+function check_python3 () {
+	if ! test -z $IGNORE_PYTHON3; then return; fi
+
+IFStmp=$IFS
+IFS='
+'
+	if PYTHON3_VERSION=$(python3 --version 2>/dev/null); then
+		ok "Found $PYTHON3_VERSION (no specific version is required)"
+	elif ! test -z $PROVISION_PYTHON3; then
+		install_python3
+	else
+		fail "You must install python3. The easiest way is to use homebrew, and execute ${COLOR_MAGENTA}brew install python3${COLOR_RESET}."
 	fi
 
-	ok "Found Visual Studio $VS_ACTUAL_VERSION (at least $MIN_VISUAL_STUDIO_VERSION and not more than $MAX_VISUAL_STUDIO_VERSION is required)"
+IFS=$IFS_tmp
 }
 
 function check_osx_version () {
@@ -743,37 +923,20 @@ function check_osx_version () {
 	ok "Found OSX $ACTUAL_OSX_VERSION (at least $MIN_OSX_BUILD_VERSION is required)"
 }
 
-function install_cmake () {
-	if ! brew --version >& /dev/null; then
-		fail "Asked to install cmake, but brew is not installed."
+function check_checkout_dir () {
+	# Skip without Xcode - this check is macOS-specific
+	if test -n "$NO_XCODE"; then
 		return
 	fi
-
-	brew install cmake
-}
-
-function check_cmake () {
-	if ! test -z $IGNORE_CMAKE; then return; fi
-
-	local MIN_CMAKE_VERSION=`grep MIN_CMAKE_VERSION= Make.config | sed 's/.*=//'`
-	local CMAKE_URL=`grep CMAKE_URL= Make.config | sed 's/.*=//'`
-
-	if ! cmake --version &> /dev/null; then
-		if ! test -z $PROVISION_CMAKE; then
-			install_cmake
-		else
-			fail "You must install CMake ($CMAKE_URL)"
+	
+	# use apple script to get the possibly translated special folders and check that we are not a subdir
+	for special in documents downloads desktop; do
+		path=$(osascript -e "set result to POSIX path of (path to $special folder as string)")
+		if [[ $PWD == $path* ]]; then
+			fail "Your checkout is under $path which is a special path. This can result in problems running the tests."
 		fi
-		return
-	fi
-
-	ACTUAL_CMAKE_VERSION=$(cmake --version | grep "cmake version" | sed 's/cmake version //')
-	if ! is_at_least_version $ACTUAL_CMAKE_VERSION $MIN_CMAKE_VERSION; then
-		fail "You must have at least CMake $MIN_CMAKE_VERSION (found $ACTUAL_CMAKE_VERSION)"
-		return
-	fi
-
-	ok "Found CMake $ACTUAL_CMAKE_VERSION (at least $MIN_CMAKE_VERSION is required)"
+	done
+	ok "Checkout location will not result in test problems."
 }
 
 function install_7z () {
@@ -812,110 +975,120 @@ IFS='
 		ok "Found Homebrew ($HOMEBREW_VERSION)"
 	elif ! test -z $PROVISION_HOMEBREW; then
 		log "Installing Homebrew..."
-		/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+		/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"	
 		HOMEBREW_VERSION=($(brew --version 2>/dev/null))
 		log "Installed Homebrew ($HOMEBREW_VERSION)"
 	else
-		warn "Could not find Homebrew. Homebrew is required to auto-provision some dependencies (autotools, cmake), but not required otherwise."
+		warn "Could not find Homebrew. Homebrew is required to auto-provision some dependencies (p7zip), but not required otherwise."
 	fi
 IFS=$IFS_tmp
 }
 
-function install_objective_sharpie () {
-	local SHARPIE_URL=$(grep MIN_SHARPIE_URL= Make.config | sed 's/.*=//')
-	local MIN_SHARPIE_VERSION=$(grep MIN_SHARPIE_VERSION= Make.config | sed 's/.*=//')
-
-	if test -z "$SHARPIE_URL"; then
-		fail "No MIN_SHARPIE_URL set in Make.config, cannot provision Objective Sharpie"
-		return
-	fi
-
-	mkdir -p "$PROVISION_DOWNLOAD_DIR"
-	log "Downloading Objective Sharpie $MIN_SHARPIE_VERSION from $SHARPIE_URL to $PROVISION_DOWNLOAD_DIR..."
-	local SHARPIE_NAME=$(basename "$SHARPIE_URL")
-	local SHARPIE_PKG=$PROVISION_DOWNLOAD_DIR/$SHARPIE_NAME
-	curl -L "$SHARPIE_URL" > "$SHARPIE_PKG"
-
-	log "Installing Objective-Sharpie $MIN_SHARPIE_VERSION from $SHARPIE_URL..."
-	sudo installer -pkg "$SHARPIE_PKG" -target /
-
-	rm -f "$SHARPIE_PKG"
-}
-
-function check_objective_sharpie () {
-	if ! test -z $IGNORE_SHARPIE; then return; fi
-
-	SHARPIE_URL=$(grep MIN_SHARPIE_URL= Make.config | sed 's/.*=//')
-	MIN_SHARPIE_VERSION=$(grep MIN_SHARPIE_VERSION= Make.config | sed 's/.*=//')
-	MAX_SHARPIE_VERSION=$(grep MAX_SHARPIE_VERSION= Make.config | sed 's/.*=//')
-
-	if ! test -f /Library/Frameworks/ObjectiveSharpie.framework/Versions/Current/Version; then
-		if ! test -z "$PROVISION_SHARPIE"; then
-			install_objective_sharpie
-			ACTUAL_SHARPIE_VERSION=$(cat /Library/Frameworks/ObjectiveSharpie.framework/Versions/Current/Version)
-		else
-			if test -z $OPTIONAL_SHARPIE; then
-				fail "You must install Objective Sharpie, at least $MIN_SHARPIE_VERSION (no Objective Sharpie found). You can download it from $SHARPIE_URL"
-				fail "Alternatively you can ${COLOR_MAGENTA}export IGNORE_SHARPIE=1${COLOR_RED} to skip this check."
-			else
-				warn "You do not have Objective Sharpie installed (should be at least $MIN_SHARPIE_VERSION). You can download it from $SHARPIE_URL"
-			fi
-			return
-		fi
-	else
-		ACTUAL_SHARPIE_VERSION=$(cat /Library/Frameworks/ObjectiveSharpie.framework/Versions/Current/Version)
-		if ! is_at_least_version "$ACTUAL_SHARPIE_VERSION" "$MIN_SHARPIE_VERSION"; then
-			if ! test -z "$PROVISION_SHARPIE"; then
-				install_objective_sharpie
-				ACTUAL_SHARPIE_VERSION=$(cat /Library/Frameworks/ObjectiveSharpie.framework/Versions/Current/Version)
-			else
-				if test -z $OPTIONAL_SHARPIE; then
-					fail "You must have at least Objective Sharpie $MIN_SHARPIE_VERSION, found $ACTUAL_SHARPIE_VERSION. You can download it from $SHARPIE_URL"
-					fail "Alternatively you can ${COLOR_MAGENTA}export IGNORE_SHARPIE=1${COLOR_RED} to skip this check."
-				else
-					warn "You do not have have at least Objective Sharpie $MIN_SHARPIE_VERSION (found $ACTUAL_SHARPIE_VERSION). You can download it from $SHARPIE_URL"
-				fi
-				return
-			fi
-		elif [[ "$ACTUAL_SHARPIE_VERSION" == "$MAX_SHARPIE_VERSION" ]]; then
-			: # this is ok
-		elif is_at_least_version "$ACTUAL_SHARPIE_VERSION" "$MAX_SHARPIE_VERSION"; then
-			if ! test -z "$PROVISION_SHARPIE"; then
-				install_objective_sharpie
-				ACTUAL_SHARPIE_VERSION=$(cat /Library/Frameworks/ObjectiveSharpie.framework/Versions/Current/Version)
-			else
-				if test -z $OPTIONAL_SHARPIE; then
-					fail "Your Objective Sharpie version is too new, max version is $MAX_SHARPIE_VERSION, found $ACTUAL_SHARPIE_VERSION. We recommend you download $SHARPIE_URL"
-					fail "Alternatively you can ${COLOR_MAGENTA}export IGNORE_SHARPIE=1${COLOR_RED} to skip this check."
-				else
-					warn "You do not have have at most Objective Sharpie $MAX_SHARPIE_VERSION (found $ACTUAL_SHARPIE_VERSION). We recommend you download $SHARPIE_URL"
-				fi
-				return
-			fi
-		fi
-	fi
-
-	if test -z $OPTIONAL_SHARPIE; then
-		ok "Found Objective Sharpie $ACTUAL_SHARPIE_VERSION (at least $MIN_SHARPIE_VERSION and not more than $MAX_SHARPIE_VERSION is required)"
-	else
-		ok "Found Objective Sharpie $ACTUAL_SHARPIE_VERSION (at least $MIN_SHARPIE_VERSION and not more than $MAX_SHARPIE_VERSION is recommended)"
-	fi
-}
-
-function check_simulators ()
+# Download and install a simulator runtime from Apple's downloadable simulator index.
+#
+# This is the same index Xcode's UI uses to download simulators, and we need it because
+# 'xcodebuild -downloadPlatform' can't download the older simulators anymore with Xcode 27+
+# (Apple removed them from the platform catalog xcodebuild uses, but they're still available
+# in this index).
+#
+# $1: the simulator's os (iOS, tvOS, ...)
+# $2: the simulator's version (16.0, ...)
+function install_old_simulator_from_index ()
 {
-	if test -n "$IGNORE_SIMULATORS"; then return; fi
+	local os="$1"
+	local version="$2"
+
+	local platform
+	local dldir
+	local index_url
+	local query
+	local source
+	local expectedSize
+	local path
+	local dmg
+	local actualSize
+
+	case "$os" in
+		iOS)             platform=com.apple.platform.iphoneos ;;
+		tvOS)            platform=com.apple.platform.appletvos ;;
+		watchOS)         platform=com.apple.platform.watchos ;;
+		xrOS | visionOS) platform=com.apple.platform.xros ;;
+		*)
+			warn "Don't know the platform identifier for the $os simulator."
+			return 1
+			;;
+	esac
+
+	dldir="$SD_TMP_DIR/$os-$version-runtime"
+	rm -rf -- "$dldir"
+	mkdir -p "$dldir"
+
+	# This is the index Xcode uses to find downloadable simulator runtimes.
+	index_url=https://devimages-cdn.apple.com/downloads/xcode/simulators/index2.dvtdownloadableindex
+	log "Downloading the simulator runtime index from $index_url..."
+	if ! curl --fail --location --silent --show-error --max-time 120 "$index_url" --output "$dldir/index.plist"; then
+		warn "Failed to download the simulator runtime index."
+		return 1
+	fi
+	plutil -convert json -o "$dldir/index.json" "$dldir/index.plist"
+
+	# Find the download url (and expected file size) for the requested simulator in the index.
+	query=".downloadables[] | select(.platform == \"$platform\" and .simulatorVersion.version == \"$version\")"
+	source=$(jq -r "first($query) | .source // empty" "$dldir/index.json")
+	if test -z "$source"; then
+		warn "Could not find the $os $version simulator in the downloadable simulator index."
+		return 1
+	fi
+	expectedSize=$(jq -r "first($query) | .fileSize // empty" "$dldir/index.json")
+
+	# The runtime dmgs require a download authorization cookie. No account is needed, but Apple's
+	# cdn rejects requests without the cookie, and requesting the download path from developerservices2
+	# hands out the cookie without requiring any authentication.
+	path=$(printf '%s' "$source" | sed -E 's,^https?://[^/]+,,')
+	log "Fetching a download authorization cookie..."
+	if ! curl --fail --location --silent --show-error --max-time 60 --cookie-jar "$dldir/cookies.txt" "https://developerservices2.apple.com/services/download?path=$path" --output /dev/null; then
+		warn "Failed to fetch a download authorization cookie for the $os $version simulator."
+		return 1
+	fi
+
+	dmg="$dldir/$(basename "$source")"
+	log "Downloading the $os $version simulator runtime from $source..."
+	if ! curl --fail --location --silent --show-error --cookie "$dldir/cookies.txt" "$source" --output "$dmg"; then
+		warn "Failed to download the $os $version simulator runtime."
+		return 1
+	fi
+
+	# Sanity check the size of the downloaded file (in case we got an error page instead of the dmg).
+	if test -n "$expectedSize"; then
+		actualSize=$(stat -f '%z' "$dmg")
+		if [[ "$actualSize" != "$expectedSize" ]]; then
+			warn "The downloaded $os $version simulator runtime has an unexpected size (expected $expectedSize bytes, got $actualSize bytes)."
+			return 1
+		fi
+	fi
+
+	log "Installing the $os $version simulator runtime..."
+	if ! xcrun simctl runtime add "$dmg" 2>&1 | sed 's/^/        /'; then
+		warn "Failed to install the $os $version simulator runtime."
+		return 1
+	fi
+
+	rm -rf -- "$dldir"
+	return 0
+}
+
+function check_old_simulators ()
+{
+	if test -n "$IGNORE_OLD_SIMULATORS"; then return; fi
 
 	local EXTRA_SIMULATORS
 	local XCODE
+	local XCODE_DEVELOPER_ROOT
 
-	EXTRA_SIMULATORS=$(grep ^EXTRA_SIMULATORS= Make.config | sed 's/.*=//')
-	XCODE=$(grep ^XCODE_DEVELOPER_ROOT= Make.config | sed 's/.*=//')/../..
+	XCODE_DEVELOPER_ROOT=$(get_xcode_developer_root "$1")
 
-	if ! make -C tools/siminstaller >/dev/null; then
-		warn "Can't check if simulators are available, because siminstaller failed to build."
-		return
-	fi
+	IFS=' ' read -r -a EXTRA_SIMULATORS <<< "$(grep ^EXTRA_SIMULATORS= Make.config | sed 's/.*=//')"
+	XCODE=$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")
 
 	if ! test -d "$XCODE"; then
 		# can't test unless Xcode is present
@@ -923,40 +1096,78 @@ function check_simulators ()
 		return
 	fi
 
-	IFS=', ' read -r -a SIMS <<< "$EXTRA_SIMULATORS"
-	arraylength=${#SIMS[@]}
-	for (( i=1; i<arraylength+1; i++ ));	do
-		SIMS[$i-1]="--install=${SIMS[$i-1]}"
-	done
+	SD_TMP_DIR=$(mktemp -d /tmp/system-dependencies.XXXXXX)
+	trap 'rm -rf -- "$SD_TMP_DIR"' EXIT
+	TMP_FILE=$SD_TMP_DIR/simulator-runtimes.json
+	xcrun simctl list runtimes --json --json-output "$TMP_FILE"
 
-	if ! FAILED_SIMULATORS=$(mono --debug tools/siminstaller/bin/Debug/siminstaller.exe -q --xcode "$XCODE" --only-check "${SIMS[@]}"); then
-		if ! test -z $PROVISION_SIMULATORS; then
-			mono --debug tools/siminstaller/bin/Debug/siminstaller.exe -q --xcode "$XCODE" "${SIMS[@]}"
-			ok "Extra simulators installed successfully: '${FAILED_SIMULATORS//$'\n'/', '}'"
+	local action=warn
+	if test -z $OPTIONAL_OLD_SIMULATORS; then
+		action=fail
+	fi
+
+	local os
+	local versionName
+	local version
+
+	for spec in "${EXTRA_SIMULATORS[@]}"; do
+		os=${spec/:*/}
+		versionName=${spec/*:/}
+		version=$(grep "^${versionName}=" Make.config | sed 's/.*=//')
+
+		OS_TMP_FILE=$SD_TMP_DIR/$os-$version.json
+		jq ".runtimes[] | select(.platform == \"$os\" and .version == \"$version\" and .isAvailable == true and .isInternal == false) | [ { \"version\":.version, \"name\":.name, \"identifier\":.identifier } ]" < "$TMP_FILE" > "$OS_TMP_FILE"
+		#echo $OS_TMP_FILE
+		LENGTH=$(jq length < "$OS_TMP_FILE")
+		if [[ "$LENGTH" != "" && "$LENGTH" -gt 0 ]]; then
+			ok "Found the $os $version simulator."
+		elif test -z "$PROVISION_OLD_SIMULATORS"; then
+			$action "The $os $version simulator is not installed. Execute ${COLOR_MAGENTA}xcodebuild -downloadPlatform $os -buildVersion $version${COLOR_RESET} to install."
 		else
-			if test -z $OPTIONAL_SIMULATORS; then
-				fail "The simulators '${FAILED_SIMULATORS//$'\n'/', '}' are not installed or need to be upgraded."
+			warn "The $os $version simulator is not installed. Now executing ${COLOR_BLUE}"$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -downloadPlatform $os -buildVersion $version${COLOR_RESET} to install..."
+			if "$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -downloadPlatform "$os" -buildVersion "$version" 2>&1 | sed 's/^/        /'; then
+				warn "Successfully executed ${COLOR_BLUE}"$XCODE_DEVELOPER_ROOT/usr/bin/xcodebuild" -downloadPlatform $os -buildVersion $version${COLOR_RESET}."
 			else
-				warn "The simulators '${FAILED_SIMULATORS//$'\n'/', '}' are not installed or should be upgraded."
+				# Starting with Xcode 27 'xcodebuild -downloadPlatform' can't download the old simulators
+				# anymore (Apple removed them from the platform catalog xcodebuild uses), so fall back to
+				# downloading the runtime directly from Apple's downloadable simulator index (the same index
+				# Xcode's UI uses, which still has the old simulators).
+				warn "Failed to install the $os $version simulator using xcodebuild; falling back to Apple's downloadable simulator index..."
+				if install_old_simulator_from_index "$os" "$version"; then
+					ok "Successfully installed the $os $version simulator from the downloadable simulator index."
+				else
+					$action "The $os $version simulator is not installed, and it couldn't be downloaded."
+				fi
 			fi
 		fi
-	else
-		ok "Found all extra simulators: ${EXTRA_SIMULATORS// /, }"
-	fi
+	done
 }
 
 echo "Checking system..."
 
+if test -n "$NO_XCODE"; then
+	ok "No Xcode available - skipping Xcode-specific checks"
+	ok "Only .NET download and managed code builds will be available"
+fi
+
 check_osx_version
+check_checkout_dir
 check_xcode
+check_xcode_components
 check_homebrew
-check_autotools
-check_mono
-check_visual_studio
-check_cmake
+check_shellcheck
+check_yamllint
+check_python3
 check_7z
-check_objective_sharpie
-check_simulators
+check_old_simulators
+if test -z "$IGNORE_DOTNET"; then
+	if test -f /usr/local/share/dotnet/dotnet; then
+		ok "Installed .NET SDKs:"
+		(IFS=$'\n'; for i in $(/usr/local/share/dotnet/dotnet --list-sdks); do log "$i"; done)
+	else
+		warn ".NET is not installed"
+	fi
+fi
 
 if test -z $FAIL; then
 	echo "System check succeeded"
@@ -964,4 +1175,3 @@ else
 	echo "System check failed"
 	exit 1
 fi
-

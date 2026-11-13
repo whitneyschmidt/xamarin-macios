@@ -25,21 +25,20 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
+using System.Runtime.CompilerServices;
 using System.Threading;
-using ObjCRuntime;
-using Foundation;
 
 namespace CoreFoundation {
 
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
 	public partial class DispatchData : DispatchObject {
 #if !COREBUILD
-		public DispatchData (IntPtr handle, bool owns) : base (handle, owns)
-		{
-		}
-
-		public DispatchData (IntPtr handle) : base (handle, false)
+		[Preserve (Conditional = true)]
+		internal DispatchData (NativeHandle handle, bool owns) : base (handle, owns)
 		{
 		}
 
@@ -50,20 +49,30 @@ namespace CoreFoundation {
 		// This constructor will do it for now, but we should support a constructor
 		// that allows custom releasing of the buffer
 		//
+		/// <param name="buffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static DispatchData FromByteBuffer (byte [] buffer)
 		{
-			if (buffer == null)
-				throw new ArgumentNullException (nameof (buffer));
+			if (buffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (buffer));
 			var b = Marshal.AllocHGlobal (buffer.Length);
 			Marshal.Copy (buffer, 0, b, buffer.Length);
 			var dd = dispatch_data_create (b, (nuint) buffer.Length, IntPtr.Zero, destructor: free);
 			return new DispatchData (dd, owns: true);
 		}
 
+		/// <param name="buffer">To be added.</param>
+		///         <param name="start">To be added.</param>
+		///         <param name="length">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static DispatchData FromByteBuffer (byte [] buffer, int start, int length)
 		{
-			if (buffer == null)
-				throw new ArgumentNullException (nameof (buffer));
+			if (buffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (buffer));
 			if (start < 0 || start >= buffer.Length)
 				throw new ArgumentException (nameof (start));
 			if (length < 0)
@@ -82,37 +91,68 @@ namespace CoreFoundation {
 		//
 		public static DispatchData FromBuffer (IntPtr buffer, nuint size)
 		{
-			if (buffer == null)
-				throw new ArgumentNullException (nameof (buffer));
+			if (buffer == IntPtr.Zero)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (buffer));
 			var dd = dispatch_data_create (buffer, (nuint) size, IntPtr.Zero, destructor: IntPtr.Zero);
 			return new DispatchData (dd, owns: true);
+		}
+
+		// create a dd using the data of the span 
+		public static DispatchData FromReadOnlySpan (ReadOnlySpan<byte> content)
+		{
+			unsafe {
+				fixed (byte* ptr = content) {
+					// As per the documentation for dispatch_data_create, seems the data the pointer points to is copied 
+					// internally when specifying DISPATCH_DATA_DESTRUCTOR_DEFAULT as the destructor,
+					// and DISPATCH_DATA_DESTRUCTOR_DEFAULT=NULL, which is what you're passing, which means the code is OK. 
+					var dd = dispatch_data_create ((IntPtr) ptr, (nuint) content.Length, IntPtr.Zero, destructor: IntPtr.Zero);
+					return new DispatchData (dd, owns: true);
+				}
+			}
 		}
 
 		[DllImport (Constants.libcLibrary)]
 		extern static nuint dispatch_data_get_size (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public nuint Size => dispatch_data_get_size (Handle);
 
 		[DllImport (Constants.libcLibrary)]
-		extern static IntPtr dispatch_data_create_map (IntPtr handle, out IntPtr bufferPtr, out nuint size);
+		unsafe extern static IntPtr dispatch_data_create_map (IntPtr handle, IntPtr* bufferPtr, nuint* size);
 
-		public DispatchData CreateMap (out IntPtr bufferPtr, out nuint size)
+		public unsafe DispatchData CreateMap (out IntPtr bufferPtr, out nuint size)
 		{
-			var nh = dispatch_data_create_map (Handle, out bufferPtr, out size);
-			return new DispatchData (nh, owns: true);
+			bufferPtr = default;
+			size = default;
+			fixed (IntPtr* bufferPtrPtr = &bufferPtr) {
+				fixed (nuint* sizePtr = &size) {
+					var nh = dispatch_data_create_map (Handle, bufferPtrPtr, sizePtr);
+					return new DispatchData (nh, owns: true);
+				}
+			}
 		}
 
 		[DllImport (Constants.libcLibrary)]
 		extern static IntPtr dispatch_data_create_concat (IntPtr h1, IntPtr h2);
 
+		/// <param name="data1">To be added.</param>
+		///         <param name="data2">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static DispatchData Concat (DispatchData data1, DispatchData data2)
 		{
-			if (data1 == null)
-				throw new ArgumentNullException (nameof (data1));
-			if (data2 == null)
-				throw new ArgumentNullException (nameof (data2));
+			if (data1 is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data1));
+			if (data2 is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data2));
 
-			return new DispatchData (dispatch_data_create_concat (data1.Handle, data2.Handle), owns: true);
+			var data = new DispatchData (dispatch_data_create_concat (data1.Handle, data2.Handle), owns: true);
+			GC.KeepAlive (data1);
+			GC.KeepAlive (data2);
+			return data;
 		}
 
 		[DllImport (Constants.libcLibrary)]
@@ -122,6 +162,19 @@ namespace CoreFoundation {
 		{
 			return new DispatchData (dispatch_data_create_subrange (Handle, offset, size), owns: true);
 		}
+
+		// copies the dispatch data to a managed array
+		public byte [] ToArray ()
+		{
+			IntPtr bufferAddress = IntPtr.Zero;
+			nuint bufferSize = 0;
+			using DispatchData dataCopy = CreateMap (out bufferAddress, out bufferSize);
+
+			byte [] managedArray = new byte [(int) bufferSize];
+			Marshal.Copy (bufferAddress, managedArray, 0, (int) bufferSize);
+			return managedArray;
+		}
+
 #endif
 	}
 }

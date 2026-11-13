@@ -25,11 +25,11 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#if !__MACCATALYST__
 
-using ObjCRuntime;
 using CoreGraphics;
+
+#nullable enable
 
 namespace AppKit {
 	public partial class NSCell {
@@ -37,17 +37,32 @@ namespace AppKit {
 		[DllImport (Constants.AppKitLibrary)]
 		extern static void NSDrawThreePartImage (CGRect rect,
 			IntPtr /* NSImage* */ startCap, IntPtr /* NSImage* */ centerFill, IntPtr /* NSImage* */ endCap,
-			bool vertial, nint op, nfloat alphaFraction, bool flipped);
-		
+			byte vertial, nint op, nfloat alphaFraction, byte flipped);
+
+		/// <summary>Draws a three-part image in the specified frame.</summary>
+		/// <param name="frame">The frame rectangle in which to draw.</param>
+		/// <param name="startCap">The image for the start cap.</param>
+		/// <param name="centerFill">The image for the center fill region.</param>
+		/// <param name="endCap">The image for the end cap.</param>
+		/// <param name="vertical">Whether to draw the image vertically.</param>
+		/// <param name="op">The compositing operation to use.</param>
+		/// <param name="alphaFraction">The alpha fraction for the drawing operation.</param>
+		/// <param name="flipped">Whether to draw with a flipped coordinate system.</param>
 		public void DrawThreePartImage (CGRect frame,
 			NSImage startCap, NSImage centerFill, NSImage endCap,
 			bool vertical, NSCompositingOperation op, nfloat alphaFraction, bool flipped)
 		{
 			NSDrawThreePartImage (
-				frame, startCap != null ? startCap.Handle : IntPtr.Zero,
-				centerFill != null ? centerFill.Handle : IntPtr.Zero,
-				endCap != null ? endCap.Handle : IntPtr.Zero,
-				vertical, (nint) (long) op, alphaFraction, flipped);
+				frame, startCap.GetHandle (),
+				centerFill.GetHandle (),
+				endCap.GetHandle (),
+				vertical ? (byte) 1 : (byte) 0,
+				(nint) (long) op,
+				alphaFraction,
+				flipped ? (byte) 1 : (byte) 0);
+			GC.KeepAlive (startCap);
+			GC.KeepAlive (centerFill);
+			GC.KeepAlive (endCap);
 		}
 
 		[DllImport (Constants.AppKitLibrary)]
@@ -55,8 +70,22 @@ namespace AppKit {
 			IntPtr /* NSImage* */ topLeftCorner, IntPtr /* NSImage* */ topEdgeFill, IntPtr /* NSImage* */ topRightCorner,
 			IntPtr /* NSImage* */ leftEdgeFill, IntPtr /* NSImage* */ centerFill, IntPtr /* NSImage* */ rightEdgeFill,
 			IntPtr /* NSImage* */ bottomLeftCorner, IntPtr /* NSImage* */ bottomEdgeFill, IntPtr /* NSImage* */ bottomRightCnint,
-			nint op, nfloat alphaFraction, bool flipped);
+			nint op, nfloat alphaFraction, byte flipped);
 
+		/// <summary>Draws a nine-part image in the specified frame.</summary>
+		/// <param name="frame">The frame rectangle in which to draw.</param>
+		/// <param name="topLeftCorner">The image for the top-left corner.</param>
+		/// <param name="topEdgeFill">The image for the top edge fill.</param>
+		/// <param name="topRightCorner">The image for the top-right corner.</param>
+		/// <param name="leftEdgeFill">The image for the left edge fill.</param>
+		/// <param name="centerFill">The image for the center fill region.</param>
+		/// <param name="rightEdgeFill">The image for the right edge fill.</param>
+		/// <param name="bottomLeftCorner">The image for the bottom-left corner.</param>
+		/// <param name="bottomEdgeFill">The image for the bottom edge fill.</param>
+		/// <param name="bottomRightCorner">The image for the bottom-right corner.</param>
+		/// <param name="op">The compositing operation to use.</param>
+		/// <param name="alphaFraction">The alpha fraction for the drawing operation.</param>
+		/// <param name="flipped">Whether to draw with a flipped coordinate system.</param>
 		public void DrawNinePartImage (CGRect frame,
 			NSImage topLeftCorner, NSImage topEdgeFill, NSImage topRightCorner,
 			NSImage leftEdgeFill, NSImage centerFill, NSImage rightEdgeFill,
@@ -64,16 +93,26 @@ namespace AppKit {
 			NSCompositingOperation op, nfloat alphaFraction, bool flipped)
 		{
 			NSDrawNinePartImage (
-				frame, topLeftCorner != null ? topLeftCorner.Handle : IntPtr.Zero,
-				topEdgeFill != null ? topEdgeFill.Handle : IntPtr.Zero,
-				topRightCorner != null ? topRightCorner.Handle : IntPtr.Zero,
-				leftEdgeFill != null ? leftEdgeFill.Handle : IntPtr.Zero,
-				centerFill != null ? centerFill.Handle : IntPtr.Zero,
-				rightEdgeFill != null ? rightEdgeFill.Handle : IntPtr.Zero,
-				bottomLeftCorner != null ? bottomLeftCorner.Handle : IntPtr.Zero,
-				bottomEdgeFill != null ? bottomEdgeFill.Handle : IntPtr.Zero,
-				bottomRightCorner != null ? bottomRightCorner.Handle : IntPtr.Zero,
-				(nint) (long) op, alphaFraction, flipped);
- 		}
+				frame, topLeftCorner.GetHandle (),
+				topEdgeFill.GetHandle (),
+				topRightCorner.GetHandle (),
+				leftEdgeFill.GetHandle (),
+				centerFill.GetHandle (),
+				rightEdgeFill.GetHandle (),
+				bottomLeftCorner.GetHandle (),
+				bottomEdgeFill.GetHandle (),
+				bottomRightCorner.GetHandle (),
+				(nint) (long) op, alphaFraction, flipped ? (byte) 1 : (byte) 0);
+			GC.KeepAlive (topLeftCorner);
+			GC.KeepAlive (topEdgeFill);
+			GC.KeepAlive (topRightCorner);
+			GC.KeepAlive (leftEdgeFill);
+			GC.KeepAlive (centerFill);
+			GC.KeepAlive (rightEdgeFill);
+			GC.KeepAlive (bottomLeftCorner);
+			GC.KeepAlive (bottomEdgeFill);
+			GC.KeepAlive (bottomRightCorner);
+		}
 	}
 }
+#endif // !__MACCATALYST__

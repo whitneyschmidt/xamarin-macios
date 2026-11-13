@@ -7,16 +7,13 @@
 // Copyright 2018 Microsoft Corporation. All rights reserved.
 //
 
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
-#if XAMCORE_2_0
 namespace CarPlay {
 	public partial class CPNavigationAlert {
 		// Defined inside CPNavigationAlert.h
 		// static NSTimeInterval const CPNavigationAlertMinimumDuration = 5;
+		/// <summary>A constant that specifies the minimum amount of time an alert is visible.</summary>
 		public const double MinimumDuration = 5;
 	}
 }
-#endif // XAMCORE_2_0

@@ -23,19 +23,29 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
+
+#if !__MACCATALYST__ // Mac Catalyst doesn't have NSApplication
+
 using System.Collections;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace AppKit {
 	public partial class NSApplication {
+		/// <param name="sheet">To be added.</param>
+		///         <param name="docWindow">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void BeginSheet (NSWindow sheet, NSWindow docWindow)
 		{
 			BeginSheet (sheet, docWindow, null, null, IntPtr.Zero);
 		}
-		
+
+		/// <param name="sheet">To be added.</param>
+		///         <param name="docWindow">To be added.</param>
+		///         <param name="onEnded">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void BeginSheet (NSWindow sheet, NSWindow docWindow, Action onEnded)
 		{
 			var obj = new NSAsyncActionDispatcher (onEnded);
@@ -44,12 +54,25 @@ namespace AppKit {
 	}
 
 	public partial class NSOpenPanel {
-		public void BeginSheet (string directory, string fileName, string []fileTypes, NSWindow modalForWindow)
+		/// <param name="directory">To be added.</param>
+		///         <param name="fileName">To be added.</param>
+		///         <param name="fileTypes">To be added.</param>
+		///         <param name="modalForWindow">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void BeginSheet (string directory, string fileName, string [] fileTypes, NSWindow modalForWindow)
 		{
 			BeginSheet (directory, fileName, fileTypes, modalForWindow, null, null, IntPtr.Zero);
 		}
-		
-		public void BeginSheet (string directory, string fileName, string []fileTypes, NSWindow modalForWindow, Action onEnded)
+
+		/// <param name="directory">To be added.</param>
+		///         <param name="fileName">To be added.</param>
+		///         <param name="fileTypes">To be added.</param>
+		///         <param name="modalForWindow">To be added.</param>
+		///         <param name="onEnded">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void BeginSheet (string directory, string fileName, string [] fileTypes, NSWindow modalForWindow, Action onEnded)
 		{
 			var obj = new NSAsyncActionDispatcher (onEnded);
 			BeginSheet (directory, fileName, fileTypes, modalForWindow, obj, NSActionDispatcher.Selector, IntPtr.Zero);
@@ -57,11 +80,20 @@ namespace AppKit {
 	}
 
 	public partial class NSPageLayout {
+		/// <param name="printInfo">To be added.</param>
+		///         <param name="docWindow">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void BeginSheet (NSPrintInfo printInfo, NSWindow docWindow)
 		{
 			BeginSheet (printInfo, docWindow, null, null, IntPtr.Zero);
 		}
-		
+
+		/// <param name="printInfo">To be added.</param>
+		///         <param name="docWindow">To be added.</param>
+		///         <param name="onEnded">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void BeginSheet (NSPrintInfo printInfo, NSWindow docWindow, Action onEnded)
 		{
 			var obj = new NSAsyncActionDispatcher (onEnded);
@@ -69,3 +101,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

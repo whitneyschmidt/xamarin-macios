@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	This file contains default item includes (globs and implicit references).
+
+	*** WARNING ***
+
+	This file is imported by AutoImport.props, and will be imported by all
+	projects using Microsoft.NET.Sdk.  All Item includes in this file *MUST*
+	be hidden behind a TargetPlatformIdentifier based condition.
+
+	This file can also not define any properties. However, due to the
+	order MSBuild evaluates properties, it's possible to use properties
+	defined in our .targets files in conditions in ItemGroups in this
+	file.
+
+	*** WARNING ***
+
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Condition="'$(EnableDefault@PLATFORM@Items)' == 'true' And $([MSBuild]::VersionEquals($(TargetFrameworkVersion), '@TARGET_FRAMEWORK_VERSION@')) And '$(CurrentHash)' == '@CURRENT_HASH_LONG@'">
+		<!-- Default plist file inclusion -->
+		<None Include="*.plist">
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+		</None>
+
+		<!-- Default Asset Catalog file inclusion -->
+		<ImageAsset Include="**\*.xcassets\**\*.*;**\*.icon\**\*.*" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);**\*.xcassets\**\*.DS_Store;**\*.icon\**\*.DS_Store">
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<Visible>false</Visible>
+			<IsDefaultItem>true</IsDefaultItem>
+		</ImageAsset>
+
+		<!-- Default Storyboard file inclusion -->
+		<InterfaceDefinition Include="**\*.storyboard;**\*.xib" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</InterfaceDefinition>
+
+		<!-- Default Atlas Texture file inclusion -->
+		<AtlasTexture Include="**\*.atlas\*.png" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</AtlasTexture>
+
+		<!-- Default CoreMLModel inclusion -->
+		<CoreMLModel Include="**\*.mlmodel" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</CoreMLModel>
+
+		<!-- Default Metal inclusion -->
+		<Metal Include="**\*.metal" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</Metal>
+
+		<!-- Default SceneKit assets inclusion -->
+		<SceneKitAsset Include="**\*.scnassets\*" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" >
+			<IsDefaultItem>true</IsDefaultItem>
+		</SceneKitAsset>
+
+		<!-- Include everything in the project's Resources folder (as represented by the _ResourcePrefix property, which is set from the AppBundleResourcePrefix or legacy IPhoneResourcePrefix/XamMacResourcePrefix properties),
+		     except for files that are already in any of the other resource type item groups.
+		     _ResourcePrefix may contain multiple semicolon-separated paths (e.g. "Resources;PlatformResources").
+		     The individual prefix paths are split into _ResourcePrefix_1, _ResourcePrefix_2, _ResourcePrefix_3
+		     in Xamarin.Shared.props, so that MSBuild expands globs correctly for each one.
+		     Up to 3 semicolon-separated resource prefix paths are supported. -->
+
+		<!-- First prefix (always present when _ResourcePrefix is set) -->
+		<BundleResource Include="$(_ResourcePrefix_1)\**\*" Exclude="
+			$(DefaultItemExcludes);
+			$(DefaultExcludesInProjectFolder);
+			$(_ResourcePrefix_1)\**\*.xcassets\**\*.*;
+			$(_ResourcePrefix_1)\**\*.icon\**\*.*;
+			$(_ResourcePrefix_1)\**\*.storyboard;**\*.xib;
+			$(_ResourcePrefix_1)\**\*.atlas\*.png;
+			$(_ResourcePrefix_1)\**\*.mlmodel;
+			$(_ResourcePrefix_1)\**\*.metal;
+			$(_ResourcePrefix_1)\**\*.scnassets\*;
+			$(_ResourcePrefix_1)\**\*.DS_Store;
+			@(Compile);
+			@(EmbeddedResource);
+			" Condition="'$(_ResourcePrefix_1)' != ''" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</BundleResource>
+
+		<!-- Second prefix (when _ResourcePrefix has 2+ semicolon-separated entries) -->
+		<BundleResource Include="$(_ResourcePrefix_2)\**\*" Exclude="
+			$(DefaultItemExcludes);
+			$(DefaultExcludesInProjectFolder);
+			$(_ResourcePrefix_2)\**\*.xcassets\**\*.*;
+			$(_ResourcePrefix_2)\**\*.icon\**\*.*;
+			$(_ResourcePrefix_2)\**\*.storyboard;**\*.xib;
+			$(_ResourcePrefix_2)\**\*.atlas\*.png;
+			$(_ResourcePrefix_2)\**\*.mlmodel;
+			$(_ResourcePrefix_2)\**\*.metal;
+			$(_ResourcePrefix_2)\**\*.scnassets\*;
+			$(_ResourcePrefix_2)\**\*.DS_Store;
+			@(Compile);
+			@(EmbeddedResource);
+			" Condition="'$(_ResourcePrefix_2)' != ''" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</BundleResource>
+
+		<!-- Third prefix (when _ResourcePrefix has 3 semicolon-separated entries) -->
+		<BundleResource Include="$(_ResourcePrefix_3)\**\*" Exclude="
+			$(DefaultItemExcludes);
+			$(DefaultExcludesInProjectFolder);
+			$(_ResourcePrefix_3)\**\*.xcassets\**\*.*;
+			$(_ResourcePrefix_3)\**\*.icon\**\*.*;
+			$(_ResourcePrefix_3)\**\*.storyboard;**\*.xib;
+			$(_ResourcePrefix_3)\**\*.atlas\*.png;
+			$(_ResourcePrefix_3)\**\*.mlmodel;
+			$(_ResourcePrefix_3)\**\*.metal;
+			$(_ResourcePrefix_3)\**\*.scnassets\*;
+			$(_ResourcePrefix_3)\**\*.DS_Store;
+			@(Compile);
+			@(EmbeddedResource);
+			" Condition="'$(_ResourcePrefix_3)' != ''" >
+			<Link>$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)', '%(FullPath)'))</Link>
+			<IsDefaultItem>true</IsDefaultItem>
+		</BundleResource>
+	</ItemGroup>
+</Project>

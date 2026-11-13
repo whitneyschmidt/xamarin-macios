@@ -1,0 +1,17 @@
+
+namespace ObjCRuntime {
+	/// <summary>
+	/// This attribute is applied to delegate parameters in a delegate to specify
+	/// that the delegate parameter needs an C-style bridge.
+	/// </summary>
+	/// <seealso cref='T:ObjCRuntime.BlockCallbackAttribute' />
+	[AttributeUsage (AttributeTargets.Parameter, AllowMultiple = false)]
+	public class CCallbackAttribute : Attribute {
+		/// <summary>
+		/// Initializes a new instance of the <see cref="CCallbackAttribute"/> class.
+		/// </summary>
+		public CCallbackAttribute ()
+		{
+		}
+	}
+}

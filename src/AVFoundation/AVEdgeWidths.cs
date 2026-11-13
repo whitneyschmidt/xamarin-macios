@@ -22,16 +22,30 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 //
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
-
+	/// <summary>A class that encapsulates the edge-widths used by an <see cref="AVFoundation.AVVideoCompositionRenderContext" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	[StructLayout (LayoutKind.Sequential)]
-	public struct AVEdgeWidths  {
-		public nfloat /* CGFloat */ Left, Top, Right, Bottom;
+	public struct AVEdgeWidths {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public nfloat /* CGFloat */ Left;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public nfloat /* CGFloat */ Top;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public nfloat /* CGFloat */ Right;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public nfloat /* CGFloat */ Bottom;
 
 		public AVEdgeWidths (nfloat left, nfloat top, nfloat right, nfloat bottom)
 		{
@@ -41,6 +55,9 @@ namespace AVFoundation {
 			Bottom = bottom;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override string ToString ()
 		{
 			return string.Format ("(left={0},top={1},right={2},bottom={3})", Left, Top, Right, Bottom);
@@ -64,15 +81,21 @@ namespace AVFoundation {
 				left.Bottom != right.Bottom;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override int GetHashCode ()
 		{
-			return (int)Left ^
-				(int)Top ^ (int)Right ^ (int)Bottom;
+			return HashCode.Combine (Left, Top, Right, Bottom);
 		}
 
-		public override bool Equals (object other)
+		/// <param name="other">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override bool Equals (object? other)
 		{
-			if (other is AVEdgeWidths){
+			if (other is AVEdgeWidths) {
 				var o = (AVEdgeWidths) other;
 
 				return this == o;

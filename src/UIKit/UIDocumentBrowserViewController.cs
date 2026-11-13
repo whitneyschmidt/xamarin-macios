@@ -25,23 +25,22 @@
 
 #if IOS
 
-using System;
-using Foundation;
-using ObjCRuntime;
-
 namespace UIKit {
 
-	public partial class UIDocumentBrowserViewController
-	{
+	public partial class UIDocumentBrowserViewController {
 
-		static bool CheckSystemVersion () {
+		static bool CheckSystemVersion ()
+		{
 #if IOS
-			return UIKit.UIDevice.CurrentDevice.CheckSystemVersion (12, 0);
+			return SystemVersion.CheckiOS (12, 0);
 #else
-			#error Unknown platform
+#error Unknown platform
 #endif
 		}
 
+		/// <param name="documentUrl">The document URL for which to get a transition controller.</param>
+		///         <summary>Creates and returns a transition controller for the document at the specified URL.</summary>
+		///         <returns>Developers should only specify values for <paramref name="documentUrl" /> that were obtained from the document browser.</returns>
 		public virtual UIDocumentBrowserTransitionController GetTransitionController (NSUrl documentUrl)
 		{
 			if (CheckSystemVersion ())

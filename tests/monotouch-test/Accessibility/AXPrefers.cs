@@ -1,0 +1,26 @@
+//
+// Copyright 2024 Microsoft Corp
+//
+
+using Accessibility;
+
+namespace MonoTouchFixtures.Accessibility {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class AXPrefersTests {
+		[Test]
+		public void HorizontalTextEnabled ()
+		{
+			TestRuntime.AssertXcodeVersion (15, 0);
+			Assert.That (AXPrefers.HorizontalTextEnabled, Is.EqualTo (true).Or.EqualTo (false), "HorizontalTextEnabled");
+		}
+
+		[Test]
+		public void NonBlinkingTextInsertionIndicator ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			Assert.That (AXPrefers.NonBlinkingTextInsertionIndicator, Is.EqualTo (true).Or.EqualTo (false), "NonBlinkingTextInsertionIndicator");
+		}
+	}
+}

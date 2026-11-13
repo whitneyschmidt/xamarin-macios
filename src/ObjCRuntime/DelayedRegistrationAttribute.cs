@@ -23,18 +23,14 @@
 
 #if MONOMAC
 
-using System;
-using System.Runtime.InteropServices;
 using System.IO;
 
-#if XAMCORE_2_0
 namespace ObjCRuntime {
-#else
-namespace MonoMac {
-#endif
+	/// <summary>An attribute that controls whether Objective-C class registration is delayed.</summary>
 	[AttributeUsage (AttributeTargets.Assembly)]
-	public abstract class DelayedRegistrationAttribute : Attribute
-	{
+	public abstract class DelayedRegistrationAttribute : Attribute {
+		/// <summary>Gets a value indicating whether registration should be delayed.</summary>
+		/// <value><see langword="true" /> if registration should be delayed; otherwise, <see langword="false" />.</value>
 		public abstract bool Delay { get; }
 	}
 }

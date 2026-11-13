@@ -7,18 +7,7 @@
 // Copyright 2013 Xamarin Inc.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using JavaScriptCore;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.JavaScriptCore;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.JavascriptCore {
 
@@ -36,8 +25,8 @@ namespace MonoTouchFixtures.JavascriptCore {
 			using (var c = new JSContext ()) {
 				using (var d = JSValue.From (1.0, c)) {
 					Assert.That (d.ToDouble (), Is.EqualTo (1.0d), "double");
-					Assert.AreSame (d.Context, c, "double.Context");
-					Assert.True (d.IsNumber, "double.IsNumber");
+					Assert.That (c, Is.SameAs (d.Context), "double.Context");
+					Assert.That (d.IsNumber, Is.True, "double.IsNumber");
 				}
 			}
 		}
@@ -70,18 +59,46 @@ namespace MonoTouchFixtures.JavascriptCore {
 			using (var c = new JSContext ())
 			using (var d = JSValue.From (1.0d, c))
 			using (var f = JSValue.From (1.0f, c)) {
-				Assert.True (d.IsEqualTo (d), "=== self");
-				Assert.True (d.IsEqualTo (f), "=== double/float"); // it's a number now
-				Assert.True (d.IsEqualTo ((NSNumber) 1.0d), "=== NSNumber");
-				Assert.False (d.IsEqualTo ((NSNumber) 2.0d), "=== NSNumber-2");
+				Assert.That (d.IsEqualTo (d), Is.True, "=== self");
+				Assert.That (d.IsEqualTo (f), Is.True, "=== double/float"); // it's a number now
+				Assert.That (d.IsEqualTo ((NSNumber) 1.0d), Is.True, "=== NSNumber");
+				Assert.That (d.IsEqualTo ((NSNumber) 2.0d), Is.False, "=== NSNumber-2");
 
-				Assert.True (d.IsEqualWithTypeCoercionTo (d), "== self");
-				Assert.True (d.IsEqualWithTypeCoercionTo (f), "== double/float");
-				Assert.True (d.IsEqualWithTypeCoercionTo ((NSNumber) 1.0d), "== NSNumber");
-				Assert.False (d.IsEqualWithTypeCoercionTo ((NSNumber) 2.0d), "== NSNumber-2");
+				Assert.That (d.IsEqualWithTypeCoercionTo (d), Is.True, "== self");
+				Assert.That (d.IsEqualWithTypeCoercionTo (f), Is.True, "== double/float");
+				Assert.That (d.IsEqualWithTypeCoercionTo ((NSNumber) 1.0d), Is.True, "== NSNumber");
+				Assert.That (d.IsEqualWithTypeCoercionTo ((NSNumber) 2.0d), Is.False, "== NSNumber-2");
 			}
+		}
+
+		[Test]
+		public void CreatePromise ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			using (var c = new JSContext ()) {
+				bool called = false;
+				var p = JSValue.CreatePromise (c, (resolve, reject) => {
+					Assert.That (resolve, Is.Not.Null, "resolve");
+					Assert.That (reject, Is.Not.Null, "reject");
+					called = true;
+				});
+				Assert.That (called, Is.True, "called");
+			}
+
+		}
+
+		[Test]
+		public void ToArray ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			using var context = new JSContext ();
+			using var array = NSArray.FromStrings ("a", "b");
+			using var value = JSValue.From (array, context);
+			using var arr2 = value.ToArray ();
+			Assert.That (arr2.GetItem<NSString> (0).ToString (), Is.EqualTo ("a"), "a");
+			Assert.That (arr2.GetItem<NSString> (1).ToString (), Is.EqualTo ("b"), "a");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

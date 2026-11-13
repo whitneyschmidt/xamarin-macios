@@ -27,87 +27,70 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
-namespace CoreFoundation {	
+namespace CoreFoundation {
 
 	// CFBase.h
-	public partial class CFAllocator : INativeObject, IDisposable 
-	{
+	public partial class CFAllocator : NativeObject {
 #if !COREBUILD
-		static CFAllocator Default_cf;
-		static CFAllocator SystemDefault_cf;
-		static CFAllocator Malloc_cf;
-		static CFAllocator MallocZone_cf;
-		static CFAllocator Null_cf;
+		static CFAllocator? Default_cf;
+		static CFAllocator? SystemDefault_cf;
+		static CFAllocator? Malloc_cf;
+		static CFAllocator? MallocZone_cf;
+		static CFAllocator? Null_cf;
 #endif
-		IntPtr handle;
 
-		public CFAllocator (IntPtr handle)
+		[Preserve (Conditional = true)]
+		internal CFAllocator (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
-		}
-
-		public CFAllocator (IntPtr handle, bool owns)
-		{
-			if (!owns)
-				CFObject.CFRetain (handle);
-			this.handle = handle;
 		}
 
-		~CFAllocator ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-		
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
 #if !COREBUILD
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CFAllocator Default {
 			get {
-				return Default_cf ?? (Default_cf = new CFAllocator (default_ptr)); 
+				return Default_cf ?? (Default_cf = new CFAllocator (default_ptr, false));
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CFAllocator SystemDefault {
 			get {
-				return SystemDefault_cf ?? (SystemDefault_cf = new CFAllocator (system_default_ptr)); 
+				return SystemDefault_cf ?? (SystemDefault_cf = new CFAllocator (system_default_ptr, false));
 			}
 		}
-		
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CFAllocator Malloc {
 			get {
-				return Malloc_cf ?? (Malloc_cf = new CFAllocator (malloc_ptr)); 
+				return Malloc_cf ?? (Malloc_cf = new CFAllocator (malloc_ptr, false));
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CFAllocator MallocZone {
 			get {
-				return MallocZone_cf ?? (MallocZone_cf = new CFAllocator (malloc_zone_ptr)); 
+				return MallocZone_cf ?? (MallocZone_cf = new CFAllocator (malloc_zone_ptr, false));
 			}
 		}
 
+		// Internal only: to get the null handle, use 'CFAllocator.null_ptr' instead.
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CFAllocator Null {
 			get {
-				return Null_cf ?? (Null_cf = new CFAllocator (null_ptr)); 
+				return Null_cf ?? (Null_cf = new CFAllocator (null_ptr, false));
 			}
 		}
 #endif
@@ -115,40 +98,37 @@ namespace CoreFoundation {
 		[DllImport (Constants.CoreFoundationLibrary)]
 		static extern /* void* */ IntPtr CFAllocatorAllocate (/* CFAllocatorRef*/ IntPtr allocator, /*CFIndex*/ nint size, /* CFOptionFlags */ nuint hint);
 
-#if XAMCORE_2_0
+		/// <param name="size">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IntPtr Allocate (long size)
 		{
-			return CFAllocatorAllocate (handle, (nint)size, 0);
+			return CFAllocatorAllocate (Handle, (nint) size, 0);
 		}
-#else
-		public IntPtr Allocate (long size, CFAllocatorFlags hint = 0)
-		{
-			return CFAllocatorAllocate (handle, (nint)size, (nuint) hint);
-		}
-#endif
 
 		[DllImport (Constants.CoreFoundationLibrary)]
 		static extern void CFAllocatorDeallocate (/* CFAllocatorRef */ IntPtr allocator, /* void* */ IntPtr ptr);
 
+		/// <param name="ptr">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Deallocate (IntPtr ptr)
 		{
-			CFAllocatorDeallocate (handle, ptr);
+			CFAllocatorDeallocate (Handle, ptr);
 		}
 
-		[DllImport (Constants.CoreFoundationLibrary, EntryPoint="CFAllocatorGetTypeID")]
+		/// <summary>Type identifier for the CoreFoundation.CFAllocator type.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>
+		///           <para>The returned token is the CoreFoundation type identifier (CFType) that has been assigned to this class.</para>
+		///           <para>This can be used to determine type identity between different CoreFoundation objects.</para>
+		///           <para>You can retrieve the type of a CoreFoundation object by invoking the <see cref="CoreFoundation.CFType.GetTypeID(System.IntPtr)" /> on the native handle of the object</para>
+		///           <example>
+		///             <code lang="csharp lang-csharp"><![CDATA[bool isCFAllocator = (CFType.GetTypeID (foo.Handle) == CFAllocator.GetTypeID ());]]></code>
+		///           </example>
+		///         </remarks>
+		[DllImport (Constants.CoreFoundationLibrary, EntryPoint = "CFAllocatorGetTypeID")]
 		public extern static /* CFTypeID */ nint GetTypeID ();
 	}
-
-#if !XAMCORE_2_0
-	// XAMCORE 2.0: removing this enum, I can't find any documentation anywhere about it,
-	//              and in any case it seems to refer to the deprecated/deleted ObjC GC.
-	// Seems to be some sort of secret values
-	[Flags]
-	[Native]
-	public enum CFAllocatorFlags : ulong
-	{
-		GCScannedMemory	= 0x200,
-		GCObjectMemory	= 0x400,
-	}
-#endif
 }

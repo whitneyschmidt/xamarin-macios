@@ -28,99 +28,110 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace CoreFoundation {
 
-	class CFDictionary : INativeObject, IDisposable {
-		public IntPtr Handle { get; private set; }
-	
-		public static IntPtr KeyCallbacks;
-		public static IntPtr ValueCallbacks;
+	partial class CFDictionary : NativeObject {
+		/// <summary>The address of the Core Foundation callback table used for dictionary keys.</summary>
+		public static IntPtr KeyCallbacks = _KeyCallbacks;
 
-		public CFDictionary (IntPtr handle)
-			: this (handle, false)
+		/// <summary>The address of the Core Foundation callback table used for dictionary values.</summary>
+		public static IntPtr ValueCallbacks = _ValueCallbacks;
+
+		[Preserve (Conditional = true)]
+		internal CFDictionary (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
 		}
 
-		public CFDictionary (IntPtr handle, bool owns)
-		{
-			if (!owns)
-				CFObject.CFRetain (handle);
-			this.Handle = handle;
-		}
-		
-		[DllImport (Constants.CoreFoundationLibrary, EntryPoint="CFDictionaryGetTypeID")]
+		[DllImport (Constants.CoreFoundationLibrary, EntryPoint = "CFDictionaryGetTypeID")]
 		public extern static nint GetTypeID ();
 
-		~CFDictionary ()
-		{
-			Dispose (false);
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-#if XAMCORE_2_0
-		protected virtual void Dispose (bool disposing)
-#else
-		public virtual void Dispose (bool disposing)
-#endif
-		{
-			if (Handle != IntPtr.Zero){
-				CFObject.CFRelease (Handle);
-				Handle = IntPtr.Zero;
-			}
-		}
-
-		static CFDictionary ()
-		{
-			var lib = Libraries.CoreFoundation.Handle;
-			KeyCallbacks = Dlfcn.GetIndirect (lib, "kCFTypeDictionaryKeyCallBacks");
-			ValueCallbacks = Dlfcn.GetIndirect (lib, "kCFTypeDictionaryValueCallBacks");
-		}
-		
 		public static CFDictionary FromObjectAndKey (INativeObject obj, INativeObject key)
 		{
-			return new CFDictionary (CFDictionaryCreate (IntPtr.Zero, new IntPtr[] { key.Handle }, new IntPtr [] { obj.Handle }, 1, KeyCallbacks, ValueCallbacks), true);
+			CFDictionary result = new CFDictionary (CFDictionaryCreate (IntPtr.Zero, new IntPtr [] { key.Handle }, new IntPtr [] { obj.Handle }, 1, KeyCallbacks, ValueCallbacks), true);
+			GC.KeepAlive (key);
+			GC.KeepAlive (obj);
+			return result;
 		}
-		
-		public static CFDictionary FromObjectsAndKeys (INativeObject[] objects, INativeObject[] keys)
-		{
-			if (objects == null)
-				throw new ArgumentNullException ("objects");
 
-			if (keys == null)
-				throw new ArgumentNullException ("keys");
+		public static CFDictionary FromObjectsAndKeys (INativeObject [] objects, INativeObject [] keys)
+		{
+			if (objects is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (objects));
+
+			if (keys is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (keys));
 
 			if (objects.Length != keys.Length)
 				throw new ArgumentException ("The length of both arrays must be the same");
 
 			IntPtr [] k = new IntPtr [keys.Length];
 			IntPtr [] v = new IntPtr [keys.Length];
-			
+
 			for (int i = 0; i < k.Length; i++) {
 				k [i] = keys [i].Handle;
 				v [i] = objects [i].Handle;
 			}
 
-			return new CFDictionary (CFDictionaryCreate (IntPtr.Zero, k, v, k.Length, KeyCallbacks, ValueCallbacks), true);
+			var rv = new CFDictionary (CFDictionaryCreate (IntPtr.Zero, k, v, k.Length, KeyCallbacks, ValueCallbacks), true);
+			GC.KeepAlive (keys);
+			GC.KeepAlive (objects);
+			return rv;
 		}
-	
+
 		[DllImport (Constants.CoreFoundationLibrary)]
-		extern static IntPtr CFDictionaryCreate (IntPtr allocator, IntPtr[] keys, IntPtr[] vals, nint len, IntPtr keyCallbacks, IntPtr valCallbacks);
-		
+		extern static IntPtr CFDictionaryCreate (IntPtr allocator, IntPtr [] keys, IntPtr [] vals, nint len, IntPtr keyCallbacks, IntPtr valCallbacks);
+
 		[DllImport (Constants.CoreFoundationLibrary)]
 		extern static IntPtr CFDictionaryGetValue (IntPtr theDict, IntPtr key);
+
+		/// <summary>Gets the pointer for a key.</summary>
+		/// <param name="theDict">The dictionary where to find the <paramref name="key" />.</param>
+		/// <param name="key">The key.</param>
+		/// <returns>The pointer for the specified <paramref name="key" />, or <see cref="IntPtr.Zero" /> if not found.</returns>
 		public static IntPtr GetValue (IntPtr theDict, IntPtr key)
 		{
 			return CFDictionaryGetValue (theDict, key);
+		}
+
+		/// <summary>Gets the pointer for a key.</summary>
+		/// <param name="dictionary">The dictionary where to find the <paramref name="key" />.</param>
+		/// <param name="key">The key.</param>
+		/// <returns>The pointer for the specified <paramref name="key" />, or <see cref="IntPtr.Zero" /> if not found.</returns>
+		internal static IntPtr GetValue (IntPtr dictionary, INativeObject? key)
+		{
+			var rv = CFDictionaryGetValue (dictionary, key.GetHandle ());
+			GC.KeepAlive (key);
+			return rv;
+		}
+
+		/// <summary>Gets the pointer for a key.</summary>
+		/// <param name="key">The key.</param>
+		/// <returns>The pointer for the specified <paramref name="key" />, or <see cref="IntPtr.Zero" /> if not found.</returns>
+		internal IntPtr GetValue (INativeObject? key)
+		{
+			var rv = CFDictionaryGetValue (Handle, key.GetHandle ());
+			GC.KeepAlive (this);
+			GC.KeepAlive (key);
+			return rv;
+		}
+
+		[DllImport (Constants.CoreFoundationLibrary)]
+		unsafe extern static byte /* Boolean */ CFDictionaryGetValueIfPresent (IntPtr /* CFDictionaryRef */ theDict, IntPtr /* const void * */ key, IntPtr* /* const void * * */ value);
+
+		/// <summary>Try to get the stored value for the specified <paramref name="key" />.</summary>
+		/// <param name="dictionary">The dictionary whose value to get.</param>
+		/// <param name="key">The key of the value to find.</param>
+		/// <param name="value">Upon return, the value that was found, or <see cref="IntPtr.Zero" /> if the dictionary doesn't contain a value for the specified <paramref name="key" />.</param>
+		/// <returns><see langword="true" /> if the dictionary contains the specified <paramref name="key" />, <see langword="false" /> otherwise.</returns>
+		public unsafe static bool TryGetValue (IntPtr dictionary, IntPtr key, out IntPtr value)
+		{
+			value = default;
+			fixed (IntPtr* valuePtr = &value) {
+				return CFDictionaryGetValueIfPresent (dictionary, key, valuePtr) != 0;
+			}
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
@@ -130,7 +141,7 @@ namespace CoreFoundation {
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		extern static void CFDictionaryGetKeysAndValues (IntPtr theDict, IntPtr[] keys, IntPtr[] values);
+		extern static void CFDictionaryGetKeysAndValues (IntPtr theDict, IntPtr [] keys, IntPtr [] values);
 		public void GetKeysAndValues (out IntPtr [] keys, out IntPtr [] values)
 		{
 			nint count = this.Count;
@@ -147,64 +158,108 @@ namespace CoreFoundation {
 				return false;
 			return CFBoolean.GetValue (value);
 		}
-		
-		public string GetStringValue (string key)
+
+		static bool GetBooleanValue (INativeObject dictionary, INativeObject? key)
 		{
-			using (var str = new CFString (key)) {
-				return CFString.FetchString (CFDictionaryGetValue (Handle, str.Handle));
+			var value = GetBooleanValue (dictionary.Handle, key.GetHandle ());
+			GC.KeepAlive (dictionary);
+			GC.KeepAlive (key);
+			return value;
+		}
+
+		internal static bool GetBooleanValue (CFDictionary dictionary, INativeObject? key)
+		{
+			return GetBooleanValue ((INativeObject) dictionary, key);
+		}
+
+		internal static bool GetBooleanValue (NSDictionary dictionary, INativeObject? key)
+		{
+			return GetBooleanValue ((INativeObject) dictionary, key);
+		}
+
+		public string? GetStringValue (string key)
+		{
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				return CFString.FromHandle (CFDictionaryGetValue (Handle, keyHandle));
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
 		public int GetInt32Value (string key)
 		{
 			int value = 0;
-			using (var str = new CFString (key)) {
-				if (!CFNumberGetValue (CFDictionaryGetValue (Handle, str.Handle), /* kCFNumberSInt32Type */ 3, out value))
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				byte rv;
+				unsafe {
+					rv = CFNumberGetValue (CFDictionaryGetValue (Handle, keyHandle), /* kCFNumberSInt32Type */ 3, &value);
+				}
+				if (rv == 0)
 					throw new System.Collections.Generic.KeyNotFoundException (string.Format ("Key {0} not found", key));
 				return value;
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
 		public long GetInt64Value (string key)
 		{
 			long value = 0;
-			using (var str = new CFString (key)) {
-				if (!CFNumberGetValue (CFDictionaryGetValue (Handle, str.Handle), /* kCFNumberSInt64Type */ 4, out value))
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				byte rv;
+				unsafe {
+					rv = CFNumberGetValue (CFDictionaryGetValue (Handle, keyHandle), /* kCFNumberSInt64Type */ 4, &value);
+				}
+				if (rv == 0)
 					throw new System.Collections.Generic.KeyNotFoundException (string.Format ("Key {0} not found", key));
 				return value;
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
 		public IntPtr GetIntPtrValue (string key)
 		{
-			using (var str = new CFString (key)) {
-				return CFDictionaryGetValue (Handle, str.Handle);
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				return CFDictionaryGetValue (Handle, keyHandle);
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
-		public CFDictionary GetDictionaryValue (string key)
+		public CFDictionary? GetDictionaryValue (string key)
 		{
-			using (var str = new CFString (key)) {
-				var ptr = CFDictionaryGetValue (Handle, str.Handle);
-				return ptr == IntPtr.Zero ? null : new CFDictionary (ptr);
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				var ptr = CFDictionaryGetValue (Handle, keyHandle);
+				return ptr == IntPtr.Zero ? null : new CFDictionary (ptr, false);
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
 		public bool ContainsKey (string key)
 		{
-			using (var str = new CFString (key)) {
-				return CFDictionaryContainsKey (Handle, str.Handle);
+			var keyHandle = CFString.CreateNative (key);
+			try {
+				return CFDictionaryContainsKey (Handle, keyHandle) != 0;
+			} finally {
+				CFString.ReleaseNative (keyHandle);
 			}
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		internal static extern bool CFNumberGetValue (IntPtr number, nint theType, out int value);
+		unsafe internal static extern byte CFNumberGetValue (IntPtr number, nint theType, int* value);
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		internal static extern bool CFNumberGetValue (IntPtr number, nint theType, out long value);
+		unsafe internal static extern byte CFNumberGetValue (IntPtr number, nint theType, long* value);
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		extern static bool CFDictionaryContainsKey (IntPtr theDict, IntPtr key);
+		extern static byte CFDictionaryContainsKey (IntPtr theDict, IntPtr key);
 	}
 
 	static class CFMutableDictionary {
@@ -219,6 +274,47 @@ namespace CoreFoundation {
 		public static void SetValue (IntPtr theDict, IntPtr key, bool value)
 		{
 			SetValue (theDict, key, value ? CFBoolean.TrueHandle : CFBoolean.FalseHandle);
+		}
+
+		internal static void SetValue (NSDictionary dictionary, IntPtr key, bool value)
+		{
+			SetValue (dictionary.GetHandle (), key, value);
+			GC.KeepAlive (dictionary);
+		}
+
+		internal static void SetValue (NSDictionary dictionary, INativeObject? key, bool value)
+		{
+			SetValue (dictionary.GetHandle (), key.GetHandle (), value);
+			GC.KeepAlive (dictionary);
+			GC.KeepAlive (key);
+		}
+
+		internal static void SetValue (IntPtr theDict, INativeObject? key, INativeObject? value)
+		{
+			SetValue (theDict, key.GetHandle (), value.GetHandle ());
+			GC.KeepAlive (key);
+			GC.KeepAlive (value);
+		}
+
+		internal static void SetValue (IntPtr theDict, INativeObject? key, IntPtr value)
+		{
+			SetValue (theDict, key.GetHandle (), value);
+			GC.KeepAlive (key);
+		}
+
+		internal static void SetValue (NSDictionary dictionary, INativeObject? key, IntPtr value)
+		{
+			SetValue (dictionary.GetHandle (), key.GetHandle (), value);
+			GC.KeepAlive (dictionary);
+			GC.KeepAlive (key);
+		}
+
+		internal static void SetValue (NSDictionary dictionary, INativeObject? key, INativeObject? value)
+		{
+			SetValue (dictionary.GetHandle (), key.GetHandle (), value.GetHandle ());
+			GC.KeepAlive (dictionary);
+			GC.KeepAlive (key);
+			GC.KeepAlive (value);
 		}
 	}
 }

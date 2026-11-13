@@ -1,8 +1,10 @@
-using System;
 
-namespace SceneKit
-{
+#nullable enable
+
+namespace SceneKit {
 	public partial class SCNSceneLoadingOptions {
+		/// <summary>Gets or sets the animation import policy for scene loading.</summary>
+		/// <value>The animation import policy.</value>
 		public SCNAnimationImportPolicy AnimationImportPolicy {
 			get {
 				var k = _AnimationImportPolicyKey;
@@ -20,7 +22,7 @@ namespace SceneKit
 			}
 
 			set {
-				switch (value){
+				switch (value) {
 				case SCNAnimationImportPolicy.Play:
 					_AnimationImportPolicyKey = SCNSceneSourceLoading.AnimationImportPolicyPlay;
 					break;

@@ -2,44 +2,108 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
+#nullable enable
+
 using System.IO;
 using System.IO.Compression;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 
-using ObjCRuntime;
-
-namespace Compression
-{
-	[iOS (9,0), Mac (10,11)]
-	public partial class CompressionStream : Stream
-	{
+namespace Compression {
+	/// <summary>Provides methods and properties for compressing and decompressing streams by using the deflate algorithm.</summary>
+	///     <remarks>
+	///       <para>
+	///       The CompressionStream uses the Compression Framework to compress and decompress the data using the Streams API.
+	///       </para>
+	///       <example>
+	///         <code lang="c#"><![CDATA[
+	/// // sample zlib data 
+	/// static byte [] compressed_data = { 0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0xe7, 0x02, 0x00 };
+	///
+	/// using (var backing = new MemoryStream (compressed_data)) // compress data to read
+	/// using (var decompressing = new CompressionStream (backing, CompressionMode.Decompress, CompressionAlgorithm.Zlib)) // create decompressin stream with the correct algorithm
+	/// using (var reader = new StreamReader (decompressing))
+	/// {
+	///     // perform the required stream operations
+	///     Console.WriteLine (reader.ReadLine ());
+	/// }
+	/// }]]></code>
+	///       </example>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
+	public partial class CompressionStream : Stream {
 		private const int DefaultBufferSize = 8192;
 
-		private Stream _stream;
+		private Stream? _stream;
+		Stream Stream {
+			get {
+				if (_stream is null)
+					throw new ObjectDisposedException (null, "Can not access a closed Stream.");
+				return _stream;
+			}
+		}
 		private CompressionMode _mode;
 		private bool _leaveOpen;
-		private Inflater _inflater;
-		private Deflater _deflater;
-		private byte[] _buffer;
+		private Inflater? _inflater;
+		Inflater Inflater {
+			get {
+				if (_inflater is null)
+					throw new InvalidOperationException ("Can't access an inflater when decompressing");
+				return _inflater;
+			}
+		}
+		private Deflater? _deflater;
+		Deflater Deflater {
+			get {
+				if (_deflater is null)
+					throw new InvalidOperationException ("Can't access a deflater when compressing");
+				return _deflater;
+			}
+		}
+		private byte []? _buffer;
+		Byte [] Buffer {
+			get {
+				if (_buffer is null)
+					throw new InvalidOperationException ("Buffer has not been initialized");
+				return _buffer;
+			}
+		}
+		CompressionAlgorithm _algorithm;
 		private int _activeAsyncOperation; // 1 == true, 0 == false
 		private bool _wroteBytes;
 
 		// Implies mode = Compress
+		/// <param name="stream">The stream to compress.</param>
+		///         <param name="algorithm">One of the enumeration values that indicates the algorithm to be used.</param>
+		///         <summary>Initializes a new instance of the CompressionStream class by using the specified stream and algorithm.</summary>
+		///         <remarks>To be added.</remarks>
 		public CompressionStream (Stream stream, CompressionAlgorithm algorithm) : this (stream, algorithm, leaveOpen: false)
 		{
 		}
 
 		// Implies mode = Compress
+		/// <param name="stream">The stream to compress.</param>
+		///         <param name="algorithm">One of the enumeration values that indicates the algorithm to be used.</param>
+		///         <param name="leaveOpen">
+		///           <see langword="true" /> to leave the stream object open after disposing the DeflateStream object; otherwise, <see langword="false" /></param>
+		///         <summary>Initializes a new instance of the CompressionStream class by using the specified stream and algorithm, and optionally leaves the stream open.</summary>
+		///         <remarks>To be added.</remarks>
 		public CompressionStream (Stream stream, CompressionAlgorithm algorithm, bool leaveOpen) : this (stream, CompressionMode.Compress, algorithm, leaveOpen)
 		{
 		}
 
+		/// <param name="stream">The stream to compress.</param>
+		///         <param name="mode">One of the enumeration values that indicates whether to compress or decompress the stream.</param>
+		///         <param name="algorithm">One of the enumeration values that indicates the algorithm to be used.</param>
+		///         <summary>Initializes a new instance of the CompressionStream class by using the specified stream, algorithm, and compression mode.</summary>
+		///         <remarks>To be added.</remarks>
 		public CompressionStream (Stream stream, CompressionMode mode, CompressionAlgorithm algorithm) : this (stream, mode, algorithm, leaveOpen: false)
 		{
 		}
@@ -50,41 +114,41 @@ namespace Compression
 		/// </summary>
 		public CompressionStream (Stream stream, CompressionMode mode, CompressionAlgorithm algorithm, bool leaveOpen)
 		{
-			if (stream == null)
-				throw new ArgumentNullException (nameof (stream));
+			if (stream is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (stream));
+
+			_stream = stream;
+			_leaveOpen = leaveOpen;
+			_algorithm = algorithm;
 
 			switch (mode) {
 			case CompressionMode.Decompress:
-				InitializeInflater (stream, algorithm, leaveOpen);
+				InitializeInflater (stream, algorithm);
 				break;
 			case CompressionMode.Compress:
-				InitializeDeflater (stream, algorithm, leaveOpen);
+				InitializeDeflater (stream, algorithm);
 				break;
 			default:
 				throw new ArgumentException ("Enum value was out of legal range.", nameof (mode));
 			}
 		}
 
-		internal void InitializeInflater (Stream stream, CompressionAlgorithm algorithm, bool leaveOpen)
+		internal void InitializeInflater (Stream stream, CompressionAlgorithm algorithm)
 		{
 			if (!stream.CanRead)
 				throw new ArgumentException ("Stream does not support reading.", nameof (stream));
 
 			_inflater = new Inflater (algorithm);
-			_stream = stream;
 			_mode = CompressionMode.Decompress;
-			_leaveOpen = leaveOpen;
 		}
 
-		internal void InitializeDeflater (Stream stream, CompressionAlgorithm algorithm, bool leaveOpen)
+		internal void InitializeDeflater (Stream stream, CompressionAlgorithm algorithm)
 		{
 			if (!stream.CanWrite)
 				throw new ArgumentException ("Stream does not support writing.", nameof (stream));
 
 			_deflater = new Deflater (algorithm);
-			_stream = stream;
 			_mode = CompressionMode.Compress;
-			_leaveOpen = leaveOpen;
 			InitializeBuffer ();
 		}
 
@@ -95,17 +159,26 @@ namespace Compression
 
 		private void EnsureBufferInitialized ()
 		{
-			if (_buffer == null) {
+			if (_buffer is null) {
 				InitializeBuffer ();
 			}
 		}
 
-		public Stream BaseStream => _stream;
+		/// <summary>A stream object that represents the underlying stream.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.ObjectDisposedException">
+		///           The underlying stream is closed.
+		///         </exception>
+		public Stream? BaseStream => _stream;
 
-		public override bool CanRead
-		{
+		/// <summary>Gets a value indicating whether the stream supports reading while decompressing a file.</summary>
+		///         <value>
+		///           <see langword="true" /> if the CompressionMode value is Decompress, and the underlying stream is opened and supports reading; otherwise, <see langword="false" />.</value>
+		///         <remarks>To be added.</remarks>
+		public override bool CanRead {
 			get {
-				if (_stream == null) {
+				if (_stream is null) {
 					return false;
 				}
 
@@ -113,9 +186,13 @@ namespace Compression
 			}
 		}
 
+		/// <summary>Gets a value indicating whether the stream supports writing.</summary>
+		///         <value>
+		///           <see langword="true" /> if the CompressionMode value is Compress, and the underlying stream supports writing and is not closed; otherwise, <see langword="false" /> .</value>
+		///         <remarks>To be added.</remarks>
 		public override bool CanWrite {
 			get {
-				if (_stream == null) {
+				if (_stream is null) {
 					return false;
 				}
 
@@ -123,19 +200,29 @@ namespace Compression
 			}
 		}
 
+		/// <summary>Gets a value indicating whether the stream supports seeking.</summary>
+		///         <value>
+		///           <see langword="false" /> in all cases.</value>
+		///         <remarks>To be added.</remarks>
 		public override bool CanSeek => false;
 
-		public override long Length
-		{
+		/// <summary>Gets the length in bytes of the stream.</summary>
+		///         <value>A long value representing the length of the stream in bytes.</value>
+		///         <remarks>To be added.</remarks>
+		public override long Length {
 			get { throw new NotSupportedException ("This operation is not supported."); }
 		}
 
-		public override long Position
-		{
+		/// <summary>This property is not supported and always throws a NotSupportedException.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public override long Position {
 			get { throw new NotSupportedException ("This operation is not supported."); }
 			set { throw new NotSupportedException ("This operation is not supported."); }
 		}
 
+		/// <summary>Clears all buffers for this stream and causes any buffered data to be written to the underlying device.</summary>
+		///         <remarks>To be added.</remarks>
 		public override void Flush ()
 		{
 			EnsureNotDisposed ();
@@ -143,6 +230,13 @@ namespace Compression
 				FlushBuffers ();
 		}
 
+		/// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+		///         <summary>Asynchronously clears all buffers for this stream and causes any buffered data to be written to the underlying device.</summary>
+		///         <returns>A task that represents the asynchronous flush operation.</returns>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.ObjectDisposedException">
+		///           Either the current stream or the destination stream is disposed.
+		///         </exception>
 		public override Task FlushAsync (CancellationToken cancellationToken)
 		{
 			EnsureNoActiveAsyncOperation ();
@@ -165,9 +259,9 @@ namespace Compression
 				bool flushSuccessful;
 				do {
 					int compressedBytes;
-					flushSuccessful = _deflater.Flush (_buffer, out compressedBytes);
+					flushSuccessful = Deflater.Flush (Buffer, out compressedBytes);
 					if (flushSuccessful) {
-						await _stream.WriteAsync(_buffer, 0, compressedBytes, cancellationToken).ConfigureAwait (false);
+						await Stream.WriteAsync (Buffer, 0, compressedBytes, cancellationToken).ConfigureAwait (false);
 					}
 				} while (flushSuccessful);
 			} finally {
@@ -175,16 +269,36 @@ namespace Compression
 			}
 		}
 
+		/// <param name="offset">The location in the stream.</param>
+		///         <param name="origin">One of the SeekOrigin values.</param>
+		///         <summary>This operation is not supported and always throws a NotSupportedException.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.NotSupportedException">
+		///           This property is not supported on this stream.
+		///         </exception>
 		public override long Seek (long offset, SeekOrigin origin)
 		{
 			throw new NotSupportedException ("This operation is not supported.");
 		}
 
+		/// <param name="value">The length of the stream.</param>
+		///         <summary>This operation is not supported and always throws a NotSupportedException.</summary>
+		///         <remarks>To be added.</remarks>
 		public override void SetLength (long value)
 		{
 			throw new NotSupportedException ("This operation is not supported.");
 		}
 
+		/// <summary>Reads a byte from the stream and advances the position within the stream by one byte, or returns -1 if at the end of the stream.</summary>
+		///         <returns>The unsigned byte cast to an Int32, or -1 if at the end of the stream.</returns>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.ObjectDisposedException">
+		///           The current stream stream is disposed.
+		///         </exception>
+		///         <exception cref="System.NotSupportedException">
+		///           The current stream does not support reading.
+		///         </exception>
 		public override int ReadByte ()
 		{
 			EnsureDecompressionMode ();
@@ -193,15 +307,20 @@ namespace Compression
 			// Try to read a single byte from zlib without allocating an array, pinning an array, etc.
 			// If zlib doesn't have any data, fall back to the base stream implementation, which will do that.
 			byte b;
-			return _inflater.Inflate (out b) ? b : base.ReadByte ();
+			return Inflater.Inflate (out b) ? b : base.ReadByte ();
 		}
 
-		public override int Read (byte[] array, int offset, int count)
+		/// <include file="../../docs/api/Compression/CompressionStream.xml" path="/Documentation/Docs[@DocId='M:Compression.CompressionStream.Read(System.Byte[],System.Int32,System.Int32)']/*" />
+		public override int Read (byte [] array, int offset, int count)
 		{
 			ValidateParameters (array, offset, count);
 			return ReadCore (new Span<byte> (array, offset, count));
 		}
 
+		/// <param name="destination">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override int Read (Span<byte> destination)
 		{
 			if (GetType () != typeof (CompressionStream)) {
@@ -223,36 +342,35 @@ namespace Compression
 			int totalRead = 0;
 
 			while (true) {
-				int bytesRead = _inflater.Inflate (destination.Slice (totalRead));
+				int bytesRead = Inflater.Inflate (destination.Slice (totalRead));
 				totalRead += bytesRead;
 				if (totalRead == destination.Length) {
 					break;
 				}
 
-				if (_inflater.Finished ()) {
+				if (Inflater.Finished ()) {
 					break;
 				}
 
-				int bytes = _stream.Read (_buffer, 0, _buffer.Length);
+				int bytes = Stream.Read (Buffer, 0, Buffer.Length);
 				if (bytes <= 0) {
 					break;
-				}
-				else if (bytes > _buffer.Length) {
+				} else if (bytes > Buffer.Length) {
 					// The stream is either malicious or poorly implemented and returned a number of
 					// bytes larger than the buffer supplied to it.
 					throw new InvalidDataException ("Found invalid data while decoding.");
 				}
 
-				_inflater.SetInput (_buffer, 0, bytes);
+				Inflater.SetInput (Buffer, 0, bytes);
 			}
 
 			return totalRead;
 		}
 
-		private void ValidateParameters (byte[] array, int offset, int count)
+		private void ValidateParameters (byte [] array, int offset, int count)
 		{
-			if (array == null)
-				throw new ArgumentNullException (nameof (array));
+			if (array is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (array));
 
 			if (offset < 0)
 				throw new ArgumentOutOfRangeException (nameof (offset));
@@ -266,11 +384,11 @@ namespace Compression
 
 		private void EnsureNotDisposed ()
 		{
-			if (_stream == null)
+			if (_stream is null)
 				ThrowStreamClosedException ();
 		}
 
-		[MethodImpl(MethodImplOptions.NoInlining)]
+		[MethodImpl (MethodImplOptions.NoInlining)]
 		private static void ThrowStreamClosedException ()
 		{
 			throw new ObjectDisposedException (null, "Can not access a closed Stream.");
@@ -282,7 +400,7 @@ namespace Compression
 				ThrowCannotReadFromDeflateStreamException ();
 		}
 
-		[MethodImpl(MethodImplOptions.NoInlining)]
+		[MethodImpl (MethodImplOptions.NoInlining)]
 		private static void ThrowCannotReadFromDeflateStreamException ()
 		{
 			throw new InvalidOperationException ("Reading from the compression stream is not supported.");
@@ -294,25 +412,39 @@ namespace Compression
 				ThrowCannotWriteToDeflateStreamException ();
 		}
 
-		[MethodImpl(MethodImplOptions.NoInlining)]
-		private static void ThrowCannotWriteToDeflateStreamException()
+		[MethodImpl (MethodImplOptions.NoInlining)]
+		private static void ThrowCannotWriteToDeflateStreamException ()
 		{
 			throw new InvalidOperationException ("Writing to the compression stream is not supported.");
 		}
 
-		public override IAsyncResult BeginRead (byte[] buffer, int offset, int count, AsyncCallback asyncCallback, object asyncState) =>
-			TaskToApm.Begin(ReadAsync (buffer, offset, count, CancellationToken.None), asyncCallback, asyncState);
+		/// <include file="../../docs/api/Compression/CompressionStream.xml" path="/Documentation/Docs[@DocId='M:Compression.CompressionStream.BeginRead(System.Byte[],System.Int32,System.Int32,System.AsyncCallback,System.Object)']/*" />
+		public override IAsyncResult BeginRead (byte [] buffer, int offset, int count, AsyncCallback? asyncCallback, object? asyncState) =>
+				TaskToApm.Begin (ReadAsync (buffer, offset, count, CancellationToken.None), asyncCallback, asyncState);
 
+		/// <param name="asyncResult">The reference to the pending asynchronous request to finish.</param>
+		///         <summary>Waits for the pending asynchronous read to complete.</summary>
+		///         <returns>The number of bytes read from the stream, between 0 (zero) and the number of bytes you requested. CompressionStream returns 0 only at the end of the stream; otherwise, it blocks until at least one byte is available.</returns>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.InvalidOperationException">
+		///           The end call is invalid because asynchronous read operations for this stream are not yet complete.
+		///         </exception>
 		public override int EndRead (IAsyncResult asyncResult) =>
 			TaskToApm.End<int> (asyncResult);
 
-		public override Task<int> ReadAsync (byte[] array, int offset, int count, CancellationToken cancellationToken)
+		/// <include file="../../docs/api/Compression/CompressionStream.xml" path="/Documentation/Docs[@DocId='M:Compression.CompressionStream.ReadAsync(System.Byte[],System.Int32,System.Int32,System.Threading.CancellationToken)']/*" />
+		public override Task<int> ReadAsync (byte [] array, int offset, int count, CancellationToken cancellationToken)
 		{
 			ValidateParameters (array, offset, count);
-			return ReadAsyncMemory (new Memory<byte>(array, offset, count), cancellationToken).AsTask ();
+			return ReadAsyncMemory (new Memory<byte> (array, offset, count), cancellationToken).AsTask ();
 		}
 
-		public override ValueTask<int> ReadAsync (Memory<byte> destination, CancellationToken cancellationToken = default(CancellationToken))
+		/// <param name="destination">To be added.</param>
+		///         <param name="cancellationToken">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override ValueTask<int> ReadAsync (Memory<byte> destination, CancellationToken cancellationToken = default (CancellationToken))
 		{
 			if (GetType () != typeof (CompressionStream)) {
 				// Ensure that existing streams derived from DeflateStream and that override ReadAsync(byte[],...)
@@ -330,7 +462,7 @@ namespace Compression
 			EnsureNotDisposed ();
 
 			if (cancellationToken.IsCancellationRequested) {
-				return new ValueTask<int>(Task.FromCanceled<int> (cancellationToken));
+				return new ValueTask<int> (Task.FromCanceled<int> (cancellationToken));
 			}
 
 			EnsureBufferInitialized ();
@@ -339,20 +471,20 @@ namespace Compression
 			AsyncOperationStarting ();
 			try {
 				// Try to read decompressed data in output buffer
-				int bytesRead = _inflater.Inflate (destination.Span);
+				int bytesRead = Inflater.Inflate (destination.Span);
 				if (bytesRead != 0) {
 					// If decompression output buffer is not empty, return immediately.
 					return new ValueTask<int> (bytesRead);
 				}
 
-				if (_inflater.Finished ()) {
+				if (Inflater.Finished ()) {
 					// end of compression stream
 					return new ValueTask<int> (0);
 				}
 
 				// If there is no data on the output buffer and we are not at
 				// the end of the stream, we need to get more data from the base stream
-				ValueTask<int> readTask = _stream.ReadAsync (_buffer, cancellationToken);
+				ValueTask<int> readTask = Stream.ReadAsync (_buffer, cancellationToken);
 				cleanup = false;
 				return FinishReadAsyncMemory (readTask, destination, cancellationToken);
 			} finally {
@@ -374,7 +506,7 @@ namespace Compression
 					if (bytesRead <= 0) {
 						// This indicates the base stream has received EOF
 						return 0;
-					} else if (bytesRead > _buffer.Length) {
+					} else if (bytesRead > Buffer.Length) {
 						// The stream is either malicious or poorly implemented and returned a number of
 						// bytes larger than the buffer supplied to it.
 						throw new InvalidDataException ("Found invalid data while decoding.");
@@ -383,13 +515,13 @@ namespace Compression
 					cancellationToken.ThrowIfCancellationRequested ();
 
 					// Feed the data from base stream into decompression engine
-					_inflater.SetInput (_buffer, 0, bytesRead);
-					bytesRead = _inflater.Inflate (destination.Span);
+					Inflater.SetInput (Buffer, 0, bytesRead);
+					bytesRead = Inflater.Inflate (destination.Span);
 
-					if (bytesRead == 0 && !_inflater.Finished ()) {
+					if (bytesRead == 0 && !Inflater.Finished ()) {
 						// We could have read in head information and didn't get any data.
 						// Read from the base stream again.
-						readTask = _stream.ReadAsync (_buffer, cancellationToken);
+						readTask = Stream.ReadAsync (_buffer, cancellationToken);
 					} else {
 						return bytesRead;
 					}
@@ -399,12 +531,20 @@ namespace Compression
 			}
 		}
 
-		public override void Write (byte[] array, int offset, int count)
+		/// <param name="array">The buffer that contains the data to compress.</param>
+		///         <param name="offset">The byte offset in array from which the bytes will be read.</param>
+		///         <param name="count">The maximum number of bytes to write.</param>
+		///         <summary>Writes compressed bytes to the underlying stream from the specified byte array.</summary>
+		///         <remarks>To be added.</remarks>
+		public override void Write (byte [] array, int offset, int count)
 		{
 			ValidateParameters (array, offset, count);
 			WriteCore (new ReadOnlySpan<byte> (array, offset, count));
 		}
 
+		/// <param name="source">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public override void Write (ReadOnlySpan<byte> source)
 		{
 			if (GetType () != typeof (CompressionStream)) {
@@ -427,8 +567,8 @@ namespace Compression
 
 			unsafe {
 				// Pass new bytes through deflater and write them too:
-				fixed (byte* bufferPtr = &MemoryMarshal.GetReference (source)) {
-					_deflater.SetInput (bufferPtr, source.Length);
+				fixed (byte* bufferPtr = &MemoryMarshal.GetReference (source!)) {
+					Deflater.SetInput (bufferPtr, source.Length);
 					WriteDeflaterOutput ();
 					_wroteBytes = true;
 				}
@@ -437,12 +577,12 @@ namespace Compression
 
 		private void WriteDeflaterOutput ()
 		{
-			while (!_deflater.NeedsInput ()) {
-				int compressedBytes = _deflater.GetDeflateOutput (_buffer);
+			while (!Deflater.NeedsInput ()) {
+				int compressedBytes = Deflater.GetDeflateOutput (Buffer);
 				if (compressedBytes > 0) {
-					_stream.Write (_buffer, 0, compressedBytes);
+					Stream.Write (Buffer, 0, compressedBytes);
 				}
-				if (_deflater.Finished ()) {
+				if (Deflater.Finished ()) {
 					break;
 				}
 			}
@@ -460,9 +600,9 @@ namespace Compression
 				bool flushSuccessful;
 				do {
 					int compressedBytes;
-					flushSuccessful = _deflater.Flush (_buffer, out compressedBytes);
+					flushSuccessful = Deflater.Flush (Buffer, out compressedBytes);
 					if (flushSuccessful) {
-						_stream.Write (_buffer, 0, compressedBytes);
+						Stream.Write (Buffer, 0, compressedBytes);
 					}
 				} while (flushSuccessful);
 			}
@@ -474,7 +614,7 @@ namespace Compression
 			if (!disposing)
 				return;
 
-			if (_stream == null)
+			if (_stream is null)
 				return;
 
 			if (_mode != CompressionMode.Compress)
@@ -493,10 +633,10 @@ namespace Compression
 				bool finished;
 				do {
 					int compressedBytes;
-					finished = _deflater.Finish (_buffer, out compressedBytes);
+					finished = Deflater.Finish (Buffer, out compressedBytes);
 
 					if (compressedBytes > 0)
-						_stream.Write(_buffer, 0, compressedBytes);
+						Stream.Write (Buffer, 0, compressedBytes);
 				} while (!finished);
 			} else {
 				// In case of zero length buffer, we still need to clean up the native created stream before
@@ -507,11 +647,14 @@ namespace Compression
 				bool finished;
 				do {
 					int compressedBytes;
-					finished = _deflater.Finish (_buffer, out compressedBytes);
+					finished = Deflater.Finish (Buffer, out compressedBytes);
 				} while (!finished);
 			}
 		}
 
+		/// <summary>Releases the resources used by this stream and optionally disposes the underlying stream.</summary>
+		/// <param name="disposing"><see langword="true" /> to release managed and unmanaged resources; <see langword="false" /> to release only unmanaged resources.</param>
+		/// <remarks>The underlying stream is disposed only when <paramref name="disposing" /> is <see langword="true" /> and this stream was not configured to leave it open.</remarks>
 		protected override void Dispose (bool disposing)
 		{
 			try {
@@ -533,8 +676,8 @@ namespace Compression
 						_deflater = null;
 						_inflater = null;
 
-						byte[] buffer = _buffer;
-						if (buffer != null) {
+						byte []? buffer = _buffer;
+						if (buffer is not null) {
 							_buffer = null;
 							if (!AsyncOperationIsActive) {
 								ArrayPool<byte>.Shared.Return (buffer);
@@ -547,17 +690,36 @@ namespace Compression
 			}
 		}
 
-		public override IAsyncResult BeginWrite (byte[] array, int offset, int count, AsyncCallback asyncCallback, object asyncState) =>
-			TaskToApm.Begin(WriteAsync (array, offset, count, CancellationToken.None), asyncCallback, asyncState);
+		/// <include file="../../docs/api/Compression/CompressionStream.xml" path="/Documentation/Docs[@DocId='M:Compression.CompressionStream.BeginWrite(System.Byte[],System.Int32,System.Int32,System.AsyncCallback,System.Object)']/*" />
+		public override IAsyncResult BeginWrite (byte [] array, int offset, int count, AsyncCallback? asyncCallback, object? asyncState) =>
+				TaskToApm.Begin (WriteAsync (array, offset, count, CancellationToken.None), asyncCallback, asyncState);
 
+		/// <param name="asyncResult">The reference to the pending asynchronous request to finish.</param>
+		///         <summary>Ends an asynchronous write operation.</summary>
+		///         <remarks>To be added.</remarks>
+		///         <exception cref="System.InvalidOperationException">
+		///           The end call is invalid because asynchronous read operations for this stream are not yet complete.
+		///         </exception>
 		public override void EndWrite (IAsyncResult asyncResult) => TaskToApm.End (asyncResult);
 
-		public override Task WriteAsync (byte[] array, int offset, int count, CancellationToken cancellationToken)
+		/// <param name="array">The buffer to write data from.</param>
+		///         <param name="offset">The zero-based byte offset in array from which to begin copying bytes to the stream.</param>
+		///         <param name="count">The maximum number of bytes to write.</param>
+		///         <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+		///         <summary>Asynchronously writes compressed bytes to the underlying stream from the specified byte array.</summary>
+		///         <returns>A task that represents the asynchronous write operation.</returns>
+		///         <remarks>To be added.</remarks>
+		public override Task WriteAsync (byte [] array, int offset, int count, CancellationToken cancellationToken)
 		{
 			ValidateParameters (array, offset, count);
 			return WriteAsyncMemory (new ReadOnlyMemory<byte> (array, offset, count), cancellationToken);
 		}
 
+		/// <param name="source">To be added.</param>
+		///         <param name="cancellationToken">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override ValueTask WriteAsync (ReadOnlyMemory<byte> source, CancellationToken cancellationToken)
 		{
 			if (GetType () != typeof (CompressionStream)) {
@@ -565,7 +727,7 @@ namespace Compression
 				// get their existing behaviors when the newer Memory-based overload is used.
 				return base.WriteAsync (source, cancellationToken);
 			} else {
-				return new ValueTask(WriteAsyncMemory (source, cancellationToken));
+				return new ValueTask (WriteAsyncMemory (source, cancellationToken));
 			}
 		}
 
@@ -576,7 +738,7 @@ namespace Compression
 			EnsureNotDisposed ();
 
 			return cancellationToken.IsCancellationRequested ?
-				Task.FromCanceled<int>(cancellationToken) :
+				Task.FromCanceled<int> (cancellationToken) :
 				WriteAsyncMemoryCore (source, cancellationToken);
 		}
 
@@ -587,7 +749,7 @@ namespace Compression
 				await WriteDeflaterOutputAsync (cancellationToken).ConfigureAwait (false);
 
 				// Pass new bytes through deflater
-				_deflater.SetInput (source);
+				Deflater.SetInput (source);
 
 				await WriteDeflaterOutputAsync (cancellationToken).ConfigureAwait (false);
 
@@ -602,18 +764,19 @@ namespace Compression
 		/// </summary>
 		private async Task WriteDeflaterOutputAsync (CancellationToken cancellationToken)
 		{
-			while (!_deflater.NeedsInput ()) {
-				int compressedBytes = _deflater.GetDeflateOutput (_buffer);
+			while (!Deflater.NeedsInput ()) {
+				int compressedBytes = Deflater.GetDeflateOutput (Buffer);
 				if (compressedBytes > 0) {
-					await _stream.WriteAsync (_buffer, 0, compressedBytes, cancellationToken).ConfigureAwait (false);
+					await Stream.WriteAsync (Buffer, 0, compressedBytes, cancellationToken).ConfigureAwait (false);
 				}
 
-				if (_deflater.Finished ()) {
+				if (Deflater.Finished ()) {
 					break;
 				}
 			}
 		}
 
+		/// <include file="../../docs/api/Compression/CompressionStream.xml" path="/Documentation/Docs[@DocId='M:Compression.CompressionStream.CopyToAsync(System.IO.Stream,System.Int32,System.Threading.CancellationToken)']/*" />
 		public override Task CopyToAsync (Stream destination, int bufferSize, CancellationToken cancellationToken)
 		{
 			// Validation as base CopyToAsync would do
@@ -633,20 +796,26 @@ namespace Compression
 			return new CopyToAsyncStream (this, destination, bufferSize, cancellationToken).CopyFromSourceToDestination ();
 		}
 
-		private sealed class CopyToAsyncStream : Stream
-		{
+		private sealed class CopyToAsyncStream : Stream {
 			private readonly CompressionStream _deflateStream;
 			private readonly Stream _destination;
 			private readonly CancellationToken _cancellationToken;
-			private byte[] _arrayPoolBuffer;
+			private byte []? _arrayPoolBuffer;
+			byte [] ArrayPoolBuffer {
+				get {
+					if (_arrayPoolBuffer is null)
+						throw new InvalidOperationException (nameof (_arrayPoolBuffer));
+					return _arrayPoolBuffer;
+				}
+			}
 			private int _arrayPoolBufferHighWaterMark;
 
 			public CopyToAsyncStream (CompressionStream deflateStream, Stream destination, int bufferSize, CancellationToken cancellationToken)
 			{
-				if (deflateStream == null)
-					throw new ArgumentNullException (nameof (deflateStream));
-				if (destination == null)
-					throw new ArgumentNullException (nameof (destination));
+				if (deflateStream is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (deflateStream));
+				if (destination is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (destination));
 				if (bufferSize <= 0)
 					throw new ArgumentOutOfRangeException (nameof (bufferSize));
 
@@ -662,29 +831,28 @@ namespace Compression
 				try {
 					// Flush any existing data in the inflater to the destination stream.
 					while (true) {
-						int bytesRead = _deflateStream._inflater.Inflate (_arrayPoolBuffer, 0, _arrayPoolBuffer.Length);
+						int bytesRead = _deflateStream.Inflater.Inflate (ArrayPoolBuffer, 0, ArrayPoolBuffer.Length);
 						if (bytesRead > 0) {
 							if (bytesRead > _arrayPoolBufferHighWaterMark) _arrayPoolBufferHighWaterMark = bytesRead;
-							await _destination.WriteAsync (_arrayPoolBuffer, 0, bytesRead, _cancellationToken).ConfigureAwait (false);
-						}
-						else break;
+							await _destination.WriteAsync (ArrayPoolBuffer, 0, bytesRead, _cancellationToken).ConfigureAwait (false);
+						} else break;
 					}
 
 					// Now, use the source stream's CopyToAsync to push directly to our inflater via this helper stream
-					await _deflateStream._stream.CopyToAsync (this, _arrayPoolBuffer.Length, _cancellationToken).ConfigureAwait (false);
+					await _deflateStream.Stream.CopyToAsync (this, ArrayPoolBuffer.Length, _cancellationToken).ConfigureAwait (false);
 				} finally {
 					_deflateStream.AsyncOperationCompleting ();
 
-					Array.Clear (_arrayPoolBuffer, 0, _arrayPoolBufferHighWaterMark); // clear only the most we used
-					ArrayPool<byte>.Shared.Return (_arrayPoolBuffer, clearArray: false);
+					Array.Clear (ArrayPoolBuffer, 0, _arrayPoolBufferHighWaterMark); // clear only the most we used
+					ArrayPool<byte>.Shared.Return (ArrayPoolBuffer, clearArray: false);
 					_arrayPoolBuffer = null;
 				}
 			}
 
-			public override async Task WriteAsync (byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+			public override async Task WriteAsync (byte [] buffer, int offset, int count, CancellationToken cancellationToken)
 			{
 				// Validate inputs
-				if (buffer == _arrayPoolBuffer)
+				if (buffer == ArrayPoolBuffer)
 					throw new ArgumentException (nameof (buffer));
 				_deflateStream.EnsureNotDisposed ();
 				if (count <= 0) {
@@ -696,20 +864,19 @@ namespace Compression
 				}
 
 				// Feed the data from base stream into the decompression engine.
-				_deflateStream._inflater.SetInput (buffer, offset, count);
+				_deflateStream.Inflater.SetInput (buffer, offset, count);
 
 				// While there's more decompressed data available, forward it to the destination stream.
 				while (true) {
-					int bytesRead = _deflateStream._inflater.Inflate (_arrayPoolBuffer, 0, _arrayPoolBuffer.Length);
+					int bytesRead = _deflateStream.Inflater.Inflate (ArrayPoolBuffer, 0, ArrayPoolBuffer.Length);
 					if (bytesRead > 0) {
 						if (bytesRead > _arrayPoolBufferHighWaterMark) _arrayPoolBufferHighWaterMark = bytesRead;
-						await _destination.WriteAsync (_arrayPoolBuffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
-					}
-					else break;
+						await _destination.WriteAsync (ArrayPoolBuffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
+					} else break;
 				}
 			}
 
-			public override void Write (byte[] buffer, int offset, int count) => WriteAsync(buffer, offset, count, default(CancellationToken)).GetAwaiter().GetResult();
+			public override void Write (byte [] buffer, int offset, int count) => WriteAsync (buffer, offset, count, default (CancellationToken)).GetAwaiter ().GetResult ();
 			public override bool CanWrite => true;
 			public override void Flush () { }
 
@@ -717,7 +884,7 @@ namespace Compression
 			public override bool CanSeek => false;
 			public override long Length { get { throw new NotSupportedException (); } }
 			public override long Position { get { throw new NotSupportedException (); } set { throw new NotSupportedException (); } }
-			public override int Read (byte[] buffer, int offset, int count) { throw new NotSupportedException (); }
+			public override int Read (byte [] buffer, int offset, int count) { throw new NotSupportedException (); }
 			public override long Seek (long offset, SeekOrigin origin) { throw new NotSupportedException (); }
 			public override void SetLength (long value) { throw new NotSupportedException (); }
 		}
@@ -746,7 +913,7 @@ namespace Compression
 
 		private static void ThrowInvalidBeginCall ()
 		{
-			throw new InvalidOperationException("Only one asynchronous reader or writer is allowed time at one time.");
+			throw new InvalidOperationException ("Only one asynchronous reader or writer is allowed time at one time.");
 		}
 	}
 }

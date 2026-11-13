@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "dotnet-t4": {
+      "version": "2.2.1",
+      "commands": [
+        "t4"
+      ],
+      "rollForward": false
+    },
+    "dotnet-ilrepack": {
+      "version": "2.0.48",
+      "commands": [
+        "ilrepack"
+      ],
+      "rollForward": false
+    },
+    "microsoft.dotnet.apicompat.tool": {
+      "version": "9.0.304",
+      "commands": [
+        "apicompat"
+      ],
+      "rollForward": false
+    }
+  }
+}

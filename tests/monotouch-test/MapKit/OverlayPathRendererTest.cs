@@ -7,21 +7,11 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using CoreLocation;
 using MapKit;
-using ObjCRuntime;
-#else
-using MonoTouch.CoreLocation;
-using MonoTouch.Foundation;
-using MonoTouch.MapKit;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.MapKit {
 
@@ -31,7 +21,7 @@ namespace MonoTouchFixtures.MapKit {
 		[SetUp]
 		public void Setup ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
 		}
 
 		[Test]
@@ -40,7 +30,7 @@ namespace MonoTouchFixtures.MapKit {
 			TestRuntime.AssertXcodeVersion (5, 0, 1);
 
 			using (var opr = new MKOverlayPathRenderer ()) {
-				Assert.Null (opr.Path, "Path");
+				Assert.That (opr.Path, Is.Null, "Path");
 			}
 		}
 
@@ -52,10 +42,10 @@ namespace MonoTouchFixtures.MapKit {
 			var loc = new CLLocationCoordinate2D (40, 70);
 			using (var overlay = MKCircle.Circle (loc, 2000))
 			using (var opr = new MKOverlayPathRenderer (overlay)) {
-				Assert.Null (opr.Path, "Path");
+				Assert.That (opr.Path, Is.Null, "Path");
 			}
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

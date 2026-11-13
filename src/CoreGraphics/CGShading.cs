@@ -25,105 +25,183 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
+using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>A type that represents a Quartz shading.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGShading.h
-	public class CGShading : INativeObject
+	public class CGShading : NativeObject {
 #if !COREBUILD
-		, IDisposable
-#endif
-	{
-#if !COREBUILD
-		internal IntPtr handle;
-
-		/* invoked by marshallers */
-		public CGShading (IntPtr handle)
+		[Preserve (Conditional = true)]
+		internal CGShading (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
-			CGShadingRetain (handle);
 		}
 
-		[Preserve (Conditional=true)]
-		internal CGShading (IntPtr handle, bool owns)
+		protected internal override void Retain ()
 		{
-			this.handle = handle;
-			if (!owns)
-				CGShadingRetain (handle);
+			CGShadingRetain (GetCheckedHandle ());
 		}
-		
 
-		[DllImport(Constants.CoreGraphicsLibrary)]
-		extern static /* CGShadingRef */ IntPtr CGShadingCreateAxial (/* CGColorSpaceRef */ IntPtr space, 
-			CGPoint start, CGPoint end, /* CGFunctionRef */ IntPtr functionHandle, bool extendStart, bool extendEnd);
-
-		public static CGShading CreateAxial (CGColorSpace colorspace, CGPoint start, CGPoint end, CGFunction function, bool extendStart, bool extendEnd)
+		protected internal override void Release ()
 		{
-			if (colorspace == null)
-				throw new ArgumentNullException ("colorspace");
-			if (colorspace.Handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("colorspace");
-			if (function == null)
-				throw new ArgumentNullException ("function");
-			if (function.Handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("function");
-
-			return new CGShading (CGShadingCreateAxial (colorspace.Handle, start, end, function.Handle, extendStart, extendEnd), true);
+			CGShadingRelease (GetCheckedHandle ());
 		}
-		
-		[DllImport(Constants.CoreGraphicsLibrary)]
-		extern static /* CGShadingRef */ IntPtr CGShadingCreateRadial (/* CGColorSpaceRef */ IntPtr space, 
+
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		extern static /* CGShadingRef */ IntPtr CGShadingCreateAxial (/* CGColorSpaceRef */ IntPtr space,
+			CGPoint start, CGPoint end, /* CGFunctionRef */ IntPtr functionHandle, byte extendStart, byte extendEnd);
+
+		/// <summary>Create a new axial shading.</summary>
+		/// <param name="colorspace">The colorspace to use for the new <see cref="CGShading" />.</param>
+		/// <param name="start">The starting point for the axis.</param>
+		/// <param name="end">The ending point for the axis</param>
+		/// <param name="function">The shading function to use.</param>
+		/// <param name="extendStart">Whether the shading will extend beyond the starting point of the axis or not.</param>
+		/// <param name="extendEnd">Whether the shading will extend beyond the ending point of the axis or not.</param>
+		/// <returns>A new <see cref="CGShading" /> if successful, <see langword="null" /> otherwise.</returns>
+		public static CGShading? CreateAxial (CGColorSpace? colorspace, CGPoint start, CGPoint end, CGFunction? function, bool extendStart, bool extendEnd)
+		{
+			var handle = CGShadingCreateAxial (colorspace.GetHandle (), start, end, function.GetHandle (), extendStart.AsByte (), extendEnd.AsByte ());
+			GC.KeepAlive (colorspace);
+			GC.KeepAlive (function);
+			if (handle == IntPtr.Zero)
+				return null;
+			return new CGShading (handle, true);
+		}
+
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		extern static /* CGShadingRef */ IntPtr CGShadingCreateRadial (/* CGColorSpaceRef */ IntPtr space,
 			CGPoint start, /* CGFloat */ nfloat startRadius, CGPoint end, /* CGFloat */ nfloat endRadius,
-			/* CGFunctionRef */ IntPtr function, bool extendStart, bool extendEnd);
+			/* CGFunctionRef */ IntPtr function, byte extendStart, byte extendEnd);
 
-		public static CGShading CreateRadial (CGColorSpace colorspace, CGPoint start, nfloat startRadius, CGPoint end, nfloat endRadius,
-						      CGFunction function, bool extendStart, bool extendEnd)
+		/// <summary>Create a new radial shading.</summary>
+		/// <param name="colorspace">The colorspace to use for the new <see cref="CGShading" />.</param>
+		/// <param name="start">The center point for the starting circle.</param>
+		/// <param name="startRadius">The radius of the starting circle.</param>
+		/// <param name="end">The center point for the ending circle</param>
+		/// <param name="endRadius">The radius of the ending circle.</param>
+		/// <param name="function">The shading function to use.</param>
+		/// <param name="extendStart">Whether the shading will extend beyond the starting circle or not.</param>
+		/// <param name="extendEnd">Whether the shading will extend beyond the ending circle or not.</param>
+		/// <returns>A new <see cref="CGShading" /> if successful, <see langword="null" /> otherwise.</returns>
+		public static CGShading? CreateRadial (CGColorSpace? colorspace, CGPoint start, nfloat startRadius, CGPoint end, nfloat endRadius,
+							  CGFunction? function, bool extendStart, bool extendEnd)
 		{
-			if (colorspace == null)
-				throw new ArgumentNullException ("colorspace");
-			if (colorspace.Handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("colorspace");
-			if (function == null)
-				throw new ArgumentNullException ("function");
-			if (function.Handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("function");
-
-			return new CGShading (CGShadingCreateRadial (colorspace.Handle, start, startRadius, end, endRadius,
-								     function.Handle, extendStart, extendEnd), true);
+			var handle = CGShadingCreateRadial (colorspace.GetHandle (), start, startRadius, end, endRadius,
+									 function.GetHandle (), extendStart.AsByte (), extendEnd.AsByte ());
+			GC.KeepAlive (colorspace);
+			GC.KeepAlive (function);
+			if (handle == IntPtr.Zero)
+				return null;
+			return new CGShading (handle, true);
 		}
 
-		~CGShading ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-	
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGShadingRef */ IntPtr CGShadingRelease (/* CGShadingRef */ IntPtr shading);
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static void CGShadingRetain (/* CGShadingRef */ IntPtr shading);
-		
-		protected virtual void Dispose (bool disposing)
+		extern static /* CGShadingRef */ IntPtr CGShadingRetain (/* CGShadingRef */ IntPtr shading);
+
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		static extern IntPtr /* CGShadingRef __nullable */ CGShadingCreateAxialWithContentHeadroom (
+				float headroom,
+				IntPtr /* CGColorSpaceRef cg_nullable */ space,
+				CGPoint start,
+				CGPoint end,
+				IntPtr /* CGFunctionRef cg_nullable */ function,
+				byte /* bool */ extendStart,
+				byte /* bool */ extendEnd);
+
+		/// <summary>Create an axial shading with the specified content headroom.</summary>
+		/// <param name="headroom">The content headroom for the new <see cref="CGShading" />.</param>
+		/// <param name="colorSpace">The colorspace to use for the new <see cref="CGShading" />. This colorspace must support HDR.</param>
+		/// <param name="start">The starting point for the axis.</param>
+		/// <param name="end">The ending point for the axis</param>
+		/// <param name="function">The shading function to use.</param>
+		/// <param name="extendStart">Whether the shading will extend beyond the starting point of the axis or not.</param>
+		/// <param name="extendEnd">Whether the shading will extend beyond the ending point of the axis or not.</param>
+		/// <returns>A new <see cref="CGShading" /> if successful, <see langword="null" /> otherwise.</returns>
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		public static CGShading? CreateAxial (float headroom, CGColorSpace? colorSpace, CGPoint start, CGPoint end, CGFunction? function, bool extendStart, bool extendEnd)
 		{
-			if (handle != IntPtr.Zero){
-				CGShadingRelease (handle);
-				handle = IntPtr.Zero;
-			}
+			var handle = CGShadingCreateAxialWithContentHeadroom (headroom, colorSpace.GetHandle (), start, end, function.GetHandle (), extendStart.AsByte (), extendEnd.AsByte ());
+			GC.KeepAlive (colorSpace);
+			GC.KeepAlive (function);
+			if (handle == IntPtr.Zero)
+				return null;
+			return new CGShading (handle, true);
+		}
+
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		extern static /* CGShadingRef */ IntPtr CGShadingCreateRadialWithContentHeadroom (
+			float headroom,
+			/* CGColorSpaceRef cg_nullable */ IntPtr space,
+			CGPoint start,
+			/* CGFloat */ nfloat startRadius,
+			CGPoint end,
+			/* CGFloat */ nfloat endRadius,
+			/* CGFunctionRef cg_nullable */ IntPtr function,
+			byte extendStart,
+			byte extendEnd);
+
+		/// <summary>Create a new radial shading with the specified content headroom.</summary>
+		/// <param name="headroom">The content headroom for the new <see cref="CGShading" />.</param>
+		/// <param name="colorspace">The colorspace to use for the new <see cref="CGShading" />. This colorspace must support HDR.</param>
+		/// <param name="start">The center point for the starting circle.</param>
+		/// <param name="startRadius">The radius of the starting circle.</param>
+		/// <param name="end">The center point for the ending circle</param>
+		/// <param name="endRadius">The radius of the ending circle.</param>
+		/// <param name="function">The shading function to use.</param>
+		/// <param name="extendStart">Whether the shading will extend beyond the starting circle or not.</param>
+		/// <param name="extendEnd">Whether the shading will extend beyond the ending circle or not.</param>
+		/// <returns>A new <see cref="CGShading" /> if successful, <see langword="null" /> otherwise.</returns>
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		public static CGShading? CreateRadial (float headroom, CGColorSpace? colorspace, CGPoint start, nfloat startRadius, CGPoint end, nfloat endRadius, CGFunction? function, bool extendStart, bool extendEnd)
+		{
+			var handle = CGShadingCreateRadialWithContentHeadroom (headroom, colorspace.GetHandle (), start, startRadius, end, endRadius, function.GetHandle (), extendStart.AsByte (), extendEnd.AsByte ());
+			GC.KeepAlive (colorspace);
+			GC.KeepAlive (function);
+			if (handle == IntPtr.Zero)
+				return null;
+			return new CGShading (handle, true);
+		}
+
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		static extern float CGShadingGetContentHeadroom (IntPtr /* CGShadingRef gc_nullable */ shading);
+
+		/// <summary>Get the content headroom for this shading.</summary>
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		public float ContentHeadroom {
+			get => CGShadingGetContentHeadroom (GetCheckedHandle ());
 		}
 #endif // !COREBUILD
 	}

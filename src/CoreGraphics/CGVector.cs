@@ -26,18 +26,27 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#nullable enable
+
 using System.Globalization;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
 using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>A mathematical vector, with value equality implemented.</summary>
+	///     <remarks>
+	///       <para>
+	///       </para>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGGeometry.h
 	public struct CGVector {
-		public /* CGFloat */ nfloat dx, dy;
+		/// <summary>X component of the vector</summary>
+		public /* CGFloat */ nfloat dx;
+		/// <summary>Y component of the vector</summary>
+		public /* CGFloat */ nfloat dy;
 
 		public CGVector (nfloat dx, nfloat dy)
 		{
@@ -55,53 +64,69 @@ namespace CoreGraphics {
 			return left.dx != right.dx || left.dy != right.dy;
 		}
 
+		/// <summary>Returns the hash code for this vector.</summary>
 		public override int GetHashCode ()
 		{
-			unchecked {
-				return ((int)dx) ^ ((int)dy);
-			}
+			return HashCode.Combine (dx, dy);
 		}
 
-		public override bool Equals (object other)
+		/// <summary>Determines whether this vector is equal to the specified object.</summary>
+		/// <param name="other">The object to compare with.</param>
+		public override bool Equals (object? other)
 		{
-			if (other == null || !(other is CGVector))
-				return false;
-			CGVector o = (CGVector) other;
-			return o.dx == dx && o.dy == dy;
+			if (other is CGVector vector)
+				return dx == vector.dx && dy == vector.dy;
+			return false;
 		}
 
-#if MONOTOUCH
+#if HAS_UIKIT
 #if !COREBUILD
-		[iOS (8,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		[DllImport (Constants.UIKitLibrary)]
 		extern static IntPtr NSStringFromCGVector (CGVector vector);
-		
-		[iOS (8,0)]
-		public override string ToString ()
+
+		/// <summary>String representation of the vector, suitable to be passed later to <see cref="CoreGraphics.CGVector.FromString(System.String)" /> method.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
+		public override string? ToString ()
 		{
-			using (var ns = new NSString (NSStringFromCGVector (this)))
-				return ns.ToString ();
-#if false
-			return String.Format ("{{dx={0}, dy={1}}}", dx.ToString (CultureInfo.CurrentCulture),
-				dy.ToString (CultureInfo.CurrentCulture));
-#endif
+			return CFString.FromHandle (NSStringFromCGVector (this));
 		}
 
-		[iOS (8,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		[DllImport (Constants.UIKitLibrary)]
 		extern static CGVector CGVectorFromString (IntPtr str);
-		
-		[iOS (8,0)]
+
+		/// <summary>Creates a CGVector from a stringified representation of the vector.</summary>
+		/// <param name="s">String representation, created previously with either the <see cref="CoreGraphics.CGVector.ToString" /> method or serialized in the CGVector format.</param>
+		/// <returns>The CGVector represented by the string representation.</returns>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		static public CGVector FromString (string s)
 		{
 			// note: null is allowed
-			var ptr = NSString.CreateNative (s);
+			var ptr = CFString.CreateNative (s);
 			var value = CGVectorFromString (ptr);
-			NSString.ReleaseNative (ptr);
+			CFString.ReleaseNative (ptr);
 			return value;
 		}
 #endif
+#else // HAS_UIKIT
+		public override string ToString ()
+		{
+			return $"{{{dx}, {dy}}}";
+		}
 #endif
-	
+
 	}
 }

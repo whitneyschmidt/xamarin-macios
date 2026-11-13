@@ -1,28 +1,29 @@
-﻿// 
+// 
 // VTPropertyOptions.cs: Strongly Typed dictionary for VTPropertyKeys 
 //
 // Authors: Alex Soto (alex.soto@xamarin.com)
 //     
 // Copyright 2015 Xamarin Inc.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Collections.Generic;
 
 using CoreFoundation;
-using ObjCRuntime;
-using Foundation;
 using CoreMedia;
 using CoreVideo;
 
 namespace VideoToolbox {
 
 	public partial class VTPropertyOptions {
-		public VTPropertyType Type { 
+		/// <summary>Gets or sets the property's value type.</summary>
+		/// <value>The property value type.</value>
+		public VTPropertyType Type {
 			get {
 				var key = GetNSStringValue (VTPropertyKeys.Type);
 
-				if (key == null)
+				if (key is null)
 					return VTPropertyType.Unset;
 				if (key == VTPropertyTypeKeys.Enumeration)
 					return VTPropertyType.Enumeration;
@@ -50,11 +51,13 @@ namespace VideoToolbox {
 			}
 		}
 
-		public VTReadWriteStatus ReadWriteStatus { 
+		/// <summary>Gets or sets whether the property can be read or written.</summary>
+		/// <value>The property's read/write status.</value>
+		public VTReadWriteStatus ReadWriteStatus {
 			get {
 				var key = GetNSStringValue (VTPropertyKeys.ReadWriteStatus);
 
-				if (key == null)
+				if (key is null)
 					return VTReadWriteStatus.Unset;
 				if (key == VTPropertyReadWriteStatusKeys.ReadOnly)
 					return VTReadWriteStatus.ReadOnly;
@@ -78,4 +81,3 @@ namespace VideoToolbox {
 		}
 	}
 }
-

@@ -1,0 +1,34 @@
+<Documentation>
+  <Docs DocId="T:Foundation.NSError">
+    <summary>Encapsulates an error.</summary>
+    <remarks>
+      <para>NSError objects wrap both error domains, an error code and an optional error payload into one.   The error domain is used to classify the error (typically, there is an error domain per susbsystem).   There are several static properties in the NSError class that represent some common domains like the <see cref="Foundation.NSError.CocoaErrorDomain" /> or the <see cref="Foundation.NSError.CFNetworkErrorDomain" />.</para>
+      <para>
+      </para>
+      <para>NSErrors can be serialized.</para>
+      <para>
+      </para>
+      <para>You can create an NSError with a domain by providing both parameters.  The following example shows how to do this, and passes a payload:</para>
+      <para>
+      </para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[var payload = NSDictionary.FromObjectsAndKeys (new object [] {1,2,3,4});]]></code>
+      </example>
+      <para>
+      </para>
+      <para>When creating the error with a payload, you can provide a number of optional elements that provide the user with more information.   You should provide this information on the NSDictionary with the keys defined in this class like <see cref="Foundation.NSError.LocalizedFailureErrorKey" />, <see cref="Foundation.NSError.FilePathErrorKey," /> <see cref="Foundation.NSError.HelpAnchorErrorKey" />, <see cref="Foundation.NSError.LocalizedDescriptionKey" />, <see cref="Foundation.NSError.LocalizedFailureReasonErrorKey" />, <see cref="Foundation.NSError.LocalizedRecoveryOptionsErrorKey" />, <see cref="Foundation.NSError.LocalizedRecoverySuggestionErrorKey" />, <see cref="Foundation.NSError.StringEncodingErrorKey," /> <see cref="Foundation.NSError.UnderlyingErrorKey" /> and <see cref="Foundation.NSError.UrlErrorKey." /></para>
+      <para>
+      </para>
+      <para>For example:</para>
+      <para>
+      </para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[var userInfo = new NSDictionary (NSError.LocalizedDescriptionKey, "Error while parsing GeoJSON");]]></code>
+      </example>
+      <para>
+      </para>
+      <para>The LocalizedDescription property will return the above value.</para>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/NSError_Class/index.html">Apple documentation for <c>NSError</c></related>
+  </Docs>
+</Documentation>

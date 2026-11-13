@@ -1,4 +1,4 @@
-﻿//
+//
 // CNSocialProfile.cs: Implements some nicer methods for CNSocialProfile
 //
 // Authors:
@@ -7,36 +7,49 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using Foundation;
+#nullable enable
 
 namespace Contacts {
-#if XAMCORE_2_0 // The Contacts framework uses generics heavily, which is only supported in Unified (for now at least)
 	// Strong typed Keys to enum
-	public enum CNSocialProfileOption
-	{
+	/// <summary>Enumerates properties of social services that are always fetched.</summary>
+	public enum CNSocialProfileOption {
+		/// <summary>Associated with the <see cref="Contacts.CNSocialProfileKey.UrlString" /> property.</summary>
 		UrlString,
+		/// <summary>Associated with the <see cref="Contacts.CNSocialProfileKey.Username" /> property.</summary>
 		Username,
+		/// <summary>Associated with the <see cref="Contacts.CNSocialProfileKey.UserIdentifier" /> property.</summary>
 		UserIdentifier,
-		Service
+		/// <summary>Associated with the <see cref="Contacts.CNSocialProfileKey.Service" /> property.</summary>
+		Service,
 	}
 
 	// Strong typed Keys to enum
-	public enum CNSocialProfileServiceOption
-	{
+	/// <summary>Enumerates known social services.</summary>
+	public enum CNSocialProfileServiceOption {
+		/// <summary>Facebook.</summary>
 		Facebook,
+		/// <summary>Flickr.</summary>
 		Flickr,
+		/// <summary>LinkedIn.</summary>
 		LinkedIn,
+		/// <summary>MySpace.</summary>
 		MySpace,
+		/// <summary>SinaWeibo.</summary>
 		SinaWeibo,
+		/// <summary>TencentWeibo.</summary>
 		TencentWeibo,
+		/// <summary>Twitter.</summary>
 		Twitter,
+		/// <summary>Yelp.</summary>
 		Yelp,
-		GameCenter
+		/// <summary>Apple GameCenter.</summary>
+		GameCenter,
 	}
 
 	public partial class CNSocialProfile {
 
+		/// <summary>Returns the localized string representing the <paramref name="option" />.</summary>
+		/// <param name="option">The option.</param>
 		public static string LocalizeProperty (CNSocialProfileOption option)
 		{
 			switch (option) {
@@ -53,6 +66,8 @@ namespace Contacts {
 			}
 		}
 
+		/// <summary>Returns the localized string representing the <paramref name="serviceOption" />.</summary>
+		/// <param name="serviceOption">The service option.</param>
 		public static string LocalizeService (CNSocialProfileServiceOption serviceOption)
 		{
 			var srvc = ServiceOptionsToNSString (serviceOption);
@@ -85,6 +100,4 @@ namespace Contacts {
 			}
 		}
 	}
-#endif // XAMCORE_2_0
 }
-

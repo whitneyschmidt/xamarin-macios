@@ -7,11 +7,12 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
+#nullable enable
 
-namespace SceneKit
-{
+namespace SceneKit {
 	public partial class SCNPhysicsTest {
+		/// <summary>Gets or sets the search mode for physics shape tests.</summary>
+		/// <value>The physics search mode.</value>
 		public SCNPhysicsSearchMode SearchMode {
 			get {
 				var k = _SearchMode;
@@ -25,9 +26,9 @@ namespace SceneKit
 
 				return SCNPhysicsSearchMode.Unknown;
 			}
-			
+
 			set {
-				switch (value){
+				switch (value) {
 				case SCNPhysicsSearchMode.All:
 					_SearchMode = SCNPhysicsTestSearchModeKeys.All;
 					break;
@@ -42,6 +43,6 @@ namespace SceneKit
 				}
 			}
 		}
-		
+
 	}
 }

@@ -1,16 +1,29 @@
-using System;
+#if !__MACCATALYST__
 using System.Diagnostics;
-using Foundation;
+
 using CoreGraphics;
+
+#nullable enable
 
 namespace AppKit {
 
-	[DebuggerTypeProxy (typeof(NSEvent.NSEventDebuggerProxy))]
+	[DebuggerTypeProxy (typeof (NSEvent.NSEventDebuggerProxy))]
 	public partial class NSEvent {
-		
+
+		/// <summary>Create a new <see cref="AppKit.NSEvent" /> using the specified <see cref="CoreGraphics.CGEvent" />.</summary>
+		/// <param name="event">The <see cref="CoreGraphics.CGEvent" /> that will be wrapped.</param>
+		/// <returns>The newly created <see cref="AppKit.NSEvent" />.</returns>
+		/// <remarks>This method will return null if there's no corresponding Cocoa event.</remarks>
+		public static NSEvent? Create (CGEvent @event)
+		{
+			NSEvent? result = EventWithCGEvent (@event.GetNonNullHandle (nameof (@event)));
+			GC.KeepAlive (@event);
+			return result;
+		}
+
 		class NSEventDebuggerProxy {
 			NSEvent target;
-			
+
 			public NSEventDebuggerProxy (NSEvent target)
 			{
 				this.target = target;
@@ -30,7 +43,7 @@ namespace AppKit {
 					return target.LocationInWindow;
 				}
 			}
-			
+
 			public NSEventModifierMask ModifierFlags {
 				get {
 					return target.ModifierFlags;
@@ -54,7 +67,7 @@ namespace AppKit {
 					return target.Window;
 				}
 			}
-			
+
 			public nint WindowNumber {
 				get {
 					return target.WindowNumber;
@@ -95,21 +108,21 @@ namespace AppKit {
 					return target.Characters;
 				}
 			}
-			
+
 			public string CharactersIgnoringModifiers {
 				get {
 					CheckKeyEvent ();
 					return target.CharactersIgnoringModifiers;
 				}
 			}
-			
+
 			public bool IsARepeat {
 				get {
 					CheckKeyEvent ();
 					return target.IsARepeat;
 				}
 			}
-			
+
 			public ushort KeyCode {
 				get {
 					CheckKeyEvent ();
@@ -158,21 +171,21 @@ namespace AppKit {
 					return;
 				throw new InvalidOperationException ("Not a tablet pointing event.");
 			}
-			
+
 			public nint AbsoluteX {
 				get {
 					CheckTabletPointingEvent ();
 					return target.AbsoluteX;
 				}
 			}
-			
+
 			public nint AbsoluteY {
 				get {
 					CheckTabletPointingEvent ();
 					return target.AbsoluteY;
 				}
 			}
-			
+
 			public nint AbsoluteZ {
 				get {
 					CheckTabletPointingEvent ();
@@ -232,7 +245,7 @@ namespace AppKit {
 					return target.ButtonNumber;
 				}
 			}
-			
+
 			public nint ClickCount {
 				get {
 					CheckMouseEvent ();
@@ -263,7 +276,7 @@ namespace AppKit {
 					return;
 				throw new InvalidOperationException ("Not a mouse tracking event.");
 			}
-			
+
 			internal nint EventNumber {
 				get {
 					CheckMouseTrackingEvent ();
@@ -350,14 +363,14 @@ namespace AppKit {
 					return false;
 				}
 			}
-			
+
 			void CheckScrollWheelEvent ()
 			{
 				if (IsScrollWheelEvent ())
 					return;
 				throw new InvalidOperationException ("Not a scroll wheel event.");
 			}
-			
+
 			public float DeltaX {
 				get {
 					CheckScrollWheelEvent ();
@@ -431,7 +444,7 @@ namespace AppKit {
 					return target.PointingDeviceID ();
 				}
 			}
-			
+
 			public NSPointingDeviceType PointingDeviceType {
 				get {
 					CheckTabletProximityEvent ();
@@ -483,7 +496,7 @@ namespace AppKit {
 				// FIXME
 				return false;
 			}
-			
+
 			void CheckTouchOrGestureEvent ()
 			{
 				if (IsTouchOrGestureEvent ())
@@ -508,21 +521,21 @@ namespace AppKit {
 					return true;
 				return false;
 			}
-			
+
 			void CheckScrollWheelOrFlickEvent ()
 			{
 				if (IsScrollWheelOrFlickEvent ())
 					return;
 				throw new InvalidOperationException ("Not a scroll wheel or flick event.");
 			}
-			
+
 			public bool HasPreciseScrollingDeltas {
 				get {
 					CheckScrollWheelOrFlickEvent ();
 					return target.HasPreciseScrollingDeltas;
 				}
 			}
-			
+
 			public nfloat ScrollingDeltaX {
 				get {
 					CheckScrollWheelOrFlickEvent ();
@@ -557,9 +570,9 @@ namespace AppKit {
 					return target.IsDirectionInvertedFromDevice;
 				}
 			}
-#endregion
+			#endregion
 		}
-		
+
 	}
 }
-
+#endif // !__MACCATALYST__

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CATextLayerTests
 //
 // Authors:
@@ -8,18 +8,7 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
 using CoreAnimation;
-#else
-using MonoTouch.CoreAnimation;
-using MonoTouch.Foundation;
-#endif
 
 namespace MonoTouchFixtures.CoreAnimation {
 	[TestFixture]
@@ -34,13 +23,10 @@ namespace MonoTouchFixtures.CoreAnimation {
 				TextTruncationMode = CATextLayerTruncationMode.Middle
 			};
 
-			Assert.AreEqual (CATextLayerTruncationMode.Middle, textLayer.TextTruncationMode, "TextTruncationMode");
-			Assert.AreEqual (textLayer.TruncationMode, (string) textLayer.TextTruncationMode.GetConstant (), "TruncationMode");
+			Assert.That (textLayer.TextTruncationMode, Is.EqualTo (CATextLayerTruncationMode.Middle), "TextTruncationMode");
 
-			textLayer.TruncationMode = CATextLayer.TruncantionEnd;
-			Assert.AreEqual (CATextLayerTruncationMode.End, textLayer.TextTruncationMode, "TextTruncationMode 2");
-
-			Assert.Throws<ArgumentNullException> (() => textLayer.TruncationMode = null);
+			textLayer.TextTruncationMode = CATextLayerTruncationMode.End;
+			Assert.That (textLayer.TextTruncationMode, Is.EqualTo (CATextLayerTruncationMode.End), "TextTruncationMode 2");
 		}
 
 		[Test]
@@ -51,14 +37,10 @@ namespace MonoTouchFixtures.CoreAnimation {
 				TextAlignmentMode = CATextLayerAlignmentMode.Justified
 			};
 
-			Assert.AreEqual (CATextLayerAlignmentMode.Justified, textLayer.TextAlignmentMode, "TextAlignmentMode");
-			Assert.AreEqual (textLayer.AlignmentMode, (string) textLayer.TextAlignmentMode.GetConstant (), "AlignmentMode");
+			Assert.That (textLayer.TextAlignmentMode, Is.EqualTo (CATextLayerAlignmentMode.Justified), "TextAlignmentMode");
 
-			textLayer.AlignmentMode = CATextLayer.AlignmentNatural;
-			Assert.AreEqual (CATextLayerAlignmentMode.Natural, textLayer.TextAlignmentMode, "TextAlignmentMode 2");
-
-			Assert.Throws<ArgumentNullException> (() => textLayer.AlignmentMode = null);
+			textLayer.TextAlignmentMode = CATextLayerAlignmentMode.Natural;
+			Assert.That (textLayer.TextAlignmentMode, Is.EqualTo (CATextLayerAlignmentMode.Natural), "TextAlignmentMode 2");
 		}
 	}
 }
-#endif // !__WATCHOS__

@@ -1,4 +1,4 @@
-﻿// 
+// 
 // AVPlayerLayer.cs: AVPlayerLayer class
 //
 // Authors:
@@ -7,27 +7,29 @@
 // Copyright 2015 Xamarin Inc.
 //
 
-#if !WATCH
-
-using ObjCRuntime;
 using CoreVideo;
+
+#nullable enable
 
 namespace AVFoundation {
 	public partial class AVPlayerLayer {
-		[iOS (9,0), Mac (10,11)]
-		public CVPixelBufferAttributes PixelBufferAttributes { 
+		/// <summary>Gets or sets the attributes of the client visual buffer.</summary>
+		/// <value>The pixel buffer attributes, or <see langword="null" /> if none are set.</value>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public CVPixelBufferAttributes? PixelBufferAttributes {
 			get {
-				if (WeakPixelBufferAttributes != null) {
+				if (WeakPixelBufferAttributes is not null) {
 					var strongDict = new CVPixelBufferAttributes (WeakPixelBufferAttributes);
 					return strongDict;
 				}
 				return null;
 			}
 			set {
-				WeakPixelBufferAttributes = value != null ? value.Dictionary : null;
+				WeakPixelBufferAttributes = value?.Dictionary;
 			}
 		}
 	}
 }
-
-#endif

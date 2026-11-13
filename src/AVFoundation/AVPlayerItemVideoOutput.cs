@@ -1,21 +1,17 @@
-#if !WATCH
-
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
 using AudioToolbox;
+
+#nullable enable
 
 namespace AVFoundation {
 	public partial class AVPlayerItemVideoOutput {
 
 		enum InitMode {
 			PixelAttributes,
-			OutputSettings
+			OutputSettings,
 		}
 
-		AVPlayerItemVideoOutput (NSDictionary data, AVPlayerItemVideoOutput.InitMode mode) : base (NSObjectFlag.Empty)
+		AVPlayerItemVideoOutput (NSDictionary? data, AVPlayerItemVideoOutput.InitMode mode) : base (NSObjectFlag.Empty)
 		{
 			switch (mode) {
 			case InitMode.PixelAttributes:
@@ -29,10 +25,12 @@ namespace AVFoundation {
 			}
 		}
 
+		/// <summary>Initializes a new instance with the specified pixel buffer attributes.</summary>
+		/// <param name="pixelBufferAttributes">
+		///   <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		/// </param>
 		[DesignatedInitializer]
 		[Advice ("Please use the constructor that uses one of the available StrongDictionaries. This constructor expects PixelBuffer attributes.")]
-		protected AVPlayerItemVideoOutput (NSDictionary pixelBufferAttributes) : this (pixelBufferAttributes, InitMode.PixelAttributes) {}
+		protected AVPlayerItemVideoOutput (NSDictionary pixelBufferAttributes) : this (pixelBufferAttributes, InitMode.PixelAttributes) { }
 	}
 }
-
-#endif

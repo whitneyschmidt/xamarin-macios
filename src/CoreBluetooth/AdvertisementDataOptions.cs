@@ -25,11 +25,9 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreBluetooth {
 
@@ -37,22 +35,31 @@ namespace CoreBluetooth {
 	// It's intentionally not called AdvertisementDataOptions because different options
 	// are valid in different contexts
 	//
-	[Watch (4,0)]
-	[iOS (6,0)]
-	public class StartAdvertisingOptions : DictionaryContainer
-	{
+	/// <summary>Manages access to options used by <see cref="CBPeripheralManager.StartAdvertising(StartAdvertisingOptions)" />.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class StartAdvertisingOptions : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>Creates a new instance of <see cref="StartAdvertisingOptions" /> with an empty dictionary.</summary>
 		public StartAdvertisingOptions ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <summary>Creates a new instance of <see cref="StartAdvertisingOptions" /> from the specified dictionary.</summary>
+		/// <param name="dictionary">The dictionary containing the advertising options.</param>
 		public StartAdvertisingOptions (NSDictionary dictionary)
 			: base (dictionary)
 		{
 		}
 
-		public string LocalName {
+		/// <summary>Represents the local name of a peripheral</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant CBAdvertisementDataLocalNameKey value to access the underlying dictionary.</remarks>
+		public string? LocalName {
 			set {
 				SetStringValue (CBAdvertisement.DataLocalNameKey, value);
 			}
@@ -61,7 +68,11 @@ namespace CoreBluetooth {
 			}
 		}
 
-		public CBUUID[] ServicesUUID {
+		/// <summary>One or more <see cref="CoreBluetooth.CBUUID" /> objects.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant CBAdvertisementDataServiceUUIDsKey value to access the underlying dictionary.</remarks>
+		public CBUUID []? ServicesUUID {
 			get {
 				return GetArray<CBUUID> (CBAdvertisement.DataServiceUUIDsKey);
 			}
@@ -72,4 +83,3 @@ namespace CoreBluetooth {
 #endif
 	}
 }
-

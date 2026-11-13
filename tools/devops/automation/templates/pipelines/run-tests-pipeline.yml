@@ -1,0 +1,64 @@
+# template to be extended by those pipelines that will run tests after a build.
+parameters:
+
+  - name: isPR
+    displayName: State if the tests are ran for a PR build
+    type: boolean
+    default: false
+
+  - name: macOSName # comes from the build agent demand named macOS.Name
+    displayName: Name of the version of macOS to use
+    type: string
+    default: 'Tahoe'
+
+  - name: runTests
+    displayName: Run Simulator Tests
+    type: boolean
+    default: true
+
+  - name: runOldMacOSTests
+    displayName: Run Tests on older macOS versions 
+    type: boolean
+    default: true
+
+  - name: runWindowsIntegration
+    displayName: Run Windows integration tests
+    type: boolean
+    default: true
+
+  - name: buildPackages
+    displayName: Build packages as part of this pipeline (instead of downloading from a pipeline resource)
+    type: boolean
+    default: false
+
+  - name: useACES
+    displayName: Use ACES shared pool for builds and simulator tests
+    type: boolean
+    default: false
+
+resources:
+  repositories:
+    - repository: self
+      checkoutOptions:
+        submodules: true
+
+    - repository: yaml-templates
+      type: git
+      name: xamarin.yaml-templates
+      ref: refs/heads/main
+
+variables:
+  - template: ../variables/common.yml
+  - name: DisablePipelineConfigDetector
+    value: true
+
+stages:
+  - template: ../tests-stage.yml
+    parameters:
+      xcodeChannel: $(xcodeChannel)
+      macOSName: ${{ parameters.macOSName }}
+      isPR: ${{ parameters.isPR }}
+      runTests: ${{ parameters.runTests }}
+      runWindowsIntegration: ${{ parameters.runWindowsIntegration }}
+      buildPackages: ${{ parameters.buildPackages }}
+      useACES: ${{ parameters.useACES }}

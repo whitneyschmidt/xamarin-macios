@@ -7,85 +7,64 @@
 // Copyright 2011 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 using CoreAnimation;
-#else
-using MonoTouch.CoreAnimation;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreAnimation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class LayerTest {
-		
+
 		[Test]
 		public void Mask ()
 		{
 			using (CALayer layer = new CALayer ()) {
-				Assert.Null (layer.Mask, "Mask/default");
+				Assert.That (layer.Mask, Is.Null, "Mask/default");
 				layer.Mask = new CALayer ();
-				Assert.NotNull (layer.Mask, "Mask/assigned");
+				Assert.That (layer.Mask, Is.Not.Null, "Mask/assigned");
 				layer.Mask = null;
-				Assert.Null (layer.Mask, "Mask/nullable");
+				Assert.That (layer.Mask, Is.Null, "Mask/nullable");
 			}
 		}
-		
+
 		[Test]
 		public void CAActionTest ()
 		{
 			// bug 2441
 			CAActionTestClass obj = new CAActionTestClass ();
-			Assert.That (null == obj.ActionForKey ("animation"), "a");
-			Assert.That (null == obj.Actions, "b");
-			Assert.That (null == CAActionTestClass.DefaultActionForKey ("animation"), "c");
-			
+			Assert.That (obj.ActionForKey ("animation"), Is.Null, "a");
+			Assert.That (obj.Actions, Is.Null, "b");
+			Assert.That (CAActionTestClass.DefaultActionForKey ("animation"), Is.Null, "c");
+
 			var animationKey = new NSString ("animation");
 			var basicAnimationKey = new NSString ("basicAnimation");
 			var dict = NSDictionary.FromObjectsAndKeys (
 				new NSObject [] { new CABasicAnimation (), new CAAnimation () },
-				new NSObject [] { basicAnimationKey, animationKey } 
+				new NSObject [] { basicAnimationKey, animationKey }
 			);
 			obj.Actions = dict;
 			Assert.That (obj.Actions == dict, "d");
-			
+
 			Assert.That (obj.ActionForKey ("animation") == dict [animationKey], "e");
 			Assert.That (obj.ActionForKey ("basicAnimation") == dict [basicAnimationKey], "f");
-			Assert.That (null == CAActionTestClass.DefaultActionForKey ("animation"), "g");
-			Assert.That (null == CALayer.DefaultActionForKey ("animation"), "h");
+			Assert.That (CAActionTestClass.DefaultActionForKey ("animation"), Is.Null, "g");
+			Assert.That (CALayer.DefaultActionForKey ("animation"), Is.Null, "h");
 		}
-		
+
 		class CAActionTestClass : CALayer {
-			
+
 		}
-		
+
 		[Test]
 		public void ConvertPoint ()
 		{
 			using (CALayer layer = new CALayer ()) {
-				Assert.True (layer.ConvertPointFromLayer (PointF.Empty, null).IsEmpty, "From/Empty/null");
-				Assert.True (layer.ConvertPointToLayer (PointF.Empty, null).IsEmpty, "To/Empty/null");
+				Assert.That (layer.ConvertPointFromLayer (CGPoint.Empty, null).IsEmpty, Is.True, "From/Empty/null");
+				Assert.That (layer.ConvertPointToLayer (CGPoint.Empty, null).IsEmpty, Is.True, "To/Empty/null");
 			}
 		}
 
@@ -93,11 +72,11 @@ namespace MonoTouchFixtures.CoreAnimation {
 		public void ConvertRect ()
 		{
 			using (CALayer layer = new CALayer ()) {
-				Assert.True (layer.ConvertRectFromLayer (RectangleF.Empty, null).IsEmpty, "From/Empty/null");
-				Assert.True (layer.ConvertRectToLayer (RectangleF.Empty, null).IsEmpty, "To/Empty/null");
+				Assert.That (layer.ConvertRectFromLayer (CGRect.Empty, null).IsEmpty, Is.True, "From/Empty/null");
+				Assert.That (layer.ConvertRectToLayer (CGRect.Empty, null).IsEmpty, Is.True, "To/Empty/null");
 			}
 		}
-		
+
 		[Test]
 		public void ConvertTime ()
 		{
@@ -112,9 +91,9 @@ namespace MonoTouchFixtures.CoreAnimation {
 		{
 			using (var layer = new CALayer ()) {
 				var animation = new CABasicAnimation ();
-				Assert.IsNull (layer.AnimationForKey ("key"), "#key A");
+				Assert.That (layer.AnimationForKey ("key"), Is.Null, "#key A");
 				layer.AddAnimation (animation, "key");
-				Assert.IsNotNull (layer.AnimationForKey ("key"), "#key B");
+				Assert.That (layer.AnimationForKey ("key"), Is.Not.Null, "#key B");
 			}
 		}
 
@@ -122,34 +101,41 @@ namespace MonoTouchFixtures.CoreAnimation {
 		static int TextLayersDisposed;
 		static int Generation;
 		[Test]
-		public void TestBug26532()
+		public void TestBug26532 ()
 		{
 			TextLayersDisposed = 0;
 			Generation++;
 
 			const int layerCount = 50;
+			Exception ex = null;
 			var thread = new Thread (() => {
-				var frame = new RectangleF (0, 0, 200, 200);
-				using (var layer = new CALayer ()) {
-					for (int i = 0; i < layerCount; i++) {
-						TextCALayer textLayer = new TextCALayer () {
-							Secret = "42",
-						};
-						layer.AddSublayer (textLayer);
+				try {
+					var frame = new CGRect (0, 0, 200, 200);
+					using (var layer = new CALayer ()) {
+						for (int i = 0; i < layerCount; i++) {
+							TextCALayer textLayer = new TextCALayer () {
+								Secret = "42",
+							};
+							layer.AddSublayer (textLayer);
+						}
+
+						GC.Collect ();
+
+						foreach (var slayer in layer.Sublayers.OfType<TextCALayer> ()) {
+							Assert.That (slayer.Secret, Is.EqualTo ("42"));
+						}
+
+						foreach (var slayer in layer.Sublayers.OfType<TextCALayer> ())
+							slayer.RemoveFromSuperLayer ();
 					}
-
-					GC.Collect ();
-
-					foreach (var slayer in layer.Sublayers.OfType<TextCALayer> ()) {
-						Assert.AreEqual ("42", slayer.Secret);
-					}
-
-					foreach (var slayer in layer.Sublayers.OfType<TextCALayer> ())
-						slayer.RemoveFromSuperLayer ();
+				} catch (Exception e) {
+					ex = e;
 				}
-			});
+			}) {
+				IsBackground = true,
+			};
 			thread.Start ();
-			thread.Join ();
+			Assert.That (thread.Join (TimeSpan.FromSeconds (10)), Is.True, "Thread.Join timed out");
 
 			var watch = new Stopwatch ();
 			watch.Start ();
@@ -158,11 +144,11 @@ namespace MonoTouchFixtures.CoreAnimation {
 				NSRunLoop.Main.RunUntil (NSDate.Now.AddSeconds (0.05));
 			}
 
+			Assert.That (ex, Is.Null, "Exceptions");
 			Assert.That (TextLayersDisposed, Is.AtLeast (layerCount / 2), "disposed text layers");
 		}
 
-		public class TextCALayer : CALayer
-		{
+		public class TextCALayer : CALayer {
 			public string Secret;
 			public int generation;
 
@@ -189,17 +175,16 @@ namespace MonoTouchFixtures.CoreAnimation {
 		public void TestCALayerDelegateDispose ()
 		{
 			var del = new LayerDelegate ();
-			var t = new Thread (() =>
-			{
+			var t = new Thread (() => {
 				var l = new Layer ();
 				l.Delegate = del;
 				l.Dispose ();
-			})
-			{
+				CATransaction.Flush ();
+			}) {
 				IsBackground = true,
 			};
 			t.Start ();
-			t.Join ();
+			Assert.That (t.Join (TimeSpan.FromSeconds (5)), Is.True, "Thread.Join timed out");
 			GC.Collect ();
 
 			NSRunLoop.Main.RunUntil (NSDate.Now.AddSeconds (0.1));
@@ -209,5 +194,3 @@ namespace MonoTouchFixtures.CoreAnimation {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

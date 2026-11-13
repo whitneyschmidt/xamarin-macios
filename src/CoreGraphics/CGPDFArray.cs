@@ -27,215 +27,210 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
+
+using System.Runtime.CompilerServices;
 using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>Represents a PDF array</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGPDFArray.h
-	public class CGPDFArray : INativeObject {
-		internal IntPtr handle;
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-
-		/* invoked by marshallers */
-		public CGPDFArray (IntPtr handle)
+	public class CGPDFArray : CGPDFObject {
+		// The lifetime management of CGPDFObject (and CGPDFArray, CGPDFDictionary and CGPDFStream) are tied to
+		// the containing CGPDFDocument, and not possible to handle independently, which is why this class
+		// does not subclass NativeObject (there's no way to retain/release CGPDFObject instances). It's
+		// also why this constructor doesn't have a 'bool owns' parameter: it's always owned by the containing CGPDFDocument.
+		internal CGPDFArray (NativeHandle handle)
+			: base (handle)
 		{
-			this.handle = handle;
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* size_t */ nint CGPDFArrayGetCount (/* CGPDFArrayRef */ IntPtr array);
-		
+
+		/// <summary>The number of elements in the PDF array.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public nint Count {
 			get {
-				return CGPDFArrayGetCount (handle);
+				return CGPDFArrayGetCount (Handle);
 			}
 		}
 
 		// CGPDFBoolean -> unsigned char -> CGPDFObject.h
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetBoolean (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFBoolean* */ out bool value);
+		unsafe extern static byte CGPDFArrayGetBoolean (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFBoolean* */ byte* value);
 
-		public bool GetBoolean (nint idx, out bool result)
+		public unsafe bool GetBoolean (nint idx, out bool result)
 		{
-			return CGPDFArrayGetBoolean (handle, idx, out result);
+			byte res = 0;
+			var rv = CGPDFArrayGetBoolean (Handle, idx, &res) != 0;
+			result = res != 0;
+			return rv;
 		}
-
-#if !XAMCORE_4_0
-		public bool GetBoolean (int idx, out bool result)
-		{
-			return CGPDFArrayGetBoolean (handle, idx, out result);
-		}
-#endif
 
 		// CGPDFInteger -> long int 32/64 bits -> CGPDFObject.h
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetInteger (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFInteger* */ out nint value);
+		unsafe extern static byte CGPDFArrayGetInteger (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFInteger* */ nint* value);
 
 		public bool GetInt (nint idx, out nint result)
 		{
-			return CGPDFArrayGetInteger (handle, idx, out result);
+			result = default;
+			unsafe {
+				fixed (nint* resultPtr = &result) {
+					return CGPDFArrayGetInteger (Handle, idx, resultPtr) != 0;
+				}
+			}
 		}
-
-#if !XAMCORE_4_0
-		public bool GetInt (int idx, out nint result)
-		{
-			return CGPDFArrayGetInteger (handle, idx, out result);
-		}
-#endif
 
 		// CGPDFReal -> CGFloat -> CGPDFObject.h
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetNumber (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFReal* */ out nfloat value);
+		unsafe extern static byte CGPDFArrayGetNumber (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFReal* */ nfloat* value);
 
 		public bool GetFloat (nint idx, out nfloat result)
 		{
-			return CGPDFArrayGetNumber (handle, idx, out result);
+			result = default;
+			unsafe {
+				fixed (nfloat* resultPtr = &result) {
+					return CGPDFArrayGetNumber (Handle, idx, resultPtr) != 0;
+				}
+			}
 		}
-
-#if !XAMCORE_4_0
-		public bool GetFloat (int idx, out nfloat result)
-		{
-			return CGPDFArrayGetNumber (handle, idx, out result);
-		}
-#endif
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetName (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* const char** */ out IntPtr value);
+		unsafe extern static byte CGPDFArrayGetName (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* const char** */ IntPtr* value);
 
-		public bool GetName (nint idx, out string result)
+		public bool GetName (nint idx, out string? result)
 		{
 			IntPtr res;
-			var r = CGPDFArrayGetName (handle, idx, out res);
+			bool r;
+			unsafe {
+				r = CGPDFArrayGetName (Handle, idx, &res) != 0;
+			}
 			result = r ? Marshal.PtrToStringAnsi (res) : null;
 			return r;
 		}
 
-#if !XAMCORE_4_0
-		public bool GetName (int idx, out string result)
-		{
-			return GetName ((nint) idx, out result);
-		}
-#endif
-
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetDictionary (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFDictionaryRef* */ out IntPtr value);
+		unsafe extern static byte CGPDFArrayGetDictionary (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFDictionaryRef* */ IntPtr* value);
 
-		public bool GetDictionary (nint idx, out CGPDFDictionary result)
+		public bool GetDictionary (nint idx, out CGPDFDictionary? result)
 		{
 			IntPtr res;
-			var r = CGPDFArrayGetDictionary (handle, idx, out res);
+			bool r;
+			unsafe {
+				r = CGPDFArrayGetDictionary (Handle, idx, &res) != 0;
+			}
 			result = r ? new CGPDFDictionary (res) : null;
 			return r;
 		}
 
-#if !XAMCORE_4_0
-		public bool GetDictionary (int idx, out CGPDFDictionary result)
-		{
-			return GetDictionary ((nint) idx, out result);
-		}
-#endif
-
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetStream (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFStreamRef* */ out IntPtr value);
+		unsafe extern static byte CGPDFArrayGetStream (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFStreamRef* */ IntPtr* value);
 
-		public bool GetStream (nint idx, out CGPDFStream result)
+		public bool GetStream (nint idx, out CGPDFStream? result)
 		{
 			IntPtr ptr;
-			var r = CGPDFArrayGetStream (handle, idx, out ptr); 
+			bool r;
+			unsafe {
+				r = CGPDFArrayGetStream (Handle, idx, &ptr) != 0;
+			}
 			result = r ? new CGPDFStream (ptr) : null;
 			return r;
 		}
 
-#if !XAMCORE_4_0
-		public bool GetStream (int idx, out CGPDFStream result)
-		{
-			return GetStream ((nint) idx, out result);
-		}
-#endif
-
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetArray (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFArrayRef* */ out IntPtr value);
+		unsafe extern static byte CGPDFArrayGetArray (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFArrayRef* */ IntPtr* value);
 
-		public bool GetArray (nint idx, out CGPDFArray array)
+		public bool GetArray (nint idx, out CGPDFArray? array)
 		{
+			bool r;
 			IntPtr ptr;
-			var r = CGPDFArrayGetArray (handle, idx, out ptr);
+			unsafe {
+				r = CGPDFArrayGetArray (Handle, idx, &ptr) != 0;
+			}
 			array = r ? new CGPDFArray (ptr) : null;
 			return r;
 		}
 
-#if !XAMCORE_4_0
-		public bool GetArray (int idx, out CGPDFArray array)
-		{
-			return GetArray ((nint) idx, out array);
-		}
-#endif
-
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPDFArrayGetString (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFStringRef* */ out IntPtr value);
+		unsafe extern static byte CGPDFArrayGetString (/* CGPDFArrayRef */ IntPtr array, /* size_t */ nint index, /* CGPDFStringRef* */ IntPtr* value);
 
-		public bool GetString (nint idx, out string result)
+		public bool GetString (nint idx, out string? result)
 		{
 			IntPtr res;
-			var r = CGPDFArrayGetString (handle, idx, out res);
+			bool r;
+			unsafe {
+				r = CGPDFArrayGetString (Handle, idx, &res) != 0;
+			}
 			result = r ? CGPDFString.ToString (res) : null;
 			return r;
 		}
 
-#if !XAMCORE_4_0
-		public bool GetString (int idx, out string result)
+		[UnmanagedCallersOnly]
+		static byte ApplyBlockHandler (IntPtr block, nint index, IntPtr value, IntPtr info)
 		{
-			return GetString ((nint) idx, out result);
-		}
-#endif
+			var del = BlockLiteral.GetTarget<ApplyCallback> (block);
+			if (del is not null) {
+				var context = info == IntPtr.Zero ? null : GCHandle.FromIntPtr (info).Target;
+				return del (index, CGPDFObject.FromHandle (value), context) ? (byte) 1 : (byte) 0;
+			}
 
-		delegate bool ApplyBlockHandlerDelegate (IntPtr block, nint index, IntPtr value, IntPtr info);
-		static readonly ApplyBlockHandlerDelegate applyblock_handler = ApplyBlockHandler;
-
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (ApplyBlockHandlerDelegate))]
-#endif
-		static unsafe bool ApplyBlockHandler (IntPtr block, nint index, IntPtr value, IntPtr info)
-		{
-			var del = (ApplyCallback) ((BlockLiteral *) block)->Target;
-			if (del != null)
-				return del (index, CGPDFObject.FromHandle (value), info == IntPtr.Zero ? null : GCHandle.FromIntPtr (info).Target);
-
-			return false;
+			return 0;
 		}
 
-		public delegate bool ApplyCallback (nint index, object value, object info);
+		/// <param name="index">To be added.</param>
+		///     <param name="value">To be added.</param>
+		///     <param name="info">To be added.</param>
+		///     <summary>To be added.</summary>
+		///     <returns>To be added.</returns>
+		///     <remarks>To be added.</remarks>
+		public delegate bool ApplyCallback (nint index, object? value, object? info);
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		[iOS (12, 0)][Mac (10, 14)][TV (12, 0)][Watch (5, 0)]
-		extern static bool CGPDFArrayApplyBlock (/* CGPDFArrayRef */ IntPtr array, /* CGPDFArrayApplierBlock */ ref BlockLiteral block, /* void* */ IntPtr info);
+		unsafe extern static byte CGPDFArrayApplyBlock (/* CGPDFArrayRef */ IntPtr array, /* CGPDFArrayApplierBlock */ BlockLiteral* block, /* void* */ IntPtr info);
 
-		[iOS (12, 0)][Mac (10, 14)][TV (12, 0)][Watch (5, 0)]
+		/// <param name="callback">To be added.</param>
+		///         <param name="info">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[BindingImpl (BindingImplOptions.Optimizable)]
-		public bool Apply (ApplyCallback callback, object info = null)
+		public bool Apply (ApplyCallback callback, object? info = null)
 		{
-			if (callback == null)
-				throw new ArgumentNullException (nameof (callback));
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
 
-			BlockLiteral block_handler = new BlockLiteral ();
-			block_handler.SetupBlockUnsafe (applyblock_handler, callback);
-			var gc_handle = info == null ? default (GCHandle) : GCHandle.Alloc (info);
-			try {
-				return CGPDFArrayApplyBlock (handle, ref block_handler, info == null ? IntPtr.Zero : GCHandle.ToIntPtr (gc_handle));
-			} finally {
-				block_handler.CleanupBlock ();
-				if (info != null)
-					gc_handle.Free ();
+			unsafe {
+				delegate* unmanaged<IntPtr, nint, IntPtr, IntPtr, byte> trampoline = &ApplyBlockHandler;
+				using var block = new BlockLiteral (trampoline, callback, typeof (CGPDFArray), nameof (ApplyBlockHandler));
+				var gc_handle = info is null ? default (GCHandle) : GCHandle.Alloc (info);
+				try {
+					return CGPDFArrayApplyBlock (Handle, &block, info is null ? IntPtr.Zero : GCHandle.ToIntPtr (gc_handle)) != 0;
+				} finally {
+					if (info is not null)
+						gc_handle.Free ();
+				}
 			}
 		}
 	}

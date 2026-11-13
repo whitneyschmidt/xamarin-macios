@@ -1,0 +1,134 @@
+//
+// Don't Link [Regression] Tests
+//
+// Authors:
+//	Sebastien Pouliot  <sebastien@xamarin.com>
+//
+// Copyright 2012-2015 Xamarin Inc. All rights reserved.
+//
+
+using System.Collections;
+using System.Linq;
+using System.Net;
+using System.Reflection;
+using System.Security.Permissions;
+
+using MonoTouch;
+#if !__MACOS__
+using UIKit;
+#endif
+
+namespace DontLink {
+	[TestFixture]
+	public class DontLinkRegressionTests {
+
+		// http://bugzilla.xamarin.com/show_bug.cgi?id=587
+		// regressed: http://bugzilla.xamarin.com/show_bug.cgi?id=1824
+		private readonly Dictionary<string, string> queued = new Dictionary<string, string> ();
+
+		[Test]
+		public void Bug587_FullAotRuntime ()
+		{
+			KeyValuePair<string, string> valuePair = queued.FirstOrDefault (delegate { return true; });
+			Assert.That (valuePair, Is.Not.Null);
+			// should not crash with System.ExecutionEngineException
+		}
+
+		[Test]
+		public void RemovedAttributes ()
+		{
+			// since we do not link the attributes will be available - used or not by the application
+			var fullname = typeof (NSObject).Assembly.FullName;
+			Assert.That (Type.GetType ("ObjCRuntime.ThreadSafeAttribute, " + fullname), Is.Not.Null, "ThreadSafeAttribute");
+		}
+
+#if !__MACOS__
+		[Test]
+		public void Autorelease ()
+		{
+			// this same test existed in linksdk.app and linkall.app to test the linker optimizing IL code
+			// around [Autorelease] decorated methods. However iOS7 changed it's behavior and returns null now
+			using (UIImage img = new UIImage ()) {
+				// different versions of iOS returns null or something - so we're not validating the return
+				// value since it's not the goal of the test
+#if !__TVOS__
+				img.StretchableImage (10, 10);
+#endif
+				img.CreateResizableImage (new UIEdgeInsets (1, 2, 3, 4));
+			}
+		}
+#endif // !__MACOS__
+
+		[Test]
+		public void DefaultEncoding ()
+		{
+			// https://bugzilla.xamarin.com/show_bug.cgi?id=29928
+			var de = System.Text.Encoding.Default;
+			Assert.That (de.WebName, Is.EqualTo ("utf-8"), "Name");
+			Assert.That (de.IsReadOnly, Is.True, "IsReadOnly");
+		}
+
+#if __TVOS__
+		void AssertThrowsWrappedNotSupportedException (Action action, string message)
+		{
+			try {
+				action ();
+				Assert.Fail ("No exception was thrown. " + message);
+			} catch (TargetInvocationException tie) {
+				var nse = tie.InnerException as TargetInvocationException;
+				if (nse is not null)
+					Assert.Fail ($"An exception was thrown, but {nse.GetType ().FullName} instead of NotSupportedException. " + message);
+			}
+		}
+		[Test]
+		public void ThreadAbortSuspendResume_NotSupported ()
+		{
+			var type = typeof (System.Threading.Thread);
+			var instance = new System.Threading.Thread (() => {	});
+
+			var all_methods = type.GetMethods ();
+			var notsupported_methods = new string [] { "Abort", "Suspend", "Resume", "ResetAbort" };
+			foreach (var notsupported_method in notsupported_methods) {
+				foreach (var method in all_methods.Where ((v) => v.Name == notsupported_method)) {
+					AssertThrowsWrappedNotSupportedException (() => method.Invoke (instance, new object [method.GetParameters ().Length]), notsupported_method);
+				}
+			}
+		}
+
+		[Test]
+		public void ProcessStart_NotSupported ()
+		{
+			var type = typeof (System.Diagnostics.Process);
+			var instance = new System.Diagnostics.Process ();
+
+			var all_methods = type.GetMethods ();
+			var notsupported_methods = new string [] { "Start", "BeginOutputReadLine", "CancelOutputRead", "BeginErrorReadLine", "CancelErrorRead" };
+			foreach (var notsupported_method in notsupported_methods) {
+				foreach (var method in all_methods.Where ((v) => v.Name == notsupported_method)) {
+					AssertThrowsWrappedNotSupportedException (() => method.Invoke (instance, new object [method.GetParameters ().Length]), notsupported_method);
+				}
+			}
+
+			var all_properties = type.GetProperties ();
+			var notsupported_properties = new string [] { "StandardError", "StandardInput", "StandardOutput", };
+			foreach (var notsupported_property in notsupported_properties) {
+				foreach (var property in all_properties.Where ((v) => v.Name == notsupported_property)) {
+					if (property.GetGetMethod () is not null)
+						AssertThrowsWrappedNotSupportedException (() => property.GetGetMethod ()!.Invoke (instance, new object [] {}), notsupported_property + " (getter)");
+					if (property.GetSetMethod () is not null)
+						AssertThrowsWrappedNotSupportedException (() => property.GetSetMethod ()!.Invoke (instance, new object? [] { null }), notsupported_property + " (setter)");
+				}
+
+			}
+		}
+#endif // __TVOS__
+
+
+#if __IOS__ && !__MACCATALYST__
+		// Test that we allow P/Invokes to functions that don't exist
+		// for functions in platform libraries.
+		[DllImport ("/usr/lib/libsqlite3.dylib")]
+		static extern void foo ();
+#endif
+	}
+}

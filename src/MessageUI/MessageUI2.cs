@@ -7,36 +7,54 @@
 // Copyright 2009, Novell, Inc.
 //
 
-using System;
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
 
 namespace MessageUI {
 
+	/// <summary>Provides data for the <see cref="MessageUI.MFMailComposeViewController.Finished" /> event.</summary>
+	///     <remarks />
 	public class MFComposeResultEventArgs : EventArgs {
-		public MFComposeResultEventArgs (MFMailComposeViewController controller, MFMailComposeResult result, NSError error)
+		/// <param name="controller">To be added.</param>
+		///         <param name="result">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>Initializes a new instance of the MFComposeResultEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
+		public MFComposeResultEventArgs (MFMailComposeViewController controller, MFMailComposeResult result, NSError? error)
 		{
 			Result = result;
 			Error = error;
 			Controller = controller;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public MFMailComposeResult Result { get; private set; }
-		public NSError Error { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSError? Error { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public MFMailComposeViewController Controller { get; private set; }
 	}
-	
+
 	public partial class MFMailComposeViewController {
 		Mono_MFMailComposeViewControllerDelegate EnsureDelegate ()
 		{
-			NSObject del = WeakMailComposeDelegate;
-			if (del == null || (!(del is Mono_MFMailComposeViewControllerDelegate))){
+			NSObject? del = WeakMailComposeDelegate;
+			if (del is null || (!(del is Mono_MFMailComposeViewControllerDelegate))) {
 				del = new Mono_MFMailComposeViewControllerDelegate ();
 				WeakMailComposeDelegate = del;
 			}
 			return (Mono_MFMailComposeViewControllerDelegate) del;
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<MFComposeResultEventArgs> Finished {
 			add {
 				EnsureDelegate ().cbFinished += value;
@@ -49,7 +67,7 @@ namespace MessageUI {
 	}
 
 	class Mono_MFMailComposeViewControllerDelegate : MFMailComposeViewControllerDelegate {
-		internal EventHandler<MFComposeResultEventArgs> cbFinished;
+		internal EventHandler<MFComposeResultEventArgs>? cbFinished;
 
 		public Mono_MFMailComposeViewControllerDelegate ()
 		{
@@ -57,21 +75,35 @@ namespace MessageUI {
 		}
 
 		[Preserve (Conditional = true)]
-		public override void Finished (MFMailComposeViewController controller, MFMailComposeResult result, NSError error)
+		public override void Finished (MFMailComposeViewController controller, MFMailComposeResult result, NSError? error)
 		{
-			if (cbFinished != null)
+			if (cbFinished is not null)
 				cbFinished (controller, new MFComposeResultEventArgs (controller, result, error));
 		}
 	}
 
 
+	/// <summary>Provides data for the <see cref="MessageUI.MFMessageComposeViewController.Finished" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
 	public class MFMessageComposeResultEventArgs : EventArgs {
+		/// <param name="controller">To be added.</param>
+		///         <param name="result">To be added.</param>
+		///         <summary>Initializes a new instance of the MFMessageComposeResultEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public MFMessageComposeResultEventArgs (MFMessageComposeViewController controller, MessageComposeResult result)
 		{
 			Result = result;
 			Controller = controller;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public MessageComposeResult Result { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public MFMessageComposeViewController Controller { get; private set; }
 	}
 
@@ -79,14 +111,16 @@ namespace MessageUI {
 	public partial class MFMessageComposeViewController {
 		Mono_MFMessageComposeViewControllerDelegate EnsureDelegate ()
 		{
-			NSObject del = WeakMessageComposeDelegate;
-			if (del == null || (!(del is Mono_MFMessageComposeViewControllerDelegate))){
+			NSObject? del = WeakMessageComposeDelegate;
+			if (del is null || (!(del is Mono_MFMessageComposeViewControllerDelegate))) {
 				del = new Mono_MFMessageComposeViewControllerDelegate ();
 				WeakMessageComposeDelegate = del;
 			}
 			return (Mono_MFMessageComposeViewControllerDelegate) del;
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<MFMessageComposeResultEventArgs> Finished {
 			add {
 				EnsureDelegate ().cbFinished += value;
@@ -99,7 +133,7 @@ namespace MessageUI {
 	}
 
 	class Mono_MFMessageComposeViewControllerDelegate : MFMessageComposeViewControllerDelegate {
-		internal EventHandler<MFMessageComposeResultEventArgs> cbFinished;
+		internal EventHandler<MFMessageComposeResultEventArgs>? cbFinished;
 
 		public Mono_MFMessageComposeViewControllerDelegate ()
 		{
@@ -109,7 +143,7 @@ namespace MessageUI {
 		[Preserve (Conditional = true)]
 		public override void Finished (MFMessageComposeViewController controller, MessageComposeResult result)
 		{
-			if (cbFinished != null)
+			if (cbFinished is not null)
 				cbFinished (controller, new MFMessageComposeResultEventArgs (controller, result));
 		}
 	}

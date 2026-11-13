@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CIImageInitializationOptions
 //
 // Authors:
@@ -7,27 +7,15 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
 using CoreGraphics;
 using CoreImage;
-using Foundation;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreImage;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.CoreImage {
 
@@ -39,8 +27,8 @@ namespace MonoTouchFixtures.CoreImage {
 		public void Defaults ()
 		{
 			var options = new CIImageInitializationOptions ();
-			Assert.That (options.Dictionary.Count, Is.EqualTo (0), "Count");
-			Assert.Null (options.ColorSpace, "ColorSpace");
+			Assert.That (options.Dictionary.Count, Is.EqualTo ((nuint) 0), "Count");
+			Assert.That (options.ColorSpace, Is.Null, "ColorSpace");
 		}
 
 		[Test]
@@ -49,24 +37,24 @@ namespace MonoTouchFixtures.CoreImage {
 			var options = new CIImageInitializationOptions () {
 				ColorSpace = CGColorSpace.CreateDeviceRGB ()
 			};
-			Assert.That (options.Dictionary.Count, Is.EqualTo (1), "Count");
-			Assert.NotNull (options.ColorSpace, "ColorSpace");
+			Assert.That (options.Dictionary.Count, Is.EqualTo ((nuint) 1), "Count");
+			Assert.That (options.ColorSpace, Is.Not.Null, "ColorSpace");
 		}
 
 		[Test]
 		public void WithMetadataDefaults ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
 
 			var options = new CIImageInitializationOptionsWithMetadata ();
-			Assert.That (options.Dictionary.Count, Is.EqualTo (0), "Count");
-			Assert.Null (options.Properties, "Properties");
+			Assert.That (options.Dictionary.Count, Is.EqualTo ((nuint) 0), "Count");
+			Assert.That (options.Properties, Is.Null, "Properties");
 		}
 
 		[Test]
 		public void WithMetadataProperties ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
 
 			var suboptions = new CGImageProperties () {
 				ProfileName = "Xamarin"
@@ -74,10 +62,8 @@ namespace MonoTouchFixtures.CoreImage {
 			var options = new CIImageInitializationOptionsWithMetadata () {
 				Properties = suboptions
 			};
-			Assert.That (options.Dictionary.Count, Is.EqualTo (1), "Count");
+			Assert.That (options.Dictionary.Count, Is.EqualTo ((nuint) 1), "Count");
 			Assert.That (options.Properties.ProfileName, Is.EqualTo ("Xamarin"), "Properties");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -1,36 +1,59 @@
 // Copyright 2015 Xamarin Inc.
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
 using CoreFoundation;
 using CoreMedia;
-using ObjCRuntime;
 
 namespace MediaToolbox {
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	static public class MTFormatNames {
-
-		[iOS (9,0)][Mac (10,11)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.MediaToolboxLibrary)]
 		static extern /* CFStringRef CM_NULLABLE */ IntPtr MTCopyLocalizedNameForMediaType (
 			CMMediaType mediaType);
 
-		[iOS (9,0)][Mac (10,11)]
-		static public string GetLocalizedName (this CMMediaType mediaType)
+		/// <param name="mediaType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		static public string? GetLocalizedName (this CMMediaType mediaType)
 		{
-			return CFString.FetchString (MTCopyLocalizedNameForMediaType (mediaType), releaseHandle: true);
+			return CFString.FromHandle (MTCopyLocalizedNameForMediaType (mediaType), releaseHandle: true);
 		}
 
-		[iOS (9,0)][Mac (10,11)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.MediaToolboxLibrary)]
 		static extern /* CFStringRef CM_NULLABLE */ IntPtr MTCopyLocalizedNameForMediaSubType (
 			CMMediaType mediaType, uint mediaSubType);
 
-		[iOS (9,0)][Mac (10,11)]
-		static public string GetLocalizedName (this CMMediaType mediaType, uint mediaSubType)
+		/// <param name="mediaType">To be added.</param>
+		///         <param name="mediaSubType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		static public string? GetLocalizedName (this CMMediaType mediaType, uint mediaSubType)
 		{
-			return CFString.FetchString (MTCopyLocalizedNameForMediaSubType (mediaType, mediaSubType), releaseHandle: true);
+			return CFString.FromHandle (MTCopyLocalizedNameForMediaSubType (mediaType, mediaSubType), releaseHandle: true);
 		}
 	}
 }

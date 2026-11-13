@@ -1,45 +1,26 @@
 // Copyright 2011-2013 Xamarin Inc. All rights reserved
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
 using CoreGraphics;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-using MonoTouch.CoreGraphics;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class TextFieldTest {
-		
+
 		[Test]
 		public void InitWithFrame ()
 		{
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (UITextField tf = new UITextField (frame)) {
 				Assert.That (tf.Frame, Is.EqualTo (frame), "Frame");
 			}
 		}
-		
+
 		[Test]
 		public void InputAccessoryViewTest ()
 		{
@@ -57,14 +38,47 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			using (var tf = new UITextField ()) {
 				if (TestRuntime.CheckXcodeVersion (9, 0)) {
-					Assert.IsNotNull (tf.SelectedTextRange, "SelectedTextRange 1");
+					Assert.That (tf.SelectedTextRange, Is.Not.Null, "SelectedTextRange 1");
 				} else {
-					Assert.IsNull (tf.SelectedTextRange, "SelectedTextRange");
+					Assert.That (tf.SelectedTextRange, Is.Null, "SelectedTextRange");
 				}
-				Assert.IsNull (tf.TypingAttributes, "default");
+				if (TestRuntime.CheckXcodeVersion (13, 0)) {
+#if !__TVOS__
+					if (TestRuntime.CheckXcodeVersion (13, 2))
+						Assert.That (tf.TypingAttributes, Is.Not.Empty, "default 13.2");
+					else
+						Assert.That (tf.TypingAttributes, Is.Empty, "default 13.0");
+#else
+					Assert.That (tf.TypingAttributes, Is.Not.Empty, "default 13.0");
+#endif
+				} else if (TestRuntime.CheckXcodeVersion (11, 0)) {
+					if (TestRuntime.CheckXcodeVersion (11, 4))
+						Assert.That (tf.TypingAttributes, Is.Not.Empty, "default 11.4"); // iOS 13.4 returns contents
+					else
+						Assert.That (tf.TypingAttributes, Is.Empty, "default");
+				} else {
+					Assert.That (tf.TypingAttributes, Is.Null, "default");
+				}
 				// ^ calling TypingAttributes does not crash like UITextView does, it simply returns null
 				tf.TypingAttributes = new NSDictionary ();
-				Assert.IsNull (tf.TypingAttributes, "empty");
+				if (TestRuntime.CheckXcodeVersion (13, 0)) {
+#if !__TVOS__
+					if (TestRuntime.CheckXcodeVersion (13, 2))
+						Assert.That (tf.TypingAttributes, Is.Not.Empty, "empty 13.2");
+					else
+						Assert.That (tf.TypingAttributes, Is.Empty, "empty 13.0");
+#else
+					Assert.That (tf.TypingAttributes, Is.Not.Empty, "empty 13.0");
+#endif
+
+				} else if (TestRuntime.CheckXcodeVersion (11, 0)) {
+					if (TestRuntime.CheckXcodeVersion (11, 4))
+						Assert.That (tf.TypingAttributes, Is.Not.Empty, "not empty 11.4"); // iOS 13.4 returns contents
+					else
+						Assert.That (tf.TypingAttributes, Is.Empty, "empty");
+				} else {
+					Assert.That (tf.TypingAttributes, Is.Null, "empty not xcode 11");
+				}
 				// and it stays null, even if assigned, since there's not selection
 			}
 		}
@@ -74,9 +88,9 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			// https://bugzilla.xamarin.com/show_bug.cgi?id=15004
 			using (UITextField tf = new UITextField ()) {
-				Assert.IsNull (tf.LeftView, "LeftView");
+				Assert.That (tf.LeftView, Is.Null, "LeftView");
 				tf.LeftView = null;
-				Assert.IsNull (tf.RightView, "RightView");
+				Assert.That (tf.RightView, Is.Null, "RightView");
 				tf.RightView = null;
 			}
 		}
@@ -99,17 +113,17 @@ namespace MonoTouchFixtures.UIKit {
 			// that's even more confusing since they all fails for respondToSelector tests but works in real life
 			using (UITextField tf = new UITextField ()) {
 				// this is just to show we can get and set those values (even if respondToSelector returns NO)
-				tf.AutocapitalizationType = tf.AutocapitalizationType;
-				tf.AutocorrectionType = tf.AutocorrectionType;
-				tf.EnablesReturnKeyAutomatically = tf.EnablesReturnKeyAutomatically;
-				tf.KeyboardAppearance = tf.KeyboardAppearance;
-				tf.KeyboardType = tf.KeyboardType;
-				tf.ReturnKeyType = tf.ReturnKeyType;
-				tf.SecureTextEntry = tf.SecureTextEntry;
-				tf.SpellCheckingType = tf.SpellCheckingType;
+				tf.SetAutocapitalizationType (tf.GetAutocapitalizationType ());
+				tf.SetAutocorrectionType (tf.GetAutocorrectionType ());
+				tf.SetEnablesReturnKeyAutomatically (tf.GetEnablesReturnKeyAutomatically ());
+				tf.SetKeyboardAppearance (tf.GetKeyboardAppearance ());
+				tf.SetKeyboardType (tf.GetKeyboardType ());
+				tf.SetReturnKeyType (tf.GetReturnKeyType ());
+				tf.SetSecureTextEntry (tf.GetSecureTextEntry ());
+				tf.SetSpellCheckingType (tf.GetSpellCheckingType ());
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

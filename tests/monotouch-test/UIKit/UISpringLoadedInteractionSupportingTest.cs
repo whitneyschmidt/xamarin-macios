@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for UISpringLoadedInteractionSupportingTest
 //
 // Authors:
@@ -8,22 +8,13 @@
 // Copyright 2017 Microsoft.
 //
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
-#if XAMCORE_2_0
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
 using UIKit;
+#if HAS_INTENTUI
 using IntentsUI;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
 #endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
 	[TestFixture]
@@ -41,7 +32,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var alertController = new UIAlertController ();
 			alertController.SpringLoaded = true;
-			Assert.IsTrue (alertController.SpringLoaded);
+			Assert.That (alertController.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -49,7 +40,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var barButtonItem = new UIBarButtonItem ();
 			barButtonItem.SpringLoaded = true;
-			Assert.IsTrue (barButtonItem.SpringLoaded);
+			Assert.That (barButtonItem.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -57,7 +48,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var button = new UIButton ();
 			button.SpringLoaded = true;
-			Assert.IsTrue (button.SpringLoaded);
+			Assert.That (button.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -65,7 +56,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var collectionView = new UICollectionView (new CGRect (0, 0, 100, 100), new UICollectionViewLayout ());
 			collectionView.SpringLoaded = true;
-			Assert.IsTrue (collectionView.SpringLoaded);
+			Assert.That (collectionView.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -73,7 +64,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var segmentedControl = new UISegmentedControl ();
 			segmentedControl.SpringLoaded = true;
-			Assert.IsTrue (segmentedControl.SpringLoaded);
+			Assert.That (segmentedControl.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -81,7 +72,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var tabBarItem = new UITabBarItem ();
 			tabBarItem.SpringLoaded = true;
-			Assert.IsTrue (tabBarItem.SpringLoaded);
+			Assert.That (tabBarItem.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -89,7 +80,7 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var tabBar = new UITabBar ();
 			tabBar.SpringLoaded = true;
-			Assert.IsTrue (tabBar.SpringLoaded);
+			Assert.That (tabBar.SpringLoaded, Is.True);
 		}
 
 		[Test]
@@ -97,9 +88,37 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			var tableView = new UITableView ();
 			tableView.SpringLoaded = true;
-			Assert.IsTrue (tableView.SpringLoaded);
+			Assert.That (tableView.SpringLoaded, Is.True);
 		}
 
+		[Test]
+		public void UISearchTabSpringLoadTest ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			using var instance = new UISearchTab (null);
+			instance.SpringLoaded = true;
+			Assert.That (instance.SpringLoaded, Is.True);
+		}
+
+		[Test]
+		public void UITabSpringLoadTest ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			using var instance = new UITab ("title", null, "identifier", null);
+			instance.SpringLoaded = true;
+			Assert.That (instance.SpringLoaded, Is.True);
+		}
+
+		[Test]
+		public void UITabGroupSpringLoadTest ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			using var instance = new UITabGroup ("title", null, "identifier", new UITab [0], null);
+			instance.SpringLoaded = true;
+			Assert.That (instance.SpringLoaded, Is.True);
+		}
+
+#if HAS_INTENTUI
 		[Test]
 		public void INUIAddVoiceShortcutButtonTest ()
 		{
@@ -107,9 +126,10 @@ namespace MonoTouchFixtures.UIKit {
 			TestRuntime.AssertDevice ();
 			var shortcutButton = new INUIAddVoiceShortcutButton (INUIAddVoiceShortcutButtonStyle.Black);
 			shortcutButton.SpringLoaded = true;
-			Assert.IsTrue (shortcutButton.SpringLoaded);
+			Assert.That (shortcutButton.SpringLoaded, Is.True);
 		}
+#endif
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

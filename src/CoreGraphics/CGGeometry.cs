@@ -26,57 +26,32 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
+using System.Runtime.CompilerServices;
 
 namespace CoreGraphics {
 
 	// untyped enum -> CGGeometry.h
+	/// <summary>Coordinates used to establish the edge in RectangleFExtensions.Divide.</summary>
 	public enum CGRectEdge : uint {
+		/// <summary>The edge with the minimum X-coordinate.</summary>
 		MinXEdge,
+		/// <summary>The edge with the minimum Y-coordinate.</summary>
 		MinYEdge,
+		/// <summary>The edge with the maximum X-coordinate.</summary>
 		MaxXEdge,
+		/// <summary>The edge with the maximum Y-coordinate.</summary>
 		MaxYEdge,
 	}
 
-#if !COREBUILD && !XAMCORE_2_0
-	public static class PointFExtensions {
-
-		// CGGeometry.h
-		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static /* CFDictionaryRef */ IntPtr CGPointCreateDictionaryRepresentation (CGPoint point);
-
-		// This exact method is defined on CGPoint in the Unified API, so there's no need for the extension method.
-		public static NSDictionary ToDictionary (this CGPoint self)
-		{
-			return new NSDictionary (CGPointCreateDictionaryRepresentation (self));
-		}
-	}
-
-	public static class NSDictionaryExtensions {
-
-		// CGGeometry.h
-		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static bool CGPointMakeWithDictionaryRepresentation (/* CFDictionaryRef */ IntPtr dict, out CGPoint ret);
-
-		// Use CGPoint.TryParse (NSDictionary, out CGPoint) instead in the Unified API.
-		// Not sure how to best advice Classic API users here, since the method does 
-		// not exist in the Classic API (so an Obsolete method can't point anywhere).
-		public static bool ToPoint (this NSDictionary dictionary, out CGPoint point)
-		{
-			if (dictionary == null)
-				throw new ArgumentNullException ("dictionary");
-			
-			return CGPointMakeWithDictionaryRepresentation (dictionary.Handle, out point);
-		}
-	}
-#endif
-	
-	public static class RectangleFExtensions {
-
+	/// <summary>Extensions to the <see cref="CGRect" /> class that are useful when using CoreGraphics.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public static class CGRectExtensions {
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		static extern /* CGFloat */ nfloat CGRectGetMinX (CGRect rect);
 
@@ -134,19 +109,19 @@ namespace CoreGraphics {
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		static extern bool CGRectIsNull (CGRect rect);
+		static extern byte CGRectIsNull (CGRect rect);
 
 		public static bool IsNull (this CGRect self)
 		{
-			return CGRectIsNull (self);
+			return CGRectIsNull (self) != 0;
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		static extern bool CGRectIsInfinite (CGRect rect);
+		static extern byte CGRectIsInfinite (CGRect rect);
 
 		public static bool IsInfinite (this CGRect self)
 		{
-			return CGRectIsInfinite (self);
+			return CGRectIsInfinite (self) != 0;
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
@@ -174,12 +149,19 @@ namespace CoreGraphics {
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		static extern void CGRectDivide (CGRect rect, out CGRect slice, out CGRect remainder, /* GCFloat */ nfloat amount, CGRectEdge edge);
+		unsafe static extern void CGRectDivide (CGRect rect, CGRect* slice, CGRect* remainder, /* GCFloat */ nfloat amount, CGRectEdge edge);
 
+#if !COREBUILD
 		public static void Divide (this CGRect self, nfloat amount, CGRectEdge edge, out CGRect slice, out CGRect remainder)
 		{
-			CGRectDivide (self, out slice, out remainder, amount, edge);
+			slice = default;
+			remainder = default;
+			unsafe {
+				fixed (CGRect* slicePtr = &slice, remainderPtr = &remainder) {
+					CGRectDivide (self, slicePtr, remainderPtr, amount, edge);
+				}
+			}
 		}
+#endif
 	}
 }
-

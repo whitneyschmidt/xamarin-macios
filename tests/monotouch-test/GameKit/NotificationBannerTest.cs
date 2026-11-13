@@ -7,17 +7,7 @@
 // Copyright 2012,2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using GameKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.GameKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.GameKit {
 
@@ -34,5 +24,3 @@ namespace MonoTouchFixtures.GameKit {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

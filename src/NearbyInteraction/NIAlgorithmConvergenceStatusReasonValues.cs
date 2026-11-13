@@ -1,0 +1,38 @@
+//
+// NIAlgorithmConvergenceStatusReasonDescription manual binding
+//
+// Authors:
+//	TJ Lambert  <TJ.Lambert@microsoft.com>
+//
+// Copyright 2022 Microsoft Corp.
+//
+
+#if IOS || __MACCATALYST__
+
+#nullable enable
+
+using CoreFoundation;
+
+namespace NearbyInteraction {
+	public partial class NIAlgorithmConvergenceStatusReasonValues {
+		[SupportedOSPlatform ("ios16.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
+		[DllImport (Constants.NearbyInteractionLibrary)]
+		static extern NativeHandle /* NSString */ NIAlgorithmConvergenceStatusReasonDescription (NativeHandle /* NIAlgorithmConvergenceStatusReason */ reason);
+
+		[SupportedOSPlatform ("ios16.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
+		public static NSString GetConvergenceStatusReason (NIAlgorithmConvergenceStatusReason reason)
+		{
+			var constant = reason.GetConstant ();
+			var rv = Runtime.GetNSObject<NSString> (NIAlgorithmConvergenceStatusReasonDescription (constant.GetHandle ()))!;
+			GC.KeepAlive (constant);
+			return rv;
+		}
+	}
+}
+#endif // IOS || __MACCATALYST__

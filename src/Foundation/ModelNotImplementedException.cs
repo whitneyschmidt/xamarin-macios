@@ -20,14 +20,17 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
 namespace Foundation {
+	/// <summary>A convenience exception used in Model method implementations.</summary>
 	public class ModelNotImplementedException : Exception {
-		public ModelNotImplementedException () {}
+		/// <summary>Initializes a new instance of the <see cref="ModelNotImplementedException" /> class.</summary>
+		public ModelNotImplementedException () { }
 	}
 
+	/// <summary>This class exists purely as a warning to future generations. You called a method using "base", but this was not required.</summary>
 	public class You_Should_Not_Call_base_In_This_Method : Exception {
-		public You_Should_Not_Call_base_In_This_Method () {}
+		/// <summary>Initializes a new instance of the <see cref="You_Should_Not_Call_base_In_This_Method" /> class.</summary>
+		public You_Should_Not_Call_base_In_This_Method () { }
 	}
 }

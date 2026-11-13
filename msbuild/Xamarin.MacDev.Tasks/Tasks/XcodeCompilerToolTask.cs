@@ -1,0 +1,437 @@
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+using Xamarin.Localization.MSBuild;
+
+using Xamarin.MacDev;
+using Xamarin.MacDev.Models;
+using Xamarin.Messaging.Build.Client;
+using Xamarin.Utils;
+
+#nullable enable
+
+namespace Xamarin.MacDev.Tasks {
+	public abstract class XcodeCompilerToolTask : XamarinTask, IHasProjectDir, IHasResourcePrefix, ICancelableTask {
+		CancellationTokenSource cancellationTokenSource = new ();
+
+		protected bool Link { get; set; }
+
+		#region Inputs
+
+		public string BundleIdentifier { get; set; } = string.Empty;
+
+		public string? AdditionalArguments { get; set; }
+
+		public string? AdditionalArgumentsPropertyName { get; set; }
+
+		[Required]
+		public string MinimumOSVersion { get; set; } = string.Empty;
+
+		[Required]
+		public string IntermediateOutputPath { get; set; } = string.Empty;
+
+		[Required]
+		public string ProjectDir { get; set; } = string.Empty;
+
+		[Required]
+		public string ResourcePrefix { get; set; } = string.Empty;
+
+		[Required]
+		public string SdkPlatform { get; set; } = string.Empty;
+
+		[Required]
+		public string SdkVersion { get; set; } = string.Empty;
+
+		public string ToolPath { get; set; } = string.Empty;
+
+		#endregion
+
+		#region Outputs
+
+		[Output]
+		public ITaskItem [] BundleResources { get; set; } = Array.Empty<ITaskItem> ();
+
+		[Output]
+		public ITaskItem [] OutputManifests { get; set; } = Array.Empty<ITaskItem> ();
+
+		#endregion
+
+		#region Inputs from the app manifest
+
+		public string CLKComplicationGroup { get; set; } = string.Empty;
+
+		public string NSExtensionPointIdentifier { get; set; } = string.Empty;
+
+		public string UIDeviceFamily { get; set; } = string.Empty;
+
+		public bool WKWatchKitApp { get; set; }
+
+		public string XSAppIconAssets { get; set; } = string.Empty;
+
+		public string XSLaunchImageAssets { get; set; } = string.Empty;
+
+		#endregion
+
+		public IPhoneDeviceType ParsedUIDeviceFamily {
+			get {
+				if (!string.IsNullOrEmpty (UIDeviceFamily))
+					return (IPhoneDeviceType) Enum.Parse (typeof (IPhoneDeviceType), UIDeviceFamily);
+				return IPhoneDeviceType.NotSet;
+			}
+		}
+
+		protected abstract string ToolName { get; }
+
+		protected virtual bool UseCompilationDirectory {
+			get { return false; }
+		}
+
+		protected bool IsWatchExtension {
+			get {
+				return NSExtensionPointIdentifier == "com.apple.watchkit";
+			}
+		}
+
+		protected IEnumerable<string> GetTargetDevices ()
+		{
+			return GetTargetDevices (ParsedUIDeviceFamily, WKWatchKitApp, IsWatchExtension);
+		}
+
+		IEnumerable<string> GetTargetDevices (IPhoneDeviceType devices, bool watch, bool watchExtension)
+		{
+			if (Platform == ApplePlatform.MacOSX)
+				yield break;
+
+			if (!watch) {
+				// the project is either a normal iOS project or an extension
+				if (devices == IPhoneDeviceType.NotSet) {
+					// library projects and extension projects will not have this key, but
+					// we'll want them to work for both iPhones and iPads if the
+					// xib or storyboard supports them
+					devices = IPhoneDeviceType.IPhoneAndIPad;
+				}
+
+				// if the project is a watch extension, we'll also want to include watch support
+				watch = watchExtension;
+			} else {
+				// the project is a WatchApp, only include watch support
+			}
+
+			if ((devices & IPhoneDeviceType.IPhone) != 0)
+				yield return "iphone";
+
+			if ((devices & IPhoneDeviceType.IPad) != 0)
+				yield return "ipad";
+
+			if (watch)
+				yield return "watch";
+
+			if ((devices & IPhoneDeviceType.TV) != 0)
+				yield return "tv";
+
+			yield break;
+		}
+
+		protected abstract void AppendCommandLineArguments (IDictionary<string, string?> environment, List<string> args, ITaskItem [] items);
+
+		protected bool AppendAdditionalArguments (List<string> args)
+		{
+			var additionalArgumentsValue = AdditionalArguments;
+			if (additionalArgumentsValue is null || additionalArgumentsValue.Length == 0)
+				return true;
+
+			if (!StringUtils.TryParseArguments (additionalArgumentsValue, out var additionalArguments, out var _)) {
+				var propertyName = AdditionalArgumentsPropertyName ?? nameof (AdditionalArguments);
+				Log.LogError (MSBStrings.E7192 /* Unable to parse the '{0}' value: {1} */, propertyName, additionalArgumentsValue);
+				return false;
+			}
+
+			args.AddRange (additionalArguments);
+			return true;
+		}
+
+		static bool? translated;
+
+		[DllImport ("/usr/lib/libSystem.dylib", SetLastError = true)]
+		static extern int sysctlbyname (/* const char */ [MarshalAs (UnmanagedType.LPStr)] string property, ref long oldp, ref long oldlenp, IntPtr newp, /* size_t */ long newlen);
+
+		// https://developer.apple.com/documentation/apple_silicon/about_the_rosetta_translation_environment
+		static bool IsTranslated ()
+		{
+			if (translated is null) {
+				long result = 0;
+				long size = sizeof (long);
+				translated = ((sysctlbyname ("sysctl.proc_translated", ref result, ref size, IntPtr.Zero, 0) != -1) && (result == 1));
+			}
+			return translated.Value;
+		}
+
+		// Cache simulator runtime check results to avoid running simctl multiple times.
+		// Key includes SdkDevPath because different Xcode installations may have different runtimes.
+		static ConcurrentDictionary<string, bool> simulatorRuntimeCache = new ();
+
+		/// <summary>
+		/// Returns the platform name used by simctl for the current build platform, or null if no simulator is needed.
+		/// </summary>
+		string? GetSimulatorPlatformName ()
+		{
+			switch (Platform) {
+			case ApplePlatform.iOS:
+			case ApplePlatform.MacCatalyst:
+				// Mac Catalyst uses the iOS-based toolchain, so it also needs the iOS simulator runtime.
+				return "iOS";
+			case ApplePlatform.TVOS:
+				return "tvOS";
+			case ApplePlatform.MacOSX:
+			default:
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// Checks if the required simulator runtime is installed and emits a diagnostic if not.
+		/// Apple's Xcode tools (actool, ibtool, etc.) require the simulator runtime to function,
+		/// even when building for physical devices. Call this after a tool failure to provide
+		/// actionable guidance to the user.
+		/// </summary>
+		void CheckSimulatorRuntimeAvailable ()
+		{
+			var simPlatform = GetSimulatorPlatformName ();
+			if (simPlatform is null)
+				return;
+
+			var cacheKey = $"{simPlatform}:{SdkDevPath}";
+			if (simulatorRuntimeCache.TryGetValue (cacheKey, out var cachedResult)) {
+				if (!cachedResult)
+					Log.LogError (MSBStrings.E7175, simPlatform);
+				return;
+			}
+
+			var jsonOutputFile = Path.GetTempFileName ();
+			try {
+				using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationTokenSource.Token);
+				timeoutCts.CancelAfter (TimeSpan.FromMinutes (1));
+				var args = new List<string> {
+					"simctl",
+					"list",
+					"runtimes",
+					"-j",
+					"--json-output=" + jsonOutputFile
+				};
+				var rv = ExecuteAsync ("xcrun", args, showErrorIfFailure: false, cancellationToken: timeoutCts.Token).Result;
+
+				if (rv.ExitCode != 0) {
+					Log.LogWarning (MSBStrings.W7176, simPlatform);
+					return;
+				}
+
+				var json = File.ReadAllText (jsonOutputFile);
+				var runtimes = SimctlOutputParser.ParseRuntimes (json);
+
+				var hasRuntime = runtimes.Any (r =>
+					string.Equals (r.Platform, simPlatform, StringComparison.OrdinalIgnoreCase) && r.IsAvailable);
+
+				simulatorRuntimeCache [cacheKey] = hasRuntime;
+				if (!hasRuntime)
+					Log.LogError (MSBStrings.E7175, simPlatform);
+			} catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested) {
+				// User cancelled - don't emit diagnostics
+			} catch (AggregateException ae) when (ae.InnerException is OperationCanceledException && cancellationTokenSource.IsCancellationRequested) {
+				// User cancelled - don't emit diagnostics
+			} catch (OperationCanceledException) {
+				// Timeout
+				Log.LogWarning (MSBStrings.W7176, simPlatform);
+			} catch (AggregateException ae) when (ae.InnerException is OperationCanceledException) {
+				// Timeout
+				Log.LogWarning (MSBStrings.W7176, simPlatform);
+			} catch (Exception ex) {
+				Log.LogWarning (MSBStrings.W7176, simPlatform);
+				Log.LogMessage (MessageImportance.Low, "Exception while checking simulator runtime: {0}", ex.Message);
+			} finally {
+				File.Delete (jsonOutputFile);
+			}
+		}
+
+		protected int Compile (ITaskItem [] items, string output, ITaskItem manifest)
+		{
+			var environment = new Dictionary<string, string?> ();
+			var args = new List<string> ();
+
+			args.Add ("--errors");
+			args.Add ("--warnings");
+			args.Add ("--notices");
+			args.Add ("--output-format");
+			args.Add ("xml1");
+
+			AppendCommandLineArguments (environment, args, items);
+
+			if (!AppendAdditionalArguments (args))
+				return 1;
+
+			if (Link)
+				args.Add ("--link");
+			else if (UseCompilationDirectory)
+				args.Add ("--compilation-directory");
+			else
+				args.Add ("--compile");
+
+			args.Add (Path.GetFullPath (output));
+
+			foreach (var item in items)
+				args.Add (item.GetMetadata ("FullPath"));
+
+			var executable = GetExecutable (args, ToolName, ToolPath);
+			// workaround for ibtool[d] bug / asserts if Intel version is loaded
+			if (IsTranslated ()) {
+				// we force the Intel (translated) msbuild process to launch ibtool as "Apple"
+				args.Insert (0, "-arch");
+				args.Insert (1, "arm64e");
+				args.Insert (2, executable);
+				executable = "arch";
+			}
+
+			// don't bother executing the tool if we've already logged errors.
+			if (Log.HasLoggedErrors)
+				return 1;
+
+			var rv = ExecuteAsync (executable, args, showErrorIfFailure: true, environment: environment, cancellationToken: cancellationTokenSource.Token).Result;
+			var exitCode = rv.ExitCode;
+			var messages = rv.Output.StandardOutput;
+			File.WriteAllText (manifest.ItemSpec, messages);
+
+			if (exitCode != 0) {
+				// Note: ibtool or actool exited with an error. Dump everything we can to help the user
+				// diagnose the issue and then delete the manifest log file so that rebuilding tries
+				// again (in case of ibtool's infamous spurious errors).
+				var errors = rv.Output.StandardError;
+				if (errors.Length > 0)
+					Log.LogError (null, null, null, items [0].ItemSpec, 0, 0, 0, 0, "{0}", errors);
+
+				// Note: If the log file exists and is parseable, log those warnings/errors as well...
+				if (File.Exists (manifest.ItemSpec)) {
+					try {
+						var plist = PDictionary.OpenFile (manifest.ItemSpec);
+
+						LogWarningsAndErrors (plist, items [0]);
+					} catch (Exception ex) {
+						Log.LogError (MSBStrings.E0094, ToolName, manifest.ItemSpec, ex.Message);
+					}
+
+					File.Delete (manifest.ItemSpec);
+				}
+
+				// Check if the failure might be caused by a missing simulator runtime.
+				CheckSimulatorRuntimeAvailable ();
+			}
+
+			return exitCode;
+		}
+
+		protected void LogWarningsAndErrors (PDictionary plist, ITaskItem file)
+		{
+			PDictionary? dictionary;
+			PString? message;
+			PArray? array;
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.notices", ToolName), out array)) {
+				foreach (var item in array.OfType<PDictionary> ()) {
+					if (item.TryGetValue ("message", out message))
+						Log.LogMessage (MessageImportance.Low, "{0} notice : {1}", ToolName, message.Value);
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.warnings", ToolName), out array)) {
+				foreach (var item in array.OfType<PDictionary> ()) {
+					if (item.TryGetValue ("message", out message))
+						Log.LogWarning (ToolName, null, null, file.ItemSpec, 0, 0, 0, 0, "{0}", message.Value);
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.errors", ToolName), out array)) {
+				foreach (var item in array.OfType<PDictionary> ()) {
+					if (item.TryGetValue ("message", out message))
+						Log.LogError (ToolName, null, null, file.ItemSpec, 0, 0, 0, 0, "{0}", message.Value);
+				}
+			}
+
+			//Trying to parse document warnings and erros using a PDictionary first since it's what ibtool is returning when building a storyboard.
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.notices", ToolName), out dictionary)) {
+				foreach (var valuePair in dictionary) {
+					array = valuePair.Value as PArray;
+					foreach (var item in array?.OfType<PDictionary> () ?? Array.Empty<PDictionary> ()) {
+						if (item.TryGetValue ("message", out message))
+							Log.LogMessage (MessageImportance.Low, "{0} notice : {1}", ToolName, message.Value);
+					}
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.warnings", ToolName), out dictionary)) {
+				foreach (var valuePair in dictionary) {
+					array = valuePair.Value as PArray;
+					foreach (var item in array?.OfType<PDictionary> () ?? Array.Empty<PDictionary> ()) {
+						if (item.TryGetValue ("message", out message))
+							Log.LogWarning (ToolName, null, null, file.ItemSpec, 0, 0, 0, 0, "{0}", message.Value);
+					}
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.document.errors", ToolName), out dictionary)) {
+				foreach (var valuePair in dictionary) {
+					array = valuePair.Value as PArray;
+					foreach (var item in array?.OfType<PDictionary> () ?? Array.Empty<PDictionary> ()) {
+						if (item.TryGetValue ("message", out message))
+							Log.LogError (ToolName, null, null, file.ItemSpec, 0, 0, 0, 0, "{0}", message.Value);
+					}
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.errors", ToolName), out array)) {
+				foreach (var item in array.OfType<PDictionary> ()) {
+					if (item.TryGetValue ("description", out message)) {
+						Log.LogError (ToolName, null, null, file.ItemSpec, 0, 0, 0, 0, "{0}", message.Value);
+						if (IsSimulatorRuntimeVersionError (message.Value)) {
+							var simPlatform = GetSimulatorPlatformName ();
+							if (simPlatform is not null)
+								Log.LogError (MSBStrings.E7177, simPlatform);
+						}
+					}
+				}
+			}
+
+			if (plist.TryGetValue (string.Format ("com.apple.{0}.notices", ToolName), out array)) {
+				foreach (var item in array.OfType<PDictionary> ()) {
+					if (item.TryGetValue ("description", out message))
+						Log.LogMessage (MessageImportance.Low, "{0} notice : {1}", ToolName, message.Value);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Detects error messages like "No simulator runtime version from [...] available to use with ... SDK version ..."
+		/// which indicate an incompatible or missing simulator runtime version.
+		/// </summary>
+		static bool IsSimulatorRuntimeVersionError (string message)
+		{
+			return message.IndexOf ("simulator runtime", StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+
+		public void Cancel ()
+		{
+			if (ShouldExecuteRemotely ()) {
+				BuildConnection.CancelAsync (BuildEngine4).Wait ();
+			} else {
+				cancellationTokenSource?.Cancel ();
+			}
+		}
+	}
+}

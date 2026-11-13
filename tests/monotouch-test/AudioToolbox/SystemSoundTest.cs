@@ -7,130 +7,106 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
 using System.IO;
-#if XAMCORE_2_0
-using Foundation;
+using System.Threading.Tasks;
+
 using AudioToolbox;
-using CoreFoundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaPlayer;
-using MonoTouch.AudioToolbox;
-using MonoTouch.CoreFoundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-using System.Threading;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.AudioToolbox {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class SystemSoundTest
-	{
-#if !MONOMAC // Currently no AppDelegate in xammac_test
+	public class SystemSoundTest {
 		[Test]
 		public void FromFile ()
 		{
-#if MONOMAC
-			var path = NSBundle.MainBundle.PathForResource ("1", "caf", "AudioToolbox");
-#else
-			var path = Path.GetFullPath (Path.Combine ("AudioToolbox", "1.caf"));
+			TestRuntime.AssertNotSimulator ();
 
-			if (Runtime.Arch == Arch.SIMULATOR)
-				Assert.Ignore ("PlaySystemSound doesn't work in the simulator");
-#endif
+			var path = NSBundle.MainBundle.PathForResource ("1", "caf", "AudioToolbox");
 
 			using (var ss = SystemSound.FromFile (NSUrl.FromFilename (path))) {
-				var completed = false;
+				var completed = new TaskCompletionSource<bool> ();
 				const int timeout = 10;
 
-				Assert.AreEqual (AudioServicesError.None, ss.AddSystemSoundCompletion (delegate {
-					completed = true;
-					}));
+				Assert.That (ss.AddSystemSoundCompletion (delegate
+				{
+					completed.SetResult (true);
+				}), Is.EqualTo (AudioServicesError.None));
 
 				ss.PlaySystemSound ();
-				Assert.IsTrue (MonoTouchFixtures.AppDelegate.RunAsync (DateTime.Now.AddSeconds (timeout), async () => { }, () => completed), "PlaySystemSound");
+				Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (timeout), completed.Task), Is.True, "PlaySystemSound");
 			}
 		}
-#endif
 
 		[Test]
 		public void Properties ()
 		{
-#if MONOMAC
 			var path = NSBundle.MainBundle.PathForResource ("1", "caf", "AudioToolbox");
-#else
-			var path = Path.GetFullPath (Path.Combine ("AudioToolbox", "1.caf"));
-#endif
 
 			using (var ss = SystemSound.FromFile (NSUrl.FromFilename (path))) {
 				Assert.That (ss.IsUISound, Is.True, "#1");
 				Assert.That (ss.CompletePlaybackIfAppDies, Is.False, "#2");
+
+				ss.CompletePlaybackIfAppDies = true;
+				ss.IsUISound = false;
+				Assert.That (ss.IsUISound, Is.False, "#1 B");
+				Assert.That (ss.CompletePlaybackIfAppDies, Is.True, "#2 B");
+
+				ss.CompletePlaybackIfAppDies = false;
+				ss.IsUISound = true;
+				Assert.That (ss.IsUISound, Is.True, "#1 C");
+				Assert.That (ss.CompletePlaybackIfAppDies, Is.False, "#2 C");
 			}
 		}
 
-#if !MONOMAC // Currently no AppDelegate in xammac_test
 		[Test]
 		public void TestCallbackPlaySystem ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 9, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertNotSimulator ();
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 9, 0, throwIfOtherPlatform: false);
 
 			string path = Path.Combine (NSBundle.MainBundle.ResourcePath, "drum01.mp3");
 
 			using (var ss = SystemSound.FromFile (NSUrl.FromFilename (path))) {
 
-				var completed = false;
+				var completed = new TaskCompletionSource<bool> ();
 				const int timeout = 10;
 
-				completed = false;
-				Assert.IsTrue (MonoTouchFixtures.AppDelegate.RunAsync (DateTime.Now.AddSeconds (timeout), async () =>
-					ss.PlaySystemSound (() => {	completed = true; }
-				), () => completed), "TestCallbackPlaySystem");
+				ss.PlaySystemSound (() => { completed.SetResult (true); });
+				Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (timeout), completed.Task), Is.True, "TestCallbackPlaySystem");
 			}
 		}
 
 		[Test]
 		public void TestCallbackPlayAlert ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 9, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertNotSimulator ();
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 9, 0, throwIfOtherPlatform: false);
 
 			string path = Path.Combine (NSBundle.MainBundle.ResourcePath, "drum01.mp3");
 
 			using (var ss = SystemSound.FromFile (NSUrl.FromFilename (path))) {
 
-				var completed = false;
+				var completed = new TaskCompletionSource<bool> ();
 				const int timeout = 10;
 
-				completed = false;
-				Assert.IsTrue (MonoTouchFixtures.AppDelegate.RunAsync (DateTime.Now.AddSeconds (timeout), async () =>
-					ss.PlayAlertSound (() => { completed = true; }
-				), () => completed), "TestCallbackPlayAlert");
+				ss.PlayAlertSound (() => { completed.SetResult (true); });
+				Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (timeout), completed.Task), Is.True, "TestCallbackPlayAlert");
 			}
 		}
-#endif
 
 		[Test]
 		public void DisposeTest ()
 		{
-#if MONOMAC
 			var path = NSBundle.MainBundle.PathForResource ("1", "caf", "AudioToolbox");
-#else
-			var path = Path.GetFullPath (Path.Combine ("AudioToolbox", "1.caf"));
-#endif
 
 			var ss = SystemSound.FromFile (NSUrl.FromFilename (path));
-			Assert.That (ss.Handle, Is.Not.EqualTo (IntPtr.Zero), "DisposeTest");
+			Assert.That (ss.SoundId, Is.Not.EqualTo ((uint) 0), "DisposeTest");
 
 			ss.Dispose ();
 			// Handle prop checks NotDisposed and throws if it is
-			Assert.Throws<ObjectDisposedException> (() => ss.Handle.ToString (), "DisposeTest");
+			Assert.Throws<ObjectDisposedException> (() => ss.SoundId.ToString (), "DisposeTest");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -7,39 +7,12 @@
 // Copyright 2013-2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
 using System.IO;
-using System.Runtime.InteropServices;
 
-#if XAMCORE_2_0
-using AVFoundation;
 using CoreGraphics;
 using CoreImage;
 using CoreText;
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.AVFoundation;
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreImage;
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.CoreImage {
 
@@ -54,41 +27,28 @@ namespace MonoTouchFixtures.CoreImage {
 			using (var url = NSUrl.FromFilename (file))
 			using (var input = CIImage.FromUrl (url))
 			using (var filter = new CIHighlightShadowAdjust ()) {
-				filter.Image = input;
+				filter.InputImage = input;
 				filter.HighlightAmount = 0.75f;
 				filter.ShadowAmount = 1.5f;
 				// https://bugzilla.xamarin.com/show_bug.cgi?id=15465
-				Assert.NotNull (filter.OutputImage, "OutputImage");
+				Assert.That (filter.OutputImage, Is.Not.Null, "OutputImage");
 			}
 		}
 
-		class MyFilter : CIFilter
-		{
+		class MyFilter : CIFilter {
 			public int Input { get; set; }
 		}
 
 		[Test]
 		public void CustomFilterTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 11, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 11, throwIfOtherPlatform: false);
 
 			MyFilter filter = new MyFilter ();
-			Assert.NotNull (filter);
+			Assert.That (filter, Is.Not.Null);
 			filter.Input = 10;
-			Assert.AreEqual(10, filter.Input);
-		}
-
-		[Test]
-		public void UnsupportedInputImage ()
-		{
-			// some filters do not support inputImage (which we bound to the Image property)
-			using (var filter = new CICheckerboardGenerator ()) {
-				// but if we call ObjC then we get a native exception and crash on devices
-				Assert.False (filter.RespondsToSelector (new Selector ("inputImage")), "inputImage");
-				// so we return null in those cases
-				Assert.Null (filter.Image, "Image");
-			}
+			Assert.That (filter.Input, Is.EqualTo (10));
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
@@ -97,22 +57,22 @@ namespace MonoTouchFixtures.CoreImage {
 		[Test]
 		public void ColorSpace ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
 
 			using (var f = new CIColorCubeWithColorSpace ()) {
-				Assert.Null (f.ColorSpace, "ColorSpace/default");
+				Assert.That (f.ColorSpace, Is.Null, "ColorSpace/default");
 				using (var cs = CGColorSpace.CreateDeviceGray ()) {
 					f.ColorSpace = cs;
 					var rc = CFGetRetainCount (cs.Handle);
 					for (int i = 0; i < 5; i++) {
 						using (var fcs = f.ColorSpace)
-							Assert.NotNull (fcs, i.ToString ());
+							Assert.That (fcs, Is.Not.Null, i.ToString ());
 					}
 					Assert.That (CFGetRetainCount (cs.Handle), Is.EqualTo (rc), "RetainCount");
 					f.ColorSpace = null;
 				}
-				Assert.Null (f.ColorSpace, "ColorSpace/reset-null");
+				Assert.That (f.ColorSpace, Is.Null, "ColorSpace/reset-null");
 			}
 		}
 
@@ -122,17 +82,17 @@ namespace MonoTouchFixtures.CoreImage {
 			TestRuntime.AssertXcodeVersion (9, 0);
 
 			using (var f = new CIBarcodeGenerator ()) {
-				Assert.Null (f.BarcodeDescriptor, "CIBarcodeDescriptor/default");
+				Assert.That (f.BarcodeDescriptor, Is.Null, "CIBarcodeDescriptor/default");
 				using (var d = new NSData ())
 				using (var b = new CIQRCodeDescriptor (d, 1, 0, CIQRCodeErrorCorrectionLevel.Q)) {
 					f.BarcodeDescriptor = b;
 					var rc = CFGetRetainCount (b.Handle);
 					for (int i = 0; i < 5; i++)
-						Assert.NotNull (f.BarcodeDescriptor, i.ToString ());
+						Assert.That (f.BarcodeDescriptor, Is.Not.Null, i.ToString ());
 					Assert.That (CFGetRetainCount (b.Handle), Is.EqualTo (rc), "RetainCount");
 					f.BarcodeDescriptor = null;
 				}
-				Assert.Null (f.BarcodeDescriptor, "CIBarcodeDescriptor/reset-null");
+				Assert.That (f.BarcodeDescriptor, Is.Null, "CIBarcodeDescriptor/reset-null");
 			}
 		}
 
@@ -142,14 +102,14 @@ namespace MonoTouchFixtures.CoreImage {
 			TestRuntime.AssertXcodeVersion (9, 0);
 
 			using (var f = new CIAttributedTextImageGenerator ()) {
-				Assert.Null (f.Text, "NSAttributedString/default");
+				Assert.That (f.Text, Is.Null, "NSAttributedString/default");
 				var attr = new CTStringAttributes () {
 					ForegroundColorFromContext = true,
 					Font = new CTFont ("Arial", 24)
 				};
 				using (var s = new NSAttributedString ("testString", attr)) {
 					f.Text = s;
-					Assert.NotNull (f.Text, "NSAttributedString/not-null");
+					Assert.That (f.Text, Is.Not.Null, "NSAttributedString/not-null");
 				}
 			}
 		}
@@ -160,14 +120,23 @@ namespace MonoTouchFixtures.CoreImage {
 			TestRuntime.AssertXcodeVersion (10, 0);
 
 			using (var f = new CIMeshGenerator ()) {
-				Assert.Null (f.Mesh, "Mesh/Null");
+				Assert.That (f.Mesh, Is.Null, "Mesh/Null");
 				f.Mesh = new CIVector [1] { new CIVector (1) };
 				Assert.That (f.Mesh.Length, Is.EqualTo (1), "Mesh/Non-null");
 				f.Mesh = null;
-				Assert.Null (f.Mesh, "Mesh/Null/again");
+				Assert.That (f.Mesh, Is.Null, "Mesh/Null/again");
 			}
+		}
+
+		[Test]
+		public void FilterNamesInCategories ()
+		{
+			var a = CIFilter.FilterNamesInCategories ();
+			var b = CIFilter.FilterNamesInCategories (null);
+
+			Assert.That (a, Is.EquivalentTo (b), "Filtering");
+			Assert.That (a.Length, Is.GreaterThan (0), "Filtered A");
+			Assert.That (b.Length, Is.GreaterThan (0), "Filtered B");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

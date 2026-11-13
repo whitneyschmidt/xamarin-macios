@@ -1,0 +1,50 @@
+# template that can be extended by pipelines that will be used to build the project. This
+# allows to share te parameters and resources. 
+
+parameters:
+
+- name: macOSName # comes from the build agent demand named macOS.Name
+  displayName: Name of the version of macOS to use
+  type: string
+  default: 'Tahoe'
+
+- name: pool
+  type: string
+  displayName: Bot pool to use
+
+- name: isPR
+  displayName: Is PR build
+  type: boolean
+  default: false
+
+- name: useACES
+  type: boolean
+  default: false
+
+resources:
+  repositories:
+  - repository: self
+    checkoutOptions:
+      submodules: true
+
+  - repository: yaml-templates
+    type: git
+    name: xamarin.yaml-templates
+    ref: refs/heads/main
+
+variables:
+- template: ../variables/common.yml
+- name: DisablePipelineConfigDetector
+  ${{ if eq(parameters.isPR, false) }}:
+    value: true
+  ${{ else }}:
+    value: false
+
+stages:
+- template: ../api-diff-stage.yml
+  parameters:
+    xcodeChannel: $(xcodeChannel)
+    macOSName: ${{ parameters.macOSName }}
+    isPR: ${{ parameters.isPR }}
+    pool: ${{ parameters.pool }}
+    useACES: ${{ parameters.useACES }}

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKMeshGraph
 //
 // Authors:
@@ -8,14 +8,11 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && XAMCORE_2_0
-
-using System;
-using OpenTK;
-using NUnit.Framework;
-
-using Foundation;
 using GameplayKit;
+
+using System.Numerics;
+
+#nullable enable
 
 namespace MonoTouchFixtures.GamePlayKit {
 	[TestFixture]
@@ -25,15 +22,14 @@ namespace MonoTouchFixtures.GamePlayKit {
 		[Test]
 		public void GKTriangleTest ()
 		{
-			if (!TestRuntime.CheckXcodeVersion (8, 0))
-				Assert.Ignore ("Ignoring GameplayKit tests: Requires iOS10+");
-			
+			TestRuntime.AssertNotInterpreter ("This test does not work in the interpreter: https://github.com/dotnet/runtime/issues/110644");
+
 			var max = new Vector2 (10, 10);
 			var min = new Vector2 (1, 1);
 			var def = new GKTriangle ();
 
 			using (var mesh = new GKMeshGraph<GKGraphNode2D> (2, min, max, typeof (GKGraphNode2D))) {
-				Assert.NotNull (mesh, "mesh is null");
+				Assert.That (mesh, Is.Not.Null, "mesh is null");
 				mesh.AddObstacles (new [] {
 					new GKPolygonObstacle (new [] {
 						new Vector2 (3,1),
@@ -49,11 +45,10 @@ namespace MonoTouchFixtures.GamePlayKit {
 					})
 				});
 				mesh.Triangulate ();
-				Assert.That (mesh.TriangleCount, Is.GreaterThan (0), "No Triangles");
+				Assert.That (mesh.TriangleCount, Is.GreaterThan ((nuint) 0), "No Triangles");
 				var triangle = mesh.GetTriangle (0);
-				Assert.AreNotEqual (def, triangle, "Default triangle");
+				Assert.That (triangle, Is.Not.EqualTo (def), "Default triangle");
 			}
 		}
 	}
 }
-#endif

@@ -1,18 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLPointerTypeTests {
 		MTLPointerType ptrType = null;
 
@@ -26,7 +18,7 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (ptrType != null)
+			if (ptrType is not null)
 				ptrType.Dispose ();
 			ptrType = null;
 		}
@@ -34,33 +26,31 @@ namespace MonoTouchFixtures.Metal {
 		[Test]
 		public void GetAccessTest ()
 		{
-			Assert.AreEqual (MTLArgumentAccess.ReadOnly, ptrType.Access);
+			Assert.That (ptrType.Access, Is.EqualTo (MTLArgumentAccess.ReadOnly));
 		}
 
 		[Test]
 		public void GetAlignmentTest ()
 		{
-			Assert.AreEqual (0, ptrType.Alignment);
+			Assert.That (ptrType.Alignment, Is.EqualTo ((nuint) 0));
 		}
 
 		[Test]
 		public void GetDataSizeTest ()
 		{
-			Assert.AreEqual (0, ptrType.DataSize);
+			Assert.That (ptrType.DataSize, Is.EqualTo ((nuint) 0));
 		}
 
 		[Test]
 		public void GetElementIsArgumentBufferTest ()
 		{
-			Assert.False (ptrType.ElementIsArgumentBuffer);
+			Assert.That (ptrType.ElementIsArgumentBuffer, Is.False);
 		}
 
 		[Test]
 		public void GetElementTypeTest ()
 		{
-			Assert.AreEqual (MTLDataType.None, ptrType.ElementType);
+			Assert.That (ptrType.ElementType, Is.EqualTo (MTLDataType.None));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

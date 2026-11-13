@@ -21,26 +21,40 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if __MACOS__
+
+#nullable enable
 
 namespace WebKit {
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("macos")]
 	public class DomEventArgs : EventArgs {
+		/// <param name="evt">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public DomEventArgs (DomEvent evt)
 		{
 			Event = evt;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public DomEvent Event { get; set; }
 	}
-	
+
+	/// <param name="sender">To be added.</param>
+	///     <param name="args">To be added.</param>
+	///     <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
 	public delegate void DomEventListenerHandler (object sender, DomEventArgs args);
-	
+
 	public partial class DomNode {
 
 		internal class DomNodeEventProxy : DomEventListener {
 			DomEventListenerHandler handler;
 			DomNode root;
-			
+
 			public DomNodeEventProxy (DomNode root, DomEventListenerHandler handler)
 			{
 				this.root = root;
@@ -55,7 +69,7 @@ namespace WebKit {
 
 		internal class DomNodeEventProxy2 : DomEventListener {
 			Action<DomEvent> callback;
-			
+
 			public DomNodeEventProxy2 (Action<DomEvent> callback)
 			{
 				this.callback = callback;
@@ -67,30 +81,36 @@ namespace WebKit {
 			}
 		}
 
-#if XAMCORE_4_0
+		/// <param name="type">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <param name="useCapture">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IDomEventListener AddEventListener (string type, DomEventListenerHandler handler, bool useCapture)
-#else
-		public DomEventListener AddEventListener (string type, DomEventListenerHandler handler, bool useCapture)
-#endif
 		{
-			if (handler == null)
-				throw new ArgumentNullException ("handler");
+			if (handler is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (handler));
 			var obj = new DomNodeEventProxy (this, handler);
 			AddEventListener (type, obj, useCapture);
 			return obj;
 		}
 
-#if XAMCORE_4_0
+		/// <param name="type">To be added.</param>
+		///         <param name="callback">To be added.</param>
+		///         <param name="useCapture">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IDomEventListener AddEventListener (string type, Action<DomEvent> callback, bool useCapture)
-#else
-		public DomEventListener AddEventListener (string type, Action<DomEvent> callback, bool useCapture)
-#endif
 		{
-			if (callback == null)
-				throw new ArgumentNullException ("callback");
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
 			var obj = new DomNodeEventProxy2 (callback);
 			AddEventListener (type, obj, useCapture);
 			return obj;
 		}
 	}
 }
+
+#endif // __MACOS__

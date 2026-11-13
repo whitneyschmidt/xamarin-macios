@@ -19,89 +19,70 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 // Copyright 2011, 2012 Xamarin Inc
-using ObjCRuntime;
-using System;
 using System.Net;
+
+#nullable enable
 
 namespace Foundation {
 	public partial class NSHttpCookie {
-
-#if !XAMCORE_2_0
-		// sadly they were not readonly
-		public static NSString KeyName;
-		public static NSString KeyValue;
-		public static NSString KeyOriginURL;
-		public static NSString KeyVersion;
-		public static NSString KeyDomain;
-		public static NSString KeyPath;
-		public static NSString KeySecure;
-		public static NSString KeyExpires;
-		public static NSString KeyComment;
-		public static NSString KeyCommentURL;
-		public static NSString KeyDiscard;
-		public static NSString KeyMaximumAge;
-		public static NSString KeyPort;
-
-		static NSHttpCookie ()
-		{
-			var handle = Libraries.Foundation.Handle;
-			if (handle == IntPtr.Zero)
-				return;
-
-			KeyName = Dlfcn.GetStringConstant (handle, "NSHTTPCookieName");
-			KeyValue = Dlfcn.GetStringConstant (handle, "NSHTTPCookieValue");
-			KeyOriginURL = Dlfcn.GetStringConstant (handle, "NSHTTPCookieOriginURL");
-			KeyVersion = Dlfcn.GetStringConstant (handle, "NSHTTPCookieVersion");
-			KeyDomain = Dlfcn.GetStringConstant (handle, "NSHTTPCookieDomain");
-			KeyPath = Dlfcn.GetStringConstant (handle, "NSHTTPCookiePath");
-			KeySecure = Dlfcn.GetStringConstant (handle, "NSHTTPCookieSecure");
-			KeyExpires = Dlfcn.GetStringConstant (handle, "NSHTTPCookieExpires");
-			KeyComment = Dlfcn.GetStringConstant (handle, "NSHTTPCookieComment");
-			KeyCommentURL = Dlfcn.GetStringConstant (handle, "NSHTTPCookieCommentURL");
-			KeyDiscard = Dlfcn.GetStringConstant (handle, "NSHTTPCookieDiscard");
-			KeyMaximumAge = Dlfcn.GetStringConstant (handle, "NSHTTPCookieMaximumAge");
-			KeyPort = Dlfcn.GetStringConstant (handle, "NSHTTPCookiePort");
-		}
-#endif
-		
 		// same order as System.Net.Cookie
 		// http://msdn.microsoft.com/en-us/library/a18ka3h2.aspx
-		public NSHttpCookie (string name, string value) : this (name, value, null, null)
+		/// <summary>Create a new cookie with the supplied name and value.</summary>
+		/// <param name="name">Cookie's name. Cannot be null.</param>
+		/// <param name="value">Cookie's value. Cannot be null.</param>
+		/// <remarks>A default Path and Domain will be used to ensure a valid instance is created.</remarks>
+		public NSHttpCookie (string name, string value)
+			: this (name, value, null, null)
 		{
-			CreateCookie (name, value, null, null, null, null, null, null, null, null, null, null);
-		}
-		
-		public NSHttpCookie (string name, string value, string path) : this (name, value, path, null)
-		{
-			CreateCookie (name, value, path, null, null, null, null, null, null, null, null, null);
 		}
 
-		public NSHttpCookie (string name, string value, string path, string domain)
+		/// <summary>Create a new cookie with the supplied name, value and path.</summary>
+		/// <param name="name">Cookie's name. Cannot be null.</param>
+		/// <param name="value">Cookie's value. Cannot be null.</param>
+		/// <param name="path">Path where the cookie will be applied on the domain. Using "/" will send the cookie to every URL on the domain.</param>
+		/// <remarks>A default Domain will be used to ensure a valid instance is created</remarks>
+		public NSHttpCookie (string name, string value, string? path)
+			: this (name, value, path, null)
+		{
+		}
+
+		/// <summary>Create a new cookie with the supplied name, value, path and domain.</summary>
+		/// <param name="name">Cookie's name. Cannot be null.</param>
+		/// <param name="value">Cookie's value. Cannot be null.</param>
+		/// <param name="path">Path where the cookie will be applied on the domain. Using "/" will send the cookie to every URL on the domain.</param>
+		/// <param name="domain">Domain (e.g. microsoft.com) related to the cookie</param>
+		/// <remarks>An <see cref="ArgumentNullException" /> will be thrown if either <paramref name="name" /> or <paramref name="value" /> are null.</remarks>
+		public NSHttpCookie (string name, string value, string? path, string? domain)
+			: base (NSObjectFlag.Empty)
 		{
 			CreateCookie (name, value, path, domain, null, null, null, null, null, null, null, null);
 		}
-		
+
 		// FIXME: should we expose more complex/long ctor or point people to use a Cookie ?
 
+		/// <summary>Create a new cookie from the supplied <see cref="System.Net.Cookie" /> instance's properties.</summary>
+		/// <param name="cookie">An existing <see cref="System.Net.Cookie" /> from the .NET framework</param>
+		/// <remarks>This constructor will throw an <see cref="ArgumentNullException" /> if <paramref name="cookie" /> is null</remarks>
 		public NSHttpCookie (Cookie cookie)
+			: base (NSObjectFlag.Empty)
 		{
-			if (cookie == null)
-				throw new ArgumentNullException ("cookie");
-			
-			string commentUrl = cookie.CommentUri != null ? cookie.CommentUri.ToString () : null;
+			if (cookie is null)
+				throw new ArgumentNullException (nameof (cookie));
+
+			var commentUrl = cookie.CommentUri?.ToString ();
 			bool? discard = null;
 			if (cookie.Discard)
 				discard = true;
 			CreateCookie (cookie.Name, cookie.Value, cookie.Path, cookie.Domain, cookie.Comment, commentUrl, discard, cookie.Expires, null, cookie.Port, cookie.Secure, cookie.Version);
 		}
-		
-		void CreateCookie (string name, string value, string path, string domain, string comment, string commentUrl, bool? discard, DateTime? expires, int? maximumAge, string ports, bool? secure, int? version)
+
+		void CreateCookie (string name, string value, string? path, string? domain, string? comment, string? commentUrl, bool? discard, DateTime? expires, int? maximumAge, string? ports, bool? secure, int? version)
 		{
 			// mandatory checks or defaults
-			if (name == null)
-				throw new ArgumentNullException ("name");
-			if (value == null)
-				throw new ArgumentNullException ("value");
+			if (name is null)
+				throw new ArgumentNullException (nameof (name));
+			if (value is null)
+				throw new ArgumentNullException (nameof (value));
 			if (String.IsNullOrEmpty (path))
 				path = "/"; // default in .net
 			if (String.IsNullOrEmpty (domain))
@@ -113,16 +94,12 @@ namespace Foundation {
 				properties.Add (NSHttpCookie.KeyValue, new NSString (value));
 				properties.Add (NSHttpCookie.KeyPath, new NSString (path));
 				properties.Add (NSHttpCookie.KeyDomain, new NSString (domain));
-				
+
 				// optional to create the cookie
 				if (!String.IsNullOrEmpty (comment))
 					properties.Add (NSHttpCookie.KeyComment, new NSString (comment));
 				if (!String.IsNullOrEmpty (commentUrl))
-#if XAMCORE_2_0
 					properties.Add (NSHttpCookie.KeyCommentUrl, new NSString (commentUrl));
-#else
-					properties.Add (NSHttpCookie.KeyCommentURL, new NSString (commentUrl));
-#endif
 				if (discard.HasValue)
 					properties.Add (NSHttpCookie.KeyDiscard, new NSString (discard.Value ? "TRUE" : "FALSE"));
 				if (expires.HasValue && expires.Value != DateTime.MinValue)
@@ -136,11 +113,21 @@ namespace Foundation {
 					properties.Add (NSHttpCookie.KeySecure, new NSString ("1"));
 				if (version.HasValue)
 					properties.Add (NSHttpCookie.KeyVersion, new NSString (version.Value.ToString ()));
-				
+
+#if NET10_0_OR_GREATER
+				var throwOnInitFailure = true;
+#else
+				var throwOnInitFailure = false;
+#endif
+
 				if (IsDirectBinding) {
-					Handle = Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, Selector.GetHandle ("initWithProperties:"), properties.Handle);
+					InitializeHandle (Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, Selector.GetHandle ("initWithProperties:"), properties.Handle), "initWithProperties:", throwOnInitFailure);
 				} else {
-					Handle = Messaging.IntPtr_objc_msgSendSuper_IntPtr (this.SuperHandle, Selector.GetHandle ("initWithProperties:"), properties.Handle);
+					unsafe {
+						var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+						InitializeHandle (Messaging.IntPtr_objc_msgSendSuper_IntPtr (&__objc_super__, Selector.GetHandle ("initWithProperties:"), properties.Handle), "initWithProperties:", throwOnInitFailure);
+						GC.KeepAlive (this);
+					}
 				}
 			}
 		}

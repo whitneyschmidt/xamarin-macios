@@ -7,18 +7,7 @@
 // Copyright 2013 Xamarin Inc.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using MediaAccessibility;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaAccessibility;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.MediaAccessibility {
 
@@ -26,23 +15,6 @@ namespace MonoTouchFixtures.MediaAccessibility {
 	// we want the test to be availble if we use the linker
 	[Preserve (AllMembers = true)]
 	public class CaptionAppearanceTest {
-
-#if !XAMCORE_3_0
-		[Test]
-		public void Fields ()
-		{
-			if (TestRuntime.CheckXcodeVersion (5, 0, 1)) {
-				Assert.NotNull (MACaptionAppearance.MediaCharacteristicDescribesMusicAndSoundForAccessibility, "MediaCharacteristicDescribesMusicAndSoundForAccessibility");
-				Assert.NotNull (MACaptionAppearance.MediaCharacteristicTranscribesSpokenDialogForAccessibility, "MediaCharacteristicTranscribesSpokenDialogForAccessibility");
-				Assert.NotNull (MACaptionAppearance.SettingsChangedNotification, "SettingsChangedNotification");
-			} else {
-				Assert.Null (MACaptionAppearance.MediaCharacteristicDescribesMusicAndSoundForAccessibility, "MediaCharacteristicDescribesMusicAndSoundForAccessibility");
-				Assert.Null (MACaptionAppearance.MediaCharacteristicTranscribesSpokenDialogForAccessibility, "MediaCharacteristicTranscribesSpokenDialogForAccessibility");
-				Assert.Null (MACaptionAppearance.SettingsChangedNotification, "SettingsChangedNotification");
-			}
-		}
-#endif // !XAMCORE_3_0
-
 		[Test]
 		[Culture ("en")] // this setting depends on locale of the device according to apple docs on MACaptionAppearanceGetDisplayType, we know english works
 		public void GetDisplayType ()
@@ -51,7 +23,66 @@ namespace MonoTouchFixtures.MediaAccessibility {
 
 			Assert.That (MACaptionAppearance.GetDisplayType (MACaptionAppearanceDomain.Default), Is.EqualTo (MACaptionAppearanceDisplayType.Automatic).Or.EqualTo (MACaptionAppearanceDisplayType.AlwaysOn).Or.EqualTo (MACaptionAppearanceDisplayType.ForcedOnly), "Default");
 		}
+
+		[Test]
+		public void DidDisplayCaptions ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			// there's a known bug with UIPasteboard and NSAttributedString - and it makes our tests hang
+			var nsa = new NSAttributedString [0];
+			MACaptionAppearance.DidDisplayCaptions (nsa);
+			nsa = new [] { new NSAttributedString ("Bonjour") };
+			MACaptionAppearance.DidDisplayCaptions (nsa);
+			nsa = null;
+			MACaptionAppearance.DidDisplayCaptions (nsa);
+
+			var a = new string [0];
+			MACaptionAppearance.DidDisplayCaptions (a);
+			a = new [] { "Hello", "World" };
+			MACaptionAppearance.DidDisplayCaptions (a);
+			a = null;
+			MACaptionAppearance.DidDisplayCaptions (a);
+		}
+
+		[Test]
+		public void IsCustomized ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			foreach (var value in Enum.GetValues<MACaptionAppearanceDomain> ()) {
+				Assert.That (MACaptionAppearance.IsCustomized (value), Is.EqualTo (true).Or.EqualTo (false), value.ToString ());
+			}
+		}
+
+		[Test]
+		public void TestProfiles ()
+		{
+			TestRuntime.AssertXcodeVersion (26, 0);
+
+			Assert.Multiple (() => {
+				var profiles = MACaptionAppearance.GetProfileIds ();
+				Assert.That (profiles, Is.Not.Empty, "Profiles");
+
+				Assert.That (MACaptionAppearance.ActiveProfileId, Is.Not.Null, "ActiveProfileId#1");
+				var originalProfileId = MACaptionAppearance.ActiveProfileId;
+				try {
+					MACaptionAppearance.ActiveProfileId = profiles [0];
+					Assert.That (MACaptionAppearance.ActiveProfileId, Is.Not.Null.And.Not.Empty, "ActiveProfileId#2");
+				} finally {
+					MACaptionAppearance.ActiveProfileId = originalProfileId;
+				}
+
+				foreach (var p in profiles) {
+					Assert.That (MACaptionAppearance.GetProfileName (p), Is.Not.Null.And.Not.Empty, $"ProfileName - {p}");
+				}
+
+				var calledCallback = false;
+				MACaptionAppearance.ExecuteCallbackForProfile (profiles [0], () => {
+					calledCallback = true;
+				});
+				Assert.That (calledCallback, Is.True, "ExecuteCallbackForProfile");
+			});
+		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -7,11 +7,6 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using CoreAnimation;
 using CoreGraphics;
 #if MONOMAC
@@ -20,16 +15,9 @@ using UIColor = AppKit.NSColor;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.CoreAnimation;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreAnimation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class ShapeLayerTest {
@@ -37,25 +25,23 @@ namespace MonoTouchFixtures.CoreAnimation {
 		public void NullableProperties ()
 		{
 			var sl = new CAShapeLayer ();
-			Assert.NotNull (sl.FillColor, "FillColor");
+			Assert.That (sl.FillColor, Is.Not.Null, "FillColor");
 			sl.FillColor = null;
-			Assert.Null (sl.Path, "Path");
+			Assert.That (sl.Path, Is.Null, "Path");
 			sl.Path = null;
-			Assert.Null (sl.LineDashPattern, "LineDashPattern");
+			Assert.That (sl.LineDashPattern, Is.Null, "LineDashPattern");
 			sl.LineDashPattern = null;
-			Assert.Null (sl.StrokeColor, "StrokeColor");
+			Assert.That (sl.StrokeColor, Is.Null, "StrokeColor");
 			sl.StrokeColor = null;
 
 			sl.FillColor = TestRuntime.GetCGColor (UIColor.Black);
-			Assert.NotNull (sl.FillColor, "FillColor");
+			Assert.That (sl.FillColor, Is.Not.Null, "FillColor");
 			sl.Path = new CGPath ();
-			Assert.NotNull (sl.Path, "Path");
+			Assert.That (sl.Path, Is.Not.Null, "Path");
 			sl.LineDashPattern = new [] { new NSNumber (5), new NSNumber (10) };
-			Assert.NotNull (sl.LineDashPattern, "LineDashPattern");
+			Assert.That (sl.LineDashPattern, Is.Not.Null, "LineDashPattern");
 			sl.StrokeColor = TestRuntime.GetCGColor (UIColor.White);
-			Assert.NotNull (sl.StrokeColor, "StrokeColor");
+			Assert.That (sl.StrokeColor, Is.Not.Null, "StrokeColor");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

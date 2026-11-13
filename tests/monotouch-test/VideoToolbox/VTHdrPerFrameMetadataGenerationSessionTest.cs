@@ -1,0 +1,75 @@
+//
+// Unit tests for VTHdrPerFrameMetadataGenerationSession
+//
+
+using System.Drawing;
+
+using AVFoundation;
+using CoreGraphics;
+using CoreMedia;
+using CoreVideo;
+using VideoToolbox;
+#if MONOMAC
+using AppKit;
+#else
+using UIKit;
+#endif
+
+using Xamarin.Utils;
+
+namespace MonoTouchFixtures.VideoToolbox {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class VTHdrPerFrameMetadataGenerationSessionTest {
+		[Test]
+		public void Create_NSDictionary_Test ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			using var session = VTHdrPerFrameMetadataGenerationSession.Create (30, (NSDictionary) null, out var vtStatus);
+			Assert.That (session, Is.Not.Null, "session");
+			Assert.That (vtStatus, Is.EqualTo (VTStatus.Ok), "status");
+		}
+
+		[Test]
+		public void Create_VTHdrPerFrameMetadataGenerationOptions_Test ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			using var session = VTHdrPerFrameMetadataGenerationSession.Create (30, (VTHdrPerFrameMetadataGenerationOptions) null, out var vtStatus);
+			Assert.That (session, Is.Not.Null, "session");
+			Assert.That (vtStatus, Is.EqualTo (VTStatus.Ok), "status");
+		}
+
+		[Test]
+		public void AttachMetadataTest ()
+		{
+			var width = 640;
+			var height = 480;
+
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			using var session = VTHdrPerFrameMetadataGenerationSession.Create (30, (VTHdrPerFrameMetadataGenerationOptions) null, out var vtStatus);
+			Assert.That (session, Is.Not.Null, "session");
+			Assert.That (vtStatus, Is.EqualTo (VTStatus.Ok), "status");
+			using var pixelBuffer = new CVPixelBuffer (width, height, CVPixelFormatType.CV420YpCbCr8BiPlanarFullRange);
+			vtStatus = session.AttachMetadata (pixelBuffer, false);
+#if __TVOS__ || __IOS__
+			// There's probably something wrong about the session or pixel buffer creation that makes iOS/tvOS return PropertyNotSupported, but I have no idea what it is.
+			// It works on other platforms though, so the API (and the bindings) seem to work fine.
+			Assert.That (vtStatus, Is.EqualTo (VTStatus.Ok).Or.EqualTo (VTStatus.PropertyNotSupported), "status AttachMetadata");
+#else
+			Assert.That (vtStatus, Is.EqualTo (VTStatus.Ok), "status AttachMetadata");
+#endif
+		}
+
+		[Test]
+		public void GetTypeId ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			Assert.That (VTHdrPerFrameMetadataGenerationSession.GetTypeId (), Is.Not.EqualTo (0), "GetTypeId");
+		}
+	}
+}

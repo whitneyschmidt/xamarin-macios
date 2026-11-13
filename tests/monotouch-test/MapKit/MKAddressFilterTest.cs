@@ -1,0 +1,27 @@
+#if HAS_MAPKIT
+
+using MapKit;
+
+using Xamarin.Utils;
+
+namespace MonoTouchFixtures.MapKit {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class AddressFilterTest {
+		[Test]
+		public void Constructors ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			using (var filter = new MKAddressFilter (MKAddressFilterOption.Country, MKAddressFilterConstructorOption.Exclude)) {
+				Assert.That (filter, Is.Not.Null, "Exclude filter");
+			}
+			using (var filter = new MKAddressFilter (MKAddressFilterOption.SubAdministrativeArea, MKAddressFilterConstructorOption.Include)) {
+				Assert.That (filter, Is.Not.Null, "Include filter");
+			}
+		}
+	}
+}
+
+#endif // HAS_MAPKIT

@@ -21,17 +21,22 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
-	
+
 	public partial class NSSound {
-		
+
 		// note: if needed override the protected Get|Set methods
-		public string Name { 
+		/// <summary>Gets or sets the name of the sound.</summary>
+		/// <value>The name identifying this sound.</value>
+		public string Name {
 			get { return GetName (); }
 			// ignore return value (bool)
 			set { SetName (value); }
 		}
 	}
 }
+#endif // !__MACCATALYST__

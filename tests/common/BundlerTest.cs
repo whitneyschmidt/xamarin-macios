@@ -1,10 +1,6 @@
 // Tests are common to both mtouch and mmp
-using System;
 using System.IO;
-using System.Collections.Generic;
 using System.Linq;
-
-using NUnit.Framework;
 
 using Mono.Cecil;
 
@@ -16,11 +12,9 @@ using BundlerTool = Xamarin.MTouchTool;
 using BundlerTool = Xamarin.MmpTool;
 #endif
 
-namespace Xamarin
-{
+namespace Xamarin {
 	[TestFixture]
-	public class BundlerTests
-	{
+	public class BundlerTests {
 #if __MACOS__
 		// The cache doesn't work properly in mmp yet.
 		// [TestCase (Profile.macOSMobile)]
@@ -86,6 +80,63 @@ namespace Xamarin
 			}
 		}
 
+		[TestCase ("4.6")]
+		[TestCase ("4.7")]
+#if __MACOS__
+		[TestCase ("Xamarin.iOS,v1.0")]
+		[TestCase ("Xamarin.WatchOS,v1.0")]
+		[TestCase ("Xamarin.TVOS,v1.0")]
+#else
+		[TestCase ("Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("Xamarin.Mac,Version=v4.5,Profile=System")]
+#endif
+		public void MX0070 (string target_framework)
+		{
+			using (var bundler = new BundlerTool ()) {
+				bundler.Sdk = BundlerTool.None;
+				bundler.TargetFramework = target_framework;
+#if MONOTOUCH
+				bundler.Action = MTouchAction.None;
+#endif
+				bundler.AssertExecuteFailure ();
+				bundler.AssertErrorPattern (70, $"Invalid target framework: {target_framework}.*");
+				bundler.AssertWarningCount (0);
+				bundler.AssertErrorCount (1);
+			}
+		}
+
+#if __MACOS__
+		[Test]
+		[TestCase ("2.0", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("3.0", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("3.5", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("4.0", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("4.5", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("Xamarin.Mac,v2.0", "Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v2.0,Profile=Whatever", "Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v2.0", "Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v2.0,Profile=Full", "Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v4.0,Profile=Full", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("Xamarin.Mac,Version=v4.6,Profile=Full", "Xamarin.Mac,Version=v4.5,Profile=Full")]
+		[TestCase ("Xamarin.Mac,Version=v2.0,Profile=System", "Xamarin.Mac,Version=v2.0,Profile=Mobile")]
+		[TestCase ("Xamarin.Mac,Version=v4.0,Profile=System", "Xamarin.Mac,Version=v4.5,Profile=System")]
+		[TestCase ("Xamarin.Mac,Version=v4.6,Profile=System", "Xamarin.Mac,Version=v4.5,Profile=System")]
+		public void MX0090 (string target_framework, string expected_target_framework)
+		{
+			using (var bundler = new BundlerTool ()) {
+				bundler.Sdk = BundlerTool.None;
+				bundler.TargetFramework = target_framework;
+				bundler.Linker = LinkerOption.DontLink; // This makes it possible to trigger a reliable error to shortcut mmp execution soon after showing the warning we're looking for.
+				bundler.AssertExecuteFailure ();
+				bundler.AssertWarning (90, $"The target framework '{target_framework}' is deprecated. Use '{expected_target_framework}' instead.");
+				bundler.AssertError (17, "You should provide a root assembly."); // We only want to test the MX0090 warning, and then stop doing stuff asap, which this error does.
+				bundler.AssertWarningCount (1);
+				bundler.AssertErrorCount (1);
+			}
+		}
+
+#endif
 
 		[Test]
 #if __MACOS__
@@ -127,7 +178,7 @@ class T {
 ";
 				bundler.Profile = profile;
 				bundler.CreateTemporaryCacheDirectory ();
-				bundler.CreateTemporaryApp (profile, code: code, extraArg: "/debug:full");
+				bundler.CreateTemporaryApp (profile, code: code, extraArgs: new [] { "/debug:full" });
 				bundler.Linker = LinkerOption.LinkAll;
 				bundler.Optimize = new string [] { "blockliteral-setupblock" };
 				bundler.AssertExecute ();
@@ -168,7 +219,7 @@ class T {
 ";
 				bundler.Profile = profile;
 				bundler.CreateTemporaryCacheDirectory ();
-				bundler.CreateTemporaryApp (profile, code: code, extraArg: "/debug:full");
+				bundler.CreateTemporaryApp (profile, code: code, extraArgs: new [] { "/debug:full" });
 				bundler.Linker = LinkerOption.LinkSdk;
 				bundler.Registrar = RegistrarOption.Static;
 				bundler.Optimize = new string [] { "remove-dynamic-registrar" };
@@ -250,7 +301,7 @@ class D : NSObject {
 ";
 				bundler.Profile = profile;
 				bundler.CreateTemporaryCacheDirectory ();
-				bundler.CreateTemporaryApp (profile, code: code, extraArg: "/debug:full");
+				bundler.CreateTemporaryApp (profile, code: code, extraArgs: new [] { "/debug:full" });
 				bundler.Optimize = new string [] { "blockliteral-setupblock" };
 				bundler.Registrar = RegistrarOption.Static;
 				bundler.AssertExecuteFailure ();
@@ -298,7 +349,7 @@ class Issue4072Session : NSUrlSession {
 			using (var bundler = new BundlerTool ()) {
 				bundler.Profile = profile;
 				bundler.CreateTemporaryCacheDirectory ();
-				bundler.CreateTemporaryApp (profile, code: code, extraArg: "/debug:full");
+				bundler.CreateTemporaryApp (profile, code: code, extraArgs: new [] { "/debug:full" });
 				bundler.Registrar = RegistrarOption.Static;
 				bundler.Linker = LinkerOption.DontLink;
 				bundler.AssertExecute ();
@@ -314,7 +365,7 @@ class Issue4072Session : NSUrlSession {
 			using (var bundler = new BundlerTool ()) {
 				bundler.Profile = profile;
 				bundler.CreateTemporaryCacheDirectory ();
-				bundler.CreateTemporaryApp (profile, code: code, extraArg: "/debug-"); // Build without debug info so that the source code location isn't available.
+				bundler.CreateTemporaryApp (profile, code: code, extraArgs: new [] { "/debug-" }); // Build without debug info so that the source code location isn't available.
 				bundler.Registrar = RegistrarOption.Static;
 #if !__MACOS__
 				bundler.Linker = LinkerOption.LinkAll; // This will remove the parameter name in Xamarin.iOS (the parameter name removal optimization (MetadataReducerSubStep) isn't implemented for Xamarin.Mac).
@@ -326,6 +377,70 @@ class Issue4072Session : NSUrlSession {
 				bundler.AssertWarning (4175, "Parameter #2 in the method 'Issue4072Session.CreateDataTask(Foundation.NSUrl,Foundation.NSUrlSessionResponse)' has an invalid BlockProxy attribute (the type passed to the attribute does not have a 'Create' method).");
 #endif
 				bundler.AssertWarningCount (1);
+			}
+		}
+
+		[Test]
+#if __MACOS__
+		[TestCase (Profile.macOSMobile)]
+#else
+		[TestCase (Profile.iOS)]
+#endif
+		public void XmlUnexpandedVariable_7904 (Profile profile)
+		{
+			using (var bundler = new BundlerTool ()) {
+				var code = @"
+using System;
+using Foundation;
+using ObjCRuntime;
+class T {
+ 	static void Main ()
+	{
+		Console.WriteLine (typeof (NSObject));
+	}
+}
+";
+				bundler.Profile = profile;
+				bundler.CreateTemporaryCacheDirectory ();
+				bundler.CreateTemporaryApp (profile, code: code);
+				// typo is intentional since `{ProjectDir}` should be expanded (different issue)
+				bundler.CustomArguments = new [] { "--xml=${xProjectDir}/linker.xml", "-v", "-v", "-v", "-v" };
+				bundler.AssertExecuteFailure ();
+				// {} messing with a good pattern substitution - we want to avoid an MT0000 when verbosity is applied
+				bundler.AssertErrorPattern (2004, "");
+				bundler.AssertErrorCount (1);
+			}
+		}
+
+		[Test]
+#if __MACOS__
+		[TestCase (Profile.macOSMobile)]
+#else
+		[TestCase (Profile.iOS)]
+#endif
+		public void MX1502_3 (Profile profile)
+		{
+			using (var bundler = new BundlerTool ()) {
+				var code = @"
+using System;
+using Foundation;
+using ObjCRuntime;
+class T {
+	static void Main ()
+	{
+		Console.WriteLine (typeof (NSObject));
+	}
+}
+";
+				bundler.Profile = profile;
+				bundler.CreateTemporaryCacheDirectory ();
+				bundler.CreateTemporaryApp (profile, code: code);
+				bundler.Linker = LinkerOption.LinkAll;
+				bundler.CustomArguments = new [] { "--warn-on-type-ref=Foundation.NSObject" };
+				bundler.AssertExecute ();
+				bundler.AssertWarning (1502, "One or more reference(s) to type 'Foundation.NSObject' already exists inside 'testApp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' before linking");
+				bundler.AssertWarning (1503, "One or more reference(s) to type 'Foundation.NSObject' still exists inside 'testApp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' after linking");
+				bundler.AssertWarningCount (2);
 			}
 		}
 	}

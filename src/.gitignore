@@ -1,13 +1,6 @@
 build
-MonoTouch.NUnitLite.csproj
-MonoTouch.NUnitLite.tvos.csproj
-MonoTouch.NUnitLite.unified.csproj
-MonoTouch.NUnitLite.watchos.csproj
-xamios.csproj
-xammac.csproj
-xamtvos.csproj
-xamwatch.csproj
-generator.csproj.inc
+bgen.csproj.inc
 *~
 *.rsp
+MinimumVersions.cs
 

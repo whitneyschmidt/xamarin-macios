@@ -1,4 +1,4 @@
-﻿//
+//
 // AVCaptureSynchronizedDataCollection.cs
 //
 // Authors:
@@ -8,14 +8,14 @@
 //
 
 #if IOS || MONOMAC
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using Foundation;
+
+#nullable enable
 
 namespace AVFoundation {
 	public partial class AVCaptureSynchronizedDataCollection { //: IEnumerable<AVCaptureOutput>
-		public AVCaptureSynchronizedData this [AVCaptureOutput captureOutput] {
+		public AVCaptureSynchronizedData? this [AVCaptureOutput captureOutput] {
 			get {
 				return GetSynchronizedData (captureOutput);
 			}

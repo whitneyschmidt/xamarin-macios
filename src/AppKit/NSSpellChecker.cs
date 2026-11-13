@@ -21,17 +21,22 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
-	
+
 	public partial class NSSpellChecker {
-		
+
 		// note: if needed override the protected Get|Set methods
-		public string Language { 
+		/// <summary>Gets or sets the language used for spell checking.</summary>
+		/// <value>The language identifier.</value>
+		public string Language {
 			get { return GetLanguage (); }
 			// ignore return value (bool)
 			set { SetLanguage (value); }
 		}
 	}
 }
+#endif // !__MACCATALYST__

@@ -7,17 +7,10 @@
 // Copyright 2013-2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MutableSAttributedStringTest {
 
 		[Test]
@@ -48,7 +41,7 @@ namespace MonoTouchFixtures.Foundation {
 			}
 		}
 
-#if !__WATCHOS__ && !MONOMAC // No foregroundColor parameter for mac
+#if !MONOMAC // No foregroundColor parameter for mac
 		[Test]
 		public void IndirectNullDictionary ()
 		{
@@ -57,6 +50,6 @@ namespace MonoTouchFixtures.Foundation {
 				Assert.That (s.Handle, Is.Not.EqualTo (IntPtr.Zero));
 			}
 		}
-#endif // !__WATCHOS__
+#endif // !MONOMAC
 	}
 }

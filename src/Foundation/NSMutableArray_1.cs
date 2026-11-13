@@ -22,119 +22,165 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if XAMCORE_2_0
-
-using System;
 using System.Collections.Generic;
-
-using ObjCRuntime;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Foundation {
-
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	[Register ("NSMutableArray", SkipRegistration = true)]
 	public sealed partial class NSMutableArray<TValue> : NSMutableArray, IEnumerable<TValue>
-		where TValue : class, INativeObject
-	{
+		where TValue : class, INativeObject {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMutableArray ()
 		{
 		}
 
+		/// <param name="coder">The unarchiver object.</param>
+		///         <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		///         <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		public NSMutableArray (NSCoder coder)
 			: base (coder)
 		{
 		}
 
-		internal NSMutableArray (IntPtr handle)
+		internal NSMutableArray (NativeHandle handle)
 			: base (handle)
 		{
 		}
 
+		/// <param name="capacity">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public NSMutableArray (nuint capacity)
 			: base (capacity)
 		{
 		}
 
+		/// <param name="values">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMutableArray (params TValue [] values)
 		{
-			if (values == null)
+			if (values is null)
 				throw new ArgumentNullException (nameof (values));
-			
+
 			for (int i = 0; i < values.Length; i++)
 				Add (values [i]);
 		}
 
 		// Strongly typed methods from NSArray
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Contains (TValue obj)
 		{
-			if (obj == null)
+			if (obj is null)
 				throw new ArgumentNullException (nameof (obj));
 
-			return _Contains (obj.Handle);
+			bool result = _Contains (obj.Handle);
+			GC.KeepAlive (obj);
+			return result;
 		}
 
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public nuint IndexOf (TValue obj)
 		{
-			if (obj == null)
+			if (obj is null)
 				throw new ArgumentNullException (nameof (obj));
 
-			return _IndexOf (obj.Handle);
+			nuint result = _IndexOf (obj.Handle);
+			GC.KeepAlive (obj);
+			return result;
 		}
 
 		// Strongly typed methods from NSMutableArray
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Add (TValue obj)
 		{
-			if (obj == null)
+			if (obj is null)
 				throw new ArgumentNullException (nameof (obj));
 
 			_Add (obj.Handle);
+			GC.KeepAlive (obj);
 		}
 
+		/// <param name="obj">To be added.</param>
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public void Insert (TValue obj, nint index)
 		{
-			if (obj == null)
+			if (obj is null)
 				throw new ArgumentNullException (nameof (obj));
 
 			ValidateIndex (index);
 
 			_Insert (obj.Handle, index);
+			GC.KeepAlive (obj);
 		}
 
+		/// <param name="index">To be added.</param>
+		/// <param name="withObject">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public void ReplaceObject (nint index, TValue withObject)
 		{
-			if (withObject == null)
+			if (withObject is null)
 				throw new ArgumentNullException (nameof (withObject));
 
 			ValidateIndex (index);
 
 			_ReplaceObject (index, withObject.Handle);
+			GC.KeepAlive (withObject);
 		}
 
-		public void AddObjects (params TValue[] source)
+		/// <param name="source">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void AddObjects (params TValue [] source)
 		{
-			if (source == null)
+			if (source is null)
 				throw new ArgumentNullException (nameof (source));
 
 			for (int i = 0; i < source.Length; i++)
-				if (source [i] == null)
+				if (source [i] is null)
 					throw new ArgumentNullException (nameof (source) + "[" + i.ToString () + "]");
 
 			for (int i = 0; i < source.Length; i++)
 				_Add (source [i].Handle);
 		}
 
-		public void InsertObjects (TValue[] objects, NSIndexSet atIndexes)
+		/// <param name="objects">To be added.</param>
+		///         <param name="atIndexes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void InsertObjects (TValue [] objects, NSIndexSet atIndexes)
 		{
-			if (objects == null)
+			if (objects is null)
 				throw new ArgumentNullException (nameof (objects));
 
-			if (atIndexes == null)
+			if (atIndexes is null)
 				throw new ArgumentNullException (nameof (atIndexes));
 
 			if (objects.Length != atIndexes.Count)
 				throw new ArgumentOutOfRangeException ("'" + nameof (objects) + "' and '" + nameof (atIndexes) + "' must contain the same number of elements");
 
 			for (int i = 0; i < objects.Length; i++)
-				if (objects [i] == null)
+				if (objects [i] is null)
 					throw new ArgumentNullException (nameof (objects) + "[" + i.ToString () + "]");
 
 			nuint idx = atIndexes.FirstIndex;
@@ -148,16 +194,23 @@ namespace Foundation {
 
 		// Additional implementations.
 
-		public TValue this [nuint index] {
+		/// <summary>Gets or sets the element at the specified index.</summary>
+		/// <param name="index">The zero-based index of the element to get or set.</param>
+		/// <value>The element at <paramref name="index" />, or <see langword="null" /> when getting if the element cannot be converted to <typeparamref name="TValue" />. Setting a <see langword="null" /> value is not allowed.</value>
+		/// <exception cref="ArgumentNullException"><paramref name="value" /> is <see langword="null" />.</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="index" /> is greater than or equal to the array's count.</exception>
+		[DisallowNull] // don't allow setting null values
+		public TValue? this [nuint index] {
 			get {
 				ValidateIndex (index);
 				return GetItem<TValue> (index);
 			}
 			set {
-				if (value == null)
+				if (value is null)
 					throw new ArgumentNullException (nameof (value));
 				ValidateIndex (index);
 				_ReplaceObject ((nint) index, value.Handle);
+				GC.KeepAlive (value);
 			}
 		}
 
@@ -166,7 +219,7 @@ namespace Foundation {
 			if (index < 0)
 				throw new IndexOutOfRangeException (nameof (index));
 
-			if ((nuint) index >= Count)
+			if ((nuint) index > Count)
 				throw new IndexOutOfRangeException (nameof (index));
 		}
 
@@ -176,20 +229,29 @@ namespace Foundation {
 				throw new IndexOutOfRangeException (nameof (index));
 		}
 
-#region IEnumerable<T> implementation
+		#region IEnumerable<T> implementation
+		/// <summary>Returns an enumerator that iterates through the array.</summary>
+		/// <returns>An enumerator that can be used to iterate through the array.</returns>
 		public IEnumerator<TValue> GetEnumerator ()
 		{
 			return new NSFastEnumerator<TValue> (this);
 		}
-#endregion
+		#endregion
 
-#region IEnumerable implementation
+		#region IEnumerable implementation
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator ()
 		{
 			return GetEnumerator ();
 		}
-#endregion
+		#endregion
+
+#if false // https://github.com/dotnet/macios/issues/15577
+		[SupportedOSPlatform ("ios"), SupportedOSPlatform ("tvos"), SupportedOSPlatform ("macos")]
+		public void ApplyDifference (NSOrderedCollectionDifference<TValue> difference)
+			=> ApplyDifference ((NSOrderedCollectionDifference) difference);
+#endif
 	}
 }
-
-#endif // XAMCORE_2_0

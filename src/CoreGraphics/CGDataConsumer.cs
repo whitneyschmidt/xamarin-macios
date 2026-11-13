@@ -25,46 +25,19 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
+using CoreFoundation;
 
 namespace CoreGraphics {
-
 	// CGDataConsumer.h
-	public partial class CGDataConsumer : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		// invoked by marshallers
-		public CGDataConsumer (IntPtr handle)
-			: this (handle, false)
+	/// <summary>Data sink for <see cref="CoreGraphics.CGContextPDF" /> or <see cref="ImageIO.CGImageDestination" /> to store data on.</summary>
+	public partial class CGDataConsumer : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CGDataConsumer (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
-		}
-
-		[Preserve (Conditional=true)]
-		internal CGDataConsumer (IntPtr handle, bool owns)
-		{
-			this.handle = handle;
-			if (!owns)
-				CGDataConsumerRetain (handle);
-		}
-
-		~CGDataConsumer ()
-		{
-			Dispose (false);
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
@@ -73,34 +46,54 @@ namespace CoreGraphics {
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGDataConsumerRef */ IntPtr CGDataConsumerRetain (/* CGDataConsumerRef */ IntPtr consumer);
 
-		protected virtual void Dispose (bool disposing)
+		protected internal override void Retain ()
 		{
-			if (handle != IntPtr.Zero){
-				CGDataConsumerRelease (handle);
-				handle = IntPtr.Zero;
-			}
+			CGDataConsumerRetain (GetCheckedHandle ());
+		}
+
+		protected internal override void Release ()
+		{
+			CGDataConsumerRelease (GetCheckedHandle ());
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGDataConsumerRef */ IntPtr CGDataConsumerCreateWithCFData (/* CFMutableDataRef __nullable */ IntPtr data);
 
-		public CGDataConsumer (NSMutableData data)
+		static IntPtr Create (NSMutableData data)
 		{
 			// not it's a __nullable parameter but it would return nil (see unit tests) and create an invalid instance
-			if (data == null)
-				throw new ArgumentNullException ("data");
-			handle = CGDataConsumerCreateWithCFData (data.Handle);
+			if (data is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data));
+			IntPtr result = CGDataConsumerCreateWithCFData (data.Handle);
+			GC.KeepAlive (data);
+			return result;
+		}
+
+		/// <summary>Creates a data sink that saves the data on the specified NSData.</summary>
+		/// <param name="data">The data.</param>
+		public CGDataConsumer (NSMutableData data)
+			: base (Create (data), true)
+		{
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGDataConsumerRef */ IntPtr CGDataConsumerCreateWithURL (/* CFURLRef __nullable */ IntPtr url);
 
-		public CGDataConsumer (NSUrl url)
+		static IntPtr Create (NSUrl url)
 		{
 			// not it's a __nullable parameter but it would return nil (see unit tests) and create an invalid instance
-			if (url == null)
-				throw new ArgumentNullException ("url");
-			handle = CGDataConsumerCreateWithURL (url.Handle);
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
+			IntPtr result = CGDataConsumerCreateWithURL (url.Handle);
+			GC.KeepAlive (url);
+			return result;
+		}
+
+		/// <summary>Creates a data sink that saves the data on a file specified by the url.</summary>
+		/// <param name="url">The url.</param>
+		public CGDataConsumer (NSUrl url)
+			: base (Create (url), true)
+		{
 		}
 	}
 }

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../../../product.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="$(NUnitPackageVersion)" />
+    <PackageReference Include="NUnit3TestAdapter" Version="$(NUnit3TestAdapterPackageVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkPackageVersion)" />
+    <PackageReference Include="Mono.Cecil" Version="$(MonoCecilPackageVersion)" />
+    <PackageReference Include="MSBuild.StructuredLogger" Version="$(MSBuildStructuredLoggerPackageVersion)" />
+    <PackageReference Include="NUnitXml.TestLogger" Version="$(NUnitXmlTestLoggerPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\mtouch\Cache.cs">
+      <Link>external\Cache.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\msbuild\Xamarin.MacDev.Tasks\CommandLineArgumentBuilder.cs">
+      <Link>external\CommandLineArgumentBuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\Configuration.cs">
+      <Link>external\Configuration.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ConfigurationNUnit.cs">
+      <Link>external\ConfigurationNUnit.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\ApplePlatform.cs">
+      <Link>external\ApplePlatform.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\SdkVersions.cs">
+      <Link>external\SdkVersions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\TargetFramework.cs">
+      <Link>external\TargetFramework.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\DotNet.cs">
+      <Link>external\DotNet.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\StringUtils.cs">
+      <Link>external\StringUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\PathUtils.cs">
+      <Link>external\PathUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\Execution.cs">
+      <Link>external\Execution.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\ExecutionHelper.cs">
+      <Link>external\ExecutionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\Profile.cs">
+      <Link>external\Profile.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\mac\ProjectTestHelpers.cs">
+      <Link>external\ProjectTestHelpers.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\BinLog.cs">
+      <Link>external\BinLog.cs</Link>
+    </Compile>
+    <Compile Include="..\..\common\Tool.cs">
+      <Link>external\Tool.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\tools\common\NullableAttributes.cs">
+      <Link>external\NullableAttributes.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\external\Xamarin.MacDev\Xamarin.MacDev\Xamarin.MacDev.csproj" />
+  </ItemGroup>
+</Project>

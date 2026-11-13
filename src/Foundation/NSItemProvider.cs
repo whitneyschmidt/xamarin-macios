@@ -1,23 +1,13 @@
-using System;
 using System.Threading.Tasks;
 using CloudKit;
-using ObjCRuntime;
 
-namespace Foundation 
-{
-#if (MONOMAC || IOS) && XAMCORE_2_0 // Only 64-bit on mac
-	public partial class NSItemProvider
-	{
-#if !XAMCORE_4_0 && MONOMAC
-		[Obsolete ("Use RegisterCloudKitShare (CloudKitRegistrationPreparationAction) instead.")]
-		public virtual void RegisterCloudKitShare (Action<CloudKitRegistrationPreparationHandler> preparationHandler)
-		{
-			CloudKitRegistrationPreparationAction action = handler => preparationHandler (handler);
-			RegisterCloudKitShare (action);
-		}
-#endif
-		
+#nullable enable
+
+namespace Foundation {
+	public partial class NSItemProvider {
 #if MONOMAC
+		/// <summary>Asynchronously registers a CloudKit share.</summary>
+		/// <returns>A task that represents the asynchronous operation. The task result contains a <see cref="CloudKitRegistrationPreparationHandler" /> that can be used to prepare the share.</returns>
 		public virtual Task<CloudKitRegistrationPreparationHandler> RegisterCloudKitShareAsync ()
 		{
 			var tcs = new TaskCompletionSource<CloudKitRegistrationPreparationHandler> ();
@@ -29,43 +19,55 @@ namespace Foundation
 		}
 #endif
 
-		[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
-		public NSProgress LoadObject<T> (Action<T, NSError> completionHandler) where T: NSObject, INSItemProviderReading
+		/// <summary>Loads an object of the specified type.</summary>
+		/// <typeparam name="T">The type of object to load. Must conform to <see cref="INSItemProviderReading" />.</typeparam>
+		/// <param name="completionHandler">A completion handler that is called when the object is loaded. The first parameter contains the loaded object (or <see langword="null" /> if loading failed), and the second parameter contains an error if one occurred.</param>
+		/// <returns>An <see cref="NSProgress" /> object that can be used to track the loading progress.</returns>
+		public NSProgress LoadObject<T> (Action<T?, NSError?> completionHandler) where T : NSObject, INSItemProviderReading
 		{
-			return LoadObject (new Class (typeof (T)), (rv, err) =>
-			{
+			return LoadObject (new Class (typeof (T)), (rv, err) => {
 				var obj = rv as T;
-				if (obj == null && rv != null)
+				if (obj is null && rv is not null) {
 					obj = Runtime.ConstructNSObject<T> (rv.Handle);
+					GC.KeepAlive (rv);
+				}
 				completionHandler (obj, err);
 			});
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
-		public Task<T> LoadObjectAsync<T> () where T: NSObject, INSItemProviderReading
+		/// <summary>Asynchronously loads an object of the specified type.</summary>
+		/// <typeparam name="T">The type of object to load. Must conform to <see cref="INSItemProviderReading" />.</typeparam>
+		/// <returns>A task that represents the asynchronous operation. The task result contains the loaded object, or <see langword="null" /> if loading failed.</returns>
+		public Task<T?> LoadObjectAsync<T> () where T : NSObject, INSItemProviderReading
 		{
 			var rv = LoadObjectAsync (new Class (typeof (T)));
-			return rv.ContinueWith ((v) =>
-			{
-				var obj = v.Result as T;
-				if (obj == null && v.Result != null)
-					obj = Runtime.ConstructNSObject<T> (v.Result.Handle);
+			return rv.ContinueWith ((v) => {
+				var result = v.Result;
+				var obj = result as T;
+				if (obj is null && result is not null) {
+					obj = Runtime.ConstructNSObject<T> (result.Handle);
+					GC.KeepAlive (result);
+				}
 				return obj;
 			});
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13), iOS (11,0)]
-		public Task<T> LoadObjectAsync<T> (out NSProgress result) where T: NSObject, INSItemProviderReading
+		/// <summary>Asynchronously loads an object of the specified type.</summary>
+		/// <typeparam name="T">The type of object to load. Must conform to <see cref="INSItemProviderReading" />.</typeparam>
+		/// <param name="result">When this method returns, contains an <see cref="NSProgress" /> object that can be used to track the loading progress.</param>
+		/// <returns>A task that represents the asynchronous operation. The task result contains the loaded object, or <see langword="null" /> if loading failed.</returns>
+		public Task<T?> LoadObjectAsync<T> (out NSProgress result) where T : NSObject, INSItemProviderReading
 		{
 			var rv = LoadObjectAsync (new Class (typeof (T)), out result);
-			return rv.ContinueWith ((v) =>
-			{
-				var obj = v.Result as T;
-				if (obj == null && v.Result != null)
-					obj = Runtime.ConstructNSObject<T> (v.Result.Handle);
+			return rv.ContinueWith ((v) => {
+				var result = v.Result;
+				var obj = result as T;
+				if (obj is null && result is not null) {
+					obj = Runtime.ConstructNSObject<T> (result.Handle);
+					GC.KeepAlive (result);
+				}
 				return obj;
 			});
 		}
 	}
-#endif // (MONOMAC || IOS) && XAMCORE_2_0
 }

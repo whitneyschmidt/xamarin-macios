@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <DefineConstants>$(DefineConstants);NET</DefineConstants>
+    <RootNamespace>interdependentbindingprojects</RootNamespace>
+
+    <SignAssembly>true</SignAssembly>
+
+    <RootTestsDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)\..\..'))</RootTestsDirectory>
+    <TestLibrariesDirectory>$(RootTestsDirectory)\test-libraries</TestLibrariesDirectory>
+    <ThisTestDirectory>$(RootTestsDirectory)\interdependent-binding-projects</ThisTestDirectory>
+
+    <AssemblyOriginatorKeyFile>$(RootTestsDirectory)\..\product.snk</AssemblyOriginatorKeyFile>
+
+    <!-- Don't remove native symbols, because it makes debugging native crashes harder -->
+    <MtouchNoSymbolStrip>true</MtouchNoSymbolStrip>
+
+    <DefineConstants Condition="'$(Configuration)' == 'Debug'">$(DefineConstants);DEBUG</DefineConstants>
+
+    <!--
+      warning CS0436: The type 'ApplePlatform' in 'xamarin-macios/tests/../tools/common/ApplePlatform.cs' conflicts with the imported type 'ApplePlatform' in 'EmbeddedResources, Version=1.0.0.0, Culture=neutral, PublicKeyToken=84e04ff9cfb79065'. Using the type defined in 'xamarin-macios/tests/../tools/common/ApplePlatform.cs'
+
+      We get the 'ApplePlatform' enum from two referenced projects, which causes a type resolution failure unless this project also has the type (in which case this project's type wins the type resolution) - but that triggers the CS0436 warning, so ignore it.
+    -->
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+
+    <!-- warning CS8002: Referenced assembly 'Touch.Client, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null' does not have a strong name. -->
+    <NoWarn>$(NoWarn);CS8002</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="$(RootTestsDirectory)/common/shared-dotnet.csproj" />
+
+  <ItemGroup>
+    <ProjectReference Include="$(RootTestsDirectory)\bindings-test\dotnet\$(_PlatformName)\bindings-test.csproj" />
+    <ProjectReference Include="$(RootTestsDirectory)\bindings-test2\dotnet\$(_PlatformName)\bindings-test2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(ThisTestDirectory)\Main.cs" />
+    <Compile Include="$(RootTestsDirectory)\common\AppDelegate.cs" Condition="!$(TargetFramework.EndsWith('-macos'))" />
+    <Compile Include="$(RootTestsDirectory)\common\mac\MacMain.cs" Condition="$(TargetFramework.EndsWith('-macos'))" Link="MacMain.cs" />
+    <Compile Include="$(RootTestsDirectory)\common\TestAssemblyLoader.cs" />
+    <Compile Include="$(RootTestsDirectory)\common\TestRuntime.cs">
+      <Link>TestRuntime.cs</Link>
+    </Compile>
+    <Compile Include="$(RootTestsDirectory)\common\TestRuntime.LinkAll.cs">
+      <Link>TestRuntime.LinkAll.cs</Link>
+    </Compile>
+    <Compile Include="$(RootTestsDirectory)\..\tools\common\ApplePlatform.cs">
+      <Link>ApplePlatform.cs</Link>
+    </Compile>
+    <Compile Include="$(RootTestsDirectory)\..\tools\common\SdkVersions.cs">
+      <Link>SdkVersions.cs</Link>
+    </Compile>
+  </ItemGroup>
+</Project>

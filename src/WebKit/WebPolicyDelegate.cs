@@ -20,40 +20,57 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using Foundation;
-using ObjCRuntime;
+
+#if __MACOS__
+
+#nullable enable
 
 namespace WebKit {
 
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
 	public partial class WebPolicyDelegate {
 		static IntPtr selUse = Selector.GetHandle ("use");
 		static IntPtr selDownload = Selector.GetHandle ("download");
 		static IntPtr selIgnore = Selector.GetHandle ("ignore");
-		
+
+		/// <param name="decisionToken">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static void DecideUse (NSObject decisionToken)
 		{
-			if (decisionToken == null)
-				throw new ArgumentNullException ("token");
-			
+			if (decisionToken is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (decisionToken));
+
 			ObjCRuntime.Messaging.void_objc_msgSend (decisionToken.Handle, selUse);
+			GC.KeepAlive (decisionToken);
 		}
-		
+
+		/// <param name="decisionToken">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static void DecideDownload (NSObject decisionToken)
 		{
-			if (decisionToken == null)
-				throw new ArgumentNullException ("decisionToken");
-			
+			if (decisionToken is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (decisionToken));
+
 			ObjCRuntime.Messaging.void_objc_msgSend (decisionToken.Handle, selDownload);
+			GC.KeepAlive (decisionToken);
 		}
-		
+
+		/// <param name="decisionToken">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static void DecideIgnore (NSObject decisionToken)
 		{
-			if (decisionToken == null)
-				throw new ArgumentNullException ("decisionToken");
-			
+			if (decisionToken is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (decisionToken));
+
 			ObjCRuntime.Messaging.void_objc_msgSend (decisionToken.Handle, selIgnore);
+			GC.KeepAlive (decisionToken);
 		}
-		
+
 	}
 }
+
+#endif // __MACOS__

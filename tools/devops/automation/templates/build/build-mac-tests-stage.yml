@@ -1,0 +1,84 @@
+# template that contains all the different steps to create a pkgs, publish the results and provide feedback to the
+# developers in github.
+parameters:
+- name: vsdropsPrefix
+  type: string
+
+- name: keyringPass
+  type: string
+
+- name: gitHubToken
+  type: string
+
+- name: xqaCertPass
+  type: string
+
+- name: pool
+  type: string
+  default: automatic
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: xcodeChannel
+  type: string
+
+- name: macOSName
+  type: string
+
+- name: useACES
+  type: boolean
+  default: false
+
+jobs:
+
+# This job builds the macOS tests.
+- job: build_macos_tests_job
+  displayName: 'Build macOS tests'
+  timeoutInMinutes: 180
+  variables:
+    DOTNET_PLATFORMS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.DOTNET_PLATFORMS'] ]
+    # add all the variables that have been parsed by the configuration step. Could we have a less verbose way??
+    # old and ugly env var use by jenkins, we do have parts of the code that use it, contains the PR number
+    PR_ID: $[ stageDependencies.configure_build.configure.outputs['labels.pr_number'] ]
+    # set the branch variable name, this is required by jenkins and we have a lot of scripts that depend on it
+    BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+    RUN_MAC_TESTS: $[ stageDependencies.configure_build.configure.outputs['decisions.RUN_MAC_TESTS'] ]
+  condition: ne(stageDependencies.configure_build.configure.outputs['decisions.RUN_MAC_TESTS'],'')
+  ${{ if parameters.useACES }}:
+    pool:
+      os: macOS
+      name: $(CIBuildPoolACES)
+      demands:
+      - ImageOverride -equals $(CIBuildPoolACESImage)
+  ${{ else }}:
+    pool:
+      os: macOS
+      name: ${{ parameters.pool }}
+      demands:
+      - Agent.OS -equals Darwin
+      - Agent.OSVersion -gtVersion $(minimumMacOSVersion)
+      - macOS.Name -equals ${{ parameters.macOSName }}
+      - macOS.Architecture -equals arm64  # the pinned Xcode package is Apple silicon only
+      - XcodeChannel -equals ${{ parameters.xcodeChannel }}
+
+  steps:
+  - template: build-mac-tests.yml
+    parameters:
+      isPR: ${{ parameters.isPR }}
+      repositoryAlias: ${{ parameters.repositoryAlias }}
+      commit: ${{ parameters.commit }}
+      vsdropsPrefix: ${{ parameters.vsdropsPrefix }}
+      keyringPass: ${{ parameters.keyringPass }}
+      gitHubToken: ${{ parameters.gitHubToken }}
+      xqaCertPass: ${{ parameters.xqaCertPass }}
+      xcodeChannel: ${{ parameters.xcodeChannel }}
+      use1ES: false

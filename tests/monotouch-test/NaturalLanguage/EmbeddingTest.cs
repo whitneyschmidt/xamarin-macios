@@ -1,0 +1,69 @@
+//
+// Unit tests for NLEmbedding
+//
+// Copyright 2019 Microsoft Corp. All rights reserved.
+//
+
+using System.IO;
+using NaturalLanguage;
+
+namespace MonoTouchFixtures.NaturalLanguage {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class EmbeddingTest {
+
+#if __IOS__ || __MACOS__
+		[Test]
+		public void Vector ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			foreach (var v in Enum.GetValues<NLLanguage> ()) {
+				if (v == NLLanguage.Unevaluated)
+					continue; // this is not a value provided by Apple.
+
+				switch (v) {
+				case NLLanguage.Kazakh:
+					if (!TestRuntime.CheckXcodeVersion (14, 0))
+						continue;
+					break;
+				}
+
+				NLEmbedding e = null;
+				Assert.DoesNotThrow (() => e = NLEmbedding.GetWordEmbedding (v), $"Throws: {v}");
+				if (e is not null) {
+					Assert.That (e, Is.Not.Null, "GetWordEmbedding");
+					Assert.That (e.GetVector ("Xamarin"), Is.Null, "GetVector");
+					Assert.That (e.TryGetVector ("Xamarin", out var vector), Is.False, "TryGetVector");
+					Assert.That (vector, Is.Null, "vector");
+				}
+			}
+		}
+#endif
+
+		[Test]
+		public void Write ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			var temp = Path.Combine (Path.GetTempPath (), "NLEmbedding.Test");
+			File.Delete (temp);
+
+			var vd = new NLVectorDictionary ();
+			vd ["a"] = new [] { 0.7f, 1.0f };
+			var wd = vd.Dictionary;
+			Assert.That (wd.Count, Is.EqualTo ((nuint) 1), "Count");
+
+			using (var url = NSUrl.FromFilename (temp)) {
+				var strong = NLEmbedding.Write (vd, NLLanguage.French, 1, url, out var error);
+				Assert.That (strong, Is.True, "strong");
+				Assert.That (error, Is.Null, "strong error");
+
+				var weak = NLEmbedding.Write (wd, NLLanguage.French.GetConstant (), 1, url, out error);
+				Assert.That (strong, Is.True, "strong");
+				Assert.That (error, Is.Null, "weak error");
+			}
+		}
+	}
+}

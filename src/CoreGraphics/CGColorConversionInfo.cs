@@ -4,155 +4,157 @@
 // Copyright 2016 Xamarin Inc.
 //
 
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
+#nullable enable
 
 #if !COREBUILD
 using CoreFoundation;
-using Foundation;
 #endif
 
 namespace CoreGraphics {
-
-	// uint32_t enum -> CGColorConversionInfo.h
-	[iOS (10,0)][TV (10,0)][Watch (3,0)][Mac (10,12)]
-	public enum CGColorConversionInfoTransformType : uint {
-		FromSpace = 0,
-		ToSpace,
-		ApplySpace
-	}
-
-	[iOS (10,0)][TV (10,0)][Watch (3,0)][Mac (10,12)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[StructLayout (LayoutKind.Sequential)]
-	public struct GColorConversionInfoTriple {
+	public struct CGColorConversionInfoTriple {
 		public CGColorSpace Space;
 		public CGColorConversionInfoTransformType Transform;
 		public CGColorRenderingIntent Intent;
 	}
 
 	// CGColorConverter.h
-	[iOS (10,0)][TV (10,0)][Watch (3,0)][Mac (10,12)]
-	public partial class CGColorConversionInfo : INativeObject, IDisposable {
-
-		/* invoked by marshallers */
-		internal CGColorConversionInfo (IntPtr handle)
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	public partial class CGColorConversionInfo : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CGColorConversionInfo (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			Handle = handle;
 		}
 
-		[Preserve (Conditional=true)]
-		internal CGColorConversionInfo (IntPtr handle, bool owns)
-		{
-			Handle = handle;
-			if (!owns)
-				CFObject.CFRetain (Handle);
-		}
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		extern static /* CGColorConversionInfoRef __nullable */ IntPtr CGColorConversionInfoCreateFromList (/* __nullable CFDictionaryRef */ IntPtr options,
+			/* CGColorSpaceRef __nullable */ IntPtr space1, /* CGColorConversionInfoTransformType */ IntPtr transform1, /* CGColorRenderingIntent */ IntPtr intent1,
+			/* CGColorSpaceRef __nullable */ IntPtr space2, /* CGColorConversionInfoTransformType */ IntPtr transform2, /* CGColorRenderingIntent */ IntPtr intent2,
+			/* CGColorSpaceRef __nullable */ IntPtr space3, /* CGColorConversionInfoTransformType */ IntPtr transform3, /* CGColorRenderingIntent */ IntPtr intent3,
+			IntPtr placeholder11, IntPtr placeholder12, IntPtr placeholder13, IntPtr placeholder14, IntPtr placeholder15, IntPtr placeholder16, IntPtr placeholder17, IntPtr placeholder18, IntPtr placeholder19);
 
-		[DllImport(Constants.CoreGraphicsLibrary)]
-		extern static /* CGColorConversionInfoRef __nullable */ IntPtr CGColorConversionInfoCreateFromList (/* __nullable CFDictionaryRef */ IntPtr options, 
-			/* CGColorSpaceRef __nullable */ IntPtr space1, CGColorConversionInfoTransformType transform1, CGColorRenderingIntent intent1,
-			/* CGColorSpaceRef __nullable */ IntPtr space2, CGColorConversionInfoTransformType transform2, CGColorRenderingIntent intent2,
-			/* CGColorSpaceRef __nullable */ IntPtr space3, CGColorConversionInfoTransformType transform3, CGColorRenderingIntent intent3,
-			IntPtr lastSpaceMarker);
-
-#if !MONOMAC
-		// https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html
-		// Declare dummies until we're on the stack then the arguments
-		// <quote>C language requires arguments smaller than int to be promoted before a call, but beyond that, unused bytes on the stack are not specified by this ABI</quote>
-		// The 'transformX' argument is a CGColorConversionInfoTransformType, which is defined as uint (uint32_t in the header),
-		// but since each parameter must be pointer-sized (to occupy the right amount of stack space),
-		// we define it as nuint (and not the enum type, which is 32-bit even on 64-bit platforms).
-		// Same for the 'intentX' argument (except that it's signed instead of unsigned).
-		[DllImport(Constants.CoreGraphicsLibrary, EntryPoint="CGColorConversionInfoCreateFromList")]
-		extern static /* CGColorConversionInfoRef __nullable */ IntPtr CGColorConversionInfoCreateFromList_arm64 (/* __nullable CFDictionaryRef */ IntPtr options,
-			IntPtr space1, nuint transform1, nint intent1, // varargs starts after them
-			IntPtr dummy4, IntPtr dummy5, IntPtr dummy6, IntPtr dummy7, // dummies so the rest goes to the stack
-			IntPtr space2, nuint transform2, nint intent2,
-			IntPtr space3, nuint transform3, nint intent3,
-			IntPtr lastSpaceMarker);
-#endif
-
-		static GColorConversionInfoTriple empty = new GColorConversionInfoTriple ();
-
-
-		public CGColorConversionInfo (CGColorConversionOptions options, params GColorConversionInfoTriple [] triples)
+		public CGColorConversionInfo (CGColorConversionOptions? options, params CGColorConversionInfoTriple [] triples)
 			: this (options?.Dictionary, triples)
 		{
 		}
 
 		[BindingImpl (BindingImplOptions.Optimizable)]
-		public CGColorConversionInfo (NSDictionary options, params GColorConversionInfoTriple [] triples)
+		static IntPtr Create (NSDictionary? options, params CGColorConversionInfoTriple [] triples)
 		{
 			// the API won't return a valid instance if no triple is given, i.e. at least one is needed. 
 			// `null` is accepted to mark the end of the list, not to make it optional
-			if ((triples == null) || (triples.Length == 0))
-				throw new ArgumentNullException ("triples");
-			if (triples.Length > 3)
-				throw new ArgumentException ("A maximum of 3 triples are supported");
-			
-			IntPtr o = NativeObjectHelper.GetHandle (options);
-			var first = triples [0]; // there's always one
-			var second = triples.Length > 1 ? triples [1] : empty; 
-			var third = triples.Length > 2 ? triples [2] : empty;
-#if !MONOMAC
-			if (Runtime.IsARM64CallingConvention) {
-				Handle = CGColorConversionInfoCreateFromList_arm64 (o, NativeObjectHelper.GetHandle (first.Space), (uint) first.Transform, (int) first.Intent,
-					IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,
-					NativeObjectHelper.GetHandle (second.Space), (uint) second.Transform, (int) second.Intent,
-					NativeObjectHelper.GetHandle (third.Space), (uint) third.Transform, (int) third.Intent,
-					IntPtr.Zero);
-			} else {
-#endif
-				Handle = CGColorConversionInfoCreateFromList (o, NativeObjectHelper.GetHandle (first.Space), first.Transform, first.Intent,
-					NativeObjectHelper.GetHandle (second.Space), second.Transform, second.Intent,
-					NativeObjectHelper.GetHandle (third.Space), third.Transform, third.Intent,
-					IntPtr.Zero);
-#if !MONOMAC
+			if ((triples is null) || (triples.Length == 0))
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (triples));
+
+			if ((triples.Length - 1) * 3 > Messaging.MaxVarArgs)
+				throw new ArgumentException ($"A maximum of {1 + Messaging.MaxVarArgs / 3} triples are supported");
+
+			var varArgs = new IntPtr [(triples.Length - 1) * 3];
+			for (var i = 1; i < triples.Length; i++) {
+				varArgs [(i - 1) * 3] = triples [i].Space.GetHandle ();
+				varArgs [(i - 1) * 3 + 1] = (IntPtr) triples [i].Transform;
+				varArgs [(i - 1) * 3 + 2] = (IntPtr) triples [i].Intent;
 			}
-#endif
-			if (Handle == IntPtr.Zero)
-				throw new Exception ("Failed to create CGColorConverter");
+
+			// The first triple is not a varargs, but the subsequent ones are
+			var first = triples [0];
+			var firstSpace = first.Space;
+			IntPtr result = Messaging.CallVariadicFunction4 (
+					CGColorConversionInfoCreateFromList,
+					options.GetHandle (),
+					firstSpace.GetHandle (),
+					(IntPtr) first.Transform,
+					(IntPtr) first.Intent,
+					varArgs);
+			GC.KeepAlive (options);
+			GC.KeepAlive (firstSpace);
+			return result;
 		}
 
-		[iOS (10,0)][Mac (10,12)]
-		[DllImport(Constants.CoreGraphicsLibrary)]
+		public CGColorConversionInfo (NSDictionary? options, params CGColorConversionInfoTriple [] triples)
+			: base (Create (options, triples), true, verify: true)
+		{
+
+		}
+
+		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static IntPtr CGColorConversionInfoCreate (/* cg_nullable CGColorSpaceRef */ IntPtr src, /* cg_nullable CGColorSpaceRef */ IntPtr dst);
 
-		[iOS (10,0)][Mac (10,12)]
-		public CGColorConversionInfo (CGColorSpace src, CGColorSpace dst)
+		static IntPtr Create (CGColorSpace source, CGColorSpace destination)
 		{
 			// API accept null arguments but returns null, which we can't use
-			if (src == null)
-				throw new ArgumentNullException (nameof (src));
-			if (dst == null)
-				throw new ArgumentNullException (nameof (dst));
-			Handle = CGColorConversionInfoCreate (src.Handle, dst.Handle);
-
-			if (Handle == IntPtr.Zero)
-				throw new Exception ("Failed to create CGColorConversionInfo");
+			if (source is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (source));
+			if (destination is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (destination));
+			IntPtr result = CGColorConversionInfoCreate (source.Handle, destination.Handle);
+			GC.KeepAlive (source);
+			GC.KeepAlive (destination);
+			return result;
 		}
 
-		~CGColorConversionInfo ()
+		/// <param name="source">To be added.</param>
+		///         <param name="destination">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CGColorConversionInfo (CGColorSpace source, CGColorSpace destination)
+			: base (Create (source, destination), true, verify: true)
 		{
-			Dispose (false);
 		}
 
-		public void Dispose ()
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		static extern /* CGColorConversionInfoRef* */ IntPtr CGColorConversionInfoCreateWithOptions (/* CGColorSpaceRef* */ IntPtr src, /* CGColorSpaceRef* */ IntPtr dst, /* CFDictionaryRef _Nullable */ IntPtr options);
+
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		static IntPtr Create (CGColorSpace source, CGColorSpace destination, NSDictionary? options)
 		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
+			if (source is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (source));
+			if (destination is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (destination));
+
+			IntPtr result = CGColorConversionInfoCreateWithOptions (source.Handle, destination.Handle, options.GetHandle ());
+			GC.KeepAlive (source);
+			GC.KeepAlive (destination);
+			GC.KeepAlive (options);
+			return result;
 		}
 
-		public IntPtr Handle { get; private set; }
-
-		protected virtual void Dispose (bool disposing)
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CGColorConversionInfo (CGColorSpace source, CGColorSpace destination, NSDictionary? options)
+			: base (Create (source, destination, options), true, verify: true)
 		{
-			if (Handle != IntPtr.Zero){
-				CFObject.CFRelease (Handle);
-				Handle = IntPtr.Zero;
-			}
+		}
+
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CGColorConversionInfo (CGColorSpace source, CGColorSpace destination, CGColorConversionOptions? options) :
+			this (source, destination, options?.Dictionary)
+		{
 		}
 	}
 }

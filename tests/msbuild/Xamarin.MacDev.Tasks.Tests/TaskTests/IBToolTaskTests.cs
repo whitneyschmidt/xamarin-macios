@@ -1,0 +1,285 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+using NUnit.Framework;
+
+using Xamarin.MacDev;
+using Xamarin.MacDev.Tasks;
+using Xamarin.Tests;
+using Xamarin.Utils;
+
+namespace Xamarin.MacDev.Tasks {
+	[TestFixture]
+	public class IBToolTaskTests : TestBase {
+		class TestIBTool : IBTool {
+			public bool InvokeAppendAdditionalArguments (List<string> arguments)
+			{
+				return base.AppendAdditionalArguments (arguments);
+			}
+
+			public bool InvokeInterfaceDefinitionChanged (ITaskItem interfaceDefinition, ITaskItem log)
+			{
+				return base.InterfaceDefinitionChanged (interfaceDefinition, log);
+			}
+		}
+
+		[Test]
+		public void AdditionalArguments ()
+		{
+			var task = CreateTask<TestIBTool> ();
+			var arguments = new List<string> ();
+
+			task.AdditionalArguments = "--cocoatouch-compiler-mode simulator --module \"My Module\"";
+
+			Assert.That (task.InvokeAppendAdditionalArguments (arguments), Is.True, "Append arguments");
+			Assert.That (arguments, Is.EqualTo (new [] { "--cocoatouch-compiler-mode", "simulator", "--module", "My Module" }), "Arguments");
+		}
+
+		[Test]
+		public void InvalidAdditionalArguments ()
+		{
+			var task = CreateTask<TestIBTool> ();
+			var arguments = new List<string> ();
+
+			task.AdditionalArguments = "\"";
+			task.AdditionalArgumentsPropertyName = "IBToolExtraArgs";
+
+			Assert.That (task.InvokeAppendAdditionalArguments (arguments), Is.False, "Append arguments");
+			Assert.That (task.Log.HasLoggedErrors, Is.True, "Logged error");
+			Assert.That (Engine.Logger.ErrorEvents.Single ().Message, Does.Contain ("IBToolExtraArgs"), "Error message");
+			Assert.That (arguments, Is.Empty, "Arguments");
+		}
+
+		[Test]
+		public void AdditionalArgumentsInvalidateManifest ()
+		{
+			var directory = Cache.CreateTemporaryDirectory ();
+			var interfaceDefinition = new TaskItem (Path.Combine (directory, "View.xib"));
+			var additionalArgumentsFile = Path.Combine (directory, "ibtool-extra-args.txt");
+			var manifest = new TaskItem (Path.Combine (directory, "View.nib"));
+			var now = DateTime.UtcNow;
+			var task = CreateTask<TestIBTool> ();
+
+			File.WriteAllText (interfaceDefinition.ItemSpec, "");
+			File.WriteAllText (additionalArgumentsFile, "");
+			new PDictionary ().Save (manifest.ItemSpec);
+			File.SetLastWriteTimeUtc (interfaceDefinition.ItemSpec, now.AddMinutes (-2));
+			File.SetLastWriteTimeUtc (additionalArgumentsFile, now.AddMinutes (-2));
+			File.SetLastWriteTimeUtc (manifest.ItemSpec, now.AddMinutes (-1));
+			task.AdditionalArgumentsFile = additionalArgumentsFile;
+
+			Assert.That (task.InvokeInterfaceDefinitionChanged (interfaceDefinition, manifest), Is.False, "Unchanged arguments");
+
+			File.SetLastWriteTimeUtc (additionalArgumentsFile, now);
+
+			Assert.That (task.InvokeInterfaceDefinitionChanged (interfaceDefinition, manifest), Is.True, "Changed arguments");
+		}
+
+		IBTool CreateIBToolTask (ApplePlatform framework, string projectDir, string intermediateOutputPath)
+		{
+			var task = CreateTask<IBTool> ();
+
+			var interfaceDefinitions = new List<ITaskItem> ();
+			var version = AppleSdkVersion.UseDefault.ToString ();
+			string platform;
+
+			switch (framework) {
+			case ApplePlatform.TVOS:
+				platform = "AppleTVOS";
+				break;
+			default:
+				platform = "iPhoneOS";
+				break;
+			}
+
+			foreach (var item in Directory.EnumerateFiles (projectDir, "*.storyboard", SearchOption.AllDirectories))
+				interfaceDefinitions.Add (new TaskItem (item));
+
+			foreach (var item in Directory.EnumerateFiles (projectDir, "*.xib", SearchOption.AllDirectories))
+				interfaceDefinitions.Add (new TaskItem (item));
+
+			task.InterfaceDefinitions = interfaceDefinitions.ToArray ();
+			task.IntermediateOutputPath = intermediateOutputPath;
+			task.MinimumOSVersion = PDictionary.OpenFile (Path.Combine (projectDir, "Info.plist")).GetMinimumOSVersion ();
+			task.ResourcePrefix = "Resources";
+			task.ProjectDir = projectDir;
+			task.SdkDevPath = Configuration.XcodeLocation;
+			task.SdkPlatform = platform;
+			task.SdkVersion = version.ToString ();
+			task.TargetFrameworkMoniker = TargetFramework.DotNet_iOS_String;
+			task.SdkRoot = task.CurrentSdk.GetSdkPath (version, false);
+			return task;
+		}
+
+		[Test]
+		public void TestBasicIBToolFunctionality ()
+		{
+			var tmp = Cache.CreateTemporaryDirectory ("basic-ibtool");
+
+			var srcdir = Path.Combine (Configuration.TestProjectsDirectory, "MyIBToolLinkTest");
+			var ibtool = CreateIBToolTask (ApplePlatform.iOS, srcdir, tmp);
+			var bundleResources = new HashSet<string> ();
+
+			ExecuteTask (ibtool);
+
+			foreach (var bundleResource in ibtool.BundleResources) {
+				Assert.That (File.Exists (bundleResource.ItemSpec), Is.True, $"File does not exist: {bundleResource.ItemSpec}");
+				Assert.That (bundleResource.GetMetadata ("LogicalName"), Is.Not.Null.Or.Empty, "The 'LogicalName' metadata must be set.");
+				Assert.That (bundleResource.GetMetadata ("Optimize"), Is.Not.Null.Or.Empty, "The 'Optimize' metadata must be set.");
+
+				bundleResources.Add (bundleResource.GetMetadata ("LogicalName"));
+			}
+
+			string [] expected = {
+				"LaunchScreen.nib",
+				"Main.storyboardc/UIViewController-BYZ-38-t0r.nib",
+				"Main.storyboardc/BYZ-38-t0r-view-8bC-Xf-vdC.nib",
+				"Main.storyboardc/Info.plist",
+			};
+
+			var inexistentResource = bundleResources.Except (expected).ToArray ();
+			var unexpectedResource = expected.Except (bundleResources).ToArray ();
+
+			Assert.That (inexistentResource, Is.Empty, "No missing resources");
+			Assert.That (unexpectedResource, Is.Empty, "No extra resources");
+		}
+
+		[Test]
+		public void TestAdvancedIBToolFunctionality ()
+		{
+			var tmp = Cache.CreateTemporaryDirectory ("advanced-ibtool");
+			IBTool ibtool;
+
+			var srcdir = Path.Combine (Configuration.TestProjectsDirectory, "IBToolTaskTests", "LinkedAndTranslated");
+			ibtool = CreateIBToolTask (ApplePlatform.iOS, srcdir, tmp);
+			var bundleResources = new HashSet<string> ();
+
+			// Add some ResourceTags...
+			foreach (var storyboard in ibtool.InterfaceDefinitions) {
+				var tag = Path.GetFileNameWithoutExtension (storyboard.ItemSpec);
+				storyboard.SetMetadata ("ResourceTags", tag);
+			}
+
+			ibtool.EnableOnDemandResources = true;
+
+			ExecuteTask (ibtool);
+
+			foreach (var bundleResource in ibtool.BundleResources) {
+				var bundleName = bundleResource.GetMetadata ("LogicalName");
+				var tag = bundleResource.GetMetadata ("ResourceTags");
+
+				Assert.That (File.Exists (bundleResource.ItemSpec), Is.True, $"File does not exist: {bundleResource.ItemSpec}");
+				Assert.That (bundleResource.GetMetadata ("LogicalName"), Is.Not.Null.Or.Empty, "The 'LogicalName' metadata must be set.");
+				Assert.That (bundleResource.GetMetadata ("Optimize"), Is.Not.Null.Or.Empty, "The 'Optimize' metadata must be set.");
+
+				Assert.That (tag, Is.Not.Null.Or.Empty, "The 'ResourceTags' metadata should be set.");
+				Assert.That (bundleName.Contains (".lproj/" + tag + ".storyboardc/"), Is.True, $"BundleResource does not have the proper ResourceTags set: {bundleName}");
+
+				bundleResources.Add (bundleName);
+			}
+
+			ibtool.EnableOnDemandResources = true;
+
+			string [] expected = {
+					"en.lproj/Main.storyboardc/UIViewController-BYZ-38-t0r.nib",
+					"en.lproj/Main.storyboardc/BYZ-38-t0r-view-8bC-Xf-vdC.nib",
+					"en.lproj/Main.storyboardc/Info.plist",
+					"en.lproj/Main.storyboardc/MyLinkedViewController.nib",
+					"en.lproj/Linked.storyboardc/5xv-Yx-H4r-view-gMo-tm-chA.nib",
+					"en.lproj/Linked.storyboardc/Info.plist",
+					"en.lproj/Linked.storyboardc/MyLinkedViewController.nib",
+					"Base.lproj/Main.storyboardc/UIViewController-BYZ-38-t0r.nib",
+					"Base.lproj/Main.storyboardc/BYZ-38-t0r-view-8bC-Xf-vdC.nib",
+					"Base.lproj/Main.storyboardc/Info.plist",
+					"Base.lproj/Main.storyboardc/MyLinkedViewController.nib",
+					"Base.lproj/Linked.storyboardc/5xv-Yx-H4r-view-gMo-tm-chA.nib",
+					"Base.lproj/Linked.storyboardc/Info.plist",
+					"Base.lproj/Linked.storyboardc/MyLinkedViewController.nib",
+					"Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-Ze5-6b-2t3.nib",
+					"Base.lproj/LaunchScreen.storyboardc/UIViewController-01J-lp-oVM.nib",
+					"Base.lproj/LaunchScreen.storyboardc/Info.plist",
+				};
+
+			var inexistentResource = bundleResources.Except (expected).ToArray ();
+			var unexpectedResource = expected.Except (bundleResources).ToArray ();
+
+			Assert.That (inexistentResource, Is.Empty, "No missing resources");
+			Assert.That (unexpectedResource, Is.Empty, "No extra resources");
+		}
+
+		IBTool CreateIBToolTask (ApplePlatform framework, string projectDir, string intermediateOutputPath, params string [] fileNames)
+		{
+			var ibtool = CreateIBToolTask (framework, projectDir, intermediateOutputPath);
+			var interfaceDefinitions = new List<ITaskItem> ();
+
+			foreach (var name in fileNames)
+				interfaceDefinitions.Add (new TaskItem (Path.Combine (projectDir, name)));
+
+			ibtool.InterfaceDefinitions = interfaceDefinitions.ToArray ();
+
+			return ibtool;
+		}
+
+		void TestGenericAndDeviceSpecificXibsGeneric (params string [] fileNames)
+		{
+			var tmp = Cache.CreateTemporaryDirectory ("advanced-ibtool");
+			IBTool ibtool;
+
+			var srcdir = Path.Combine (Configuration.TestProjectsDirectory, "IBToolTaskTests", "GenericAndDeviceSpecific");
+			ibtool = CreateIBToolTask (ApplePlatform.iOS, srcdir, tmp, fileNames);
+			var bundleResources = new HashSet<string> ();
+
+			// Add some ResourceTags...
+			foreach (var storyboard in ibtool.InterfaceDefinitions) {
+				var tag = Path.GetFileNameWithoutExtension (storyboard.ItemSpec);
+				storyboard.SetMetadata ("ResourceTags", tag);
+			}
+
+			ibtool.EnableOnDemandResources = true;
+
+			ExecuteTask (ibtool);
+
+			foreach (var bundleResource in ibtool.BundleResources) {
+				var bundleName = bundleResource.GetMetadata ("LogicalName");
+				var tag = bundleResource.GetMetadata ("ResourceTags");
+
+				Assert.That (File.Exists (bundleResource.ItemSpec), Is.True, $"File does not exist: {bundleResource.ItemSpec}");
+				Assert.That (bundleResource.GetMetadata ("LogicalName"), Is.Not.Null.Or.Empty, "The 'LogicalName' metadata must be set.");
+				Assert.That (bundleResource.GetMetadata ("Optimize"), Is.Not.Null.Or.Empty, "The 'Optimize' metadata must be set.");
+
+				Assert.That (tag, Is.Not.Null.Or.Empty, "The 'ResourceTags' metadata should be set.");
+				Assert.That (bundleResource.ItemSpec, Is.EqualTo (Path.Combine (tmp, "ibtool", tag + ".nib")), $"BundleResource {bundleName} is not at the expected location.");
+
+				bundleResources.Add (bundleName);
+			}
+
+			string [] expected = {
+					"View.nib",
+					"View~ipad.nib",
+				};
+
+			var inexistentResource = bundleResources.Except (expected).ToArray ();
+			var unexpectedResource = expected.Except (bundleResources).ToArray ();
+
+			Assert.That (inexistentResource, Is.Empty, "No missing resources");
+			Assert.That (unexpectedResource, Is.Empty, "No extra resources");
+		}
+
+		[Test]
+		public void TestGenericAndDeviceSpecificXibsGenericFirst ()
+		{
+			TestGenericAndDeviceSpecificXibsGeneric ("View.xib", "View~ipad.xib");
+		}
+
+		[Test]
+		public void TestGenericAndDeviceSpecificXibsGenericLast ()
+		{
+			TestGenericAndDeviceSpecificXibsGeneric ("View~ipad.xib", "View.xib");
+		}
+	}
+}

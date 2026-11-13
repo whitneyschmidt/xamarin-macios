@@ -8,132 +8,98 @@
 //
 //
 
-#if !WATCH
+#if HAS_OPENGLES && !__MACOS__ && !__MACCATALYST__
 
-using System;
-using System.Runtime.InteropServices;
-
-using OpenTK;
-using OpenTK.Graphics;
-
-#if XAMCORE_2_0
-using ObjCRuntime;
 using CoreFoundation;
-using Foundation;
 using OpenGLES;
 
-namespace CoreVideo {
-#else
-using MonoTouch.ObjCRuntime;
-using MonoTouch.CoreFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.OpenGLES;
+#nullable enable
 
-namespace MonoTouch.CoreVideo {
-#endif
+namespace CoreVideo {
 
 	// CVOpenGLESTextureCache.h
-	[Deprecated (PlatformName.iOS, 12,0, message: "Use 'CVMetalTextureCache' instead.")]
-	[Deprecated (PlatformName.TvOS, 12,0, message: "Use 'CVMetalTextureCache' instead.")]
-	public class CVOpenGLESTextureCache : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-
-		~CVOpenGLESTextureCache ()
-		{
-			Dispose (false);
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-#if XAMCORE_2_0
-		protected
-#else
-		public
-#endif
-		virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CVOpenGLESTexture.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
-
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("ios")]
+	[ObsoletedOSPlatform ("tvos12.0", "Use 'CVMetalTextureCache' instead.")]
+	[ObsoletedOSPlatform ("ios12.0", "Use 'CVMetalTextureCache' instead.")]
+	public class CVOpenGLESTextureCache : NativeObject {
 		[DllImport (Constants.CoreVideoLibrary)]
-		extern static int CVOpenGLESTextureCacheCreate (
-			/* CFAllocatorRef __nullable */ IntPtr allocator, 
+		unsafe extern static int CVOpenGLESTextureCacheCreate (
+			/* CFAllocatorRef __nullable */ IntPtr allocator,
 			/* CFDictionaryRef __nullable */ IntPtr cacheAttributes,
-			/* CVEAGLContext __nonnull */ IntPtr eaglContext, 
-			/* CFDictionaryRef __nullable */ IntPtr textureAttextureAttributestr, 
-			/* CVOpenGLESTextureCacheRef __nullable * __nonnull */ out IntPtr cacheOut);
+			/* CVEAGLContext __nonnull */ IntPtr eaglContext,
+			/* CFDictionaryRef __nullable */ IntPtr textureAttextureAttributestr,
+			/* CVOpenGLESTextureCacheRef __nullable * __nonnull */ IntPtr* cacheOut);
 
-		CVOpenGLESTextureCache (IntPtr handle)
+		[Preserve (Conditional = true)]
+		CVOpenGLESTextureCache (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
 		}
-		
+
 		public CVOpenGLESTextureCache (EAGLContext context)
+			: base (Create (context), true)
 		{
-			if (context == null)
-				throw new ArgumentNullException ("context");
-			
-			if (CVOpenGLESTextureCacheCreate (IntPtr.Zero,
+		}
+
+		static IntPtr Create (EAGLContext context, bool throwIfFailure = true)
+		{
+			if (context is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (context));
+
+			var handle = default (IntPtr);
+			int errorCode;
+
+			unsafe {
+				errorCode = CVOpenGLESTextureCacheCreate (IntPtr.Zero,
 							  IntPtr.Zero, /* change one day to support cache attributes */
-							  context.Handle,
+							  context.GetNonNullHandle (nameof (context)),
 							  IntPtr.Zero, /* change one day to support texture attributes */
-							  out handle) == 0)
-				return;
-			
+							  &handle);
+
+				GC.KeepAlive (context);
+			}
+			if (errorCode == 0)
+				return handle;
+
+			if (!throwIfFailure)
+				return IntPtr.Zero;
+
 			throw new Exception ("Could not create the texture cache");
 		}
 
-		public static CVOpenGLESTextureCache FromEAGLContext (EAGLContext context)
+		public static CVOpenGLESTextureCache? FromEAGLContext (EAGLContext context)
 		{
-			if (context == null)
-				throw new ArgumentNullException ("context");
-			IntPtr handle;
-			if (CVOpenGLESTextureCacheCreate (IntPtr.Zero,
-							  IntPtr.Zero, /* change one day to support cache attributes */
-							  context.Handle,
-							  IntPtr.Zero, /* change one day to support texture attribuets */
-							  out handle) == 0)
-				return new CVOpenGLESTextureCache (handle);
-			return null;
+			var handle = Create (context, false);
+			if (handle == IntPtr.Zero)
+				return null;
+
+			return new CVOpenGLESTextureCache (handle, true);
 		}
 
-		public CVOpenGLESTexture TextureFromImage (CVImageBuffer imageBuffer, bool isTexture2d, OpenTK.Graphics.ES20.All internalFormat, int width, int height, OpenTK.Graphics.ES20.All pixelFormat, OpenTK.Graphics.ES20.DataType pixelType, int planeIndex, out CVReturn errorCode)
+		public CVOpenGLESTexture? CreateTexture (CVImageBuffer imageBuffer, bool isTexture2d, int internalFormat, int width, int height, uint pixelFormat, uint pixelType, int planeIndex, out CVReturn errorCode)
 		{
-			if (imageBuffer == null)
-				throw new ArgumentNullException ("imageBuffer");
-			
-			int target = isTexture2d ? 0x0DE1 /* GL_TEXTURE_2D */ : 0x8D41 /* GL_RENDERBUFFER */;
-			IntPtr texture;
-			errorCode = CVOpenGLESTextureCacheCreateTextureFromImage (
-				IntPtr.Zero,
-				handle, /* textureCache dict, one day we might add it */
-				imageBuffer.Handle,
-				IntPtr.Zero,
-				target,
-				internalFormat, width, height, pixelFormat,
-				pixelType, (IntPtr) planeIndex, out texture);
+			if (imageBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (imageBuffer));
+
+			uint target = isTexture2d ? (uint) 0x0DE1 /* GL_TEXTURE_2D */ : (uint) 0x8D41 /* GL_RENDERBUFFER */;
+			var texture = default (IntPtr);
+			unsafe {
+				errorCode = CVOpenGLESTextureCacheCreateTextureFromImage (
+					IntPtr.Zero,
+					GetCheckedHandle (), /* textureCache dict, one day we might add it */
+					imageBuffer.GetCheckedHandle (),
+					IntPtr.Zero,
+					target,
+					internalFormat, width, height, pixelFormat,
+					pixelType, (IntPtr) planeIndex, &texture);
+
+				GC.KeepAlive (imageBuffer);
+			}
 			if (errorCode != 0)
 				return null;
-			return new CVOpenGLESTexture (texture);
+			return new CVOpenGLESTexture (texture, true);
 		}
-		
-#if OPENTK_1_1
-		public CVOpenGLESTexture TextureFromImage (CVImageBuffer imageBuffer, bool isTexture2d, OpenTK.Graphics.ES30.All internalFormat, int width, int height, OpenTK.Graphics.ES30.All pixelFormat, OpenTK.Graphics.ES30.DataType pixelType, int planeIndex, out CVReturn errorCode)
-		{
-			return TextureFromImage (imageBuffer, isTexture2d, (OpenTK.Graphics.ES20.All) internalFormat, width, height, (OpenTK.Graphics.ES20.All) pixelFormat, (OpenTK.Graphics.ES20.DataType) pixelType, planeIndex, out errorCode);
-		}
-#endif
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVOpenGLESTextureCacheFlush (
@@ -141,23 +107,23 @@ namespace MonoTouch.CoreVideo {
 
 		public void Flush (CVOptionFlags flags)
 		{
-			CVOpenGLESTextureCacheFlush (handle, flags);
+			CVOpenGLESTextureCacheFlush (GetCheckedHandle (), flags);
 		}
-			
+
 		[DllImport (Constants.CoreVideoLibrary)]
-		extern static CVReturn CVOpenGLESTextureCacheCreateTextureFromImage (
+		unsafe extern static CVReturn CVOpenGLESTextureCacheCreateTextureFromImage (
 			/* CFAllocatorRef __nullable */ IntPtr allocator,
 			/* CVOpenGLESTextureCacheRef */ IntPtr textureCache,
 			/* CVImageBufferRef __nonnull */ IntPtr sourceImage,
 			/* CFDictionaryRef __nullable */ IntPtr textureAttr,
-			/* GLenum */ int target,
-			/* GLint */ OpenTK.Graphics.ES20.All internalFormat,
+			/* GLenum */ uint target,
+			/* GLint */ int internalFormat,
 			/* GLsizei */ int width,
 			/* GLsizei */ int height,
-			/* GLenum */ OpenTK.Graphics.ES20.All format,
-			/* GLenum */ OpenTK.Graphics.ES20.DataType type,
+			/* GLenum */ uint format,
+			/* GLenum */ uint type,
 			/* size_t */ IntPtr planeIndex,
-			/* CVOpenGLESTextureRef __nullable * __nonnull */ out IntPtr textureOut);
+			/* CVOpenGLESTextureRef __nullable * __nonnull */ IntPtr* textureOut);
 	}
 }
 

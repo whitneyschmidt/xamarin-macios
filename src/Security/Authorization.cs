@@ -25,195 +25,218 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if MONOMAC
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
-using System;
-using System.Runtime.InteropServices;
+#if MONOMAC || __MACCATALYST__
 
 namespace Security {
-	// Untyped enum in ObjC
-	public enum AuthorizationStatus {
-		Success                 = 0,
-		InvalidSet              = -60001,
-		InvalidRef              = -60002,
-		InvalidTag              = -60003,
-		InvalidPointer          = -60004,
-		Denied                  = -60005,
-		Canceled                = -60006,
-		InteractionNotAllowed   = -60007,
-		Internal                = -60008,
-		ExternalizeNotAllowed   = -60009,
-		InternalizeNotAllowed   = -60010,
-		InvalidFlags            = -60011,
-		ToolExecuteFailure      = -60031,
-		ToolEnvironmentError    = -60032,
-		BadAddress              = -60033,
-	}
-
-	// typedef UInt32 AuthorizationFlags;
-	[Flags]
-	public enum AuthorizationFlags : int {
-		Defaults,
-		InteractionAllowed = 1 << 0,
-		ExtendRights = 1 << 1,
-		PartialRights = 1 << 2,
-		DestroyRights = 1 << 3,
-		PreAuthorize = 1 << 4,
-	}
 
 	//
 	// For ease of use, we let the user pass the AuthorizationParameters, and we
 	// create the structure for them with the proper data
 	//
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
 	public class AuthorizationParameters {
-		public string PathToSystemPrivilegeTool;
-		public string Prompt;
-		public string IconPath;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public string? PathToSystemPrivilegeTool;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public string? Prompt;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public string? IconPath;
 	}
 
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
 	public class AuthorizationEnvironment {
-		public string Username;
-		public string Password;
-		public bool   AddToSharedCredentialPool;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public string? Username;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public string? Password;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public bool AddToSharedCredentialPool;
 	}
 
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
 	[StructLayout (LayoutKind.Sequential)]
 	struct AuthorizationItem {
 		public IntPtr /* AuthorizationString = const char * */ name;
-#if XAMCORE_2_0
 		public nint /* size_t */ valueLen;
-#else
-		public IntPtr /* size_t */ valueLen;
-#endif
 		public IntPtr /* void* */ value;
 		public int /* UInt32 */ flags;  // zero
 	}
 
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
 	unsafe struct AuthorizationItemSet {
 		public int /* UInt32 */ count;
-		public AuthorizationItem * /* AuthorizationItem* */ ptrToAuthorization;
+		public AuthorizationItem* /* AuthorizationItem* */ ptrToAuthorization;
 	}
 
-	public unsafe class Authorization : INativeObject, IDisposable {
-		IntPtr handle;
-
-		public IntPtr Handle { get { return handle; } }
-		
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	public unsafe class Authorization : DisposableObject {
 		[DllImport (Constants.SecurityLibrary)]
-		extern static int /* OSStatus = int */ AuthorizationCreate (AuthorizationItemSet *rights, AuthorizationItemSet *environment, AuthorizationFlags flags, out IntPtr auth);
+		unsafe extern static int /* OSStatus = int */ AuthorizationCreate (AuthorizationItemSet* rights, AuthorizationItemSet* environment, AuthorizationFlags flags, IntPtr* auth);
 
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use the Service Management framework or the launchd-launched helper tool instead.")]
+		[ObsoletedOSPlatform ("macos", "Use the Service Management framework or the launchd-launched helper tool instead.")]
 		[DllImport (Constants.SecurityLibrary)]
-		extern static int /* OSStatus = int */ AuthorizationExecuteWithPrivileges (IntPtr handle, string pathToTool, AuthorizationFlags flags, string [] args, IntPtr FILEPtr);
+		extern static int /* OSStatus = int */ AuthorizationExecuteWithPrivileges (IntPtr handle, IntPtr pathToTool, AuthorizationFlags flags, IntPtr args, IntPtr FILEPtr);
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static int /* OSStatus = int */ AuthorizationFree (IntPtr handle, AuthorizationFlags flags);
-		
-		internal Authorization (IntPtr handle)
+
+		[Preserve (Conditional = true)]
+		internal Authorization (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
 		}
 
-		public int ExecuteWithPrivileges (string pathToTool, AuthorizationFlags flags, string [] args)
+		/// <param name="pathToTool">To be added.</param>
+		///         <param name="flags">To be added.</param>
+		///         <param name="args">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use the Service Management framework or the launchd-launched helper tool instead.")]
+		[ObsoletedOSPlatform ("macos", "Use the Service Management framework or the launchd-launched helper tool instead.")]
+		public int ExecuteWithPrivileges (string pathToTool, AuthorizationFlags flags, string []? args)
 		{
-			return AuthorizationExecuteWithPrivileges (handle, pathToTool, flags, args, IntPtr.Zero);
+			string? []? arguments = args!;
+
+			if (arguments is not null) {
+				// The arguments array must be null-terminated, so make sure that's the case
+				if (arguments.Length == 0) {
+					arguments = new string? [] { null };
+				} else if (arguments [arguments.Length - 1] is not null) {
+					var array = new string? [arguments.Length + 1];
+					arguments.CopyTo (array, 0);
+					arguments = array;
+				}
+			}
+			using var pathToToolStr = new TransientString (pathToTool);
+			var argsPtr = TransientString.AllocStringArray (arguments);
+			var retval = AuthorizationExecuteWithPrivileges (Handle, pathToToolStr, flags, argsPtr, IntPtr.Zero);
+			TransientString.FreeStringArray (argsPtr, args is null ? 0 : args.Length);
+			return retval;
 		}
 
-		public void Dispose ()
+		/// <inheritdoc />
+		protected override void Dispose (bool disposing)
 		{
-			GC.SuppressFinalize (this);
-			Dispose (0, true);
+			Dispose (0, disposing);
 		}
 
-		~Authorization ()
-		{
-			Dispose (0, false);
-		}
-		
+		/// <param name="flags">To be added.</param>
+		///         <param name="disposing">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public virtual void Dispose (AuthorizationFlags flags, bool disposing)
 		{
-			if (handle != IntPtr.Zero){
-				AuthorizationFree (handle, flags);
-				handle = IntPtr.Zero;
-			}
+			if (Handle != IntPtr.Zero && Owns)
+				AuthorizationFree (Handle, flags);
+			base.Dispose (disposing);
 		}
-		
-		public static Authorization Create (AuthorizationFlags flags)
+
+		/// <param name="flags">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static Authorization? Create (AuthorizationFlags flags)
 		{
 			return Create (null, null, flags);
 		}
-		
-		static void EncodeString (ref AuthorizationItem item, string key, string value)
+
+		static void EncodeString (ref AuthorizationItem item, string key, string? value)
 		{
 			item.name = Marshal.StringToHGlobalAuto (key);
-			if (value != null){
+			if (value is not null) {
 				item.value = Marshal.StringToHGlobalAuto (value);
-#if XAMCORE_2_0
 				item.valueLen = value.Length;
-#else
-				item.valueLen = (IntPtr) value.Length;
-#endif
 			}
 		}
-		
-		public static Authorization Create (AuthorizationParameters parameters, AuthorizationEnvironment environment, AuthorizationFlags flags)
+
+		/// <param name="parameters">To be added.</param>
+		///         <param name="environment">To be added.</param>
+		///         <param name="flags">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static Authorization? Create (AuthorizationParameters? parameters, AuthorizationEnvironment? environment, AuthorizationFlags flags)
 		{
 			AuthorizationItemSet pars = new AuthorizationItemSet ();
-			AuthorizationItemSet *ppars = null;
-			AuthorizationItem *pitems = null;
+			AuthorizationItemSet* ppars = null;
+			AuthorizationItem* pitems = null;
 			AuthorizationItemSet env = new AuthorizationItemSet ();
-			AuthorizationItemSet *penv = null;
-			AuthorizationItem *eitems = null;
+			AuthorizationItemSet* penv = null;
+			AuthorizationItem* eitems = null;
 			int code;
 			IntPtr auth;
 
 			try {
 				unsafe {
-					if (parameters != null){
+					if (parameters is not null) {
 						ppars = &pars;
-						pars.ptrToAuthorization = (AuthorizationItem *) Marshal.AllocHGlobal (sizeof (AuthorizationItem) * 2);
-						if (parameters.PathToSystemPrivilegeTool != null)
+						pars.ptrToAuthorization = (AuthorizationItem*) Marshal.AllocHGlobal (sizeof (AuthorizationItem) * 2);
+						if (parameters.PathToSystemPrivilegeTool is not null)
 							EncodeString (ref pars.ptrToAuthorization [pars.count++], "system.privilege.admin", parameters.PathToSystemPrivilegeTool);
-						if (parameters.IconPath != null)
-							EncodeString (ref pars.ptrToAuthorization [pars.count++], "prompt", parameters.IconPath);
+						if (parameters.IconPath is not null)
+							EncodeString (ref pars.ptrToAuthorization [pars.count++], "icon", parameters.IconPath);
 					}
-					if (environment != null || (parameters != null && parameters.Prompt != null)){
+					if (environment is not null || (parameters is not null && parameters.Prompt is not null)) {
 						penv = &env;
-						env.ptrToAuthorization = (AuthorizationItem *) Marshal.AllocHGlobal (sizeof (AuthorizationItem) * 4);
-						if (environment != null){
-							if (environment.Username != null)
+						env.ptrToAuthorization = (AuthorizationItem*) Marshal.AllocHGlobal (sizeof (AuthorizationItem) * 4);
+						if (environment is not null) {
+							if (environment.Username is not null)
 								EncodeString (ref env.ptrToAuthorization [env.count++], "username", environment.Username);
-							if (environment.Password != null)
+							if (environment.Password is not null)
 								EncodeString (ref env.ptrToAuthorization [env.count++], "password", environment.Password);
 							if (environment.AddToSharedCredentialPool)
 								EncodeString (ref env.ptrToAuthorization [env.count++], "shared", null);
 						}
-						if (parameters != null){
-							if (parameters.Prompt != null)
+						if (parameters is not null) {
+							if (parameters.Prompt is not null)
 								EncodeString (ref env.ptrToAuthorization [env.count++], "prompt", parameters.Prompt);
 						}
 					}
-					code = AuthorizationCreate (ppars, penv, flags, out auth);
+					code = AuthorizationCreate (ppars, penv, flags, &auth);
 					if (code != 0)
 						return null;
-					return new Authorization (auth);
+					return new Authorization (auth, true);
 				}
 			} finally {
-				if (ppars != null){
-					for (int i = 0; i < pars.count; i++){
+				if (ppars is not null) {
+					for (int i = 0; i < pars.count; i++) {
 						Marshal.FreeHGlobal (pars.ptrToAuthorization [i].name);
 						Marshal.FreeHGlobal (pars.ptrToAuthorization [i].value);
 					}
-					Marshal.FreeHGlobal ((IntPtr)pars.ptrToAuthorization);
+					Marshal.FreeHGlobal ((IntPtr) pars.ptrToAuthorization);
 				}
-				if (penv != null){
-					for (int i = 0; i < env.count; i++){
+				if (penv is not null) {
+					for (int i = 0; i < env.count; i++) {
 						Marshal.FreeHGlobal (env.ptrToAuthorization [i].name);
 						if (env.ptrToAuthorization [i].value != IntPtr.Zero)
 							Marshal.FreeHGlobal (env.ptrToAuthorization [i].value);
 					}
-					Marshal.FreeHGlobal ((IntPtr)env.ptrToAuthorization);
+					Marshal.FreeHGlobal ((IntPtr) env.ptrToAuthorization);
 				}
 			}
 		}

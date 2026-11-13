@@ -1,27 +1,17 @@
-﻿#if !__WATCHOS__
-using System;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
-
-namespace MonoTouchFixtures.HttpClientTests
-{
+namespace MonoTouchFixtures.HttpClientTests {
 	[TestFixture]
-	public class HttpClientTest
-	{
+	[Preserve (AllMembers = true)]
+	public class HttpClientTest {
 		const int WaitTimeout = 5000;
 
-		interface IHandlerWrapper
-		{
+		interface IHandlerWrapper {
 			bool AllowAutoRedirect { get; set; }
 			HttpMessageHandler Handler { get; }
 
@@ -29,8 +19,7 @@ namespace MonoTouchFixtures.HttpClientTests
 
 		// Add new classes to deal with in this class in order not to change the tests, that way we ensure all
 		// handlers will pass the exact same tests with no duplication.
-		class HandlerWrapper : IHandlerWrapper
-		{
+		class HandlerWrapper : IHandlerWrapper {
 			string handlerType;
 			HttpMessageHandler handler;
 
@@ -55,20 +44,20 @@ namespace MonoTouchFixtures.HttpClientTests
 			public bool AllowAutoRedirect {
 				get {
 					if (handlerType == "CFNetworkHandler")
-						return ((CFNetworkHandler)handler).AllowAutoRedirect;
+						return ((CFNetworkHandler) handler).AllowAutoRedirect;
 					if (handlerType == "NSUrlSessionHandler")
-						return ((NSUrlSessionHandler)handler).AllowAutoRedirect;
+						return ((NSUrlSessionHandler) handler).AllowAutoRedirect;
 					if (handlerType == "HttpClientHandler")
-						return ((HttpClientHandler)handler).AllowAutoRedirect;
+						return ((HttpClientHandler) handler).AllowAutoRedirect;
 					throw new InvalidOperationException ();
 				}
 				set {
 					if (handlerType == "CFNetworkHandler")
-						((CFNetworkHandler)handler).AllowAutoRedirect = value;
+						((CFNetworkHandler) handler).AllowAutoRedirect = value;
 					if (handlerType == "NSUrlSessionHandler")
-						((NSUrlSessionHandler)handler).AllowAutoRedirect = value;
+						((NSUrlSessionHandler) handler).AllowAutoRedirect = value;
 					if (handlerType == "HttpClientHandler")
-						((HttpClientHandler)handler).AllowAutoRedirect = value;
+						((HttpClientHandler) handler).AllowAutoRedirect = value;
 					throw new InvalidOperationException ();
 				}
 			}
@@ -91,23 +80,34 @@ namespace MonoTouchFixtures.HttpClientTests
 		}
 
 		[TestCase (typeof (HttpClientHandler), 8)]
-		[TestCase (typeof (CFNetworkHandler), 8)]
+		// There are known issues (deadlocks) with CFNetworkHandler: https://github.com/dotnet/macios/issues/25634
+		// CFNetworkHandler is obsolete, so we won't fix any such issues, so to avoid deadlocks, just avoid testing CFNetworkHandler.
+		[TestCase (typeof (CFNetworkHandler), 8, Ignore = "There are known issues (deadlocks) with CFNetworkHandler: https://github.com/dotnet/macios/issues/25634")]
 		[TestCase (typeof (NSUrlSessionHandler), 9)]
 		public void EnsureModifiabilityPostSend (Type handlerType, int macOSMinVersion)
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, macOSMinVersion, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, macOSMinVersion, throwIfOtherPlatform: false);
 
 			var wrapper = HandlerWrapper.GetWrapper (handlerType);
 			using (var client = new HttpClient (wrapper.Handler))
 			using (var request = new HttpRequestMessage (HttpMethod.Get, "http://xamarin.com")) {
 				var token = new CancellationTokenSource ();
+#pragma warning disable CA2025
 				client.SendAsync (request, token.Token);
-				Assert.Throws<InvalidOperationException> (() => wrapper.AllowAutoRedirect = !wrapper.AllowAutoRedirect);
+#pragma warning restore CA2025
+				Exception e = null;
+				try {
+					wrapper.AllowAutoRedirect = !wrapper.AllowAutoRedirect;
+					Assert.Fail ("Unexpectedly able to change AllowAutoRedirect");
+				} catch (InvalidOperationException ioe) {
+					e = ioe;
+				} catch (TargetInvocationException tie) {
+					e = tie.InnerException;
+				}
+				Assert.That (e, Is.InstanceOf<InvalidOperationException> (), "AllowAutoRedirect");
 				// cancel to ensure that we do not have side effects
 				token.Cancel ();
 			}
 		}
 	}
 }
-#endif
-

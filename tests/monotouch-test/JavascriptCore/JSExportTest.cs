@@ -1,21 +1,8 @@
-﻿//
+//
 // Copyright 2014 Xamarin Inc.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using JavaScriptCore;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.JavaScriptCore;
-using MonoTouch.UIKit;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 
 using XamarinTests.ObjCRuntime;
 using MonoTouchFixtures.ObjCRuntime;
@@ -31,7 +18,7 @@ namespace MonoTouchFixtures.JavascriptCore {
 		{
 			TestRuntime.AssertXcodeVersion (5, 0, 1);
 
-			if (RegistrarTest.CurrentRegistrar != Registrars.Static)
+			if (!global::XamarinTests.ObjCRuntime.Registrar.IsStaticRegistrar)
 				Assert.Ignore ("Exporting protocols to JavaScriptCore requires the static registrar.");
 
 			var context = new JSContext ();
@@ -42,8 +29,8 @@ namespace MonoTouchFixtures.JavascriptCore {
 			var obj = new MyJavaExporter ();
 			context [(NSString) "obj"] = JSValue.From (obj, context);
 			context.EvaluateScript ("obj.myFunc ();");
-			Assert.IsNull (exc, "JS exception");
-			Assert.IsTrue (obj.MyFuncCalled, "Called");
+			Assert.That (exc, Is.Null, "JS exception");
+			Assert.That (obj.MyFuncCalled, Is.True, "Called");
 
 			context.EvaluateScript ("obj.hello (42);");
 			context.EvaluateScript ("obj.callMeBack (function() { return 314; });");
@@ -65,8 +52,7 @@ namespace MonoTouchFixtures.JavascriptCore {
 		void CallMeBack (JSValue callbackFunc);
 	}
 
-	class MyJavaExporter : NSObject, IMyJavaExporter
-	{
+	class MyJavaExporter : NSObject, IMyJavaExporter {
 		public bool MyFuncCalled;
 		public void MyFunc ()
 		{
@@ -75,17 +61,15 @@ namespace MonoTouchFixtures.JavascriptCore {
 
 		public void Hello (JSValue val)
 		{
-			Assert.IsTrue (val.IsNumber, "Hello - IsNumber");
-			Assert.AreEqual (42, val.ToNumber ().Int32Value, "Hello - Number");
+			Assert.That (val.IsNumber, Is.True, "Hello - IsNumber");
+			Assert.That (val.ToNumber ().Int32Value, Is.EqualTo (42), "Hello - Number");
 		}
 
 		public void CallMeBack (JSValue callbackFunc)
 		{
 			var rv = callbackFunc.Call ();
-			Assert.IsTrue (rv.IsNumber, "CallMeBack - IsNumber");
-			Assert.AreEqual (314, rv.ToNumber ().Int32Value, "CallMeBack - Number");
+			Assert.That (rv.IsNumber, Is.True, "CallMeBack - IsNumber");
+			Assert.That (rv.ToNumber ().Int32Value, Is.EqualTo (314), "CallMeBack - Number");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -1,16 +1,10 @@
-﻿using System;
 using System.IO;
 using System.IO.Compression;
 
-using Foundation;
 using Compression;
-using ObjCRuntime;
-
-using NUnit.Framework;
-
 
 namespace MonoTouchFixtures.Compression {
-	
+
 	// Special test case that tests the compression class against files that
 	// have been compressed by apple tools. This ensures that we can read
 	// the data from a file created by an outside tool.
@@ -20,21 +14,16 @@ namespace MonoTouchFixtures.Compression {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class ThoroughCompressionStreamTest
-	{
+	public class ThoroughCompressionStreamTest {
 
-#if MONOMAC
- 		string uncompressedFilePath = Path.Combine (NSBundle.MainBundle.BundlePath, "Contents/Resources/uncompressed.txt");
-#else
- 		string uncompressedFilePath = Path.Combine (NSBundle.MainBundle.BundlePath, "uncompressed.txt");
-#endif
+		string uncompressedFilePath = Path.Combine (NSBundle.MainBundle.ResourcePath, "uncompressed.txt");
 
 		string firstTempPath;
 		string secondTempPath;
 
 		private static void CopyStream (Stream src, Stream dest)
 		{
-			byte[] array = new byte[1024];
+			byte [] array = new byte [1024];
 			int bytes_read;
 			bytes_read = src.Read (array, 0, 1024);
 			while (bytes_read != 0) {
@@ -43,13 +32,13 @@ namespace MonoTouchFixtures.Compression {
 			}
 		}
 
-		private static bool compare_buffers (byte[] first, byte[] second, int length)
+		private static bool compare_buffers (byte [] first, byte [] second, int length)
 		{
 			if (first.Length < length || second.Length < length) {
 				return false;
 			}
 			for (int i = 0; i < length; i++) {
-				if (first[i] != second[i]) {
+				if (first [i] != second [i]) {
 					return false;
 				}
 			}
@@ -74,10 +63,10 @@ namespace MonoTouchFixtures.Compression {
 			output.Seek (0, SeekOrigin.Begin);
 			StreamReader reader = new StreamReader (output);
 			output.Seek (0, SeekOrigin.Begin);
-			Assert.AreNotEqual (0, output.Length, "Stream length should not be 0,");
-			Assert.IsTrue (compare_buffers (File.ReadAllBytes (uncompressedFile), output.GetBuffer(), (int) output.Length), "Streams are not equal.");
-			decompressing.Close();
-			output.Close();
+			Assert.That (output.Length, Is.Not.EqualTo (0), "Stream length should not be 0,");
+			Assert.That (compare_buffers (File.ReadAllBytes (uncompressedFile), output.GetBuffer (), (int) output.Length), Is.True, "Streams are not equal.");
+			decompressing.Close ();
+			output.Close ();
 		}
 
 		[TestCase (CompressionAlgorithm.LZ4, "compressed_lz4")]
@@ -88,11 +77,7 @@ namespace MonoTouchFixtures.Compression {
 		{
 			if (!TestRuntime.CheckXcodeVersion (7, 0))
 				Assert.Ignore ("Requires iOS 9.0+ or macOS 10.11+");
-#if MONOMAC
- 			string compressedFilePath = Path.Combine (NSBundle.MainBundle.BundlePath, $"Contents/Resources/{compressedFile}");
-#else
- 			string compressedFilePath = Path.Combine (NSBundle.MainBundle.BundlePath, compressedFile);
-#endif
+			string compressedFilePath = Path.Combine (NSBundle.MainBundle.ResourcePath, compressedFile);
 			DecodeRealFile (algorithm, compressedFilePath, uncompressedFilePath);
 		}
 	}

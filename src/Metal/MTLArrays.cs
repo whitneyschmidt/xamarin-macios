@@ -6,14 +6,10 @@
 //
 // Copyrigh 2014, Xamarin Inc.
 //
-#if XAMCORE_2_0 || !MONOMAC
 
-using System;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace Metal {
 
@@ -81,8 +77,10 @@ namespace Metal {
 	}
 
 	public partial class MTLPipelineBufferDescriptorArray {
-		public MTLPipelineBufferDescriptor this [nuint index]
-		{
+		/// <summary>Gets or sets the pipeline buffer descriptor at the specified index.</summary>
+		/// <value>The buffer descriptor at the specified index.</value>
+		/// <param name="index">The index of the buffer descriptor to get or set.</param>
+		public MTLPipelineBufferDescriptor this [nuint index] {
 			get {
 				return GetObject (index);
 			}
@@ -94,8 +92,7 @@ namespace Metal {
 
 #if IOS
 	public partial class MTLTileRenderPipelineColorAttachmentDescriptorArray {
-		public MTLTileRenderPipelineColorAttachmentDescriptor this [nuint index]
-		{
+		public MTLTileRenderPipelineColorAttachmentDescriptor this [nuint index] {
 			get {
 				return GetObject (index);
 			}
@@ -106,4 +103,3 @@ namespace Metal {
 	}
 #endif
 }
-#endif

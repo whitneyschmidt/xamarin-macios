@@ -7,28 +7,23 @@
 // Copyright 2014 Xamarin Inc
 //
 
-#if !WATCH
-
-using System;
-using Foundation;
-using ObjCRuntime;
 using CoreGraphics;
+
+#nullable enable
 
 namespace UIKit {
 
+	/// <summary>
+	/// A custom action to be presented to an assistive application.
+	/// </summary>
 	public partial class UIAccessibilityCustomAction {
-		object action;
+		object? action;
 
-#if !XAMCORE_3_0
-		[Obsolete ("iOS9 does not allow creating an empty instance")]
-		public UIAccessibilityCustomAction ()
+		/// <summary>Creates a <see cref="UIAccessibilityCustomAction" /> with the specified <paramref name="name" />.</summary>
+		/// <param name="name">The name of the action.</param>
+		/// <param name="probe">A callback to invoke when the action is activated.</param>
+		public UIAccessibilityCustomAction (string name, Func<UIAccessibilityCustomAction, bool> probe) : this (name, FuncBoolDispatcher.Selector, new FuncBoolDispatcher (probe))
 		{
-		}
-#endif
-
-		public UIAccessibilityCustomAction (string name, Func<UIAccessibilityCustomAction,bool> probe) : this (name, FuncBoolDispatcher.Selector, new FuncBoolDispatcher (probe))
-		{
-			
 		}
 
 		internal UIAccessibilityCustomAction (string name, Selector sel, FuncBoolDispatcher disp) : this (name, disp, sel)
@@ -43,12 +38,11 @@ namespace UIKit {
 			public const string SelectorName = "xamarinApplySelectorFunc:";
 			public static readonly Selector Selector = new Selector (SelectorName);
 
-			readonly Func<UIAccessibilityCustomAction,bool> probe;
+			readonly Func<UIAccessibilityCustomAction, bool> probe;
 
-			public FuncBoolDispatcher (Func<UIAccessibilityCustomAction,bool> probe)
+			public FuncBoolDispatcher (Func<UIAccessibilityCustomAction, bool> probe)
 			{
-				if (probe == null)
-					throw new ArgumentNullException ("probe");
+				ArgumentNullException.ThrowIfNull (probe);
 
 				this.probe = probe;
 				IsDirectBinding = false;
@@ -61,8 +55,6 @@ namespace UIKit {
 				return probe (customAction);
 			}
 		}
-		
+
 	}
 }
-
-#endif // !WATCH

@@ -1,0 +1,92 @@
+# template that can be extended by pipelines that will be used to build the project. This
+# allows to share te parameters and resources. 
+
+parameters:
+
+- name: macOSName # comes from the build agent demand named macOS.Name
+  displayName: Name of the version of macOS to use
+  type: string
+  default: 'Tahoe'
+
+- name: pool
+  type: string
+  displayName: Bot pool to use
+  default: automatic
+  values:
+  - pr
+  - ci
+  - automatic
+
+- name: runGovernanceTests
+  displayName: Run Governance Checks
+  type: boolean
+  default: true
+
+- name: enableAPIDiff
+  displayName: Enable API diff generation
+  type: boolean
+  default: true
+
+- name: forceInsertion
+  displayName: Force Insertion 
+  type: boolean
+  default: false 
+
+- name: pushNugets
+  type: boolean
+  default: true
+
+- name: pushNugetsToMaestro
+  type: boolean
+  default: true
+
+- name: isPR
+  displayName: Is PR build
+  type: boolean
+  default: false
+
+resources:
+  repositories:
+  - repository: self
+    checkoutOptions:
+      submodules: true
+
+  - repository: yaml-templates
+    type: git
+    name: xamarin.yaml-templates
+    ref: refs/heads/main
+
+variables:
+- ${{ if eq(parameters.isPR, false) }}:
+  - ${{ if contains(variables['Build.DefinitionName'], 'private') }}:
+    - template: ../vsts-variables.yml
+  - template: ../variables.yml
+  - name: MicrobuildConnector
+    value: 'MicroBuild Signing Task (DevDiv)'
+  - name: MaciosUploadPrefix
+    value: ''
+  - name: DisablePipelineConfigDetector
+    value: true
+- ${{ else }}:
+  - template: ../variables.yml
+  - name: MicrobuildConnector
+    value: ''
+  - name: MaciosUploadPrefix
+    value: ''
+  - name: Packaging.EnableSBOMSigning
+    value: false
+
+stages:
+- template: ../main-stage.yml
+  parameters:
+    xcodeChannel: $(xcodeChannel)
+    macOSName: ${{ parameters.macOSName }}
+    isPR: ${{ parameters.isPR }}
+    pool: ${{ parameters.pool }}
+    runGovernanceTests: ${{ parameters.runGovernanceTests }}
+    enableAPIDiff: ${{ parameters.enableAPIDiff }}
+    forceInsertion: ${{ parameters.forceInsertion }}
+    pushNugets: ${{ parameters.pushNugets }}
+    pushNugetsToMaestro: ${{ parameters.pushNugetsToMaestro }}
+    azureStorage: ${{ variables['azureStorage'] }}
+    azureContainer: ${{ variables['azureContainer'] }}

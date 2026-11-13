@@ -25,70 +25,103 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using Foundation;
 using CoreGraphics;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreImage {
 
 	// convenience enum on kCISamplerWrap[Black|Clamp] fields -> CISampler.h (headers hidden under QuartzCore.framework)
+	/// <summary>Enumerates values that control how samples from outside the source image are treated.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum CIWrapMode {
+		/// <summary>Areas outside the source image are treated as black.</summary>
 		Black,
-		Clamp
+		/// <summary>Areas outside the source image are clamped to the value at the edge.</summary>
+		Clamp,
 	}
 
 	// convenience enum on kCISamplerFilter[Nearest|Linear] fields -> CISampler.h (headers hidden under QuartzCore.framework)
+	/// <summary>Enumerates filter modes.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum CIFilterMode {
-		Nearest, Linear
+		/// <summary>Use the value of the nearest pixel.</summary>
+		Nearest,
+		/// <summary>Linearly interpolate a sample value from the neighboring pixels.</summary>
+		Linear,
 	}
-	
-	public class CISamplerOptions {
-		public CISamplerOptions () {}
 
+	/// <summary>Options to control sampler operations for <see cref="CoreImage.CISampler" /> objects.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CISamplerOptions {
+		/// <summary>Creates a new default sampler options argument.</summary>
+		///         <remarks>To be added.</remarks>
+		public CISamplerOptions () { }
+
+		/// <summary>Gets or sets the matrix to use for affine transformations.</summary>
+		///         <value>The matrix to use for affine transformations.</value>
+		///         <remarks>To be added.</remarks>
 		public CGAffineTransform? AffineMatrix { get; set; }
+		/// <summary>Gets or sets the wrapping mode, which controls whether pixels outside of the source image boundary will be clamped to the edge value or be black.</summary>
+		///         <value>The wrapping mode, which controls whether pixels outside of the source image boundary will be clamped to the edge value or be black.</value>
+		///         <remarks>To be added.</remarks>
 		public CIWrapMode? WrapMode { get; set; }
+		/// <summary>Gets or sets the filter mode, which controls whether to do the nearest value or to linearly interpolate the value from the surrounding pixels.</summary>
+		///         <value>The filter mode, which controls whether to do the nearest value or to linearly interpolate the value from the surrounding pixels.</value>
+		///         <remarks>To be added.</remarks>
 		public CIFilterMode? FilterMode { get; set; }
-		public CGColorSpace ColorSpace { get; set; }
-		
+		/// <summary>Gets or sets the color space to which samples are converted before being passed to kernels.</summary>
+		///         <value>The color space to which samples are converted before being passed to kernels.</value>
+		///         <remarks>If the developer does not set this value, then samples are processed in the working color space of the rendering context.</remarks>
+		public CGColorSpace? ColorSpace { get; set; }
+
 		internal NSDictionary ToDictionary ()
 		{
 			var ret = new NSMutableDictionary ();
 
-			if (AffineMatrix.HasValue){
+			if (AffineMatrix.HasValue) {
 				var a = AffineMatrix.Value;
-				using (var array = NSArray.FromObjects (a.xx, a.yx, a.xy, a.yy, a.x0, a.y0))
+				using (var array = NSArray.FromObjects (a.A, a.B, a.C, a.D, a.Tx, a.Ty))
 					ret.SetObject (array, CISampler.AffineMatrix);
 			}
-			if (WrapMode.HasValue){
+			if (WrapMode.HasValue) {
 				var k = WrapMode.Value == CIWrapMode.Black ? CISampler.WrapBlack : CISampler.FilterNearest;
 				ret.SetObject (k, CISampler.WrapMode);
 			}
-			if (FilterMode.HasValue){
+			if (FilterMode.HasValue) {
 				var k = FilterMode.Value == CIFilterMode.Nearest ? CISampler.FilterNearest : CISampler.FilterLinear;
 				ret.SetObject (k, CISampler.FilterMode);
 			}
-			if (ColorSpace != null)
-				ret.LowlevelSetObject (ColorSpace.Handle, CISampler.ColorSpace.Handle);
+			if (ColorSpace is not null)
+				ret.LowlevelSetObject (ColorSpace, CISampler.ColorSpace);
 			return ret;
 		}
 	}
-	
+
 	public partial class CISampler {
-#if !XAMCORE_3_0 && MONOMAC
-		[Obsolete ("This default constructor does not provide a valid instance")]
-		public CISampler () {}
-#endif
-		public CISampler FromImage (CIImage sourceImage, CISamplerOptions options)
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>Creates a new <see cref="CoreImage.CISampler" /> from the <paramref name="sourceImage" /> with <paramref name="options" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CISampler FromImage (CIImage sourceImage, CISamplerOptions? options)
 		{
-			if (options == null)
+			if (options is null)
 				return FromImage (sourceImage);
 			return FromImage (sourceImage, options.ToDictionary ());
 		}
 
+		/// <param name="sourceImage">The image from which to sample.</param>
+		///         <param name="options">Options that specify transform matrices, wrapping and filtering modes, and the color space.</param>
+		///         <summary>Creates a new sampler from a source image and a set of options.</summary>
+		///         <remarks>To be added.</remarks>
 		[DesignatedInitializer]
-		public CISampler (CIImage sourceImage, CISamplerOptions options) : this (sourceImage, options == null ? null : options.ToDictionary ())
+		public CISampler (CIImage sourceImage, CISamplerOptions? options) : this (sourceImage, options?.ToDictionary ())
 		{
 		}
 	}

@@ -1,0 +1,101 @@
+# yamllint disable rule:line-length
+# template that contains all the different steps to create a pkgs, publish the results and provide feedback to the
+# developers in github.
+parameters:
+  - name: vsdropsPrefix
+    type: string
+
+  - name: keyringPass
+    type: string
+
+  - name: gitHubToken
+    type: string
+
+  - name: xqaCertPass
+    type: string
+
+  - name: pool
+    type: string
+    default: automatic
+
+  - name: isPR
+    type: boolean
+
+  - name: repositoryAlias
+    type: string
+    default: self
+
+  - name: commit
+    type: string
+    default: HEAD
+
+  - name: xcodeChannel
+    type: string
+
+  - name: macOSName
+    type: string
+
+  - name: use1ES
+    type: boolean
+
+  - name: useACES
+    type: boolean
+    default: false
+
+jobs:
+  # This job performs the build of the nuget pkgs and the framework pkgs. There are two interesting dependencies in this job:
+  - job: build
+    displayName: 'Build packages'
+    timeoutInMinutes: 1000
+    variables:
+      DOTNET_PLATFORMS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.DOTNET_PLATFORMS'] ]
+      INCLUDE_DOTNET_IOS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.INCLUDE_DOTNET_IOS'] ]
+      INCLUDE_DOTNET_MACCATALYST: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.INCLUDE_DOTNET_MACCATALYST'] ]
+      INCLUDE_DOTNET_MACOS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.INCLUDE_DOTNET_MACOS'] ]
+      INCLUDE_DOTNET_TVOS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.INCLUDE_DOTNET_TVOS'] ]
+      # add all the variables that have been parsed by the configuration step. Could we have a less verbose way??
+      #
+      # build-package
+      # skip-packages
+      # skip-nugets
+      # skip-signing
+      BuildPackage: $[ stageDependencies.configure_build.configure.outputs['labels.build_package'] ]
+      SkipPackages: $[ stageDependencies.configure_build.configure.outputs['labels.skip_packages'] ]
+      SkipNugets: $[ stageDependencies.configure_build.configure.outputs['labels.skip_nugets'] ]
+      SkipSigning: $[ stageDependencies.configure_build.configure.outputs['labels.skip_signing'] ]
+      SkipApiComparison: $[ stageDependencies.configure_build.configure.outputs['labels.skip_api_comparison'] ]
+      # old and ugly env var use by jenkins, we do have parts of the code that use it, contains the PR number
+      PR_ID: $[ stageDependencies.configure_build.configure.outputs['labels.pr_number'] ]
+      # set the branch variable name, this is required by jenkins and we have a lot of scripts that depend on it
+      BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+      XHARNESS_LABELS: $[ stageDependencies.configure_build.configure.outputs['labels.xharness_labels'] ]
+      RUN_MAC_TESTS: $[ stageDependencies.configure_build.configure.outputs['decisions.RUN_MAC_TESTS'] ]
+    ${{ if parameters.useACES }}:
+      pool:
+        os: macOS
+        name: $(CIBuildPoolACES)
+        demands:
+          - ImageOverride -equals $(CIBuildPoolACESImage)
+    ${{ else }}:
+      pool:
+        os: macOS
+        name: ${{ parameters.pool }}
+        demands:
+          - Agent.OS -equals Darwin
+          - Agent.OSVersion -gtVersion $(minimumMacOSVersion)
+          - macOS.Name -equals ${{ parameters.macOSName }}
+          - macOS.Architecture -equals arm64  # the pinned Xcode package is Apple silicon only
+          - XcodeChannel -equals ${{ parameters.xcodeChannel }}
+
+    steps:
+      - template: build-pkgs.yml
+        parameters:
+          isPR: ${{ parameters.isPR }}
+          repositoryAlias: ${{ parameters.repositoryAlias }}
+          commit: ${{ parameters.commit }}
+          vsdropsPrefix: ${{ parameters.vsdropsPrefix }}
+          keyringPass: ${{ parameters.keyringPass }}
+          gitHubToken: ${{ parameters.gitHubToken }}
+          xqaCertPass: ${{ parameters.xqaCertPass }}
+          use1ES: ${{ parameters.use1ES }}
+          xcodeChannel: ${{ parameters.xcodeChannel }}

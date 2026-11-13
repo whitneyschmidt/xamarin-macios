@@ -1,6 +1,49 @@
-﻿namespace Xamarin.MacDev.Tasks
-{
-	public class SpotlightIndexer : SpotlightIndexerTaskBase
-	{
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+using Xamarin.Messaging.Build.Client;
+
+#nullable enable
+
+namespace Xamarin.MacDev.Tasks {
+	public class SpotlightIndexer : XamarinTask, ICancelableTask {
+		CancellationTokenSource? cancellationTokenSource;
+		#region Inputs
+
+		[Required]
+		public string Input { get; set; } = string.Empty;
+
+		public string MdimportPath { get; set; } = string.Empty;
+
+		#endregion
+
+		public override bool Execute ()
+		{
+			if (ShouldExecuteRemotely ())
+				return ExecuteRemotely ();
+
+			var args = new List<string> () {
+				Input
+			};
+			var executable = GetExecutable (args, "mdimport", MdimportPath);
+			cancellationTokenSource = new CancellationTokenSource ();
+			ExecuteAsync (executable, args, cancellationToken: cancellationTokenSource.Token).Wait ();
+			return !Log.HasLoggedErrors;
+		}
+
+		public void Cancel ()
+		{
+			if (ShouldExecuteRemotely ()) {
+				BuildConnection.CancelAsync (BuildEngine4).Wait ();
+			} else {
+				cancellationTokenSource?.Cancel ();
+			}
+		}
 	}
 }

@@ -21,17 +21,10 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
-#if XAMCORE_2_0
 namespace ObjCRuntime {
-#endif
+	/// <include file="../docs/api/ObjCRuntime/MonoNativeFunctionWrapperAttribute.xml" path="/Documentation/Docs[@DocId='T:ObjCRuntime.MonoNativeFunctionWrapperAttribute']/*" />
 	[AttributeUsage (AttributeTargets.Delegate)]
-#if XAMCORE_2_0
-	sealed
-#endif
-	public class MonoNativeFunctionWrapperAttribute : Attribute {
+	public sealed class MonoNativeFunctionWrapperAttribute : Attribute {
 	}
-#if XAMCORE_2_0
 }
-#endif

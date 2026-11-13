@@ -10,88 +10,108 @@
 
 #if MONOMAC
 
-using System;
+#nullable enable
+
 using System.Net;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Foundation
-{
-	public partial class NSHost : IEquatable<NSHost>, IEnumerable<IPAddress>
-	{
-		static NSHost CheckNull (NSHost host)
+namespace Foundation {
+	public partial class NSHost : IEquatable<NSHost>, IEnumerable<IPAddress> {
+		static NSHost? CheckNull (NSHost? host)
 		{
-			if (host == null)
+			if (host is null)
 				return null;
 
 			var addrs = host._Addresses;
-			if (addrs == null || addrs.Length == 0)
+			if (addrs is null || addrs.Length == 0)
 				return null;
 
 			return host;
 		}
 
-		public static NSHost Current {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public static NSHost? Current {
 			get { return CheckNull (_Current); }
 		}
 
-		public static NSHost FromAddress (string address)
+		/// <param name="address">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSHost? FromAddress (string? address)
 		{
-			if (address == null)
+			if (address is null)
 				return null;
 			return CheckNull (_FromAddress (address));
 		}
 
-		public static NSHost FromName (string name)
+		/// <param name="name">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSHost? FromName (string? name)
 		{
-			if (name == null)
+			if (name is null)
 				return null;
 			return CheckNull (_FromName (name));
 		}
 
-		public static explicit operator IPAddress (NSHost host)
+		public static explicit operator IPAddress? (NSHost? host)
 		{
+			if (host is null)
+				return null;
+
 			return host.Address;
 		}
 
-		public static explicit operator NSHost (IPAddress address)
+		public static explicit operator NSHost? (IPAddress? address)
 		{
 			return FromAddress (address);
 		}
 
-		public static explicit operator IPHostEntry (NSHost host)
+		public static explicit operator IPHostEntry? (NSHost host)
 		{
+			if (host is null)
+				return null;
+
 			return host.ToIPHostEntry ();
 		}
 
-		public static explicit operator NSHost (IPHostEntry hostEntry)
+		public static explicit operator NSHost? (IPHostEntry? hostEntry)
 		{
 			return FromIPHostEntry (hostEntry);
 		}
 
-		public static NSHost FromIPHostEntry (IPHostEntry hostEntry)
+		/// <param name="hostEntry">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSHost? FromIPHostEntry (IPHostEntry? hostEntry)
 		{
-			if (hostEntry == null)
+			if (hostEntry is null)
 				return null;
 
-			if (hostEntry.AddressList != null) {
+			if (hostEntry.AddressList is not null) {
 				foreach (var addr in hostEntry.AddressList) {
 					var host = FromAddress (addr);
-					if (host != null)
+					if (host is not null)
 						return host;
 				}
 			}
 
-			if (hostEntry.HostName != null) {
+			if (hostEntry.HostName is not null) {
 				var host = FromName (hostEntry.HostName);
-				if (host != null)
+				if (host is not null)
 					return host;
 			}
 
-			if (hostEntry.Aliases != null) {
+			if (hostEntry.Aliases is not null) {
 				foreach (var name in hostEntry.Aliases) {
 					var host = FromName (name);
-					if (host != null)
+					if (host is not null)
 						return host;
 				}
 			}
@@ -99,26 +119,44 @@ namespace Foundation
 			return null;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IPHostEntry ToIPHostEntry ()
 		{
 			return new IPHostEntry {
-				HostName = Name,
+				HostName = Name!,
 				AddressList = Addresses,
-				Aliases = Names
+				Aliases = Names,
 			};
 		}
 
-		public static NSHost FromAddress (IPAddress address)
+		/// <param name="address">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSHost? FromAddress (IPAddress? address)
 		{
-			if (address == null)
+			if (address is null)
 				return null;
 			return FromAddress (address.ToString ());
 		}
 
-		public IPAddress Address {
-			get { return IPAddress.Parse (_Address); }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public IPAddress? Address {
+			get {
+				var address = _Address;
+				if (address is null)
+					return null;
+				return IPAddress.Parse (address);
+			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public IPAddress [] Addresses {
 			get {
 				var addrs = new IPAddress [_Addresses.Length];
@@ -128,32 +166,50 @@ namespace Foundation
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override int GetHashCode ()
 		{
-			return (int)_Hash;
+			return (int) _Hash;
 		}
 
-		public override bool Equals (object obj)
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override bool Equals (object? obj)
 		{
 			if (obj == this)
 				return true;
 
 			var host = obj as NSHost;
-			if (host != null)
+			if (host is not null)
 				return Equals (host);
 
 			return false;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IEnumerator<IPAddress> GetEnumerator ()
 		{
 			foreach (var address in Addresses)
 				yield return address;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		IEnumerator IEnumerable.GetEnumerator ()
 		{
 			return GetEnumerator ();
+		}
+
+		bool IEquatable<NSHost>.Equals (NSHost? other)
+		{
+			return Equals ((object?) other);
 		}
 	}
 }

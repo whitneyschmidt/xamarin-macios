@@ -1,39 +1,31 @@
-﻿// Copyright 2017 Microsoft Inc. All rights reserved.
+// Copyright 2017 Microsoft Inc. All rights reserved.
 
-#if !__WATCHOS__
-
-using System;
-
-#if XAMCORE_2_0
 using Metal;
 using MetalPerformanceShaders;
-#else
-using MonoTouch.Metal;
-using MonoTouch.MetalPerformanceShaders;
-#endif
 
-using NUnit.Framework;
-
-namespace MonoTouchFixtures.MetalPerformanceShaders
-{
+namespace MonoTouchFixtures.MetalPerformanceShaders {
 
 	[TestFixture]
-	public class MPSImageHistogramTest
-	{
+	[Preserve (AllMembers = true)]
+	public class MPSImageHistogramTest {
 		IMTLDevice device;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Metal ()
 		{
-#if !MONOMAC
+#if !MONOMAC && !__MACCATALYST__
 			TestRuntime.AssertXcodeVersion (7, 0);
+
+			if (Runtime.Arch == Arch.SIMULATOR)
+				Assert.Inconclusive ("Metal Performance Shaders is not supported in the simulator");
 #else
 			TestRuntime.AssertXcodeVersion (9, 0);
+			TestRuntime.AssertNotVirtualMachine ();
 #endif
 
 			device = MTLDevice.SystemDefault;
 			// some older hardware won't have a default
-			if (device == null || !MPSKernel.Supports (device))
+			if (device is null || !MPSKernel.Supports (device))
 				Assert.Inconclusive ("Metal is not supported");
 		}
 
@@ -46,25 +38,23 @@ namespace MonoTouchFixtures.MetalPerformanceShaders
 				var rv = obj.HistogramInfo;
 				Asserts.AreEqual (info, rv, "HistogramForAlpha");
 
-				Assert.IsTrue (obj.ZeroHistogram, "ZeroHistogram");
+				Assert.That (obj.ZeroHistogram, Is.True, "ZeroHistogram");
 				if (TestRuntime.CheckXcodeVersion (8, 0)) {
 					// HistogramSizeForSourceFormat was introduced in iOS 9, but no matter which MTLPixelFormat value I pass in,
 					// the native histogramSizeForSourceFormat: function rudely aborts the entire process with an abrupt:
 					// > /BuildRoot/Library/Caches/com.apple.xbs/Sources/MetalImage/MetalImage-39.3/MetalImage/Filters/MIHistogram.mm:103: failed assertion `[MPSImageHistogram histogramSizeForSourceFormat:] unsupported texture format: 114'
 					// I made sure the MTLPixelFormat values I tested with were also added in iOS 9, so that's not the problem.
 					// Conclusion: just avoid executing HistogramSizeForSourceFormat on anything below iOS 10.rm 
-					Assert.AreEqual (3072, obj.GetHistogramSize (MTLPixelFormat.RGBA16Sint), "HistogramSizeForSourceFormat");
+					Assert.That (obj.GetHistogramSize (MTLPixelFormat.RGBA16Sint), Is.EqualTo ((nuint) 3072), "HistogramSizeForSourceFormat");
 				}
 				var crs = obj.ClipRectSource;
-				Assert.AreEqual (0, crs.Origin.X, "ClipRectSource.Origin.X");
-				Assert.AreEqual (0, crs.Origin.Y, "ClipRectSource.Origin.Y");
-				Assert.AreEqual (0, crs.Origin.Z, "ClipRectSource.Origin.Z");
-				Assert.AreEqual (-1, crs.Size.Depth, "ClipRectSource.Size.Depth");
-				Assert.AreEqual (-1, crs.Size.Height, "ClipRectSource.Size.Height");
-				Assert.AreEqual (-1, crs.Size.Width, "ClipRectSource.Size.Width");
+				Assert.That (crs.Origin.X, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.X");
+				Assert.That (crs.Origin.Y, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.Y");
+				Assert.That (crs.Origin.Z, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.Z");
+				Assert.That (crs.Size.Depth, Is.EqualTo ((nint) (-1)), "ClipRectSource.Size.Depth");
+				Assert.That (crs.Size.Height, Is.EqualTo ((nint) (-1)), "ClipRectSource.Size.Height");
+				Assert.That (crs.Size.Width, Is.EqualTo ((nint) (-1)), "ClipRectSource.Size.Width");
 			}
 		}
 	}
 }
-
-#endif // !__WATCHOS__

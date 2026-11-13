@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NSIndexPath
 //
 // Authors:
@@ -7,36 +7,19 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class IndexPathTest {
 		[Test]
 		public void FromIndex ()
 		{
 			using (var ip = NSIndexPath.FromIndex (314159)) {
-				Assert.AreEqual ((nuint)1, ip.Length, "Length");
+				Assert.That (ip.Length, Is.EqualTo ((nint) 1), "Length");
 				var rv = ip.GetIndexes ();
-				Assert.AreEqual (1, rv.Length, "GetIndexes ().Length");
-				Assert.AreEqual (314159, rv [0], "GetIndexes ()[0]");
+				Assert.That (rv.Length, Is.EqualTo (1), "GetIndexes ().Length");
+				Assert.That (rv [0], Is.EqualTo ((nuint) 314159), "GetIndexes ()[0]");
 			}
 		}
 
@@ -45,10 +28,10 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var ip1 = new NSIndexPath ()) {
 				using (var ip2 = ip1.IndexPathByAddingIndex (3141592)) {
-					Assert.AreEqual ((nuint)1, ip2.Length, "Length");
+					Assert.That (ip2.Length, Is.EqualTo ((nint) 1), "Length");
 					var rv = ip2.GetIndexes ();
-					Assert.AreEqual (1, rv.Length, "GetIndexes ().Length");
-					Assert.AreEqual (3141592, rv [0], "GetIndexes ()[0]");
+					Assert.That (rv.Length, Is.EqualTo (1), "GetIndexes ().Length");
+					Assert.That (rv [0], Is.EqualTo ((nuint) 3141592), "GetIndexes ()[0]");
 				}
 			}
 		}
@@ -58,9 +41,9 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var ip1 = NSIndexPath.FromIndex (3)) {
 				using (var ip2 = ip1.IndexPathByRemovingLastIndex ()) {
-					Assert.AreEqual ((nuint)0, ip2.Length, "Length");
+					Assert.That (ip2.Length, Is.EqualTo ((nint) 0), "Length");
 					var rv = ip2.GetIndexes ();
-					Assert.AreEqual (0, rv.Length, "GetIndexes ().Length");
+					Assert.That (rv.Length, Is.EqualTo (0), "GetIndexes ().Length");
 				}
 			}
 		}
@@ -69,10 +52,10 @@ namespace MonoTouchFixtures.Foundation {
 		public void IndexAtPositionTest ()
 		{
 			using (var ip = NSIndexPath.Create (3, 14, 15)) {
-				Assert.AreEqual ((nuint) 3, ip.Length, "Length");
-				Assert.AreEqual ((nuint)3, ip.IndexAtPosition (0), "[0]");
-				Assert.AreEqual ((nuint)14, ip.IndexAtPosition (1), "[0]");
-				Assert.AreEqual ((nuint)15, ip.IndexAtPosition (2), "[0]");
+				Assert.That (ip.Length, Is.EqualTo ((nint) 3), "Length");
+				Assert.That (ip.IndexAtPosition (0), Is.EqualTo ((nuint) 3), "[0]");
+				Assert.That (ip.IndexAtPosition (1), Is.EqualTo ((nuint) 14), "[0]");
+				Assert.That (ip.IndexAtPosition (2), Is.EqualTo ((nuint) 15), "[0]");
 			}
 		}
 
@@ -82,12 +65,12 @@ namespace MonoTouchFixtures.Foundation {
 			using (var ip1 = NSIndexPath.Create (3, 14, 15)) {
 				using (var ip2 = NSIndexPath.Create (3, 14, 15)) {
 					using (var ip3 = NSIndexPath.Create (3, 14)) {
-						Assert.AreEqual (0, ip1.Compare (ip2), "ip1.Compare (ip2)");
-						Assert.True (ip1.Equals (ip2), "ip1.Equals (ip2)");
+						Assert.That (ip1.Compare (ip2), Is.EqualTo ((nint) 0), "ip1.Compare (ip2)");
+						Assert.That (ip1.Equals (ip2), Is.True, "ip1.Equals (ip2)");
 						// "Two objects that are equal return hash codes that are equal."
 						Assert.That (ip1.GetHashCode (), Is.EqualTo (ip2.GetHashCode ()), "GetHashCode");
-						Assert.AreNotEqual (0, ip1.Compare (ip3), "ip1.Compare (ip3)");
-						Assert.False (ip1.Equals (ip3), "ip1.Equals (ip3)");
+						Assert.That (ip1.Compare (ip3), Is.Not.EqualTo ((nint) 0), "ip1.Compare (ip3)");
+						Assert.That (ip1.Equals (ip3), Is.False, "ip1.Equals (ip3)");
 					}
 				}
 			}
@@ -96,27 +79,27 @@ namespace MonoTouchFixtures.Foundation {
 		[Test]
 		public void CreateTest ()
 		{
-			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((int[])null), "ANE 1");
-			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((uint[])null), "ANE 2");
-			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((nint[])null), "ANE 3");
-			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((nuint[])null), "ANE 4");
+			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((int []) null), "ANE 1");
+			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((uint []) null), "ANE 2");
+			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((nint []) null), "ANE 3");
+			Assert.Throws<ArgumentNullException> (() => NSIndexPath.Create ((nuint []) null), "ANE 4");
 
 			using (var ip = NSIndexPath.Create (1, 2, 3, 4)) {
-				Assert.AreEqual ((nuint)4, ip.Length, "Length");
+				Assert.That (ip.Length, Is.EqualTo ((nint) 4), "Length");
 				var rv = ip.GetIndexes ();
-				Assert.AreEqual ((nuint) 4, rv.Length, "GetIndexes ().Length");
-				Assert.AreEqual ((nuint) 1, rv [0], "GetIndexes ()[0]");
-				Assert.AreEqual ((nuint) 2, rv [1], "GetIndexes ()[1]");
-				Assert.AreEqual ((nuint) 3, rv [2], "GetIndexes ()[2]");
-				Assert.AreEqual ((nuint) 4, rv [3], "GetIndexes ()[3]");
+				Assert.That (rv.Length, Is.EqualTo (4), "GetIndexes ().Length");
+				Assert.That (rv [0], Is.EqualTo ((nuint) 1), "GetIndexes ()[0]");
+				Assert.That (rv [1], Is.EqualTo ((nuint) 2), "GetIndexes ()[1]");
+				Assert.That (rv [2], Is.EqualTo ((nuint) 3), "GetIndexes ()[2]");
+				Assert.That (rv [3], Is.EqualTo ((nuint) 4), "GetIndexes ()[3]");
 			}
 
 			using (var ip = NSIndexPath.Create ((uint) 1, (uint) 2)) {
-				Assert.AreEqual ((nuint) 2, ip.Length, "Length");
+				Assert.That (ip.Length, Is.EqualTo ((nint) 2), "Length");
 				var rv = ip.GetIndexes ();
-				Assert.AreEqual ((nuint) 2, rv.Length, "GetIndexes ().Length");
-				Assert.AreEqual ((nuint) 1, rv [0], "GetIndexes ()[0]");
-				Assert.AreEqual ((nuint) 2, rv [1], "GetIndexes ()[1]");
+				Assert.That (rv.Length, Is.EqualTo (2), "GetIndexes ().Length");
+				Assert.That (rv [0], Is.EqualTo ((nuint) 1), "GetIndexes ()[0]");
+				Assert.That (rv [1], Is.EqualTo ((nuint) 2), "GetIndexes ()[1]");
 			}
 		}
 	}

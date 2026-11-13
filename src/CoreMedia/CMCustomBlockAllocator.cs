@@ -1,4 +1,4 @@
-﻿// 
+// 
 // CMCustomBlockAllocator.cs: Custom allocator for CMBlockBuffer apis 
 //
 // Authors:
@@ -6,26 +6,36 @@
 // 
 // Copyright 2015 Xamarin Inc.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
-using ObjCRuntime;
 
 namespace CoreMedia {
 
+	/// <summary>Provides custom memory allocation for Core Media block buffers.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CMCustomBlockAllocator : IDisposable {
 
 		GCHandle gch;
 
+		/// <summary>Initializes a new instance of the <see cref="CMCustomBlockAllocator" /> class.</summary>
 		public CMCustomBlockAllocator ()
 		{
 			gch = GCHandle.Alloc (this);
 			// kCMBlockBufferCustomBlockSourceVersion = 0 <- this is the only and current value
 			Cblock.Version = 0;
-			Cblock.Allocate = static_AllocateCallback;
-			Cblock.Free = static_FreeCallback;
+			unsafe {
+				// Assign function pointers to temporary variable due to https://github.com/dotnet/runtime/issues/107396.
+				delegate* unmanaged<IntPtr, nuint, IntPtr> allocate = &AllocateCallback;
+				delegate* unmanaged<IntPtr, IntPtr, nuint, void> free = &FreeCallback;
+
+				Cblock.Allocate = allocate;
+				Cblock.Free = free;
+			}
 			Cblock.RefCon = GCHandle.ToIntPtr (gch);
 		}
 
@@ -33,39 +43,32 @@ namespace CoreMedia {
 		[StructLayout (LayoutKind.Sequential, Pack = 4)] // it's 28 bytes (not 32) on 64 bits iOS
 		internal struct CMBlockBufferCustomBlockSource {
 			public uint Version;
-			public CMAllocateCallback Allocate;
-			public CMFreeCallback Free;
+			public unsafe delegate* unmanaged<IntPtr, nuint, IntPtr> Allocate;
+			public unsafe delegate* unmanaged<IntPtr, IntPtr, nuint, void> Free;
 			public IntPtr RefCon;
 		}
 		internal CMBlockBufferCustomBlockSource Cblock;
 
-		internal delegate IntPtr CMAllocateCallback (/* void* */ IntPtr refCon, /* size_t */ nuint sizeInBytes);
-		internal delegate void CMFreeCallback (/* void* */ IntPtr refCon, /* void* */ IntPtr doomedMemoryBlock, /* size_t */ nuint sizeInBytes);
-
-		static CMAllocateCallback static_AllocateCallback = AllocateCallback;
-		static CMFreeCallback static_FreeCallback = FreeCallback;
-
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (CMAllocateCallback))]
-#endif
+		[UnmanagedCallersOnly]
 		static IntPtr AllocateCallback (IntPtr refCon, nuint sizeInBytes)
 		{
 			var gch = GCHandle.FromIntPtr (refCon);
-			return ((CMCustomBlockAllocator) gch.Target).Allocate (sizeInBytes);
+			if (gch.Target is CMCustomBlockAllocator target)
+				return target.Allocate (sizeInBytes);
+			return IntPtr.Zero;
 		}
 
-		public virtual IntPtr Allocate (nuint sizeInBytes) 
+		public virtual IntPtr Allocate (nuint sizeInBytes)
 		{
-			return Marshal.AllocHGlobal ((int)sizeInBytes);
+			return Marshal.AllocHGlobal ((int) sizeInBytes);
 		}
 
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (CMFreeCallback))]
-#endif
+		[UnmanagedCallersOnly]
 		static void FreeCallback (IntPtr refCon, IntPtr doomedMemoryBlock, nuint sizeInBytes)
 		{
 			var gch = GCHandle.FromIntPtr (refCon);
-			((CMCustomBlockAllocator) gch.Target).Free (doomedMemoryBlock, sizeInBytes);
+			if (gch.Target is CMCustomBlockAllocator allocator)
+				allocator.Free (doomedMemoryBlock, sizeInBytes);
 		}
 
 		public virtual void Free (IntPtr doomedMemoryBlock, nuint sizeInBytes)
@@ -78,16 +81,25 @@ namespace CoreMedia {
 			Dispose (false);
 		}
 
+		/// <summary>Releases the resources used by the CMCustomBlockAllocator object.</summary>
+		/// <remarks>
+		///   <para>The Dispose method releases the resources used by the CMCustomBlockAllocator class.</para>
+		///   <para>Calling the Dispose method when the application is finished using the CMCustomBlockAllocator ensures
+		///   that all external resources used by this managed object are released as soon as possible. Once developers
+		///   have invoked the Dispose method, the object is no longer useful and developers should no longer make any
+		///   calls to it.</para>
+		/// </remarks>
 		public void Dispose ()
 		{
 			Dispose (true);
 			GC.SuppressFinalize (this);
 		}
 
+		/// <include file="../../docs/api/CoreMedia/CMCustomBlockAllocator.xml" path="/Documentation/Docs[@DocId='M:CoreMedia.CMCustomBlockAllocator.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
 		{
 			if (gch.IsAllocated)
-				gch.Free();
+				gch.Free ();
 		}
 	}
 
@@ -113,4 +125,3 @@ namespace CoreMedia {
 		}
 	}
 }
-

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for AUAudioUnitFactory
 //
 // Authors:
@@ -7,13 +7,6 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && XAMCORE_2_0
-
-using System;
-
-using NUnit.Framework;
-
-using Foundation;
 using AudioUnit;
 
 namespace MonoTouchFixtures.AudioUnit {
@@ -29,9 +22,9 @@ namespace MonoTouchFixtures.AudioUnit {
 			var desc = new AudioComponentDescription {
 				ComponentType = AudioComponentType.Output,
 #if MONOMAC
-				ComponentSubType = (int)AudioUnitSubType.VoiceProcessingIO,
+				ComponentSubType = AudioUnitSubType.GenericOutput,
 #else
-				ComponentSubType = 0x72696f63, // Remote_IO
+				ComponentSubType = (AudioUnitSubType) AudioTypeOutput.Remote,
 #endif
 				ComponentManufacturer = AudioComponentManufacturerType.Apple
 			};
@@ -39,9 +32,8 @@ namespace MonoTouchFixtures.AudioUnit {
 			using (var auFactory = new CustomAudioUnitFactory ()) {
 				NSError error;
 				using (var audioUnit = auFactory.CreateAudioUnit (desc, out error)) {
-					Assert.True (audioUnit != null, "CustomAudioUnitFactory returned null object for valid component description");
-					Assert.True (audioUnit.ManufacturerName == expectedManufacturer,
-						$"CustomAudioUnitFactory returned audio unit with incorrect manufacturer. Expected - {expectedManufacturer}, actual - {audioUnit.ManufacturerName}");
+					Assert.That (audioUnit is not null, Is.True, "CustomAudioUnitFactory returned null object for valid component description");
+					Assert.That (audioUnit.ManufacturerName == expectedManufacturer, Is.True, $"CustomAudioUnitFactory returned audio unit with incorrect manufacturer. Expected - {expectedManufacturer}, actual - {audioUnit.ManufacturerName}");
 				}
 			}
 		}
@@ -60,5 +52,3 @@ namespace MonoTouchFixtures.AudioUnit {
 		}
 	}
 }
-
-#endif // !__WATCHOS__ && XAMCORE_2_0

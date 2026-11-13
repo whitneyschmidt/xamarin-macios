@@ -7,28 +7,10 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.UIKit {
 
@@ -39,38 +21,40 @@ namespace MonoTouchFixtures.UIKit {
 		[Test]
 		public void Defaults ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
 
 			using (var lm = new NSLayoutManager ()) {
-				Assert.False (lm.AllowsNonContiguousLayout, "AllowsNonContiguousLayout");
-				Assert.True (lm.ExtraLineFragmentRect.IsEmpty, "ExtraLineFragmentRect");
-				Assert.Null (lm.ExtraLineFragmentTextContainer, "ExtraLineFragmentTextContainer");
-				Assert.True (lm.ExtraLineFragmentUsedRect.IsEmpty, "ExtraLineFragmentUsedRect");
+				Assert.That (lm.AllowsNonContiguousLayout, Is.False, "AllowsNonContiguousLayout");
+				Assert.That (lm.ExtraLineFragmentRect.IsEmpty, Is.True, "ExtraLineFragmentRect");
+				Assert.That (lm.ExtraLineFragmentTextContainer, Is.Null, "ExtraLineFragmentTextContainer");
+				Assert.That (lm.ExtraLineFragmentUsedRect.IsEmpty, Is.True, "ExtraLineFragmentUsedRect");
 				Assert.That (lm.FirstUnlaidCharacterIndex, Is.EqualTo ((nuint) 0), "FirstUnlaidCharacterIndex");
 				Assert.That (lm.FirstUnlaidGlyphIndex, Is.EqualTo ((nuint) 0), "FirstUnlaidGlyphIndex");
-				Assert.False (lm.HasNonContiguousLayout, "HasNonContiguousLayout");
+				Assert.That (lm.HasNonContiguousLayout, Is.False, "HasNonContiguousLayout");
+#if !__MACCATALYST__
 				Assert.That (lm.HyphenationFactor, Is.EqualTo ((nfloat) 0), "HyphenationFactor");
+#endif
 				Assert.That (lm.NumberOfGlyphs, Is.EqualTo ((nuint) 0), "NumberOfGlyphs");
-				Assert.False (lm.ShowsControlCharacters, "ShowsControlCharacters");
-				Assert.False (lm.ShowsInvisibleCharacters, "ShowsInvisibleCharacters");
-				Assert.Null (lm.TextStorage, "TextStorage");
-				Assert.True (lm.UsesFontLeading, "UsesFontLeading");
+				Assert.That (lm.ShowsControlCharacters, Is.False, "ShowsControlCharacters");
+				Assert.That (lm.ShowsInvisibleCharacters, Is.False, "ShowsInvisibleCharacters");
+				Assert.That (lm.TextStorage, Is.Null, "TextStorage");
+				Assert.That (lm.UsesFontLeading, Is.True, "UsesFontLeading");
 				if (TestRuntime.CheckXcodeVersion (10, 0))
-					Assert.False (lm.LimitsLayoutForSuspiciousContents, "LimitsLayoutForSuspiciousContents");
+					Assert.That (lm.LimitsLayoutForSuspiciousContents, Is.False, "LimitsLayoutForSuspiciousContents");
 			}
 		}
 
 		[Test]
 		public void GetGlyphsTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
 
 			using (var txt = new NSTextStorage ()) {
 				var str = "hello world\n\t";
 				txt.SetString (new NSAttributedString (str));
 				using (var lm = new NSLayoutManager ()) {
 					lm.TextStorage = txt;
-					var glyphs = new short[str.Length];
+					var glyphs = new short [str.Length];
 					var props = new NSGlyphProperty [glyphs.Length];
 					var charIndexBuffer = new nuint [glyphs.Length];
 					var bidiLevelBuffer = new byte [glyphs.Length];
@@ -101,7 +85,7 @@ namespace MonoTouchFixtures.UIKit {
 				txt.SetString (new NSAttributedString (str));
 				using (var lm = new NSLayoutManager ()) {
 					lm.TextStorage = txt;
-					var glyphs = new short[str.Length];
+					var glyphs = new short [str.Length];
 					var charIndexBuffer = new nuint [glyphs.Length];
 					var bidiLevelBuffer = new byte [glyphs.Length];
 					lm.GetGlyphs (new NSRange (0, str.Length), glyphs, null, charIndexBuffer, bidiLevelBuffer);
@@ -115,4 +99,4 @@ namespace MonoTouchFixtures.UIKit {
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

@@ -11,34 +11,44 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
 namespace Security {
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class SecTrust2 : NativeObject {
-		internal SecTrust2 (IntPtr handle) : base (handle, false) {}
-		public SecTrust2 (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal SecTrust2 (NativeHandle handle, bool owns) : base (handle, owns) { }
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_trust_create (IntPtr sectrustHandle);
 
+		/// <param name="trust">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public SecTrust2 (SecTrust trust)
 		{
-			if (trust == null)
-				throw new ArgumentNullException (nameof (trust));
+			if (trust is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (trust));
 
-			Handle = sec_trust_create (trust.Handle);
+			InitializeHandle (sec_trust_create (trust.Handle));
+			GC.KeepAlive (trust);
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_trust_copy_ref (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public SecTrust Trust => new SecTrust (sec_trust_copy_ref (GetCheckedHandle ()), owns: true);
 	}
 }

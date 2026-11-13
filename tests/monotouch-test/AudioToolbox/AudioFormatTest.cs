@@ -7,29 +7,13 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using System.IO;
-#if XAMCORE_2_0
-using Foundation;
 using AudioToolbox;
-using CoreFoundation;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaPlayer;
-using MonoTouch.AudioToolbox;
-using MonoTouch.CoreFoundation;
-#endif
-using NUnit.Framework;
-using System.Threading;
 
 namespace MonoTouchFixtures.AudioToolbox {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class AudioFormatTest
-	{
+	public class AudioFormatTest {
 		[Test]
 		public void GetFirstPlayableFormat ()
 		{
@@ -37,10 +21,8 @@ namespace MonoTouchFixtures.AudioToolbox {
 			AudioStreamBasicDescription.GetFormatInfo (ref asbd);
 
 			var ofl = asbd.GetOutputFormatList ();
-			
-			Assert.IsNotNull (AudioFormat.GetFirstPlayableFormat (ofl));
+
+			Assert.That (AudioFormat.GetFirstPlayableFormat (ofl), Is.Not.Null);
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -1,18 +1,25 @@
 // Compatibility stubs
 
-#if !XAMCORE_4_0 && IOS
+using System.ComponentModel;
 
-using System;
+#nullable enable
 
 namespace CoreSpotlight {
 
-	partial class CSCustomAttributeKey {
+#if !TV
+	public partial class CSSearchQueryContext {
 
-		[Obsolete ("Use .ctor(string)")]
-		public CSCustomAttributeKey () : this (String.Empty)
-		{
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("This property was removed. The getter always returns null and the setter throws and InvalidOperationException.")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("macos")]
+		public virtual string []? ProtectionClasses {
+			get => null;
+			set => throw new InvalidOperationException (Constants.ApiRemovedGeneral);
 		}
 	}
+#endif
 }
 
-#endif

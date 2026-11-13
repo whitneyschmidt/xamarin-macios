@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKStateMachine
 //
 // Authors:
@@ -8,21 +8,7 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using OpenTK;
-
-#if XAMCORE_2_0
-using Foundation;
 using GameplayKit;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.GameplayKit;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.GameplayKit {
 
@@ -30,7 +16,7 @@ namespace MonoTouchFixtures.GameplayKit {
 	[Preserve (AllMembers = true)]
 	public class GKStateMachineTests {
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Setup ()
 		{
 			TestRuntime.AssertXcodeVersion (7, 0);
@@ -39,22 +25,22 @@ namespace MonoTouchFixtures.GameplayKit {
 		[Test]
 		public void StateMachineTests ()
 		{
-			var sm = new GKStateMachine (new GKState [] { 
-				new ChaseState (), 
+			var sm = new GKStateMachine (new GKState [] {
+				new ChaseState (),
 				new FleeState ()
 			});
 
-			Assert.Null (sm.CurrentState, "CurrentState");
+			Assert.That (sm.CurrentState, Is.Null, "CurrentState");
 
-			Assert.NotNull (sm, "StateMachine must not be null");
+			Assert.That (sm, Is.Not.Null, "StateMachine must not be null");
 			sm.EnterState (typeof (ChaseState));
 
-			var chaseState = sm.GetState (typeof(ChaseState));
-			Assert.NotNull (chaseState, "ChaseState must not be null");
-			Assert.AreSame (chaseState, sm.CurrentState, "Must be same state");
+			var chaseState = sm.GetState (typeof (ChaseState));
+			Assert.That (chaseState, Is.Not.Null, "ChaseState must not be null");
+			Assert.That (sm.CurrentState, Is.SameAs (chaseState), "Must be same state");
 
-			var canEnterState = sm.EnterState (typeof(UndefinedState));
-			Assert.IsFalse (canEnterState, "Should not be able to enter that state since we did not allow it");
+			var canEnterState = sm.EnterState (typeof (UndefinedState));
+			Assert.That (canEnterState, Is.False, "Should not be able to enter that state since we did not allow it");
 		}
 	}
 
@@ -69,5 +55,3 @@ namespace MonoTouchFixtures.GameplayKit {
 
 	class UndefinedState : GKState { }
 }
-
-#endif // __WATCHOS__

@@ -26,41 +26,61 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if MONOMAC
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
+#if MONOMAC
+
 using CoreFoundation;
 using CoreGraphics;
 
 namespace QuickLook {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
 	public static partial class QLThumbnailImage {
 
 		// QuickLook.framework/Versions/A/Headers/QLThumbnailImage.h
 		// note: documented as Thread-Safe
-		[DllImport(Constants.QuickLookLibrary)]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos15.0", "Use the QuickLookThumbnailing framework instead for creating thumbnails for files.")]
+		[DllImport (Constants.QuickLookLibrary)]
 		extern static /* CGImageRef */ IntPtr QLThumbnailImageCreate (/* CFAllocatorRef */ IntPtr allocator, /* CFUrlRef */ IntPtr url, CGSize maxThumbnailSize, /* CFDictionaryRef */ IntPtr options);
 
-		public static CGImage Create (NSUrl url, CGSize maxThumbnailSize, float scaleFactor = 1, bool iconMode = false)
+		/// <param name="url">To be added.</param>
+		///         <param name="maxThumbnailSize">To be added.</param>
+		///         <param name="scaleFactor">To be added.</param>
+		///         <param name="iconMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos15.0", "Use the QuickLookThumbnailing framework instead for creating thumbnails for files.")]
+		public static CGImage? Create (NSUrl url, CGSize maxThumbnailSize, float scaleFactor = 1, bool iconMode = false)
 		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
 
-			NSMutableDictionary dictionary = null;
+			NSMutableDictionary? dictionary = null;
 
 			if (scaleFactor != 1 && iconMode != false) {
 				dictionary = new NSMutableDictionary ();
-				dictionary.LowlevelSetObject ((NSNumber) scaleFactor, OptionScaleFactorKey.Handle);
-				dictionary.LowlevelSetObject (iconMode ? CFBoolean.TrueHandle : CFBoolean.FalseHandle, OptionIconModeKey.Handle);
+				var scaleFactorKey = OptionScaleFactorKey;
+				dictionary.LowlevelSetObject ((NSNumber) scaleFactor, scaleFactorKey);
+				var iconModeKey = OptionIconModeKey;
+				dictionary.LowlevelSetObject (iconMode ? CFBoolean.TrueHandle : CFBoolean.FalseHandle, iconModeKey);
 			}
-			
-			var handle = QLThumbnailImageCreate (IntPtr.Zero, url.Handle, maxThumbnailSize, dictionary == null ? IntPtr.Zero : dictionary.Handle);
+
+			var handle = QLThumbnailImageCreate (IntPtr.Zero, url.Handle, maxThumbnailSize, dictionary.GetHandle ());
+			GC.KeepAlive (url);
 			GC.KeepAlive (dictionary);
 			if (handle != IntPtr.Zero)
 				return new CGImage (handle, true);
-			
+
 			return null;
 		}
 	}

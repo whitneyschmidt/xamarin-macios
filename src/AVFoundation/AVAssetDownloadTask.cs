@@ -1,4 +1,4 @@
-﻿// 
+// 
 // AVAssetDownloadTask.cs: AVAssetDownloadTask class
 //
 // Authors:
@@ -7,27 +7,29 @@
 // Copyright 2015 Xamarin Inc.
 //
 
-using System;
-using Foundation;
+#nullable enable
 
 namespace AVFoundation {
-#if !MONOMAC && !WATCH && !TVOS
+#if !MONOMAC && !TVOS
 	public partial class AVAssetDownloadTask : NSUrlSessionTask {
 
 		// NSURLRequest and NSURLResponse objects are not available for AVAssetDownloadTask
-		public override NSUrlRequest OriginalRequest { 
+		/// <summary>Not supported. Always throws <see cref="NotSupportedException" />.</summary>
+		public override NSUrlRequest OriginalRequest {
 			get {
 				throw new NotSupportedException ("OriginalRequest not available for AVAssetDownloadTask");
 			}
 		}
 
-		public override NSUrlRequest CurrentRequest { 
+		/// <summary>Not supported. Always throws <see cref="NotSupportedException" />.</summary>
+		public override NSUrlRequest CurrentRequest {
 			get {
 				throw new NotSupportedException ("CurrentRequest not available for AVAssetDownloadTask");
 			}
 		}
 
-		public override NSUrlResponse Response { 
+		/// <summary>Not supported. Always throws <see cref="NotSupportedException" />.</summary>
+		public override NSUrlResponse Response {
 			get {
 				throw new NotSupportedException ("Response not available for AVAssetDownloadTask");
 			}
@@ -35,4 +37,3 @@ namespace AVFoundation {
 	}
 #endif
 }
-

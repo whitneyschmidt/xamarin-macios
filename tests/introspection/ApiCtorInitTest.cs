@@ -19,32 +19,21 @@
 // limitations under the License.
 //
 
-using System;
 using System.Reflection;
 using System.Linq;
 using System.Text;
 
-using NUnit.Framework;
-#if __IOS__
+#if HAS_ARKIT
 using ARKit;
 #endif
 
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 
 	public abstract class ApiCtorInitTest : ApiBaseTest {
 
-		string instance_type_name;
+		string? instance_type_name;
 
 		/// <summary>
 		/// Gets or sets a value indicating whether this test fixture will log untested types.
@@ -62,16 +51,6 @@ namespace Introspection {
 			if (type.ContainsGenericParameters)
 				return true;
 
-#if !XAMCORE_2_0
-			// skip delegate (and other protocol references)
-			foreach (object ca in type.GetCustomAttributes (false)) {
-				if (ca is ProtocolAttribute)
-					return true;
-				if (ca is ModelAttribute)
-					return true;
-			}
-#endif
-
 			switch (type.Name) {
 			case "JSExport":
 				// This is interesting: Apple defines a private JSExport class - if you try to define your own in an Objective-C project you get this warning at startup:
@@ -80,16 +59,18 @@ namespace Introspection {
 				// see that there's an existing JSExport type, and use that one instead of creating a new type.
 				// This is problematic, because Apple's JSExport is completely unusable, and will crash if you try to do anything.
 				return true;
-#if !XAMCORE_2_0
-			case "AVAssetResourceLoader": // We have DisableDefaultCtor in XAMCORE_2_0 but can't change in compat because of backwards compat
-			case "AVAssetResourceLoadingRequest":
-			case "AVAssetResourceLoadingContentInformationRequest":
-#endif
 			// on iOS 8.2 (beta 1) we get:  NSInvalidArgumentException Caller did not provide an activityType, and this process does not have a NSUserActivityTypes in its Info.plist.
 			// even if we specify an NSUserActivityTypes in the Info.plist - might be a bug or there's a new (undocumented) requirement
 			case "NSUserActivity":
 				return true;
 			case "NEPacketTunnelProvider":
+				return true;
+			// On iOS 14 (beta 4) we get: [NISimulator] To simulate Nearby Interaction distance and direction, launch two or more simulators and
+			// move the simulator windows around the screen.
+			// The same error occurs when trying to default init NISession in Xcode.
+			// It seems that it is only possible to create a NISession when there are two devices or sims running, which makes sense given the description of
+			// NISession from Apple API docs: "An object that identifies a unique connection between two peer devices"
+			case "NISession":
 				return true;
 			case "NSUnitDispersion": // -init should never be called on NSUnit!
 			case "NSUnitVolume": // -init should never be called on NSUnit!
@@ -130,9 +111,65 @@ namespace Introspection {
 				return true;
 			case "MPSImageArithmetic": // Cannot directly initialize MPSImageArithmetic. Use one of the sub-classes of MPSImageArithmetic.
 				return true;
-			case "QTMovie":
-				return TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 14, 4); // Broke in macOS 10.14.4.
+			case "CKModifyBadgeOperation":
+			case "CKDiscoverUserInfosOperation": // deprecated, throws exception
+			case "CKSubscription":
+			case "MPSCnnConvolutionState":
+				return true;
+			case "MPSGraphExecutableSerializationDescriptor":
+#if __MACCATALYST__
+				// failed assertion `Error: unhandled platform for MPSGraph serialization'
+				return true;
+#elif __IOS__
+				// crashes in the simulator
+				return TestRuntime.IsSimulator;
+#endif
+			case "AVSpeechSynthesisVoice": // Calling description crashes the test
+				return TestRuntime.CheckExactXcodeVersion (12, 2, beta: 3);
+			case "AVRouteDetector": // only seems to work on device.
+				return TestRuntime.IsSimulator;
+			case "SKView":
+				// Causes a crash later. Filed as radar://18440271.
+				// Apple said they won't fix this ('init' isn't a designated initializer)
+				return true;
+			case "HMMatterRequestHandler": // got removed and the current API throws an exception at run time.
+				return true;
+#if __MACCATALYST__
+			case "PKIdentityButton":
+				return true;
+#endif
+#if !XAMCORE_5_0
+			case "GKHybridStrategist":
+				return true; // GKHybridStrategist has been removed from our bindings
+#endif
+			case "THClient":
+				// The default initializer is documented to work, but it takes a long time before it eventually fails on macOS Sequoia
+				// Looking at the stack trace in Xcode, it seems it hits the network and times out waiting for something?
+				// So just skip the testing, it's likely the constructor is bound correctly, but that it only works in some circumstances.
+				return true;
+			case "ASAccountAuthenticationModificationController":
+				return true; // started failing in Xcode 16.3 beta 1 for unknown reasons (it works in an Xcode project).
+#if __TVOS__
+			case "CIPersonSegmentation": // removed in Xcode 26?
+			case "CISaliencyMapFilter": // removed in Xcode 26?
+				return TestRuntime.CheckXcodeVersion (26, 0);
+#endif
+			case "PhaseConeDirectivityModelParameters":
+				return !TestRuntime.IsSimulator; // fails on device
 			}
+
+			switch (type.Namespace) {
+			case "SensorKit": // SensorKit doesn't exist on iPads
+				if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+					return true;
+				break;
+			case "SafetyKit":
+				return true; // SafetyKit requires a custom entitlement, and will throw exceptions if it's not present.
+			}
+
+			// skip types that we renamed / rewrite since they won't behave correctly (by design)
+			if (SkipDueToRejectedTypes (type))
+				return true;
 
 			return SkipDueToAttribute (type);
 		}
@@ -153,18 +190,14 @@ namespace Introspection {
 		/// <param name="obj">NSObject instance to validate</param>
 		protected virtual void CheckToString (NSObject obj)
 		{
-			if (obj.ToString () == null)
+			if (obj.ToString () is null)
 				ReportError ("{0} : ToString", instance_type_name);
 		}
-		
+
 		bool GetIsDirectBinding (NSObject obj)
 		{
-#if XAMCORE_2_0
-			int flags = (byte) typeof (NSObject).GetField ("flags", BindingFlags.Instance | BindingFlags.GetField | BindingFlags.NonPublic).GetValue (obj);
+			var flags = TestRuntime.GetFlags (obj);
 			return (flags & 4) == 4;
-#else
-			return (bool) typeof (NSObject).GetField ("IsDirectBinding", BindingFlags.Instance | BindingFlags.GetField | BindingFlags.NonPublic).GetValue (obj);
-#endif
 		}
 
 		/// <summary>
@@ -175,9 +208,9 @@ namespace Introspection {
 		{
 			var attrib = obj.GetType ().GetCustomAttribute<RegisterAttribute> (false);
 			// only check types that we register - that way we avoid the 118 MonoTouch.CoreImagge.CI* "special" types
-			if (attrib == null)
+			if (attrib is null)
 				return;
-			var is_wrapper = attrib != null && attrib.IsWrapper;
+			var is_wrapper = attrib is not null && attrib.IsWrapper;
 			var is_direct_binding = GetIsDirectBinding (obj);
 			if (is_direct_binding != is_wrapper)
 				ReportError ("{0} : IsDirectBinding (expected {1}, got {2})", instance_type_name, is_wrapper, is_direct_binding);
@@ -228,12 +261,11 @@ namespace Introspection {
 		}
 
 		// if a .ctor is obsolete then it's because it was not usable (nor testable)
-		protected override bool SkipDueToAttribute (MemberInfo member)
+		protected override bool SkipDueToAttribute (MemberInfo? member)
 		{
-			if (member == null)
+			if (member is null)
 				return false;
-			var ca = member.GetCustomAttribute<ObsoleteAttribute> ();
-			return ca != null || base.SkipDueToAttribute (member);
+			return MemberHasObsolete (member) || base.SkipDueToAttribute (member);
 		}
 
 		[Test]
@@ -242,11 +274,11 @@ namespace Introspection {
 			Errors = 0;
 			ErrorData.Clear ();
 			int n = 0;
-			
+
 			foreach (Type t in Assembly.GetTypes ()) {
 				if (t.IsAbstract || !NSObjectType.IsAssignableFrom (t))
 					continue;
-				
+
 				if (Skip (t))
 					continue;
 
@@ -254,38 +286,40 @@ namespace Introspection {
 				if (SkipDueToAttribute (ctor))
 					continue;
 
-				if ((ctor == null) || ctor.IsAbstract) {
+				// Don't test methods that have [UnsupportedOSPlatform] + [EditorBrowsable (Never)]
+				if (SkipDueToInvisibleAndUnsupported (ctor))
+					continue;
+
+				if ((ctor is null) || ctor.IsAbstract) {
 					if (LogUntestedTypes)
 						Console.WriteLine ("[WARNING] {0} was skipped because it had no default constructor", t);
 					continue;
 				}
-				
+
 				instance_type_name = t.FullName;
 				if (LogProgress)
-						Console.WriteLine ("{0}. {1}", n, instance_type_name);
+					Console.WriteLine ("{0}. {1}", n, instance_type_name);
 
-				NSObject obj = null;
+				NSObject? obj = null;
 				try {
-					obj = ctor.Invoke (null) as NSObject;
+					obj = (NSObject) ctor.Invoke (null);
 					CheckHandle (obj);
 					CheckToString (obj);
 					CheckIsDirectBinding (obj);
 					CheckNSObjectProtocol (obj);
 					Dispose (obj, t);
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					// Objective-C exception thrown
 					if (!ContinueOnFailure)
 						throw;
 
-					TargetInvocationException tie = (e as TargetInvocationException);
-					if (tie != null)
-						e = tie.InnerException;
+					if (e is TargetInvocationException tie)
+						e = tie.InnerException!;
 					ReportError ("Default constructor not allowed for {0} : {1}", instance_type_name, e.Message);
 				}
 				n++;
 			}
-			Assert.AreEqual (0, Errors, "{0} potential errors found in {1} default ctor validated{2}", Errors, n, Errors == 0 ? string.Empty : ":\n" + ErrorData.ToString () + "\n");
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found in {n} default ctor validated:\n{ErrorData}\n");
 		}
 
 		// .NET constructors are not virtual, so we need to re-expose the base class .ctor when a subclass is created.
@@ -298,72 +332,82 @@ namespace Introspection {
 			int n = 0;
 
 			foreach (Type t in Assembly.GetTypes ()) {
+
+				if (SkipCheckShouldReExposeBaseCtor (t))
+					continue;
+
 				// we only care for NSObject subclasses that we expose publicly
 				if (!t.IsPublic || !NSObjectType.IsAssignableFrom (t))
 					continue;
 
+				// we only care about wrapper types (types with a native counterpart), and they all have a Register attribute.
+				var typeRegisterAttribute = t.GetCustomAttribute<RegisterAttribute> (false);
+				if (typeRegisterAttribute is null)
+					continue;
+
 				int designated = 0;
 				foreach (var ctor in t.GetConstructors ()) {
-					if (ctor.GetCustomAttribute<DesignatedInitializerAttribute> () == null)
+					if (ctor.GetCustomAttribute<DesignatedInitializerAttribute> () is null)
 						continue;
 					designated++;
 				}
 				// that does not mean that inlining is not required, i.e. it might be useful, even needed
 				// but it's not a showstopper for subclassing so we'll start with those cases
-				if (designated > 1)
+				if (designated > 0)
 					continue;
 
-				var base_class = t.BaseType;
+				var base_class = t.BaseType!;
 				// NSObject ctor requirements are handled by the generator
 				if (base_class == NSObjectType)
 					continue;
 				foreach (var ctor in base_class.GetConstructors ()) {
 					// if the base ctor is a designated (not a convenience) initializer then we should re-expose it
-					if (ctor.GetCustomAttribute<DesignatedInitializerAttribute> () == null)
+					if (ctor.GetCustomAttribute<DesignatedInitializerAttribute> () is null)
 						continue;
 
 					// check if this ctor (from base type) is exposed in the current (subclass) type
 					if (!Match (ctor, t))
-						ReportError ("{0} should re-expose {1}::{2}", t, base_class.Name, ctor.ToString ().Replace ("Void ", String.Empty));
+						ReportError ("{0} should re-expose {1}::{2}", t, base_class.Name, ctor.ToString ()?.Replace ("Void ", String.Empty));
 					n++;
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} potential errors found in {1} designated initializer validated", Errors, n);
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found in {n} designated initializer validated");
 		}
 
 		protected virtual bool Match (ConstructorInfo ctor, Type type)
 		{
-#if XAMCORE_2_0
-			string foundation_namespace = "Foundation";
-#elif MONOMAC
-			string foundation_namespace = "MonoMac.Foundation";
-#else
-			string foundation_namespace = "MonoTouch.Foundation";
-#endif
+			var cstr = ctor.ToString ();
+
 			switch (type.Name) {
+			case "ASDiscoveredDisplayItem":
+				switch (cstr) {
+				case "Void .ctor(System.String, UIKit.UIImage, AccessorySetupKit.ASDiscoveryDescriptor)": // NS_UNAVAILABLE
+					return true;
+				}
+				break;
 			case "MKTileOverlayRenderer":
 				// NSInvalidArgumentEception Expected a MKTileOverlay
 				// looks like Apple has not yet added a DI for this type, but it should be `initWithTileOverlay:`
-				if (ctor.ToString () == $"Void .ctor(MapKit.IMKOverlay)")
+				if (cstr == $"Void .ctor(MapKit.IMKOverlay)")
 					return true;
 				break;
 			case "MPSMatrixMultiplication":
-				// marked as NS_UNAVAILABLE - Use the above initialization method instead.
+			// marked as NS_UNAVAILABLE - Use the above initialization method instead.
 			case "MPSImageHistogram":
 				// Could not initialize an instance of the type 'MetalPerformanceShaders.MPSImageHistogram': the native 'initWithDevice:' method returned nil.
 				// make sense: there's a `initWithDevice:histogramInfo:` DI
-				if (ctor.ToString () == $"Void .ctor(Metal.IMTLDevice)")
+				if (cstr == $"Void .ctor(Metal.IMTLDevice)")
 					return true;
 				break;
 			case "NSDataDetector":
 				// -[NSDataDetector initWithPattern:options:error:]: Not valid for NSDataDetector
-				if (ctor.ToString () == $"Void .ctor({foundation_namespace}.NSString, {foundation_namespace}.NSRegularExpressionOptions, {foundation_namespace}.NSError ByRef)")
+				if (cstr == $"Void .ctor(Foundation.NSString, Foundation.NSRegularExpressionOptions, Foundation.NSError ByRef)")
 					return true;
 				break;
 			case "SKStoreProductViewController":
 			case "SKCloudServiceSetupViewController":
 				// SKStoreProductViewController and SKCloudServiceSetupViewController are OS View Controllers which can't be customized. Therefore they shouldn't re-expose initWithNibName:bundle:
-				if (ctor.ToString () == $"Void .ctor(System.String, {foundation_namespace}.NSBundle)")
+				if (cstr == $"Void .ctor(System.String, Foundation.NSBundle)")
 					return true;
 				break;
 			case "MKCompassButton":
@@ -377,6 +421,9 @@ namespace Introspection {
 				return true;
 			case "TVDigitEntryViewController":
 				// full screen, no customization w/NIB
+				return true;
+			case "TVDocumentViewController":
+				// as documented
 				return true;
 #endif
 			case "PdfAnnotationButtonWidget":
@@ -394,20 +441,16 @@ namespace Introspection {
 			case "PdfAnnotationTextWidget":
 				// This ctor was introduced in 10,13 but all of the above objects are deprecated in 10,12
 				// so it does not make much sense to expose this ctor in all the deprecated subclasses
-#if XAMCORE_2_0
-				if (ctor.ToString () == $"Void .ctor(CoreGraphics.CGRect, {foundation_namespace}.NSString, {foundation_namespace}.NSDictionary)")
-#else
-				if (ctor.ToString () == $"Void .ctor(System.Drawing.RectangleF, {foundation_namespace}.NSString, {foundation_namespace}.NSDictionary)")
-#endif
+				if (cstr == $"Void .ctor(CoreGraphics.CGRect, Foundation.NSString, Foundation.NSDictionary)")
 					return true;
 				break;
 			case "VNTargetedImageRequest": // Explicitly disabled
-				if (ctor.ToString () == $"Void .ctor(Vision.VNRequestCompletionHandler)")
+				if (cstr == $"Void .ctor(Vision.VNRequestCompletionHandler)")
 					return true;
 				break;
 			case "PKPaymentRequestShippingContactUpdate":
 				// a more precise designated initializer is provided
-				if (ctor.ToString () == $"Void .ctor(PassKit.PKPaymentSummaryItem[])")
+				if (cstr == $"Void .ctor(PassKit.PKPaymentSummaryItem[])")
 					return true;
 				break;
 			case "NSApplication": // Does not make sense, also it crashes
@@ -417,12 +460,12 @@ namespace Introspection {
 			case "NSCustomImageRep": // exception raised
 			case "NSEPSImageRep": // exception raised
 			case "NSPdfImageRep": // exception raised
-				if (ctor.ToString () == $"Void .ctor()")
+				if (cstr == $"Void .ctor()")
 					return true;
 				break;
 			case "AUPannerView": // Do not make sense without the AudioUnit
 			case "AUGenericView": // Do not make sense without the AudioUnit
-				if (ctor.ToString () == $"Void .ctor(CoreGraphics.CGRect)")
+				if (cstr == $"Void .ctor(CoreGraphics.CGRect)")
 					return true;
 				break;
 			case "MDLNoiseTexture":
@@ -434,10 +477,11 @@ namespace Introspection {
 				// they don't make sense without extra arguments
 				return true;
 			case "ASCredentialProviderViewController": // goal is to "provides a standard interface for creating a credential provider extension", not a custom one
+			case "ASAccountAuthenticationModificationViewController":
 			case "INUIAddVoiceShortcutViewController": // Doesn't make sense without INVoiceShortcut and there is no other way to set this unless you use the other only .ctor
 			case "INUIEditVoiceShortcutViewController": // Doesn't make sense without INVoiceShortcut and there is no other way to set this unless you use the other only .ctor
 			case "ILClassificationUIExtensionViewController": // Meant to be an extension
-				if (ctor.ToString () == $"Void .ctor(System.String, {foundation_namespace}.NSBundle)")
+				if (cstr == $"Void .ctor(System.String, Foundation.NSBundle)")
 					return true;
 				break;
 			case "MPSImageReduceUnary": // Not meant to be used, only subclasses
@@ -446,9 +490,87 @@ namespace Introspection {
 			case "MPSNNOptimizer": // Not meant to be used, only subclasses
 			case "MPSNNReduceBinary": // Not meant to be used, only subclasses
 			case "MPSNNReduceUnary": // Not meant to be used, only subclasses
-				var cstr = ctor.ToString ();
-				if (cstr == "Void .ctor(Metal.IMTLDevice)" || cstr == $"Void .ctor({foundation_namespace}.NSCoder, Metal.IMTLDevice)")
+			case "MPSMatrixRandom": // Not meant to be used, only subclasses
+				if (cstr == "Void .ctor(Metal.IMTLDevice)" || cstr == $"Void .ctor(Foundation.NSCoder, Metal.IMTLDevice)")
 					return true;
+				break;
+			case "MPSTemporaryNDArray": // NS_UNAVAILABLE
+				if (ctor.ToString () == $"Void .ctor(Metal.IMTLDevice, MetalPerformanceShaders.MPSNDArrayDescriptor)")
+					return true;
+				break;
+			case "MFComposeAssistantViewController":
+				// The inherited UIViewController initializer aborts, and the header does not designate initWithDelegate:.
+				if (cstr == $"Void .ctor(System.String, Foundation.NSBundle)")
+					return true;
+				break;
+			case "MFMailComposeViewController": // You are meant to use the system provided one
+			case "MFMessageComposeViewController": // You are meant to use the system provided one
+			case "GKFriendRequestComposeViewController": // You are meant to use the system provided one
+			case "GKGameCenterViewController": // You are meant to use the system provided one
+			case "GKMatchmakerViewController": // You are meant to use the system provided one
+			case "GKTurnBasedMatchmakerViewController": // You are meant to use the system provided one
+			case "UIImagePickerController": // You are meant to use the system provided one
+			case "UIVideoEditorController": // You are meant to use the system provided one
+			case "VNDocumentCameraViewController": // Explicitly disabled on the headers
+				if (cstr == $"Void .ctor(System.String, Foundation.NSBundle)")
+					return true;
+				if (cstr == $"Void .ctor(UIKit.UIViewController)")
+					return true;
+				break;
+			case "UICollectionViewCompositionalLayout":
+				// Explicitly disabled ctors - (instancetype)init NS_UNAVAILABLE;
+				return true;
+			case "NSPickerTouchBarItem": // You are meant to use the static factory methods
+				if (cstr == $"Void .ctor(System.String)")
+					return true;
+				break;
+			case "NSMenuToolbarItem": // No ctor specified
+				if (cstr == $"Void .ctor(System.String)")
+					return true;
+				break;
+			case "NSStepperTouchBarItem": // You are meant to use the static factory methods
+				if (cstr == $"Void .ctor(System.String)")
+					return true;
+				break;
+			case "NSSharingServicePickerToolbarItem": // This type doesn't have .ctors
+				if (cstr == $"Void .ctor(System.String)")
+					return true;
+				break;
+			case "UIRefreshControl": // init should be used instead.
+				if (cstr == $"Void .ctor(CoreGraphics.CGRect)")
+					return true;
+				break;
+			case "PKAddSecureElementPassViewController":
+				// no overview available yet... unlikely that it can be customized
+				if (cstr == "Void .ctor(System.String, Foundation.NSBundle)")
+					return true;
+				break;
+			case "PKPayLaterView":
+				// headers have: (instancetype)initWithFrame:(CGRect)frame NS_UNAVAILABLE;
+				if (cstr == "Void .ctor(CoreGraphics.CGRect)")
+					return true;
+				break;
+			case "VNDetectedPoint":
+				// This class is not meant to be instantiated
+				if (cstr == "Void .ctor(Double, Double)")
+					return true;
+				break;
+			case "VNStatefulRequest":
+				// This class uses another overload to get instantiated
+				if (cstr == "Void .ctor(Vision.VNRequestCompletionHandler)")
+					return true;
+				break;
+			case "AVSpeechSynthesisProviderAudioUnit":
+				if (cstr == "Void .ctor(AudioUnit.AudioComponentDescription, AudioUnit.AudioComponentInstantiationOptions, Foundation.NSError ByRef)") {
+					// This constructor is exposed using a factory method.
+					return true;
+				}
+				break;
+			case "AUHeadTrackingBinauralRenderer":
+				if (cstr == "Void .ctor(AudioUnit.AudioComponentDescription, AudioUnit.AudioComponentInstantiationOptions, Foundation.NSError ByRef)") {
+					// This constructor is exposed using a factory method.
+					return true;
+				}
 				break;
 			}
 
@@ -494,7 +616,7 @@ namespace Introspection {
 					continue;
 
 				// ignore CIFilter derived subclasses since they are specially generated
-				if (cifiltertype != null && t.IsSubclassOf (cifiltertype))
+				if (cifiltertype is not null && t.IsSubclassOf (cifiltertype))
 					continue;
 
 				if (SkipCheckShouldNotExposeDefaultCtor (t))
@@ -504,7 +626,7 @@ namespace Introspection {
 				if (SkipDueToAttribute (ctor))
 					continue;
 
-				if (ctor == null || ctor.IsAbstract) {
+				if (ctor is null || ctor.IsAbstract) {
 					if (LogUntestedTypes)
 						Console.WriteLine ("[WARNING] {0} was skipped because it had no default constructor", t);
 					continue;
@@ -513,22 +635,22 @@ namespace Introspection {
 				if (LogProgress)
 					Console.WriteLine ($"{n}: {t.FullName}");
 
-				var parentType = t.BaseType;
+				var parentType = t.BaseType!;
 				var parentCtor = parentType.GetConstructor (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
 
-				if (parentCtor == null) {
+				if (parentCtor is null) {
 					ReportError ($"Type '{t.FullName}' is a possible candidate for [DisableDefaultCtor] because its BaseType '{parentType.FullName}' does not have one.");
 
 					// Useful to test in Xcode
 					if (genObjCTestCode) {
 						var export = t.GetCustomAttribute<RegisterAttribute> ();
 						var typeName = export?.Name ?? t.Name;
-						objCCode.AppendLine ($"{typeName}* test{n} = [[{typeName} alloc] init];");
+						objCCode!.AppendLine ($"{typeName}* test{n} = [[{typeName} alloc] init];");
 					}
 				}
 				n++;
 			}
-			Assert.AreEqual (0, Errors, $"{Errors} potential errors found in {n} BaseType empty ctor validated: \n{ErrorData}\n{(genObjCTestCode ? $"\n\n{objCCode}\n" : string.Empty)}");
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found in {n} BaseType empty ctor validated: \n{ErrorData}\n{(genObjCTestCode ? $"\n\n{objCCode}\n" : string.Empty)}");
 		}
 
 		protected virtual bool SkipCheckShouldNotExposeDefaultCtor (Type type)
@@ -541,16 +663,15 @@ namespace Introspection {
 					return true;
 			}
 
-			// Add Skipped types here
-			//switch (type.Namespace) {
-			//case "":
-			//	return true;
-			//}
-
 			return SkipDueToAttribute (type);
 		}
 
-#if __IOS__
+		protected virtual bool SkipCheckShouldReExposeBaseCtor (Type type)
+		{
+			return SkipDueToAttribute (type);
+		}
+
+#if HAS_ARKIT
 		/// <summary>
 		/// Ensures that all subclasses of a base class that conforms to IARAnchorCopying re-expose its constructor.
 		/// Note: we cannot have constructors in protocols so we have to inline them in every subclass.
@@ -567,11 +688,11 @@ namespace Introspection {
 				if (!typeof (IARAnchorCopying).IsAssignableFrom (t))
 					continue;
 
-				if (t.GetConstructor (new Type [] { typeof (ARAnchor) }) == null)
+				if (t.GetConstructor (new Type [] { typeof (ARAnchor) }) is null)
 					ReportError ("{0} should re-expose IARAnchorCopying::.ctor(ARAnchor)", t);
 			}
 
-			Assert.AreEqual (0, Errors, "{0} potential errors found when validating if subclasses of 'ARAnchor' re-expose 'IARAnchorCopying' constructor", Errors);
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} potential errors found when validating if subclasses of 'ARAnchor' re-expose 'IARAnchorCopying' constructor");
 		}
 #endif
 	}

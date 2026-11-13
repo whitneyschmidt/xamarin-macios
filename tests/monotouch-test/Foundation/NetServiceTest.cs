@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NSNetService
 //
 // Authors:
@@ -7,21 +7,11 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
 
@@ -32,25 +22,23 @@ namespace MonoTouchFixtures.Foundation {
 		[Test]
 		public void DefaultCtor ()
 		{
-			using (var ns = new NSNetService ("d", 
-			                                  "_test._tcp",
+			using (var ns = new NSNetService ("d",
+											  "_test._tcp",
 #if MONOMAC
-			                                  "DeviceName",
+											  "DeviceName",
 #else
-			                                  UIDevice.CurrentDevice.Name,
+											  UIDevice.CurrentDevice.Name,
 #endif
-			                                  1234)) {
+											  1234)) {
 				Assert.That (ns.Domain, Is.EqualTo ("d"), "Domain");
 				Assert.That (ns.Type, Is.EqualTo ("_test._tcp"), "Type");
-				Assert.That (ns.Port, Is.EqualTo (1234), "Port");
+				Assert.That (ns.Port, Is.EqualTo ((nint) 1234), "Port");
 				NSInputStream input;
 				NSOutputStream output;
-				Assert.True (ns.GetStreams (out input, out output), "GetStreams");
-				Assert.NotNull (input, "input");
-				Assert.NotNull (output, "output");
+				Assert.That (ns.GetStreams (out input, out output), Is.True, "GetStreams");
+				Assert.That (input, Is.Not.Null, "input");
+				Assert.That (output, Is.Not.Null, "output");
 			}
 		}
 	}
 }
-
-#endif // !__WATCHOS__

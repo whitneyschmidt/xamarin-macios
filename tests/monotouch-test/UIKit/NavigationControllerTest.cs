@@ -7,25 +7,17 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
 using System.Reflection;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	class NavigationControllerPoker : UINavigationController {
 	}
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class NavigationControllerTest {
@@ -35,7 +27,7 @@ namespace MonoTouchFixtures.UIKit {
 			using (UIViewController vc = new UIViewController ())
 			using (var nc = new NavigationControllerPoker ()) {
 				Assert.That (nc.ViewControllers, Is.Empty, "Empty");
-				nc.SetViewControllers (new UIViewController[] { vc }, false);
+				nc.SetViewControllers (new UIViewController [] { vc }, false);
 				Assert.That (nc.ViewControllers, Is.Not.Empty, "!Empty");
 				nc.SetViewControllers (null, false);
 				Assert.That (nc.ViewControllers, Is.Empty, "null->Empty/SetMethod");
@@ -46,4 +38,4 @@ namespace MonoTouchFixtures.UIKit {
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

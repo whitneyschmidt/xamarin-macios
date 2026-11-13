@@ -7,14 +7,12 @@
  * Copyright 2014 Xamarin Inc
  * All Rights Reserved
  */
-using System;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
 
-namespace CoreFoundation
-{
+#nullable enable
+
+using System.Reflection;
+
+namespace CoreFoundation {
 
 #if false
 	[StructLayout(LayoutKind.Sequential)]
@@ -32,84 +30,62 @@ namespace CoreFoundation
 
 	delegate void CFMachPortCallBack (IntPtr cfMachPort, IntPtr msg, IntPtr size, IntPtr info);
 #endif
-	
-	public class CFMachPort : INativeObject, IDisposable 
-	{
+
+	/// <summary>Basic access to the underlying operating system Mach Port and integration with run loops.</summary>
+	///     <remarks>
+	///       <para>
+	/// 	The main use is to integrate Mach Ports into a <see cref="CoreFoundation.CFRunLoop" />.  Use the <see cref="CoreFoundation.CFMachPort.CreateRunLoopSource" />
+	/// 	to create a <see cref="CoreFoundation.CFRunLoopSource" /> that can
+	/// 	then be added into the <see cref="CoreFoundation.CFRunLoop" />.
+	///       </para>
+	///     </remarks>
+	public class CFMachPort : NativeObject {
 		delegate void CFMachPortCallBack (IntPtr cfmachport, IntPtr msg, nint len, IntPtr context);
-			
-		internal IntPtr handle;
 
-		public CFMachPort (IntPtr handle) : this (handle, false)
+		[Preserve (Conditional = true)]
+		internal CFMachPort (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-		}
-
-		public CFMachPort (IntPtr handle, bool ownsHandle)
-		{
-			if (!ownsHandle)
-				CFObject.CFRetain (handle);
-			this.handle = handle;
-		}
-
-		~CFMachPort ()
-		{
-			Dispose (false);
-		}
-
-		public IntPtr Handle {
-			get {
-				return handle;
-			}
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero) {
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
 		extern static IntPtr CFMachPortGetPort (IntPtr handle);
 
+		/// <summary>Gets the pointer to the wrapped Mach port instance.</summary>
 		public IntPtr MachPort {
 			get {
-				return CFMachPortGetPort (handle);
+				return CFMachPortGetPort (Handle);
 			}
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
 		extern static void CFMachPortInvalidate (IntPtr handle);
 
+		/// <summary>Stops the Mach port from sending or receiving messages, but does not destroy it.</summary>
 		public void Invalidate ()
 		{
-			CFMachPortInvalidate (handle);
+			CFMachPortInvalidate (Handle);
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		extern static bool CFMachPortIsValid (IntPtr handle);
-		public bool IsValid { 
+		extern static byte CFMachPortIsValid (IntPtr handle);
+		/// <summary>Gets a value that tells whether the port can send and receive messages.</summary>
+		public bool IsValid {
 			get {
-				return CFMachPortIsValid (handle);
+				return CFMachPortIsValid (Handle) != 0;
 			}
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
 		extern static IntPtr CFMachPortCreateRunLoopSource (IntPtr allocator, IntPtr port, IntPtr order);
 
+		/// <summary>Creates the run loop source for the Mach port.</summary>
 		public CFRunLoopSource CreateRunLoopSource ()
 		{
 			// order is currently ignored, we must pass 0
-			var source = CFMachPortCreateRunLoopSource (IntPtr.Zero, handle, IntPtr.Zero);
+			var source = CFMachPortCreateRunLoopSource (IntPtr.Zero, Handle, IntPtr.Zero);
 			return new CFRunLoopSource (source, true);
 		}
 
 	}
 }
-

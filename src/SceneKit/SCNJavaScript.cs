@@ -7,31 +7,30 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if (XAMCORE_2_0 || !MONOMAC) && !WATCH
-
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
 using JavaScriptCore;
 
-namespace SceneKit
-{
-	[Mac (10, 10)]
-	[iOS (8, 0)]
-	public static class SCNJavaScript
-	{
+#nullable enable
+
+namespace SceneKit {
+	/// <summary>Static class that contains a method to export JavaScript modules.</summary>
+	/// <!-- TODO: Probably https://developer.apple.com/library/prerelease/mac/documentation/SceneKit/Reference/SCNAction_Class/index.html#//apple_ref/occ/clm/SCNAction/javaScriptActionWithScript:duration: -->
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
+	public static class SCNJavaScript {
 		[DllImport (Constants.SceneKitLibrary)]
 		static extern void SCNExportJavaScriptModule (IntPtr context);
 
+		/// <summary>Exports SceneKit classes into the specified JavaScript context.</summary>
+		/// <param name="context">The JavaScript context to export SceneKit classes into.</param>
 		public static void ExportModule (JSContext context)
 		{
-			if (context == null)
-				throw new ArgumentNullException ("context");
+			if (context is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (context));
 
 			SCNExportJavaScriptModule (context.Handle);
+			GC.KeepAlive (context);
 		}
 	}
 }
-
-#endif

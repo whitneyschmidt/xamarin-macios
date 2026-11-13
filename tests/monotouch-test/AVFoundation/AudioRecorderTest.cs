@@ -1,27 +1,18 @@
-﻿// Unit test for AVAudioRecorder
+// Unit test for AVAudioRecorder
 // Authors: 
 // 		Paola Villarreal (paola.villarreal@xamarin.com)
 // Copyright 2014 Xamarin Inc. All rights reserved.
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using AudioToolbox;
 using AVFoundation;
-#else
-using MonoTouch.AVFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.AudioToolbox;
-#endif
-using NUnit.Framework;
 namespace MonoTouchFixtures.AVFoundation {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class AudioRecorderTest {
-		NSObject[] Values = new NSObject[]
+		NSObject [] Values = new NSObject []
 		{
 			NSNumber.FromFloat ((float)44100), //Sample Rate
 			NSNumber.FromInt32 ((int)AudioFormatType.AppleLossless), //AVFormat
@@ -29,7 +20,7 @@ namespace MonoTouchFixtures.AVFoundation {
 			NSNumber.FromInt32 ((int)AVAudioQuality.Min)
 		};
 
-		NSObject[] Keys = new NSObject[]
+		NSObject [] Keys = new NSObject []
 		{
 			AVAudioSettings.AVSampleRateKey,
 			AVAudioSettings.AVFormatIDKey,
@@ -41,13 +32,13 @@ namespace MonoTouchFixtures.AVFoundation {
 		{
 			TestRuntime.RequestMicrophonePermission ();
 
-			var url =  NSUrl.FromFilename ("/dev/null");
+			var url = NSUrl.FromFilename ("/dev/null");
 			NSError error;
 			var audioSettings = new AudioSettings (NSDictionary.FromObjectsAndKeys (Values, Keys));
 
 			using (var recorder = AVAudioRecorder.Create (url, audioSettings, out error)) {
-				Assert.NotNull (recorder);
-				Assert.Null (error);
+				Assert.That (recorder, Is.Not.Null);
+				Assert.That (error, Is.Null);
 			}
 		}
 		[Test]
@@ -55,16 +46,16 @@ namespace MonoTouchFixtures.AVFoundation {
 		{
 			TestRuntime.RequestMicrophonePermission ();
 
-			var url =  NSUrl.FromFilename ("/dev/fake.wav");
+			var url = NSUrl.FromFilename ("/dev/fake.wav");
 			NSError error;
 			var audioSettings = new AudioSettings (NSDictionary.FromObjectsAndKeys (Values, Keys));
 			using (var recorder = AVAudioRecorder.Create (url, audioSettings, out error)) {
-				Assert.Null (recorder);
-				Assert.NotNull (error);
+				Assert.That (recorder, Is.Null);
+				Assert.That (error, Is.Not.Null);
 			}
 		}
 
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

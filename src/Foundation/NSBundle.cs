@@ -1,37 +1,39 @@
-using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Collections;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
+#nullable enable
 
 namespace Foundation {
 	public partial class NSBundle : NSObject {
-
-#if !XAMCORE_4_0
-		[Obsolete ("Use 'GetLocalizedString' instead.")]
-		public virtual string LocalizedString (string key, string value, string table)
+		/// <summary>Gets the localized string identified by the specified key and table.</summary>
+		/// <param name="key">The key for the localized string.</param>
+		/// <param name="value">The value to return if no localized string exists for <paramref name="key" />.</param>
+		/// <param name="table">The table in which to look up <paramref name="key" />.</param>
+		/// <returns>The localized string, or <paramref name="value" /> if no localized string is found.</returns>
+		public NSString GetLocalizedString (string key, string? value = null, string? table = null)
 		{
-			return (string) GetLocalizedString ((NSString) key, (NSString) value, (NSString) table);
+			return GetLocalizedString ((NSString) key, (NSString?) value, (NSString?) table);
 		}
 
-		[Obsolete ("Use 'GetLocalizedString' instead.")]
-		public string LocalizedString (string key, string comment) {
-			return LocalizedString (key, "", "");
-		}
-
-		[Obsolete ("Use 'GetLocalizedString' instead.")]
-		public string LocalizedString (string key, string val, string table, string comment) {
-			return LocalizedString (key, val, table);
-		}
-#endif
-		public NSString GetLocalizedString (string key, string value = null, string table = null)
+		/// <summary>Returns the paths for all bundle resources with the specified extension.</summary>
+		/// <param name="fileExtension">The file extension to filter resources by.</param>
+		/// <returns>An array of file paths for matching resources.</returns>
+		public string [] PathsForResources (string fileExtension)
 		{
-			return GetLocalizedString ((NSString) key, (NSString) value, (NSString) table);
-		}
-
-		public string [] PathsForResources (string fileExtension) {
 			return PathsForResources (fileExtension, null);
 		}
+
+#if !MONOMAC && !XAMCORE_5_0
+		/// <summary>Default constructor that initializes a new instance of this class with no parameters.</summary>
+		///         <remarks>
+		///         </remarks>
+		[Obsolete ("Do not use this constructor, it does not work as expected.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public NSBundle ()
+			: base (NSObjectFlag.Empty)
+		{
+		}
+#endif // !MONOMAC && !XAMCORE_5_0
 	}
 }

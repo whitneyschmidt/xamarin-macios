@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <PackageId>Microsoft.$(_PlatformName).Ref.$(PackageOSTargetVersion)</PackageId>
+    <Description>Microsoft $(_PlatformName) reference assemblies. Please do not reference directly.</Description>
+    <OverridePackageId>$(PackageId)</OverridePackageId>
+    <PlatformPackageType>TargetingPack</PlatformPackageType>
+    <UseTemplatedPlatformManifest>true</UseTemplatedPlatformManifest>
+  </PropertyGroup>
+  <Import Project="common.csproj" />
+</Project>

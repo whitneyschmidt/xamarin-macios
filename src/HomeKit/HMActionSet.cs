@@ -1,18 +1,18 @@
-using System;
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace HomeKit {
 
 	partial class HMActionSet {
-
-		[iOS (9,0)]
-		[TV (10,0)]
+		/// <summary>Gets the type of this action set.</summary>
+		/// <value>The <see cref="HMActionSetType" /> that this action set belongs to.</value>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		public HMActionSetType ActionSetType {
 			get {
 				var s = _ActionSetType;
 				// safety in case the field does not exists / cannot be loaded / new in future iOS versions...
-				if (s == null)
+				if (s is null)
 					return HMActionSetType.Unknown;
 				if (s == HMActionSetTypesInternal.WakeUp)
 					return HMActionSetType.WakeUp;

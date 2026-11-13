@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for ARFaceGeometry
 //
 // Authors:
@@ -7,18 +7,14 @@
 // Copyright 2017 Microsoft. All rights reserved.
 //
 
-#if XAMCORE_2_0 && __IOS__
+#if HAS_ARKIT
 
-using System;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ARKit;
-using Foundation;
-using NUnit.Framework;
-using ObjCRuntime;
+using Xamarin.Utils;
 
-using VectorFloat2 = global::OpenTK.Vector2;
-using VectorFloat3 = global::OpenTK.NVector3;
+using VectorFloat2 = global::System.Numerics.Vector2;
+using VectorFloat3 = global::CoreGraphics.NVector3;
 
 namespace MonoTouchFixtures.ARKit {
 
@@ -88,6 +84,8 @@ namespace MonoTouchFixtures.ARKit {
 		public void Setup ()
 		{
 			TestRuntime.AssertXcodeVersion (9, 0);
+			// The API here was introduced to Mac Catalyst later than for the other frameworks, so we have this additional check
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacCatalyst, 14, 0, throwIfOtherPlatform: false);
 		}
 
 		[Test]
@@ -95,8 +93,8 @@ namespace MonoTouchFixtures.ARKit {
 		{
 			var face = new ARFaceGeometryPoker ();
 			var vertices = face.GetVertices ();
-			Assert.AreEqual (new VectorFloat3 (1, 2, 3), vertices [0], "Vertex 1");
-			Assert.AreEqual (new VectorFloat3 (4, 5, 6), vertices [1], "Vertex 2");
+			Assert.That (vertices [0], Is.EqualTo (new VectorFloat3 (1, 2, 3)), "Vertex 1");
+			Assert.That (vertices [1], Is.EqualTo (new VectorFloat3 (4, 5, 6)), "Vertex 2");
 		}
 
 		[Test]
@@ -104,17 +102,17 @@ namespace MonoTouchFixtures.ARKit {
 		{
 			var face = new ARFaceGeometryPoker ();
 			var textureCoordinates = face.GetTextureCoordinates ();
-			Assert.AreEqual (new VectorFloat2 (1, 2), textureCoordinates [0], "Texture Coordinates 1");
-			Assert.AreEqual (new VectorFloat2 (3, 4), textureCoordinates [1], "Texture Coordinates 2");
+			Assert.That (textureCoordinates [0], Is.EqualTo (new VectorFloat2 (1, 2)), "Texture Coordinates 1");
+			Assert.That (textureCoordinates [1], Is.EqualTo (new VectorFloat2 (3, 4)), "Texture Coordinates 2");
 		}
 
 		[Test]
 		public void TriangleIndicesTest ()
 		{
 			var face = new ARFaceGeometryPoker ();
-			Assert.AreEqual (new short [] { 1, 2, 3, 4, 5, 6 }, face.GetTriangleIndices ());
+			Assert.That (face.GetTriangleIndices (), Is.EqualTo (new short [] { 1, 2, 3, 4, 5, 6 }));
 		}
 	}
 }
 
-#endif // XAMCORE_2_0 && __IOS__
+#endif // HAS_ARKIT

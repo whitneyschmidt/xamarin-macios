@@ -1,0 +1,383 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Xml;
+
+using NUnit.Framework;
+
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+
+using ObjCRuntime;
+
+using Xamarin.Tests;
+using Xamarin.Utils;
+
+#nullable enable
+
+namespace Cecil.Tests {
+	[TestFixture]
+	public partial class Documentation {
+		[Test]
+		public void VerifyNoUnresolvedCrefs ()
+		{
+			// We join all the APIs from all the platforms, so we can only run this test when all platforms are enabled.
+			Configuration.IgnoreIfAnyIgnoredPlatforms ();
+
+			var allFailures = new HashSet<string> ();
+			foreach (var info in Helper.NetPlatformAssemblyDefinitions) {
+				var xml = Path.ChangeExtension (info.Path, ".xml");
+				var reader = XmlReader.Create (xml);
+				string? currentType = null;
+				string? currentMember = null;
+				var failures = new HashSet<string> ();
+				while (reader.Read ()) {
+					if (reader.NodeType != XmlNodeType.Element)
+						continue;
+
+					switch (reader.Name) {
+					case "member":
+						currentMember = reader.GetAttribute ("name") ?? string.Empty;
+						break;
+					case "type":
+						currentMember = null;
+						currentType = reader.GetAttribute ("name") ?? string.Empty;
+						break;
+					case "cref":
+						failures.Add ($"{currentMember ?? currentType}: Found element 'cref', should be element 'see' with attribute 'cref' (i.e. instead of <cref ... /> do <see cref=... />).");
+						break;
+					case "see": {
+						var cref = reader.GetAttribute ("cref");
+						if (string.IsNullOrEmpty (cref)) {
+							if (!string.IsNullOrEmpty (reader.GetAttribute ("langword")))
+								continue; // '<see langword=... />' is allowed
+							if (!string.IsNullOrEmpty (reader.GetAttribute ("href")))
+								continue; // '<see href==... />' is allowed
+
+							failures.Add ($"{currentMember ?? currentType}: Found element 'see' element with no 'cref' nor 'langword' attribute.");
+							continue;
+						} else if (cref.Length < 2) {
+							failures.Add ($"{currentMember ?? currentType}: Found element 'see' with unexpectedly short 'name' attribute: '{cref}'.");
+							continue;
+						} else if (cref [1] != ':') {
+							failures.Add ($"{currentMember ?? currentType}: Found element 'see' with unexpected format for the 'cref' attribute (second character isn't ':'): '{cref}'.");
+							continue;
+						}
+						switch (cref [0]) {
+						case 'T': // type
+						case 'M': // method
+						case 'P': // property
+						case 'F': // field
+						case 'E': // event
+						case 'N': // namespace
+								  // Valid cref
+							break;
+						default:
+							failures.Add ($"{currentMember ?? currentType}: Invalid cref '{cref}'");
+							break;
+						}
+						continue;
+					}
+					}
+				}
+
+				allFailures.UnionWith (failures);
+			}
+			Helper.AssertFailures (allFailures, KnownCrefFailures, nameof (KnownCrefFailures), "Cref failures");
+		}
+
+		// Verify that all our publicly visible APIs are documented.
+		// This is obviously not true, so we have a rather huge list of known failures.
+		// However, this will prevent us from adding more undocumented APIs by accident.
+		[Test]
+		public void VerifyEveryVisibleMemberIsDocumented ()
+		{
+			// We join all the APIs from all the platforms, so we can only run this test when all platforms are enabled.
+			Configuration.IgnoreIfAnyIgnoredPlatforms ();
+
+			// Collect everything
+			var xmlMembers = new HashSet<AssemblyApi> ();
+			var dllMembers = new HashSet<AssemblyApi> ();
+			foreach (var info in Helper.NetPlatformAssemblyDefinitions) {
+				// Just pick one of the implementation assemblies.
+				// We can't just list all the members in the ref assembly, because it doesn't contain any private members, and some private members are documented.
+				var implementationAssembly = Helper.NetPlatformImplementationAssemblyDefinitions.Where (v => Path.GetFileName (v.Path) == Path.GetFileName (info.Path)).First ();
+
+				var xml = GetDocumentedMembers (Path.ChangeExtension (info.Path, ".xml"));
+				xmlMembers.UnionWith (xml);
+				var dll = GetAssemblyMembers (implementationAssembly.Assembly);
+				dllMembers.UnionWith (dll);
+			}
+
+			// Propagate publicness
+			foreach (var dll in dllMembers) {
+				if (xmlMembers.TryGetValue (dll, out var xml)) {
+					xml.PubliclyVisible = dll.PubliclyVisible;
+				}
+			}
+
+			var documentedButNotPresent = xmlMembers.Except (dllMembers).ToList ();
+			Assert.Multiple (() => {
+				if (documentedButNotPresent.Any ()) {
+					foreach (var dll in dllMembers)
+						Console.WriteLine (dll.DocId);
+				}
+				foreach (var doc in documentedButNotPresent)
+					Assert.Fail ($"{doc.DocId}: Documented API not found in the platform assembly. This probably indicates that the code to compute the doc name for a given member is incorrect.");
+			});
+
+			var shouldHaveBeenDocumented = dllMembers
+											.Except (xmlMembers)
+											.Where (v => v.PubliclyVisible == true && v.DocsRequired)
+											.Select (v => v.DocId)
+											.OrderBy (v => v)
+											.ToList ();
+			var knownfailuresFilename = $"Documentation.KnownFailures.txt";
+			var knownfailuresPath = Path.Combine (Configuration.SourceRoot, "tests", "cecil-tests", knownfailuresFilename);
+			var knownfailures = File.Exists (knownfailuresPath) ? File.ReadAllLines (knownfailuresPath) : Array.Empty<string> ();
+
+			var unknownFailures = shouldHaveBeenDocumented.Except (knownfailures).ToList ();
+			var fixedFailures = knownfailures.Except (shouldHaveBeenDocumented).ToList ();
+
+			if (unknownFailures.Any () || fixedFailures.Any ()) {
+				if (!string.IsNullOrEmpty (Environment.GetEnvironmentVariable ("WRITE_KNOWN_FAILURES"))) {
+					File.WriteAllLines (knownfailuresPath, shouldHaveBeenDocumented);
+					Assert.Fail ($"Found {unknownFailures.Count} undocumented APIs (not known failures) and {fixedFailures.Count} APIs that were marked as known failures but are now documented. The known failures have been updated, so please commit the results. Re-running the test should now succeed.");
+				} else {
+					if (unknownFailures.Any ()) {
+						Console.WriteLine ($"Undocumented APIs that aren't known failures (found {unknownFailures.Count}, showing at most 10):");
+						foreach (var failure in unknownFailures.Take (10))
+							Console.WriteLine ($"    {failure}");
+						if (unknownFailures.Count > 10)
+							Console.WriteLine ($"    ... and {unknownFailures.Count () - 10} more");
+					}
+					if (fixedFailures.Any ()) {
+						Console.WriteLine ($"Documented APIs that are known failures (found {fixedFailures.Count}, showing at most 10):");
+						foreach (var failure in fixedFailures.Take (10))
+							Console.WriteLine ($"    {failure}");
+						if (fixedFailures.Count > 10)
+							Console.WriteLine ($"    ... and {fixedFailures.Count () - 10} more");
+					}
+					Assert.Fail ($"Found {unknownFailures.Count} undocumented APIs (not known failures) and {fixedFailures.Count} APIs that were marked as known failures but are now documented. If this is expected, set the WRITE_KNOWN_FAILURES=1 environment variable, run the test again, and commit the modified known failures file.");
+				}
+			}
+		}
+
+		[Test]
+		public void NoRemarksOnEnumFields ()
+		{
+			var xmlEnumFieldsWithRemarks = new Dictionary<string, string> ();
+			foreach (var info in Helper.NetPlatformAssemblyDefinitions) {
+				// create a dictionary lookup of all types in the assembly
+				var allTypes = info.Assembly.EnumerateTypes ().ToDictionary (k => k.FullName.Replace ('/', '.'), v => v);
+				// load the xml documentation, filtering to fields with a <remarks> section
+				var xmlPath = Path.ChangeExtension (info.Path, ".xml");
+				var doc = new XmlDocument ();
+				doc.LoadWithoutNetworkAccess (xmlPath);
+				foreach (XmlNode node in doc.SelectNodes ("/doc/members/member[starts-with(@name,'F:') and ./remarks]")!) {
+					var name = node.Attributes! ["name"]!.Value;
+
+					// extract the type name from the member name, and use it to check if the field's type is an enum
+					var typename = name [2..name.LastIndexOf ('.')];
+					var type = allTypes [typename];
+					if (!type.IsEnum)
+						continue;
+
+					// the field has a <remarks> section, and it's an enum field - record it as a failure
+					var remarks = node.SelectSingleNode ("remarks")?.InnerText ?? "";
+					xmlEnumFieldsWithRemarks [name] = remarks;
+				}
+			}
+
+			Assert.That (xmlEnumFieldsWithRemarks, Is.Empty, "No enum fields with <remarks> documentation.");
+		}
+
+		static HashSet<AssemblyApi> GetDocumentedMembers (string xml)
+		{
+			var rv = new HashSet<AssemblyApi> ();
+			var doc = new XmlDocument ();
+			doc.LoadWithoutNetworkAccess (xml);
+			foreach (XmlNode node in doc.SelectNodes ("/doc/members/member")!) {
+				rv.Add (new AssemblyApi (node.Attributes! ["name"]!.Value!, null, false));
+			}
+			return rv;
+		}
+
+		class AssemblyApi {
+			public string DocId;
+			public bool? PubliclyVisible;
+			public bool DocsRequired;
+
+			public AssemblyApi (string docId, bool? visible, bool docsRequired)
+			{
+				DocId = docId;
+				PubliclyVisible = visible;
+				DocsRequired = docsRequired;
+			}
+
+			public override int GetHashCode ()
+			{
+				return DocId.GetHashCode ();
+			}
+
+			public override bool Equals (object? other)
+			{
+				return other is AssemblyApi aa && aa.DocId == DocId;
+			}
+		}
+
+		static HashSet<AssemblyApi> GetAssemblyMembers (AssemblyDefinition asm)
+		{
+			var rv = new HashSet<AssemblyApi> ();
+
+			foreach (var member in asm.EnumerateMembers ()) {
+				string name;
+
+				if (member is MethodDefinition md) {
+					// It's not possible to add xml documentation to members of delegates, so don't verify those
+					if (IsDelegateType (md.DeclaringType))
+						continue;
+					// It's not possible to add xml documentation to getters/setters (it's added to the property itself), so don't verify those.
+					if (md.IsPropertyAccessor ())
+						continue;
+					// It's not possible to add xml documentation to event add/remove accessors (it's added to the event itself), so don't verify those.
+					if (md.IsEventMethod ())
+						continue;
+					name = "M:" + GetDocId (md);
+				} else if (member is PropertyDefinition pd) {
+					name = "P:" + GetDocId (pd);
+				} else if (member is FieldDefinition fd) {
+					// It's not possible to add xml documentation to the 'value__' field for enums, so don't verify those
+					if (fd.Name == "value__" && fd.DeclaringType.BaseType.Is ("System", "Enum"))
+						continue;
+					name = "F:" + GetDocId (fd.DeclaringType) + "." + fd.Name;
+				} else if (member is EventDefinition ed) {
+					name = "E:" + GetDocId (ed);
+				} else if (member is TypeDefinition td) {
+					name = "T:" + GetDocId (td);
+				} else {
+					throw new NotImplementedException ($"Unknown member type: {member.GetType ()}");
+				}
+				var docsRequired = true;
+				if (member is ICustomAttributeProvider provider) {
+					if (provider.HasEditorBrowseableNeverAttribute () || provider.IsObsolete ())
+						docsRequired = false;
+				}
+				rv.Add (new AssemblyApi (name, member.IsPubliclyVisible (), docsRequired));
+			}
+
+			return rv;
+		}
+
+		static bool IsDelegateType (TypeDefinition? type)
+		{
+			while (type is not null) {
+				if (type.Is ("System", "Delegate"))
+					return true;
+
+				type = type.BaseType is not null ? type.BaseType.Resolve () : null;
+			}
+
+			return false;
+		}
+
+		// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/#id-strings
+		// See src/bgen/DocumentationManager.cs for an implementation that works with System.Reflection.
+		// There's already an implementation in Roslyn, but that's a rather heavy dependency,
+		// so we're implementing this in our own code instead.
+
+		static string EscapeName (string name)
+		{
+			return name.Replace ('.', '#').Replace ('<', '{').Replace ('>', '}');
+		}
+
+		static string GetDocId (MethodDefinition md)
+		{
+			var methodName = EscapeName (md.Name);
+			var name = GetDocId (md.DeclaringType) + "." + methodName;
+			if (md.HasGenericParameters)
+				name += $"``{md.GenericParameters.Count}";
+			if (md.HasParameters) {
+				name += "(" + string.Join (",", md.Parameters.Select (p => GetDocId (p.ParameterType))) + ")";
+			}
+
+			if (md.Name == "op_Explicit" || md.Name == "op_Implicit") {
+				name += "~" + GetDocId (md.ReturnType);
+			}
+
+			return name;
+		}
+
+		static string GetDocId (EventDefinition ed) => GetDocId (ed.DeclaringType) + "." + ed.Name;
+
+		static string GetDocId (PropertyDefinition pd)
+		{
+			var propertyName = EscapeName (pd.Name);
+			var name = GetDocId (pd.DeclaringType) + "." + propertyName;
+			if (pd.HasParameters) {
+				name += "(" + string.Join (",", pd.Parameters.Select (p => GetDocId (p.ParameterType))) + ")";
+			}
+			return name;
+		}
+
+		static string GetDocId (TypeReference tr)
+		{
+			// Roslyn currently renders function pointers as an empty type name in DocIds (e.g. "M:C.M(,System.Int32)").
+			// Ref: https://github.com/dotnet/roslyn/issues/48363
+			if (tr is FunctionPointerType)
+				return "";
+
+			string name = "";
+			if (tr.IsNested) {
+				var decl = tr.DeclaringType;
+				while (true) {
+					name = decl.Name + "." + name;
+					if (!decl.IsNested)
+						break;
+					decl = decl.DeclaringType;
+				}
+				name = decl.Namespace + "." + name;
+			} else {
+				name = tr.Namespace + ".";
+			}
+
+			if (tr is GenericInstanceType git) {
+				name += git.Name [0..(git.Name.IndexOf ('`'))];
+				name += "{" + string.Join (",", git.GenericArguments.Select (v => GetDocId (v))) + "}";
+			} else if (tr is TypeDefinition td && td.HasGenericParameters) {
+				name += tr.Name;
+			} else if (tr is ByReferenceType brt) {
+				name = GetDocId (brt.ElementType) + "@";
+			} else if (tr is GenericParameter gp) {
+				if (gp.DeclaringMethod is not null) {
+					name = $"``{gp.Position}";
+				} else {
+					name = $"`{gp.Position}";
+				}
+			} else if (tr is ArrayType at) {
+				name = GetDocId (at.ElementType);
+				if (at.Rank == 1) {
+					name += "[]";
+				} else {
+					name += "[";
+					for (var d = 0; d < at.Dimensions.Count; d++) {
+						if (d > 0)
+							name += ",";
+						var dim = at.Dimensions [d];
+						if (dim.LowerBound.HasValue)
+							name += dim.LowerBound.Value;
+						name += ":";
+						if (dim.UpperBound.HasValue)
+							name += dim.UpperBound.Value;
+					}
+					name += "]";
+				}
+			} else {
+				name += tr.Name;
+			}
+			return name;
+		}
+	}
+}

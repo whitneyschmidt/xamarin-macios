@@ -21,120 +21,130 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
+
+#if !__MACCATALYST__
+
+using System.ComponentModel;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace AppKit {
 	public partial class NSApplication : NSResponder {
-		public static bool CheckForIllegalCrossThreadCalls = true;
+		/// <summary>Controls whether calls to AppKit APIs are checked to ensure that they are made on the UI thread.</summary>
+		/// <remarks>
+		///   <para>Accessing AppKit APIs from a background thread can corrupt application state. These checks help identify such accesses.</para>
+		///   <para>The initial value is controlled by the <c>CheckForIllegalCrossThreadCalls</c> build property, which defaults to <see langword="true" /> in debug builds and <see langword="false" /> in release builds.</para>
+		/// </remarks>
+		public static bool CheckForIllegalCrossThreadCalls;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static bool CheckForEventAndDelegateMismatches = true;
-		public static bool IgnoreMissingAssembliesDuringRegistration = false;
-
-		private static Thread mainThread;
-
-		static NSApplication () {
-			class_ptr = Class.GetHandle ("NSApplication");
-		}
 
 		[DllImport (Constants.AppKitLibrary)]
-		extern static int /* int */ NSApplicationMain (int /* int */ argc, string [] argv);
+		extern static int /* int */ NSApplicationMain (int /* int */ argc, IntPtr argv);
 
-		static bool initialized;
-
-		[Preserve]
+#if !XAMCORE_5_0
+		/// <summary>This method does nothing.</summary>
+		[EditorBrowsable (EditorBrowsableState.Never)]
 		public static void Init ()
 		{
-			if (initialized) {
-				throw new InvalidOperationException ("Init has already been invoked; it can only be invoked once");
-			}
+			// No need anymore.
+		}
+#endif // !XAMCORE_5_0
 
-			Runtime.EnsureInitialized ();
+		internal static void InitializeApplication ()
+		{
+			// The linker replaces the 'Runtime.CheckForIllegalCrossThreadCalls' getter with a constant value, so when the UI
+			// thread checks are disabled the assignment below (and the 'CheckForIllegalCrossThreadCalls' field
+			// itself, unless something else references it) is trimmed away.
+			if (Runtime.CheckForIllegalCrossThreadCalls)
+				CheckForIllegalCrossThreadCalls = true;
 
-			initialized = true;
-
-			Runtime.RegisterAssemblies ();
-
-			// Runtime hosts embedding MonoMac may use a different sync context 
-			// and call NSApplicationMain externally prior to this Init, so only
-			// initialize the context if it hasn't been set externally. Alternatively,
-			// AppKitSynchronizationContext could be made public.
-			if(SynchronizationContext.Current == null)
-				SynchronizationContext.SetSynchronizationContext (new AppKitSynchronizationContext ());
-
-			// Establish the main thread at the time of Init to support hosts
-			// that don't call Main.
-			NSApplication.mainThread = Thread.CurrentThread;
-
-			// Launcher sets this to work around https://bugzilla.xamarin.com/show_bug.cgi?id=45279
-			// But can affect child xbuild processes, so unset
-			Environment.SetEnvironmentVariable ("MONO_CFG_DIR", "");
-
-			// TODO:
-			//   Install hook to register dynamically loaded assemblies
+			SynchronizationContext.SetSynchronizationContext (new AppKitSynchronizationContext ());
 		}
 
+#if !XAMCORE_5_0
+		/// <summary>This method does nothing.</summary>
+		[EditorBrowsable (EditorBrowsableState.Never)]
 		public static void InitDrawingBridge ()
 		{
-			FieldInfo UseCocoaDrawableField = Type.GetType ("System.Drawing.GDIPlus, System.Drawing").GetField ("UseCocoaDrawable", BindingFlags.Static | BindingFlags.Public);
-			FieldInfo UseCarbonDrawableField = Type.GetType ("System.Drawing.GDIPlus, System.Drawing").GetField ("UseCarbonDrawable", BindingFlags.Static | BindingFlags.Public);
-
-			UseCocoaDrawableField.SetValue (null, true);
-			UseCarbonDrawableField.SetValue (null, false);
 		}
+#endif // !XAMCORE_5_0
 
+		/// <param name="args">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+#if XAMCORE_5_0
+		public static int Main (string [] args)
+#else
 		public static void Main (string [] args)
+#endif
 		{
-			// Switch to an AppKitSynchronizationContext if Main is invoked
-			if(SynchronizationContext.Current == null || !typeof(AppKitSynchronizationContext).IsAssignableFrom(SynchronizationContext.Current.GetType()))
-				SynchronizationContext.SetSynchronizationContext (new AppKitSynchronizationContext ());
+			InitializeApplication ();
 
-			// Init where this is set the first time is generally paired
-			// with a call to Main, but this guarantees the right thread.
-			NSApplication.mainThread = Thread.CurrentThread;
-
-			NSApplicationMain (args.Length, args);
+			var argsPtr = TransientString.AllocStringArray (args);
+			try {
+#if XAMCORE_5_0
+				return NSApplicationMain (args.Length, argsPtr);
+#else
+				NSApplicationMain (args.Length, argsPtr);
+#endif
+			} finally {
+				TransientString.FreeStringArray (argsPtr, args.Length);
+			}
 		}
 
-		public static void EnsureUIThread()
+		/// <summary>Checks that the current call is made on the UI thread.</summary>
+		/// <exception cref="AppKitThreadAccessException">Thread checks are enabled and the current thread is not the UI thread.</exception>
+		/// <remarks>This method does nothing when <see cref="CheckForIllegalCrossThreadCalls" /> is <see langword="false" />. Thread checks are enabled by default in debug builds and disabled by default in release builds.</remarks>
+		public static void EnsureUIThread ()
 		{
-			if (NSApplication.CheckForIllegalCrossThreadCalls && NSApplication.mainThread != Thread.CurrentThread)
-				throw new AppKitThreadAccessException();
+			Runtime.EnsureUIThread ();
 		}
 
+		/// <param name="del">To be added.</param>
+		///         <param name="expectedType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public static void EnsureEventAndDelegateAreNotMismatched (object del, Type expectedType)
 		{
 			if (NSApplication.CheckForEventAndDelegateMismatches && !(expectedType.IsAssignableFrom (del.GetType ())))
-				throw new InvalidOperationException (string.Format("Event registration is overwriting existing delegate. Either just use events or your own delegate: {0} {1}", del.GetType (), expectedType));
+				throw new InvalidOperationException (string.Format ("Event registration is overwriting existing delegate. Either just use events or your own delegate: {0} {1}", del.GetType (), expectedType));
 		}
 
-		public static void EnsureDelegateAssignIsNotOverwritingInternalDelegate (object currentDelegateValue, object newDelegateValue, Type internalDelegateType)
+		/// <param name="currentDelegateValue">To be added.</param>
+		///         <param name="newDelegateValue">To be added.</param>
+		///         <param name="internalDelegateType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public static void EnsureDelegateAssignIsNotOverwritingInternalDelegate (object? currentDelegateValue, object? newDelegateValue, Type internalDelegateType)
 		{
-			if (NSApplication.CheckForEventAndDelegateMismatches && currentDelegateValue != null && newDelegateValue != null
-				&& currentDelegateValue.GetType().IsAssignableFrom (internalDelegateType)
-				&& !newDelegateValue.GetType().IsAssignableFrom (internalDelegateType))
-				throw new InvalidOperationException (string.Format("Event registration is overwriting existing delegate. Either just use events or your own delegate: {0} {1}", newDelegateValue.GetType(), internalDelegateType));
+			if (NSApplication.CheckForEventAndDelegateMismatches && currentDelegateValue is not null && newDelegateValue is not null
+				&& currentDelegateValue.GetType ().IsAssignableFrom (internalDelegateType)
+				&& !newDelegateValue.GetType ().IsAssignableFrom (internalDelegateType))
+				throw new InvalidOperationException (string.Format ("Event registration is overwriting existing delegate. Either just use events or your own delegate: {0} {1}", newDelegateValue.GetType (), internalDelegateType));
 		}
 
+		/// <param name="mask">To be added.</param>
+		///         <param name="lastEvent">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void DiscardEvents (NSEventMask mask, NSEvent lastEvent)
 		{
-			DiscardEvents ((nuint)(ulong) mask, lastEvent);
-		}
-
-		[Obsolete ("This method does nothing.")]
-		public static void RestoreWindow (string identifier, Foundation.NSCoder state, NSWindowCompletionHandler onCompletion)
-		{
+			DiscardEvents ((nuint) (ulong) mask, lastEvent);
 		}
 
 		// note: if needed override the protected Get|Set methods
-		public NSApplicationActivationPolicy ActivationPolicy { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSApplicationActivationPolicy ActivationPolicy {
 			get { return GetActivationPolicy (); }
 			// ignore return value (bool)
 			set { SetActivationPolicy (value); }
 		}
 	}
 }
+#endif // !__MACCATALYST__

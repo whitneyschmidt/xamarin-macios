@@ -25,37 +25,42 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreImage {
 
-	public partial class CIImageInitializationOptions
-	{
+	public partial class CIImageInitializationOptions {
 #if !COREBUILD
-		public CGColorSpace ColorSpace {
+		/// <summary>Gets or sets the color space.</summary>
+		public CGColorSpace? ColorSpace {
 			get {
 				return GetNativeValue<CGColorSpace> (CIImageInitializationOptionsKeys.ColorSpaceKey);
 			}
 			set {
-				SetNativeValue (CIImageInitializationOptionsKeys.ColorSpaceKey, value == null ? null : value);
+				SetNativeValue (CIImageInitializationOptionsKeys.ColorSpaceKey, value);
 			}
 		}
 #endif
 	}
 
+	/// <summary>A type of <see cref="CoreImage.CIImageInitializationOptions" /> that has additional metadata properties.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// Keeping 'CIImageInitializationOptionsWithMetadata' to avoid breaking change
-	public class CIImageInitializationOptionsWithMetadata : CIImageInitializationOptions
-	{
+	public class CIImageInitializationOptionsWithMetadata : CIImageInitializationOptions {
 #if !COREBUILD
+		/// <summary>Creates a new CIImageInitializationOptionsWithMetadata with default values.</summary>
 		public CIImageInitializationOptionsWithMetadata ()
 		{
 		}
 
+		/// <summary>Creates a new CIImageInitializationOptionsWithMetadata by using the specified dictionary of options.</summary>
+		/// <param name="dictionary">The dictionary.</param>
 		public CIImageInitializationOptionsWithMetadata (NSDictionary dictionary)
 			: base (dictionary)
 		{

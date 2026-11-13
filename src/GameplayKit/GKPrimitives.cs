@@ -1,4 +1,4 @@
-﻿//
+//
 // GKPrimitives.cs
 //
 // Authors:
@@ -7,48 +7,70 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
+#nullable enable
 
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
-
-using Vector2 = global::OpenTK.Vector2;
-using Vector3 = global::OpenTK.Vector3;
+using System.Numerics;
 
 namespace GameplayKit {
-
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	/// <summary>An axis-aligned rectangular three-dimensional box.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKBox {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public Vector3 Min;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public Vector3 Max;
 	}
 
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKQuad {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public Vector2 Min;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public Vector2 Max;
 	}
 
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct GKTriangle {
-		[MarshalAs (UnmanagedType.ByValArray, SizeConst = 3)]
-		Vector3 [] points;
+		Vector3 point1;
+		Vector3 point2;
+		Vector3 point3;
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public Vector3 [] Points {
 			get {
-				return points ?? (points = new Vector3 [3]);
+				return new Vector3 [] { point1, point2, point3 };
 			}
 			set {
-				if (value == null)
-					throw new ArgumentNullException (nameof (value));
+				if (value is null)
+					ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
 				if (value.Length != 3)
 					throw new ArgumentOutOfRangeException (nameof (value), "The length of the Value array must be 3");
-				points = value;
+				point1 = value [0];
+				point2 = value [1];
+				point3 = value [2];
 			}
 		}
 	}
 }
-#endif

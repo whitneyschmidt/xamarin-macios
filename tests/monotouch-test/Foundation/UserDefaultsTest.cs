@@ -7,34 +7,16 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
+using System.Diagnostics;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Foundation {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class UserDefaultsTest {
@@ -45,29 +27,39 @@ namespace MonoTouchFixtures.Foundation {
 			// confusing API for .NET developers since the parameters are 'value', 'key'
 			// http://stackoverflow.com/q/12415054/220643
 			NSUserDefaults defaults = NSUserDefaults.StandardUserDefaults;
-			defaults.RemoveObject ("spid");
-			Assert.Null (defaults.StringForKey ("spid"), "StringForKey-1");
-			defaults.SetString ("coucou", "spid");
+			var keyName = $"spid-{Process.GetCurrentProcess ().Id}";
+			defaults.RemoveObject (keyName);
+			Assert.That (defaults.StringForKey (keyName), Is.Null, "StringForKey-1");
+			defaults.SetString ("coucou", keyName);
 			defaults.Synchronize ();
-			Assert.That (defaults.StringForKey ("spid"), Is.EqualTo ("coucou"), "StringForKey-2");
+			Assert.That (defaults.StringForKey (keyName), Is.EqualTo ("coucou"), "StringForKey-2");
+			// Clean up after ourselves.
+			defaults.RemoveObject (keyName);
+			defaults.Synchronize ();
+			Assert.That (defaults.StringForKey (keyName), Is.Null, "StringForKey-3");
 		}
 
 		[Test]
 		public void Ctor_UserName ()
 		{
+			var userName = $"username-{Process.GetCurrentProcess ().Id}";
+			var keyName = $"key-{Process.GetCurrentProcess ().Id}";
 			// initWithUser:
-			using (var ud = new NSUserDefaults ("username")) {
-				Assert.That (ud.RetainCount, Is.EqualTo ((nint) 1), "RetainCount");
-				ud.SetString ("value", "key");
+			using (var ud = new NSUserDefaults (userName)) {
+				Assert.That (ud.RetainCount, Is.EqualTo ((nuint) 1), "RetainCount");
+				ud.SetString ("value", keyName);
 				ud.Synchronize ();
 			}
 
-			using (var ud = new NSUserDefaults ("username", NSUserDefaultsType.UserName)) {
-				Assert.That (ud.RetainCount, Is.EqualTo ((nint) 1), "RetainCount");
-				Assert.That (ud ["key"].ToString (), Is.EqualTo ("value"), "[key]-1");
-				ud.RemoveObject ("key");
+			using (var ud = new NSUserDefaults (userName, NSUserDefaultsType.UserName)) {
+				Assert.That (ud.RetainCount, Is.EqualTo ((nuint) 1), "RetainCount");
+				var keyValue = ud [keyName];
+				if (keyValue is null)
+					Assert.Fail ($"The key '{keyName}' was not preserved:\n{ud.ToDictionary ()}");
+				Assert.That (keyValue.ToString (), Is.EqualTo ("value"), "[key]-1");
+				ud.RemoveObject (keyName);
 				ud.Synchronize ();
-				Assert.Null (ud ["key"], "[key]-2");
+				Assert.That (ud [keyName], Is.Null, "[key]-2");
 			}
 		}
 
@@ -75,11 +67,12 @@ namespace MonoTouchFixtures.Foundation {
 		public void Ctor_SuiteName ()
 		{
 			TestRuntime.AssertXcodeVersion (5, 0);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
 
 			// initWithSuiteName:
-			using (var ud = new NSUserDefaults ("suitename", NSUserDefaultsType.SuiteName)) {
-				Assert.That (ud.RetainCount, Is.EqualTo ((nint) 1), "RetainCount");
+			var suiteName = $"suitename-{Process.GetCurrentProcess ().Id}";
+			using (var ud = new NSUserDefaults (suiteName, NSUserDefaultsType.SuiteName)) {
+				Assert.That (ud.RetainCount, Is.EqualTo ((nuint) 1), "RetainCount");
 			}
 		}
 	}

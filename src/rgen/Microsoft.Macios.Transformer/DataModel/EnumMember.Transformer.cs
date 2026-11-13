@@ -1,0 +1,54 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Macios.Generator.Availability;
+using Microsoft.Macios.Transformer.Attributes;
+
+namespace Microsoft.Macios.Generator.DataModel;
+
+readonly partial struct EnumMember {
+
+	/// <summary>
+	/// The data of the field attribute used to mark the value as a binding.
+	/// </summary>
+	public FieldInfo? FieldInfo { get; init; }
+
+	/// <summary>
+	/// The enum member declaration.
+	/// </summary>
+	public EnumMemberDeclarationSyntax? DeclarationSyntax { get; init; }
+
+	public bool IsSmartMember { get; init; }
+
+	/// <summary>
+	/// Return the native selector that references the enum value.
+	/// </summary>
+	public string? Selector => FieldInfo?.FieldData?.SymbolName;
+
+	public EnumMember (string name,
+		string libraryName,
+		string? libraryPath,
+		SymbolAvailability symbolAvailability,
+		Dictionary<string, List<AttributeData>> attributes)
+	{
+		Name = name;
+		SymbolAvailability = symbolAvailability;
+		AttributesDictionary = attributes;
+		FieldInfo = FieldAttribute is null ? null : new FieldInfo (FieldAttribute.Value, libraryName, libraryPath);
+	}
+
+	public EnumMember (string name,
+		uint index,
+		string libraryName,
+		string? libraryPath,
+		FieldData? fieldData,
+		SymbolAvailability symbolAvailability) : this (StructState.Initialized, name)
+	{
+		Index = index;
+		SymbolAvailability = symbolAvailability;
+		FieldInfo = new (fieldData, libraryName, libraryPath);
+	}
+
+}

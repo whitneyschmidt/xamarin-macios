@@ -1,12 +1,7 @@
-﻿#if !__WATCHOS__
-
-using System;
 
 using CoreGraphics;
 using CoreText;
-using Foundation;
 
-using NUnit.Framework;
 using MonoTouchFixtures.CoreGraphics;
 
 namespace MonoTouchFixtures.CoreText {
@@ -25,19 +20,19 @@ namespace MonoTouchFixtures.CoreText {
 			Width = false;
 		}
 
-		public override float GetAscent ()
+		public override nfloat GetAscent ()
 		{
 			Ascent = true;
 			return base.GetAscent ();
 		}
 
-		public override float GetDescent ()
+		public override nfloat GetDescent ()
 		{
 			Descent = true;
 			return base.GetDescent ();
 		}
 
-		public override float GetWidth ()
+		public override nfloat GetWidth ()
 		{
 			Width = true;
 			return base.GetWidth ();
@@ -53,7 +48,7 @@ namespace MonoTouchFixtures.CoreText {
 		{
 			using (var o = new MyOps ())
 			using (var d = new CTRunDelegate (o)) {
-				Assert.AreSame (o, d.Operations, "same");
+				Assert.That (d.Operations, Is.SameAs (o), "same");
 			}
 		}
 
@@ -67,13 +62,26 @@ namespace MonoTouchFixtures.CoreText {
 				};
 				mas.SetAttributes (sa, new NSRange (3, 3));
 				using (var fs = new CTFramesetter (mas)) {
-					Assert.True (MyOps.Ascent, "Ascent called");
-					Assert.True (MyOps.Descent, "Descent called");
-					Assert.True (MyOps.Width, "Width called");
+					Assert.That (MyOps.Ascent, Is.True, "Ascent called");
+					Assert.That (MyOps.Descent, Is.True, "Descent called");
+					Assert.That (MyOps.Width, Is.True, "Width called");
 				}
+			}
+		}
+
+		[Test]
+		public void GetBaseAdvancesAndOrigins ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+
+			using (var attributedString = new NSAttributedString ("Hello world."))
+			using (var line = new CTLine (attributedString)) {
+				var runs = line.GetGlyphRuns ();
+				Assert.That (runs.Length, Is.EqualTo (1), "runs");
+				runs [0].GetBaseAdvancesAndOrigins (new NSRange (0, 10), out var advances, out var origins);
+				Assert.That (advances, Is.Not.Null, "advances");
+				Assert.That (origins, Is.Not.Null, "origins");
 			}
 		}
 	}
 }
-
-#endif

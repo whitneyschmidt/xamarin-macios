@@ -1,30 +1,31 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
+using Xamarin.Bundler;
+
+#nullable enable
 
 #if MLAUNCH
 using Xamarin.Launcher;
 #elif XAMARIN_HOSTING
 using Xamarin.Hosting;
-#else
-using Xamarin.Bundler;
 #endif
 
-namespace Xamarin
-{
+namespace Xamarin {
 	[Flags]
 	public enum Abi {
-		None   =   0,
-		i386   =   1,
-		ARMv6  =   2,
-		ARMv7  =   4,
-		ARMv7s =   8,
-		ARM64 =   16,
-		x86_64 =  32,
-		Thumb  =  64,
-		LLVM   = 128,
+		None = 0,
+		i386 = 1,
+		ARMv6 = 2,
+		ARMv7 = 4,
+		ARMv7s = 8,
+		ARM64 = 16,
+		x86_64 = 32,
+		Thumb = 64,
+		LLVM = 128,
 		ARMv7k = 256,
 		ARM64e = 512,
 		ARM64_32 = 1024,
@@ -35,8 +36,24 @@ namespace Xamarin
 		Arch32Mask = i386 | ARMv6 | ARMv7 | ARMv7s | ARMv7k | ARM64_32 /* This is a 32-bit arch for our purposes */,
 	}
 
-	public class MachO
-	{
+	public static class AbiExtensions {
+		public static string AsString (this Abi self)
+		{
+			var rv = (self & Abi.ArchMask).ToString ();
+			if ((self & Abi.LLVM) == Abi.LLVM)
+				rv += "+LLVM";
+			if ((self & Abi.Thumb) == Abi.Thumb)
+				rv += "+Thumb";
+			return rv;
+		}
+
+		public static string AsArchString (this Abi self)
+		{
+			return (self & Abi.ArchMask).ToString ().ToLowerInvariant ();
+		}
+	}
+
+	public class MachO {
 		/* definitions from: /usr/include/mach-o/loader.h */
 		/* Constant for the magic field of the mach_header (32-bit architectures) */
 		internal const uint MH_MAGIC = 0xfeedface; /* the mach magic number */
@@ -50,30 +67,31 @@ namespace Xamarin
 		internal const uint FAT_MAGIC = 0xcafebabe;
 		internal const uint FAT_CIGAM = 0xbebafeca; /* NXSwapLong(FAT_MAGIC) */
 
+		internal const uint MH_OBJECT = 0x1; /* relocatable object file */
 		internal const uint MH_DYLIB = 0x6; /* dynamically bound shared library */
 
 		// Values here match the corresponding values in the Abi enum.
 		public enum Architectures {
-			None   =   0,
-			i386   =   1,
-			ARMv6  =   2,
-			ARMv7  =   4,
-			ARMv7s =   8,
-			ARM64 =   16,
-			x86_64 =  32,
+			None = 0,
+			i386 = 1,
+			ARMv6 = 2,
+			ARMv7 = 4,
+			ARMv7s = 8,
+			ARM64 = 16,
+			x86_64 = 32,
 			ARMv7k = 256,
 			ARM64e = 512,
 			ARM64_32 = 1024,
 		}
 
-		public enum LoadCommands : uint
-		{
+		public enum LoadCommands : uint {
 			//#define LC_REQ_DYLD 0x80000000
 			ReqDyld = 0x80000000,
 			//
 			//			/* Constants for the cmd field of all load commands, the type */
 			//#define	LC_SEGMENT	0x1	/* segment of this file to be mapped */
 			//#define	LC_SYMTAB	0x2	/* link-edit stab symbol table info */
+			Symtab = 0x2,
 			//#define	LC_SYMSEG	0x3	/* link-edit gdb symbol table info (obsolete) */
 			//#define	LC_THREAD	0x4	/* thread */
 			//#define	LC_UNIXTHREAD	0x5	/* unix thread (includes a stack) */
@@ -108,11 +126,13 @@ namespace Xamarin
 			//
 			//#define	LC_SEGMENT_64	0x19	/* 64-bit segment of this file to be
 			//			mapped */
+			Segment64 = 0x19,
 			//#define	LC_ROUTINES_64	0x1a	/* 64-bit image routines */
 			//#define LC_UUID		0x1b	/* the uuid */
 			Uuid = 0x1b,
 			//#define LC_RPATH       (0x1c | LC_REQ_DYLD)    /* runpath additions */
 			//#define LC_CODE_SIGNATURE 0x1d	/* local of code signature */
+			CodeSignature = 0x1d,
 			//#define LC_SEGMENT_SPLIT_INFO 0x1e /* local of info to split segments */
 			//#define LC_REEXPORT_DYLIB (0x1f | LC_REQ_DYLD) /* load and re-export dylib */
 			ReexportDylib = 0x1f | ReqDyld,
@@ -123,20 +143,23 @@ namespace Xamarin
 			//#define	LC_LOAD_UPWARD_DYLIB (0x23 | LC_REQ_DYLD) /* load upward dylib */
 			MinMacOSX = 0x24, //#define LC_VERSION_MIN_MACOSX 0x24   /* build for MacOSX min OS version */
 			MiniPhoneOS = 0x25,//#define LC_VERSION_MIN_IPHONEOS 0x25 /* build for iPhoneOS min OS version */
-			//#define LC_FUNCTION_STARTS 0x26 /* compressed table of function start addresses */
-			//#define LC_DYLD_ENVIRONMENT 0x27 /* string for dyld to treat
-			//			like environment variable */
-			//#define LC_MAIN (0x28|LC_REQ_DYLD) /* replacement for LC_UNIXTHREAD */
-			//#define LC_DATA_IN_CODE 0x29 /* table of non-instructions in __text */
-			//#define LC_SOURCE_VERSION 0x2A /* source version used to build binary */
-			//#define LC_DYLIB_CODE_SIGN_DRS 0x2B /* Code signing DRs copied from linked dylibs */
-			//#define	LC_ENCRYPTION_INFO_64 0x2C /* 64-bit encrypted segment information */
-			//#define LC_LINKER_OPTION 0x2D /* linker options in MH_OBJECT files */
-			//#define LC_LINKER_OPTIMIZATION_HINT 0x2E /* optimization hints in MH_OBJECT files */
+							   //#define LC_FUNCTION_STARTS 0x26 /* compressed table of function start addresses */
+							   //#define LC_DYLD_ENVIRONMENT 0x27 /* string for dyld to treat
+							   //			like environment variable */
+							   //#define LC_MAIN (0x28|LC_REQ_DYLD) /* replacement for LC_UNIXTHREAD */
+							   //#define LC_DATA_IN_CODE 0x29 /* table of non-instructions in __text */
+							   //#define LC_SOURCE_VERSION 0x2A /* source version used to build binary */
+							   //#define LC_DYLIB_CODE_SIGN_DRS 0x2B /* Code signing DRs copied from linked dylibs */
+							   //#define	LC_ENCRYPTION_INFO_64 0x2C /* 64-bit encrypted segment information */
+							   //#define LC_LINKER_OPTION 0x2D /* linker options in MH_OBJECT files */
+							   //#define LC_LINKER_OPTIMIZATION_HINT 0x2E /* optimization hints in MH_OBJECT files */
 			MintvOS = 0x2f,//#define LC_VERSION_MIN_TVOS 0x2F /* build for AppleTV min OS version */
 			MinwatchOS = 0x30,//#define LC_VERSION_MIN_WATCHOS 0x30 /* build for Watch min OS version */
-			//#define LC_NOTE 0x31 /* arbitrary data included within a Mach-O file */
+							  //#define LC_NOTE 0x31 /* arbitrary data included within a Mach-O file */
 			BuildVersion = 0x32,//#define LC_BUILD_VERSION 0x32 /* build for platform min OS version */
+								//#define LC_DYLD_CHAINED_FIXUPS (0x34 | LC_REQ_DYLD) /* used with linkedit_data_command */
+								//#define LC_FILESET_ENTRY (0x35 | LC_REQ_DYLD) /* used with fileset_entry_command */
+			AtomInfo = 0x36,//#define LC_ATOM_INFO 0x36 /* used with linkedit_data_command, used by mergeable libraries */
 		}
 
 		public enum Platform : uint {
@@ -145,6 +168,7 @@ namespace Xamarin
 			TvOS = 3,
 			WatchOS = 4,
 			BridgeOS = 5,
+			MacCatalyst = 6,
 			IOSSimulator = 7,
 			TvOSSimulator = 8,
 			WatchOSSimulator = 9,
@@ -182,7 +206,7 @@ namespace Xamarin
 				| ((number << 24)));
 		}
 
-		static object ReadFile (BinaryReader reader, string filename)
+		static object? ReadFile (BinaryReader reader, string filename, bool throw_if_error = true)
 		{
 			var magic = reader.ReadUInt32 ();
 			reader.BaseStream.Position = 0;
@@ -195,17 +219,19 @@ namespace Xamarin
 			case FAT_MAGIC: // little-endian fat binary
 			case FAT_CIGAM: // big-endian fat binary
 				{
-					var f = new FatFile (filename);
-					f.Read (reader);
-					return f;
-				}
+				var f = new FatFile (filename);
+				f.Read (reader);
+				return f;
+			}
 			default:
 				if (StaticLibrary.IsStaticLibrary (reader)) {
 					var sl = new StaticLibrary ();
 					sl.Read (filename, reader, reader.BaseStream.Length);
 					return sl;
 				}
-				throw new Exception (string.Format ("File format not recognized: {0} (magic: 0x{1})", filename, magic.ToString ("X")));
+				if (throw_if_error)
+					throw new Exception (string.Format ("File format not recognized: {0} (magic: 0x{1})", filename, magic.ToString ("X")));
+				return null;
 			}
 		}
 
@@ -213,7 +239,7 @@ namespace Xamarin
 		{
 			using (var fs = new FileStream (filename, FileMode.Open, FileAccess.Read, FileShare.Read)) {
 				using (var reader = new BinaryReader (fs)) {
-					return ReadFile (reader, filename);
+					return ReadFile (reader, filename)!;
 				}
 			}
 		}
@@ -222,139 +248,33 @@ namespace Xamarin
 		{
 			var file = ReadFile (filename);
 			var fatfile = file as FatFile;
-			if (fatfile != null) {
-				foreach (var ff in fatfile.entries) {
-					if (ff.entry != null)
+			if (fatfile is not null) {
+				foreach (var ff in fatfile.entries!) {
+					if (ff.entry is not null)
 						yield return ff.entry;
-					if (ff.static_library != null)
+					if (ff.static_library is not null)
 						foreach (var obj in ff.static_library.ObjectFiles)
 							yield return obj;
 				}
 			} else {
 				var mf = file as MachOFile;
-				if (mf != null)
+				if (mf is not null) {
 					yield return mf;
-				else
-					throw ErrorHelper.CreateError (1604, "File of type {0} is not a MachO file ({1}).", file.GetType ().Name, filename);
-			}
-		}
-
-#if MTOUCH
-		// Removes all architectures from the target file, except for those in 'architectures'.
-		// This method doesn't do anything if the target file is a thin mach-o file.
-		// Also it doesn't do anything if the result is an empty file (i.e. none of the
-		// selected architectures match any of the architectures in the file) - this is
-		// only because I haven't investigated what would be needed elsewhere in the link
-		// process when the entire file is removed. FIXME <--.
-		public static void SelectArchitectures (string filename, ICollection<Abi> abis)
-		{
-			var architectures = GetArchitectures (abis);
-			var tmpfile = filename + ".tmp";
-
-			if (abis.Count == 0)
-				return;
-
-			using (var fsr = new FileStream (filename, FileMode.Open, FileAccess.Read)) {
-				using (var reader = new BinaryReader (fsr)) {
-					var file = ReadFile (filename);
-					if (file is MachOFile) {
-						Driver.Log (2, "Skipping architecture selecting of '{0}', since it only contains 1 architecture.", filename);
-						return;
-					}
-
-					var fatfile = (FatFile) file;
-					bool any_removed = false;
-
-					// remove architectures we don't want
-					for (int i = fatfile.entries.Count - 1; i >= 0; i--) {
-						var ff = fatfile.entries [i];
-						if (!architectures.Contains (ff.entry.Architecture)) {
-							any_removed = true;
-							fatfile.entries.RemoveAt (i);
-							fatfile.nfat_arch--;
-							Driver.Log (2, "Removing architecture {0} from {1}", ff.entry.Architecture, filename);
-						}
-					}
-
-					if (!any_removed) {
-						Driver.Log (2, "Architecture selection of '{0}' didn't find any architectures to remove.", filename);
-						return;
-					}
-
-					if (fatfile.nfat_arch == 0) {
-						Driver.Log (2, "Skipping architecture selection of '{0}', none of the selected architectures match any of the architectures in the archive.", filename, architectures [0]);
-						return;
-					}
-
-					if (fatfile.nfat_arch == 1) {
-						// Thin file
-						var entry = fatfile.entries [0];
-						using (var fsw = new FileStream (tmpfile, FileMode.Create, FileAccess.Write)) {
-							using (var writer = new BinaryWriter (fsw)) {
-								entry.WriteFile (writer, reader, entry.offset);
-							}
-						}
-					} else {
-						// Fat file
-						// Re-calculate header data
-						var read_offset = new List<uint> (fatfile.entries.Count);
-						read_offset.Add (fatfile.entries [0].offset);
-						fatfile.entries [0].offset = (uint) (1 << (int) fatfile.entries [0].align);
-						for (int i = 1; i < fatfile.entries.Count; i++) {
-							read_offset.Add (fatfile.entries [i].offset);
-							fatfile.entries [i].offset = fatfile.entries [i - 1].offset + fatfile.entries [i - 1].size;
-							var alignSize = (1 << (int) fatfile.entries [i].align);
-							var align = (int) fatfile.entries [i].offset % alignSize;
-							if (align != 0)
-								fatfile.entries [i].offset += (uint) (alignSize - align);
-						}
-						// Write out the fat file
-						using (var fsw = new FileStream (tmpfile, FileMode.Create, FileAccess.Write)) {
-							using (var writer = new BinaryWriter (fsw)) {
-								// write headers
-								fatfile.WriteHeaders (writer);
-								// write data
-								for (int i = 0; i < fatfile.entries.Count; i++) {
-									fatfile.entries [i].Write (writer, reader, read_offset [i]);
-								}
-							}
-						}
-					}
+					yield break;
 				}
-			}
 
-			File.Delete (filename);
-			File.Move (tmpfile, filename);
-		}
-#endif
-
-		static Dictionary<string, IEnumerable<string>> native_dependencies = new Dictionary<string, IEnumerable<string>> ();
-
-		public static IEnumerable<string> GetNativeDependencies (string libraryName)
-		{
-			IEnumerable<string> result;
-			lock (native_dependencies) {
-				if (native_dependencies.TryGetValue (libraryName, out result))
-					return result;
-			}
-
-			var macho_files = Read (libraryName);
-			var dependencies = new HashSet<string> ();
-			foreach (var macho_file in macho_files) {
-				foreach (var lc in macho_file.load_commands) {
-					var dyld_lc = lc as Xamarin.DylibLoadCommand;
-					if (dyld_lc != null) {
-						dependencies.Add (dyld_lc.name);
-					}
+				var sl = file as StaticLibrary;
+				if (sl is not null) {
+					foreach (var obj in sl.ObjectFiles)
+						yield return obj;
+					yield break;
 				}
+
+				throw ErrorHelper.CreateError (1604, Errors.MX1604, file.GetType ().Name, filename);
 			}
-			result = dependencies;
-			lock (native_dependencies)
-				native_dependencies.Add (libraryName, result);
-			return result;
 		}
 
-		public static List<Abi> GetArchitectures (string file)
+		public static List<Abi> GetArchitectures (IToolLog log, string file)
 		{
 			var result = new List<Abi> ();
 
@@ -394,7 +314,7 @@ namespace Xamarin
 						result.Add (GetArch (System.Net.IPAddress.NetworkToHostOrder (reader.ReadInt32 ()), System.Net.IPAddress.NetworkToHostOrder (reader.ReadInt32 ())));
 						break;
 					default:
-						Console.WriteLine ("File '{0}' is neither a Universal binary nor a Mach-O binary (magic: 0x{1})", file, magic.ToString ("x"));
+						log.Log ("File '{0}' is neither a Universal binary nor a Mach-O binary (magic: 0x{1})", file, magic.ToString ("x"));
 						break;
 					}
 				}
@@ -452,6 +372,30 @@ namespace Xamarin
 			return Abi.None;
 		}
 
+		public static bool IsStaticLibraryOrObjectFile (string filename, bool throw_if_error, out bool objectFile)
+		{
+			objectFile = false;
+			using var fs = File.OpenRead (filename);
+			using var reader = new BinaryReader (fs);
+			if (StaticLibrary.IsStaticLibrary (reader, throw_if_error))
+				return true;
+			var f = ReadFile (reader, filename, throw_if_error);
+			if (f is StaticLibrary)
+				return true;
+			var fat = f as FatFile;
+			if (fat is null)
+				return false;
+			foreach (var entry in fat.entries!) {
+				if (entry.IsStaticLibrary)
+					return true;
+				if (entry.entry?.IsObjectFile == true) {
+					objectFile = true;
+					return true;
+				}
+			}
+			return false;
+		}
+
 		public static bool IsDynamicFramework (string filename)
 		{
 			var f = ReadFile (filename);
@@ -461,19 +405,61 @@ namespace Xamarin
 				return ((MachOFile) f).IsDynamicLibrary;
 
 			var fat = f as FatFile;
-			if (fat == null)
+			if (fat is null)
+				return false;
+
+			foreach (var entry in fat.entries!)
+				if (!entry.IsDynamicLibrary)
+					return false;
+
+			return true;
+		}
+
+		// A mergeable library is a dynamic library that also contains atom info (LC_ATOM_INFO),
+		// which allows it to be linked statically as well. The atom info can be stripped to
+		// reduce the size of the library when it's used as a dynamic library.
+		// Ref: https://developer.apple.com/videos/play/wwdc2023/10268/
+		public static bool IsMergeableLibrary (string filename)
+		{
+			var f = ReadFile (filename);
+			if (f is MachOFile mf)
+				return mf.IsDynamicLibrary && mf.HasAtomInfo;
+
+			var fat = f as FatFile;
+			if (fat is null)
+				return false;
+			if (fat.entries is null)
 				return false;
 
 			foreach (var entry in fat.entries)
-				if (!entry.IsDynamicLibrary)
+				if (entry.entry is not null && entry.entry.IsDynamicLibrary && entry.entry.HasAtomInfo)
+					return true;
+
+			return false;
+		}
+
+		public static bool IsMachOFile (string filename)
+		{
+			using (var fs = File.OpenRead (filename)) {
+				if (fs.Length < 4)
 					return false;
-			
-			return true;
+				using (var reader = new BinaryReader (fs)) {
+					var magic = reader.ReadUInt32 ();
+					switch (magic) {
+					case MH_MAGIC:
+					case MH_MAGIC_64:
+					case FAT_MAGIC: // little-endian fat binary
+					case FAT_CIGAM: // big-endian fat binary
+						return true;
+					default:
+						return false;
+					}
+				}
+			}
 		}
 	}
 
-	public class StaticLibrary
-	{
+	public class StaticLibrary {
 		List<MachOFile> object_files = new List<MachOFile> ();
 
 		public IEnumerable<MachOFile> ObjectFiles { get { return object_files; } }
@@ -521,7 +507,7 @@ namespace Xamarin
 				var fileSize = ReadDecimal (reader, 10);
 				bytes = reader.ReadBytes (2); // ending characters
 				if (bytes [0] != 0x60 && bytes [1] != 0x0A)
-					throw ErrorHelper.CreateError (1605, $"Invalid entry '{fileIdentifier}' in the static library '{filename}', entry header doesn't end with 0x60 0x0A (found '0x{bytes [0].ToString ("x")} 0x{bytes [1].ToString ("x")}')");
+					throw ErrorHelper.CreateError (1605, Errors.MT1605, fileIdentifier, filename, bytes [0].ToString ("x"), bytes [1].ToString ("x"));
 
 				if (fileIdentifier.StartsWith ("#1/", StringComparison.Ordinal)) {
 					var nameLength = int.Parse (fileIdentifier.Substring (3).TrimEnd (' '));
@@ -535,8 +521,8 @@ namespace Xamarin
 					file.Read (reader);
 					object_files.Add (file);
 				}
-				// byte position is always even after each file.
-				if (nextPosition % 1 == 1)
+				// The ar format requires each entry to start at an even byte offset.
+				if (nextPosition % 2 == 1)
 					nextPosition++;
 				reader.BaseStream.Position = nextPosition;
 			}
@@ -548,20 +534,87 @@ namespace Xamarin
 			var pos = reader.BaseStream.Position;
 
 			var bytes = reader.ReadBytes (8);
-			var rv = bytes [0] == '!' && bytes [1] == '<' && bytes [2] == 'a' && bytes [3] == 'r' && bytes [4] == 'c' && bytes [5] == 'h' && bytes [6] == '>' && bytes [7] == 0xa;
+			bool rv;
+			if (bytes.Length < 8) {
+				rv = false;
+			} else {
+				rv = bytes [0] == '!' && bytes [1] == '<' && bytes [2] == 'a' && bytes [3] == 'r' && bytes [4] == 'c' && bytes [5] == 'h' && bytes [6] == '>' && bytes [7] == 0xa;
+			}
 			reader.BaseStream.Position = pos;
 
 			if (throw_if_error && !rv)
-				throw ErrorHelper.CreateError (1601, "Not a Mach-O static library (unknown header '{0}', expected '!<arch>').", System.Text.Encoding.ASCII.GetString (bytes, 0, 7));
+				throw ErrorHelper.CreateError (1601, Errors.MT1601, System.Text.Encoding.ASCII.GetString (bytes, 0, 7));
 
 			return rv;
 		}
+
+		public static bool IsStaticLibrary (string filename, bool throw_if_error = false)
+		{
+			using (var fs = File.OpenRead (filename)) {
+				using (var reader = new BinaryReader (fs)) {
+					return IsStaticLibrary (reader, throw_if_error);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Reads a static library or a Mach-O object file and returns the set of unresolved (undefined external) symbols.
+		/// </summary>
+		public static HashSet<string> GetUnresolvedSymbols (string filename)
+		{
+			var symbols = new HashSet<string> ();
+			using (var fs = File.OpenRead (filename))
+			using (var reader = new BinaryReader (fs)) {
+				if (IsStaticLibrary (reader)) {
+					var lib = new StaticLibrary ();
+					lib.Read (filename, reader, fs.Length);
+					foreach (var obj in lib.ObjectFiles) {
+						foreach (var sym in obj.GetUnresolvedSymbols (reader))
+							symbols.Add (sym);
+					}
+				} else if (MachOFile.IsMachOLibrary (null, reader)) {
+					var obj = new MachOFile (filename);
+					obj.Read (reader);
+					foreach (var sym in obj.GetUnresolvedSymbols (reader))
+						symbols.Add (sym);
+				} else {
+					throw ErrorHelper.CreateError (1601, Errors.MT1601, System.Text.Encoding.ASCII.GetString (reader.ReadBytes (7), 0, 7));
+				}
+			}
+			return symbols;
+		}
+
+		/// <summary>
+		/// Reads a static library or a Mach-O object file and returns the set of defined (external, non-undefined) symbols.
+		/// </summary>
+		public static HashSet<string> GetDefinedSymbols (string filename)
+		{
+			var symbols = new HashSet<string> ();
+			using (var fs = File.OpenRead (filename))
+			using (var reader = new BinaryReader (fs)) {
+				if (IsStaticLibrary (reader)) {
+					var lib = new StaticLibrary ();
+					lib.Read (filename, reader, fs.Length);
+					foreach (var obj in lib.ObjectFiles) {
+						foreach (var sym in obj.GetDefinedSymbols (reader))
+							symbols.Add (sym);
+					}
+				} else if (MachOFile.IsMachOLibrary (null, reader)) {
+					var obj = new MachOFile (filename);
+					obj.Read (reader);
+					foreach (var sym in obj.GetDefinedSymbols (reader))
+						symbols.Add (sym);
+				} else {
+					throw ErrorHelper.CreateError (1601, Errors.MT1601, System.Text.Encoding.ASCII.GetString (reader.ReadBytes (7), 0, 7));
+				}
+			}
+			return symbols;
+		}
 	}
 
-	public class MachOFile
-	{
-		FatEntry fat_parent;
-		string filename;
+	public class MachOFile {
+		FatEntry? fat_parent;
+		string? filename;
 
 		public uint magic;
 		int _cputype;
@@ -573,6 +626,7 @@ namespace Xamarin
 		uint _reserved;
 
 		bool is64bitheader;
+		long streamBasePosition; // position in the stream where this Mach-O header starts
 
 		public int cputype { get { return is_big_endian ? MachO.ToBigEndian (_cputype) : _cputype; } }
 		public int cpusubtype { get { return is_big_endian ? MachO.ToBigEndian (_cpusubtype) : _cpusubtype; } }
@@ -582,9 +636,10 @@ namespace Xamarin
 		public uint flags { get { return is_big_endian ? MachO.ToBigEndian (_flags) : _flags; } }
 		public uint reserved { get { return is_big_endian ? MachO.ToBigEndian (_reserved) : _reserved; } }
 
-		public List<LoadCommand> load_commands;
+		public List<LoadCommand> load_commands = new List<LoadCommand> ();
 
-		public string Filename { get { return filename; } }
+		public string? Filename { get { return filename; } }
+		public FatEntry? Parent { get { return fat_parent; } }
 
 		public MachOFile (FatEntry parent)
 		{
@@ -615,7 +670,7 @@ namespace Xamarin
 				writer.Write (reserved);
 		}
 
-		internal static bool IsMachOLibrary (FatEntry fat_entry, BinaryReader reader, bool throw_if_error = false)
+		internal static bool IsMachOLibrary (FatEntry? fat_entry, BinaryReader reader, bool throw_if_error = false)
 		{
 			var pos = reader.BaseStream.Position;
 
@@ -636,42 +691,44 @@ namespace Xamarin
 			reader.BaseStream.Position = pos;
 
 			if (throw_if_error && !rv)
-				throw ErrorHelper.CreateError (1600, "Not a Mach-O dynamic library (unknown header '0x{0}'): {1}.", magic.ToString ("x"), fat_entry.Parent.Filename);
+				throw ErrorHelper.CreateError (1600, Errors.MX1600, magic.ToString ("x"), fat_entry?.Parent?.Filename);
 
 			return rv;
 		}
 
 		internal void Read (BinaryReader reader)
 		{
+			streamBasePosition = reader.BaseStream.Position;
+
 			/* definitions from: /usr/include/mach-o/loader.h */
 			/*
 			* The 32-bit mach header appears at the very beginning of the object file for
 				* 32-bit architectures.
 				*/
-				//	struct mach_header {
-				//		uint32_t	magic;		/* mach magic number identifier */
-				//		cpu_type_t	cputype;	/* cpu specifier */
-				//		cpu_subtype_t	cpusubtype;	/* machine specifier */
-				//		uint32_t	filetype;	/* type of file */
-				//		uint32_t	ncmds;		/* number of load commands */
-				//		uint32_t	sizeofcmds;	/* the size of all the load commands */
-				//		uint32_t	flags;		/* flags */
-				//	};
+			//	struct mach_header {
+			//		uint32_t	magic;		/* mach magic number identifier */
+			//		cpu_type_t	cputype;	/* cpu specifier */
+			//		cpu_subtype_t	cpusubtype;	/* machine specifier */
+			//		uint32_t	filetype;	/* type of file */
+			//		uint32_t	ncmds;		/* number of load commands */
+			//		uint32_t	sizeofcmds;	/* the size of all the load commands */
+			//		uint32_t	flags;		/* flags */
+			//	};
 
-				/*
-			* The 64-bit mach header appears at the very beginning of object files for
-			* 64-bit architectures.
-			*/
-				//	struct mach_header_64 {
-				//		uint32_t	magic;		/* mach magic number identifier */
-				//		cpu_type_t	cputype;	/* cpu specifier */
-				//		cpu_subtype_t	cpusubtype;	/* machine specifier */
-				//		uint32_t	filetype;	/* type of file */
-				//		uint32_t	ncmds;		/* number of load commands */
-				//		uint32_t	sizeofcmds;	/* the size of all the load commands */
-				//		uint32_t	flags;		/* flags */
-				//		uint32_t	reserved;	/* reserved */
-				//	};
+			/*
+		* The 64-bit mach header appears at the very beginning of object files for
+		* 64-bit architectures.
+		*/
+			//	struct mach_header_64 {
+			//		uint32_t	magic;		/* mach magic number identifier */
+			//		cpu_type_t	cputype;	/* cpu specifier */
+			//		cpu_subtype_t	cpusubtype;	/* machine specifier */
+			//		uint32_t	filetype;	/* type of file */
+			//		uint32_t	ncmds;		/* number of load commands */
+			//		uint32_t	sizeofcmds;	/* the size of all the load commands */
+			//		uint32_t	flags;		/* flags */
+			//		uint32_t	reserved;	/* reserved */
+			//	};
 
 			magic = reader.ReadUInt32 ();
 			switch (magic) {
@@ -684,7 +741,7 @@ namespace Xamarin
 				is64bitheader = true;
 				break;
 			default:
-				throw ErrorHelper.CreateError (1602, "Not a Mach-O dynamic library (unknown header '0x{0}'): {1}.", magic.ToString ("x"), fat_parent != null ? fat_parent.Parent.Filename : filename);
+				throw ErrorHelper.CreateError (1602, Errors.MX1602, magic.ToString ("x"), fat_parent?.Parent?.Filename ?? filename);
 			}
 			_cputype = reader.ReadInt32 ();
 			_cpusubtype = reader.ReadInt32 ();
@@ -702,11 +759,12 @@ namespace Xamarin
 				switch (cmd) {
 				case MachO.LoadCommands.LoadDylib:
 				case MachO.LoadCommands.LoadWeakDylib:
-				case MachO.LoadCommands.ReexportDylib:
+				case MachO.LoadCommands.ReexportDylib: {
 					var dlc = new DylibLoadCommand ();
 					dlc.cmd = reader.ReadUInt32 ();
 					dlc.cmdsize = reader.ReadUInt32 ();
-					/*var nameofs = */reader.ReadUInt32 ();
+					/*var nameofs = */
+					reader.ReadUInt32 ();
 					dlc.timestamp = reader.ReadUInt32 ();
 					dlc.current_version = reader.ReadUInt32 ();
 					dlc.compatibility_version = reader.ReadUInt32 ();
@@ -723,6 +781,30 @@ namespace Xamarin
 
 					lc = dlc;
 					break;
+				}
+				case MachO.LoadCommands.IdDylib: {
+					var dlc = new DylibIdCommand ();
+					dlc.cmd = reader.ReadUInt32 ();
+					dlc.cmdsize = reader.ReadUInt32 ();
+					/*var nameofs = */
+					reader.ReadUInt32 ();
+					dlc.timestamp = reader.ReadUInt32 ();
+					dlc.current_version = reader.ReadUInt32 ();
+					dlc.compatibility_version = reader.ReadUInt32 ();
+					var namelength = dlc.cmdsize - 6 * 4;
+					var namechars = reader.ReadBytes ((int) namelength);
+					// strip off any null characters at the end.
+					for (int n = namechars.Length - 1; n >= 0; n--) {
+						if (namechars [n] == 0)
+							namelength--;
+						else
+							break;
+					}
+					dlc.name = Encoding.UTF8.GetString (namechars, 0, (int) namelength);
+
+					lc = dlc;
+					break;
+				}
 				case MachO.LoadCommands.Uuid:
 					var uuidCmd = new UuidCommand ();
 					uuidCmd.cmd = reader.ReadUInt32 ();
@@ -749,14 +831,24 @@ namespace Xamarin
 					buildVer.minos = reader.ReadUInt32 ();
 					buildVer.sdk = reader.ReadUInt32 ();
 					buildVer.ntools = reader.ReadUInt32 ();
-					buildVer.tools = new BuildVersionCommand.BuildToolVersion[buildVer.ntools];
+					buildVer.tools = new BuildVersionCommand.BuildToolVersion [buildVer.ntools];
 					for (int j = 0; j < buildVer.ntools; j++) {
 						var buildToolVer = new BuildVersionCommand.BuildToolVersion ();
 						buildToolVer.tool = reader.ReadUInt32 ();
 						buildToolVer.version = reader.ReadUInt32 ();
-						buildVer.tools[j] = buildToolVer;
+						buildVer.tools [j] = buildToolVer;
 					}
 					lc = buildVer;
+					break;
+				case MachO.LoadCommands.Symtab:
+					var symtabCmd = new SymtabLoadCommand ();
+					symtabCmd.cmd = reader.ReadUInt32 ();
+					symtabCmd.cmdsize = reader.ReadUInt32 ();
+					symtabCmd.symoff = reader.ReadUInt32 ();
+					symtabCmd.nsyms = reader.ReadUInt32 ();
+					symtabCmd.stroff = reader.ReadUInt32 ();
+					symtabCmd.strsize = reader.ReadUInt32 ();
+					lc = symtabCmd;
 					break;
 				default:
 					lc = new LoadCommand ();
@@ -779,6 +871,121 @@ namespace Xamarin
 		public bool IsDynamicLibrary {
 			get { return filetype == MachO.MH_DYLIB; }
 		}
+
+		public bool IsObjectFile {
+			get => filetype == MachO.MH_OBJECT;
+		}
+
+		// Whether the Mach-O file contains atom info (LC_ATOM_INFO), which is the metadata
+		// added to mergeable libraries that enables static linking.
+		public bool HasAtomInfo {
+			get {
+				foreach (var lc in load_commands) {
+					if ((MachO.LoadCommands) lc.cmd == MachO.LoadCommands.AtomInfo)
+						return true;
+				}
+				return false;
+			}
+		}
+
+		const byte N_EXT = 0x01;  // external symbol
+		const byte N_TYPE = 0x0e; // mask for type bits
+		const byte N_UNDF = 0x0;  // undefined symbol
+
+		/// <summary>
+		/// Reads unresolved (undefined external) symbols from this Mach-O file.
+		/// The reader must be the same stream used to read this file.
+		/// </summary>
+		public HashSet<string> GetUnresolvedSymbols (BinaryReader reader)
+		{
+			var symbols = new HashSet<string> ();
+			var symtab = load_commands.OfType<SymtabLoadCommand> ().FirstOrDefault ();
+			if (symtab is null || symtab.nsyms == 0)
+				return symbols;
+
+			// Read the string table
+			reader.BaseStream.Position = streamBasePosition + symtab.stroff;
+			var stringTable = reader.ReadBytes ((int) symtab.strsize);
+
+			// Read symbol table entries
+			reader.BaseStream.Position = streamBasePosition + symtab.symoff;
+			var nlistSize = is64bitheader ? 16 : 12;
+			for (uint i = 0; i < symtab.nsyms; i++) {
+				var n_strx = reader.ReadUInt32 ();
+				var n_type = reader.ReadByte ();
+				var n_sect = reader.ReadByte ();
+				var n_desc = reader.ReadInt16 ();
+				if (is64bitheader)
+					reader.ReadUInt64 (); // n_value (8 bytes)
+				else
+					reader.ReadUInt32 (); // n_value (4 bytes)
+
+				// Filter for undefined external symbols (equivalent of nm -u)
+				if ((n_type & N_EXT) == 0)
+					continue;
+				if ((n_type & N_TYPE) != N_UNDF)
+					continue;
+
+				// Read symbol name from string table
+				if (n_strx >= symtab.strsize)
+					continue;
+				var end = (int) n_strx;
+				while (end < stringTable.Length && stringTable [end] != 0)
+					end++;
+				var name = Encoding.UTF8.GetString (stringTable, (int) n_strx, end - (int) n_strx);
+				if (name.Length > 0)
+					symbols.Add (name);
+			}
+
+			return symbols;
+		}
+
+		/// <summary>
+		/// Reads defined (external, non-undefined) symbols from this Mach-O file.
+		/// The reader must be the same stream used to read this file.
+		/// </summary>
+		public HashSet<string> GetDefinedSymbols (BinaryReader reader)
+		{
+			var symbols = new HashSet<string> ();
+			var symtab = load_commands.OfType<SymtabLoadCommand> ().FirstOrDefault ();
+			if (symtab is null || symtab.nsyms == 0)
+				return symbols;
+
+			// Read the string table
+			reader.BaseStream.Position = streamBasePosition + symtab.stroff;
+			var stringTable = reader.ReadBytes ((int) symtab.strsize);
+
+			// Read symbol table entries
+			reader.BaseStream.Position = streamBasePosition + symtab.symoff;
+			for (uint i = 0; i < symtab.nsyms; i++) {
+				var n_strx = reader.ReadUInt32 ();
+				var n_type = reader.ReadByte ();
+				var n_sect = reader.ReadByte ();
+				var n_desc = reader.ReadInt16 ();
+				if (is64bitheader)
+					reader.ReadUInt64 (); // n_value (8 bytes)
+				else
+					reader.ReadUInt32 (); // n_value (4 bytes)
+
+				// Filter for defined external symbols (equivalent of nm -g, excluding undefined ones)
+				if ((n_type & N_EXT) == 0)
+					continue;
+				if ((n_type & N_TYPE) == N_UNDF)
+					continue;
+
+				// Read symbol name from string table
+				if (n_strx >= symtab.strsize)
+					continue;
+				var end = (int) n_strx;
+				while (end < stringTable.Length && stringTable [end] != 0)
+					end++;
+				var name = Encoding.UTF8.GetString (stringTable, (int) n_strx, end - (int) n_strx);
+				if (name.Length > 0)
+					symbols.Add (name);
+			}
+
+			return symbols;
+		}
 	}
 
 	public class FatFile {
@@ -797,10 +1004,10 @@ namespace Xamarin
 			set { _nfat_arch = is_big_endian ? MachO.FromBigEndian (value) : value; }
 		}
 
-		public List<FatEntry> entries;
+		public List<FatEntry>? entries;
 
 		internal bool is_big_endian {
-			get { return magic == MachO.FAT_CIGAM;	}
+			get { return magic == MachO.FAT_CIGAM; }
 		}
 
 		internal void WriteHeader (BinaryWriter writer)
@@ -812,7 +1019,7 @@ namespace Xamarin
 		internal void WriteHeaders (BinaryWriter writer)
 		{
 			WriteHeader (writer);
-			for (int i = 0; i < entries.Count; i++) {
+			for (int i = 0; i < entries!.Count; i++) {
 				entries [i].WriteHeader (writer);
 			}
 		}
@@ -834,22 +1041,23 @@ namespace Xamarin
 	}
 
 	public class FatEntry {
-		FatFile parent;
+		FatFile? parent;
 		public int cputype;
 		public int cpusubtype;
 		public uint offset;
 		public uint size;
 		public uint align;
 
-		public MachOFile entry;
-		public StaticLibrary static_library;
-		
-		public bool IsDynamicLibrary { get { return entry == null ? false : entry.IsDynamicLibrary; } }
-		public FatFile Parent { get { return parent; } }
+		public MachOFile? entry;
+		public StaticLibrary? static_library;
+
+		public bool IsDynamicLibrary { get { return entry?.IsDynamicLibrary == true; } }
+		public bool IsStaticLibrary { get => static_library is not null; }
+		public FatFile Parent { get { return parent!; } }
 
 		internal void WriteHeader (BinaryWriter writer)
 		{
-			if (parent.is_big_endian) {
+			if (Parent.is_big_endian) {
 				writer.Write (MachO.ToBigEndian (cputype));
 				writer.Write (MachO.ToBigEndian (cpusubtype));
 				writer.Write (MachO.ToBigEndian (offset));
@@ -863,7 +1071,7 @@ namespace Xamarin
 				writer.Write (align);
 			}
 		}
-			
+
 		internal void Write (BinaryWriter writer, BinaryReader reader, uint reader_offset)
 		{
 			writer.BaseStream.Position = offset;
@@ -913,9 +1121,9 @@ namespace Xamarin
 				entry.Read (reader);
 			} else if (StaticLibrary.IsStaticLibrary (reader)) {
 				static_library = new StaticLibrary ();
-				static_library.Read (parent?.Filename, reader, size);
+				static_library.Read (parent?.Filename!, reader, size);
 			} else {
-				throw ErrorHelper.CreateError (1603, "Unknown format for fat entry at position {0} in {1}.", offset, parent.Filename);
+				throw ErrorHelper.CreateError (1603, Errors.MX1603, offset, parent?.Filename);
 			}
 		}
 	}
@@ -929,41 +1137,59 @@ namespace Xamarin
 		}
 
 #if DEBUG
-		public virtual void Dump ()
+		public virtual void Dump (IToolLog log)
 		{
-			Console.WriteLine ("    cmd: {0}", cmd);
-			Console.WriteLine ("    cmdsize: {0}", cmdsize);
+			log.Log ("    cmd: {0}", cmd);
+			log.Log ("    cmdsize: {0}", cmdsize);
 		}
 #endif
 	}
 
 	public class DylibLoadCommand : LoadCommand {
-		public string name;
+		public string name = string.Empty;
 		public uint timestamp;
 		public uint current_version;
 		public uint compatibility_version;
 
 #if DEBUG
-		public override void Dump ()
+		public override void Dump (IToolLog log)
 		{
-			base.Dump ();
-			Console.WriteLine ("    name: {0}", name);
-			Console.WriteLine ("    timestamp: {0}", timestamp);
-			Console.WriteLine ("    current_version: {0}", current_version);
-			Console.WriteLine ("    compatibility_version: {0}", compatibility_version);
+			base.Dump (log);
+			log.Log ("    name: {0}", name);
+			log.Log ("    timestamp: {0}", timestamp);
+			log.Log ("    current_version: {0}", current_version);
+			log.Log ("    compatibility_version: {0}", compatibility_version);
 		}
 #endif
 	}
-	
-	public class UuidCommand : LoadCommand {
-		public byte [] uuid;
+
+	public class DylibIdCommand : LoadCommand {
+		public string name = string.Empty;
+		public uint timestamp;
+		public uint current_version;
+		public uint compatibility_version;
 
 #if DEBUG
-		public override void Dump ()
+		public override void Dump (IToolLog log)
 		{
-			base.Dump ();
-			Console.WriteLine ("    cmd: {0}", cmd);
-			Console.WriteLine ("    uuid: {0}", uuid);
+			base.Dump (log);
+			log.Log ("    name: {0}", name);
+			log.Log ("    timestamp: {0}", timestamp);
+			log.Log ("    current_version: {0}", current_version);
+			log.Log ("    compatibility_version: {0}", compatibility_version);
+		}
+#endif
+	}
+
+	public class UuidCommand : LoadCommand {
+		public byte []? uuid;
+
+#if DEBUG
+		public override void Dump (IToolLog log)
+		{
+			base.Dump (log);
+			log.Log ("    cmd: {0}", cmd);
+			log.Log ("    uuid: {0}", uuid);
 		}
 #endif
 	}
@@ -974,7 +1200,7 @@ namespace Xamarin
 
 		Version DeNibble (uint value)
 		{
-			return new Version ((int)(value >> 16), (int)((value >> 8) & 0xFF), (int)(value & 0xFF));
+			return new Version ((int) (value >> 16), (int) ((value >> 8) & 0xFF), (int) (value & 0xFF));
 		}
 
 		public Version Version {
@@ -991,7 +1217,7 @@ namespace Xamarin
 		public uint minos; /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
 		public uint sdk; /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
 		public uint ntools;
-		public BuildToolVersion[] tools;
+		public BuildToolVersion []? tools;
 
 		public class BuildToolVersion {
 			public uint tool;
@@ -1000,7 +1226,7 @@ namespace Xamarin
 
 		Version DeNibble (uint value)
 		{
-			return new Version ((int)(value >> 16), (int)((value >> 8) & 0xFF), (int)(value & 0xFF));
+			return new Version ((int) (value >> 16), (int) ((value >> 8) & 0xFF), (int) (value & 0xFF));
 		}
 
 		public Version MinOS {
@@ -1012,7 +1238,14 @@ namespace Xamarin
 		}
 
 		public MachO.Platform Platform {
-			get { return (MachO.Platform)platform; }
+			get { return (MachO.Platform) platform; }
 		}
+	}
+
+	public class SymtabLoadCommand : LoadCommand {
+		public uint symoff;  // offset to symbol table entries
+		public uint nsyms;   // number of symbol table entries
+		public uint stroff;  // offset to string table
+		public uint strsize; // size of string table in bytes
 	}
 }

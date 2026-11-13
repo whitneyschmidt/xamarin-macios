@@ -1,0 +1,15 @@
+using Network;
+
+namespace MonoTouchFixtures.Network {
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class NSUrlTest {
+		[Test]
+		public void ImplicitConversion ()
+		{
+			global::System.Uri uri = null;
+			NSUrl sUrl = uri;
+			Assert.That (sUrl, Is.Null);
+		}
+	}
+}

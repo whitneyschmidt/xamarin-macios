@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for VTCompressionSession
 //
 // Authors:
@@ -8,53 +8,47 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
+using System.Threading;
 
-using System;
-
-#if XAMCORE_2_0
-using Foundation;
 using VideoToolbox;
 using CoreMedia;
+using CoreVideo;
 using AVFoundation;
-using CoreFoundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.VideoToolbox;
-using MonoTouch.UIKit;
-using MonoTouch.CoreMedia;
-using MonoTouch.AVFoundation;
-using MonoTouch.CoreFoundation;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.VideoToolbox {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class VTCompressionSessionTests
-	{
+	public class VTCompressionSessionTests {
+		[Test]
+		public void CompressionSessionPropertiesTest ()
+		{
+			TestRuntime.AssertXcodeVersion (15, 0);
+
+			Assert.That (VTCompressionSession.IsStereoMvHevcEncodeSupported (), Is.EqualTo (true).Or.EqualTo (false), "IsStereoMvHevcEncodeSupported");
+		}
+
 		[Test]
 		public void CompressionSessionCreateTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
 
-			using (var session = CreateSession ()){
-				Assert.IsNotNull (session, "Session should not be null");
+			using (var session = CreateSession ()) {
+				Assert.That (session, Is.Not.Null, "Session should not be null");
 			}
 		}
 
 		[Test]
 		public void CompressionSessionSetCompressionPropertiesTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
 
-			using (var session = CreateSession ()){
+			using (var session = CreateSession ()) {
 
 				var result = session.SetCompressionProperties (new VTCompressionProperties {
 					RealTime = true,
@@ -68,11 +62,11 @@ namespace MonoTouchFixtures.VideoToolbox {
 		[Test]
 		public void CompressionSessionSetPropertiesTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
 
-			using (var session = CreateSession ()){
+			using (var session = CreateSession ()) {
 
 				var result = session.SetProperties (new VTPropertyOptions {
 					ReadWriteStatus = VTReadWriteStatus.ReadWrite,
@@ -86,12 +80,12 @@ namespace MonoTouchFixtures.VideoToolbox {
 		[Test]
 		public void CompressionSessionSetCompressionPropertiesMultiPassStorageTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
 
 			using (var session = CreateSession ())
-			using (var storage = VTMultiPassStorage.Create ()){
+			using (var storage = VTMultiPassStorage.Create ()) {
 				var result = session.SetCompressionProperties (new VTCompressionProperties {
 					RealTime = false,
 					AllowFrameReordering = true,
@@ -107,23 +101,23 @@ namespace MonoTouchFixtures.VideoToolbox {
 		[Test]
 		public void CompressionSessionGetSupportedPropertiesTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
 
 			using (var session = CreateSession ()) {
 				var supportedProps = session.GetSupportedProperties ();
-				Assert.NotNull (supportedProps, "GetSupportedProperties IsNull");
+				Assert.That (supportedProps, Is.Not.Null, "GetSupportedProperties IsNull");
 
 				var key = new NSString ("ShouldBeSerialized");
 				foreach (var item in supportedProps) {
-					var dict = (NSDictionary)item.Value;
-					if (dict == null) continue;
+					var dict = (NSDictionary) item.Value;
+					if (dict is null) continue;
 
 					NSObject value;
-					if (dict.TryGetValue (key, out value) && value != null ) {
+					if (dict.TryGetValue (key, out value) && value is not null) {
 						var number = (NSNumber) value;
-						Assert.IsFalse (number.BoolValue, "CompressionSession GetSupportedPropertiesTest ShouldBeSerialized is True");
+						Assert.That (number.BoolValue, Is.False, "CompressionSession GetSupportedPropertiesTest ShouldBeSerialized is True");
 					}
 				}
 			}
@@ -132,29 +126,222 @@ namespace MonoTouchFixtures.VideoToolbox {
 		// This test is (kind of) expected to be null due to as of iOS 8 all supported properties are not meant to be serialized
 		// see CompressionSessionGetSupportedPropertiesTest.
 		[Test]
-#if MONOMAC // https://bugzilla.xamarin.com/show_bug.cgi?id=51258
+#if MONOMAC || __MACCATALYST__ // https://bugzilla.xamarin.com/show_bug.cgi?id=51258
 		[Ignore ("Crashes with SIGSEGV when trying to dispose session after calling session.GetSerializableProperties ()")]
 #endif
 		public void CompressionSessionGetSerializablePropertiesTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 10, 2, throwIfOtherPlatform: false);
-			
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 10, 2, throwIfOtherPlatform: false);
+
 			using (var session = CreateSession ()) {
 				var supportedProps = session.GetSerializableProperties ();
-				Assert.IsNull (supportedProps, "CompressionSession GetSerializableProperties is not null");
+				Assert.That (supportedProps, Is.Null, "CompressionSession GetSerializableProperties is not null");
 			}
 		}
 
-		VTCompressionSession CreateSession ()
+		VTCompressionSession CreateSession (int width = 1024, int height = 768)
 		{
-			var session = VTCompressionSession.Create (1024, 768, CMVideoCodecType.H264,
+			var session = VTCompressionSession.Create (width, height, CMVideoCodecType.H264,
 				(sourceFrame, status, flags, buffer) => { });
 			return session;
 		}
+
+
+		VTCompressionSession CreateSession2 (bool stronglyTyped, int width = 640, int height = 480, CMVideoCodecType codecType = CMVideoCodecType.H264, VTCompressionSession.VTCompressionOutputCallback? callback = null, CVPixelBufferAttributes? source_attributes = null)
+		{
+			VTCompressionSession rv;
+			if (stronglyTyped) {
+				rv = VTCompressionSession.Create (
+						width, height,
+						codecType,
+						callback,
+						null,
+						source_attributes
+						);
+			} else {
+				rv = VTCompressionSession.Create (
+						width, height,
+						codecType,
+						callback,
+						null,
+						source_attributes?.Dictionary
+						);
+			}
+
+			return rv;
+		}
+		[TestCase (true)]
+		[TestCase (false)]
+		public void TestCallback (bool stronglyTyped)
+		{
+			Exception ex = null;
+			var thread = new Thread (() => {
+				try {
+					TestCallbackBackground (stronglyTyped);
+				} catch (Exception e) {
+					ex = e;
+				}
+			});
+			thread.IsBackground = true;
+			thread.Start ();
+			var completed = thread.Join (TimeSpan.FromSeconds (30));
+			Assert.That (ex, Is.Null); // We check for this before the completion assert, to show any other assertion failures that may occur in CI.
+			if (!completed)
+				TestRuntime.IgnoreInCI ("This test fails occasionally in CI");
+			Assert.That (completed, Is.True, "timed out");
+		}
+
+		public void TestCallbackBackground (bool stronglyTyped)
+		{
+			var duration = new CMTime (40, 1);
+			VTStatus status;
+			var width = 120;
+			var height = 120;
+
+			const nint sourceFrameValue = 0x0ea1f00d;
+			int callbackCounter = 0;
+			var failures = new List<string> ();
+			var callback = new VTCompressionSession.VTCompressionOutputCallback ((IntPtr sourceFrame, VTStatus status, VTEncodeInfoFlags flags, CMSampleBuffer buffer) => {
+				Interlocked.Increment (ref callbackCounter);
+				if (status != VTStatus.Ok)
+					failures.Add ($"Callback #{callbackCounter} failed: Expected status = Ok, got status = {status}");
+				if (sourceFrame != sourceFrameValue)
+					failures.Add ($"Callback #{callbackCounter} failed: Expected sourceFrame = 0x{sourceFrameValue:x}, got sourceFrame = 0x{sourceFrame}");
+			});
+			using var session = CreateSession2 (stronglyTyped, callback: callback);
+
+			var frameCount = 3;
+			for (var i = 0; i < frameCount; i++) {
+				using var imageBuffer = new CVPixelBuffer (width, height, CVPixelFormatType.CV420YpCbCr8BiPlanarFullRange);
+				var pts = new CMTime (40 * i, 1);
+				status = session.EncodeFrame (imageBuffer, pts, duration, null, sourceFrameValue, out var infoFlags);
+				Assert.That (status, Is.EqualTo (VTStatus.Ok), $"status #{i}");
+				// This looks weird, but it seems the video encoder can become overwhelmed otherwise, and it
+				// will start failing (and taking a long time to do so, eventually timing out the test).
+				Thread.Sleep (10);
+			}
+			status = session.CompleteFrames (new CMTime (40 * frameCount, 1));
+			Assert.That (status, Is.EqualTo (VTStatus.Ok), "status finished");
+			Assert.That (callbackCounter, Is.EqualTo (frameCount), "frame count");
+			Assert.That (failures, Is.Empty, "no callback failures");
+		}
+
+#if !__TVOS__
+		[TestCase (true, true)]
+		[TestCase (false, true)]
+		[TestCase (true, false)]
+		[TestCase (false, false)]
+		public void TestMultiImage (bool stronglyTyped, bool customCallback)
+		{
+			TestRuntime.AssertXcodeVersion (26, 0);
+#if __MACOS__ || __MACCATALYST__
+			TestRuntime.AssertNotVirtualMachine ();
+#endif
+
+			if (!VTCompressionSession.IsStereoMvHevcEncodeSupported ())
+				Assert.Ignore ("Stereo MV-HEVC encoding is not supported on the current system.");
+
+			Exception ex = null;
+			var thread = new Thread (() => {
+				try {
+					TestMultiImageCallbackBackground (stronglyTyped, customCallback);
+				} catch (Exception e) {
+					ex = e;
+				}
+			});
+			thread.IsBackground = true;
+			thread.Start ();
+			var completed = thread.Join (TimeSpan.FromSeconds (30));
+
+			if (ex is NUnit.Framework.Internal.NUnitException)
+				throw ex;
+			Assert.That (ex, Is.Null); // We check for this before the completion assert, to show any other assertion failures that may occur in CI.
+
+			if (!completed)
+				TestRuntime.IgnoreInCI ("This test fails occasionally in CI");
+			Assert.That (completed, Is.True, "timed out");
+		}
+
+		void TestMultiImageCallbackBackground (bool stronglyTyped, bool customCallback)
+		{
+			var duration = new CMTime (40, 1);
+			VTStatus status;
+
+			const nint sourceFrameValue = 0x0ee1f00d;
+			int callbackCounter = 0;
+			int callbackCounter2 = 0;
+			var failures = new List<string> ();
+			var callback = new VTCompressionSession.VTCompressionOutputCallback ((IntPtr sourceFrame, VTStatus status, VTEncodeInfoFlags flags, CMSampleBuffer buffer) => {
+				Interlocked.Increment (ref callbackCounter);
+				if (status != VTStatus.Ok)
+					failures.Add ($"Output callback #{callbackCounter} failed: Expected status = Ok, got status = {status} = 0x{(int) status:x}");
+				if (sourceFrame != sourceFrameValue)
+					failures.Add ($"Output callback #{callbackCounter} failed: Expected sourceFrame = 0x{sourceFrameValue:x}, got sourceFrame = 0x{sourceFrame:x}");
+			});
+			var callback2 = new VTCompressionSession.VTCompressionOutputHandler ((VTStatus status, VTEncodeInfoFlags flags, CMSampleBuffer buffer) => {
+				Interlocked.Increment (ref callbackCounter2);
+				if (status != VTStatus.Ok)
+					failures.Add ($"Output handler #{callbackCounter2} failed B. Expected status = Ok, got status = {status} = 0x{(int) status:x}");
+			});
+
+			var width = 120;
+			var height = 120;
+			var codecType = CMVideoCodecType.Hevc;
+			var pixelFormat = CVPixelFormatType.CV420YpCbCr8BiPlanarVideoRange;
+			using var session = CreateSession2 (stronglyTyped, width: width, height: height, codecType: codecType, callback: customCallback ? null : callback);
+
+			var IDs = new [] { new NSNumber (0), new NSNumber (1) };
+			var compressionProperties = new VTCompressionProperties {
+				MvHevcVideoLayerIds = IDs,
+				MvHevcViewIds = IDs,
+				MvHevcLeftAndRightViewIds = IDs,
+				HasLeftStereoEyeView = true,
+				HasRightStereoEyeView = true,
+			};
+			session.SetCompressionProperties (compressionProperties);
+
+			var frameCount = 3;
+			var chunks = 2;
+			for (var i = 0; i < frameCount; i++) {
+				var buffers = new List<CVPixelBuffer> ();
+				var tagCollections = new List<CMTagCollection> ();
+
+				buffers.Add (new CVPixelBuffer (width, height, pixelFormat));
+				tagCollections.Add (CMTagCollection.Create (CMTag.CreateWithFlagsValue (CMTagCategory.StereoView, 1), CMTag.CreateWithSInt64Value (CMTagCategory.VideoLayerId, 0)));
+				buffers.Add (new CVPixelBuffer (width, height, pixelFormat));
+				tagCollections.Add (CMTagCollection.Create (CMTag.CreateWithFlagsValue (CMTagCategory.StereoView, 2), CMTag.CreateWithSInt64Value (CMTagCategory.VideoLayerId, 1)));
+
+				using var taggedBufferGroup = CMTaggedBufferGroup.Create (tagCollections.ToArray (), buffers.ToArray (), out var taggedBufferGroupStatus);
+				Assert.That (taggedBufferGroup, Is.Not.Null, $"TaggedBuff1erGroup #{i}");
+				Assert.That (taggedBufferGroupStatus, Is.EqualTo (CMTaggedBufferGroupError.Success), $"TaggedBufferGroup #{i} Ok");
+
+				var pts = new CMTime (40 * i, 1);
+				var infoFlags = default (VTEncodeInfoFlags);
+				if (customCallback) {
+					status = session.EncodeMultiImageFrame (taggedBufferGroup, pts, duration, null, out infoFlags, callback2);
+				} else {
+					status = session.EncodeMultiImageFrame (taggedBufferGroup, pts, duration, null, sourceFrameValue, out infoFlags);
+				}
+				Assert.That (status, Is.EqualTo (VTStatus.Ok), $"status #{i}");
+				Assert.That (infoFlags, Is.EqualTo (VTEncodeInfoFlags.Asynchronous), $"infoFlags #{i}");
+
+				foreach (var img in buffers)
+					img.Dispose ();
+			}
+			status = session.CompleteFrames (new CMTime (40 * frameCount * chunks, 1));
+			GC.KeepAlive (session);
+			Assert.That (status, Is.EqualTo (VTStatus.Ok), "status finished");
+			if (customCallback) {
+				Assert.That (callbackCounter, Is.EqualTo (0), "frame count A");
+				Assert.That (callbackCounter2, Is.EqualTo (frameCount), "frame count A2");
+			} else {
+				Assert.That (callbackCounter, Is.EqualTo (frameCount), "frame count B");
+				Assert.That (callbackCounter2, Is.EqualTo (0), "frame count B2");
+			}
+			Assert.That (failures, Is.Empty, "no callback failures");
+		}
+#endif // __TVOS__
 	}
 }
-
-#endif // !__WATCHOS__
-

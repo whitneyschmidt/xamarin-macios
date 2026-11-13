@@ -7,11 +7,10 @@
 // Copyright 2018 Microsoft Corporation.
 //
 
-#if XAMCORE_2_0 && !MONOMAC
-using System;
-using Foundation;
-using ObjCRuntime;
+#if !MONOMAC
 using MediaPlayer;
+
+#nullable enable
 
 namespace Intents {
 	public partial class INPlayMediaIntentResponse {

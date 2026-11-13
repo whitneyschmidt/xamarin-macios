@@ -8,37 +8,29 @@
 //
 
 #if !MONOMAC
-using System;
 using System.Linq;
-#if XAMCORE_2_0
-using Foundation;
 using CoreData;
-#else
-using MonoTouch.CoreData;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreData {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class FetchedResultsControllerTest {
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Cache ()
 		{
 			// null -> delete all cache
 			NSFetchedResultsController.DeleteCache (null);
 		}
-		
+
 		[Test]
 		public void Default ()
 		{
 			using (NSFetchedResultsController frc = new NSFetchedResultsController ()) {
 				NSError e;
-				Assert.False (frc.PerformFetch (out e), "PerformFetch");
-				Assert.Null (e, "NSError");
+				Assert.That (frc.PerformFetch (out e), Is.False, "PerformFetch");
+				Assert.That (e, Is.Null, "NSError");
 			}
 		}
 
@@ -47,13 +39,13 @@ namespace MonoTouchFixtures.CoreData {
 		{
 			using (NSManagedObjectContext c = new NSManagedObjectContext (NSManagedObjectContextConcurrencyType.PrivateQueue))
 			using (NSFetchRequest r = new NSFetchRequest ()) {
-				r.SortDescriptors = new NSSortDescriptor[] {
+				r.SortDescriptors = new NSSortDescriptor [] {
 					new NSSortDescriptor ("key", true)
 				};
 				r.Entity = new NSEntityDescription ();
 				using (NSFetchedResultsController frc = new NSFetchedResultsController (r, c, null, null)) {
 					NSError e;
-					Assert.False (frc.PerformFetch (out e), "PerformFetch");
+					Assert.That (frc.PerformFetch (out e), Is.False, "PerformFetch");
 				}
 			}
 		}
@@ -104,7 +96,7 @@ namespace MonoTouchFixtures.CoreData {
 					USGSWebLink.Optional = false;
 
 					// assign the properties to the entity
-					entity.Properties = new NSPropertyDescription[] { 
+					entity.Properties = new NSPropertyDescription [] {
 						date,
 						latitude,
 						location,
@@ -115,7 +107,7 @@ namespace MonoTouchFixtures.CoreData {
 
 					// add the entity to the model, and then add a configuration that
 					// contains the entities
-					ManagedObjectModel.Entities = new NSEntityDescription[] { entity };
+					ManagedObjectModel.Entities = new NSEntityDescription [] { entity };
 					ManagedObjectModel.SetEntities (ManagedObjectModel.Entities, String.Empty);
 				}
 
@@ -125,17 +117,17 @@ namespace MonoTouchFixtures.CoreData {
 						var storeUrl = new NSUrl (storePath, false);
 						NSError error;
 
-						if (PersistentStoreCoordinator.AddPersistentStoreWithType (NSPersistentStoreCoordinator.SQLiteStoreType, null, storeUrl, null, out error) == null) {
+						if (PersistentStoreCoordinator.AddPersistentStore (NSPersistentStoreCoordinator.SQLiteStoreType, null, storeUrl, null, out error) is null) {
 							Assert.Fail ("Unresolved error " + error + ", " + error.UserInfo);
 						}
 					}
 
 					using (var ManagedObjectContext = new NSManagedObjectContext ()) {
 						ManagedObjectContext.PersistentStoreCoordinator = PersistentStoreCoordinator;
-					
-	//					NSNotificationCenter.DefaultCenter.AddObserver (
-	//						this, new MonoTouch.ObjCRuntime.Selector ("mergeChanges"), 
-	//						"NSManagedObjectContextDidSaveNotification", null);
+
+						//					NSNotificationCenter.DefaultCenter.AddObserver (
+						//						this, new MonoTouch.ObjCRuntime.Selector ("mergeChanges"), 
+						//						"NSManagedObjectContextDidSaveNotification", null);
 
 
 						NSFetchRequest fetchRequest = new NSFetchRequest ();
@@ -155,7 +147,7 @@ namespace MonoTouchFixtures.CoreData {
 						}
 
 						var sections = fetchedResultsController.Sections;
-						Assert.That (sections [0].GetType ().FullName, Is.StringEnding ("CoreData.NSFetchedResultsSectionInfoWrapper"), "Wrapper");
+						Assert.That (sections [0].GetType ().FullName, Does.EndWith ("CoreData.NSFetchedResultsSectionInfoWrapper"), "Wrapper");
 					}
 				}
 			}

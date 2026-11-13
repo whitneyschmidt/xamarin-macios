@@ -7,25 +7,21 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.ComponentModel;
-using ObjCRuntime;
-using Foundation;
-
 
 namespace Contacts {
+	interface ICNKeyDescriptor { }
 
-#if XAMCORE_2_0 // The Contacts framework uses generics heavily, which is only supported in Unified (for now at least)
-
-	interface ICNKeyDescriptor {}
-
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	// Headers say "This protocol is reserved for Contacts framework usage.", so don't create a model
 	interface CNKeyDescriptor : NSObjectProtocol, NSSecureCoding, NSCopying {
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Represents a contact such as a person or business and holds their data, such as name, phone numbers, etc.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContact_Class/index.html">Apple documentation for <c>CNContact</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContact : NSCopying, NSMutableCopying, NSSecureCoding, NSItemProviderReading, NSItemProviderWriting {
 
@@ -65,8 +61,7 @@ namespace Contacts {
 		[Export ("phoneticFamilyName")]
 		string PhoneticFamilyName { get; }
 
-		[iOS (10,0)][Mac (10,12, onlyOn64: true)]
-		[Watch (3,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("phoneticOrganizationName")]
 		string PhoneticOrganizationName { get; }
 
@@ -90,7 +85,7 @@ namespace Contacts {
 		[Export ("thumbnailImageData", ArgumentSemantic.Copy)]
 		NSData ThumbnailImageData { get; }
 
-		[Mac (10,12)]
+		[MacCatalyst (13, 1)]
 		[Export ("imageDataAvailable")]
 		bool ImageDataAvailable { get; }
 
@@ -149,14 +144,11 @@ namespace Contacts {
 		[Export ("isUnifiedWithContactWithIdentifier:")]
 		bool IsUnifiedWithContact (string contactIdentifier);
 
+		/// <summary>Used as the name of an exception thrown when attempting to read a property that has not been fetched.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPropertyNotFetchedExceptionName")]
 		NSString PropertyNotFetchedExceptionName { get; }
-
-#if !XAMCORE_3_0
-		// now exposed with the corresponding CNErrorCode enum
-		[Field ("CNErrorDomain")]
-		NSString ErrorDomain { get; }
-#endif
 
 		// CNContact_PredicatesExtension - they should be in a [Category] but it makes
 		// [Static] API hard (and ugly) to use since they become extension methods (and
@@ -167,12 +159,12 @@ namespace Contacts {
 		[Export ("predicateForContactsMatchingName:")]
 		NSPredicate GetPredicateForContacts (string matchingName);
 
-		[Watch (4,0), Mac (10,13), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("predicateForContactsMatchingEmailAddress:")]
 		NSPredicate GetPredicateForContactsMatchingEmailAddress (string emailAddress);
 
-		[Watch (4,0), Mac (10,13), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("predicateForContactsMatchingPhoneNumber:")]
 		NSPredicate GetPredicateForContacts (CNPhoneNumber phoneNumber);
@@ -190,114 +182,207 @@ namespace Contacts {
 		NSPredicate GetPredicateForContactsInContainer (string containerIdentifier);
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values are the names of the possibly-available keys for <see cref="Contacts.CNContact" /> objects.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNContactKey {
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.Identifier" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactIdentifierKey")]
 		NSString Identifier { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.NamePrefix" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactNamePrefixKey")]
 		NSString NamePrefix { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.GivenName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactGivenNameKey")]
 		NSString GivenName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.MiddleName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactMiddleNameKey")]
 		NSString MiddleName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.FamilyName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactFamilyNameKey")]
 		NSString FamilyName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PreviousFamilyName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPreviousFamilyNameKey")]
 		NSString PreviousFamilyName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.NameSuffix" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactNameSuffixKey")]
 		NSString NameSuffix { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.Nickname" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactNicknameKey")]
 		NSString Nickname { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PhoneticGivenName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPhoneticGivenNameKey")]
 		NSString PhoneticGivenName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PhoneticMiddleName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPhoneticMiddleNameKey")]
 		NSString PhoneticMiddleName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PhoneticFamilyName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPhoneticFamilyNameKey")]
 		NSString PhoneticFamilyName { get; }
 
-		[iOS (10,0)][Mac (10,12, onlyOn64: true)]
-		[Watch (3,0)]
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PhoneticOrganizationName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CNContactPhoneticOrganizationNameKey")]
 		NSString PhoneticOrganizationName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.OrganizationName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactOrganizationNameKey")]
 		NSString OrganizationName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.DepartmentName" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactDepartmentNameKey")]
 		NSString DepartmentName { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.JobTitle" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactJobTitleKey")]
 		NSString JobTitle { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.Birthday" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactBirthdayKey")]
 		NSString Birthday { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.NonGregorianBirthday" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactNonGregorianBirthdayKey")]
 		NSString NonGregorianBirthday { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.Note" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactNoteKey")]
 		NSString Note { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.ImageData" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactImageDataKey")]
 		NSString ImageData { get; }
 
-		[Mac (10,12)]
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.ImageDataAvailable" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CNContactImageDataAvailableKey")]
 		NSString ImageDataAvailable { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.ThumbnailImageData" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactThumbnailImageDataKey")]
 		NSString ThumbnailImageData { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.ContactType" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactTypeKey")]
 		NSString Type { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PhoneNumbers" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPhoneNumbersKey")]
 		NSString PhoneNumbers { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.EmailAddresses" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactEmailAddressesKey")]
 		NSString EmailAddresses { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.PostalAddresses" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPostalAddressesKey")]
 		NSString PostalAddresses { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.Dates" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactDatesKey")]
 		NSString Dates { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.UrlAddresses" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactUrlAddressesKey")]
 		NSString UrlAddresses { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.ContactRelations" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactRelationsKey")]
 		NSString Relations { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.SocialProfiles" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactSocialProfilesKey")]
 		NSString SocialProfiles { get; }
 
+		/// <summary>Key identifying the <see cref="Contacts.CNContact.InstantMessageAddresses" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactInstantMessageAddressesKey")]
 		NSString InstantMessageAddresses { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
-	[BaseType (typeof (NSObject))]
+	/// <summary>Holds the parameters for a search request of the <see cref="Contacts.CNContactStore" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactFetchRequest_Class/index.html">Apple documentation for <c>CNContactFetchRequest</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNFetchRequest))]
 	[DisableDefaultCtor] // using init raises an exception according to docs
 	interface CNContactFetchRequest : NSSecureCoding {
 
 		[DesignatedInitializer]
 		[Export ("initWithKeysToFetch:")]
 		[Protected] // we cannot use ICNKeyDescriptor as Apple (and others) can adopt it from categories
-		IntPtr Constructor (NSArray keysToFetch);
+		NativeHandle Constructor (NSArray keysToFetch);
 
 		[NullAllowed]
 		[Export ("predicate", ArgumentSemantic.Copy)]
@@ -308,7 +393,7 @@ namespace Contacts {
 		// cannot be exposed as NSString since they could be internalized types, like CNAggregateKeyDescriptor
 		NSArray KeysToFetch { get; set; }
 
-		[iOS (10,0)][Mac (10,12)] // API existed previously ? maybe it was not working before now ?
+		[MacCatalyst (13, 1)]
 		[Export ("mutableObjects")]
 		bool MutableObjects { get; set; }
 
@@ -319,7 +404,10 @@ namespace Contacts {
 		CNContactSortOrder SortOrder { get; set; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A custom formatter for <see cref="Contacts.CNContact" /> objects.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactFormatter_Class/index.html">Apple documentation for <c>CNContactFormatter</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSFormatter))]
 	interface CNContactFormatter : NSSecureCoding {
 
@@ -328,10 +416,12 @@ namespace Contacts {
 		ICNKeyDescriptor GetDescriptorForRequiredKeys (CNContactFormatterStyle style);
 
 		[Static]
+		[return: NullAllowed]
 		[Export ("stringFromContact:style:")]
 		string GetStringFrom (CNContact contact, CNContactFormatterStyle style);
 
 		[Static]
+		[return: NullAllowed]
 		[Export ("attributedStringFromContact:style:defaultAttributes:")]
 		NSAttributedString GetAttributedStringFrom (CNContact contact, CNContactFormatterStyle style, [NullAllowed] NSDictionary attributes);
 
@@ -346,17 +436,37 @@ namespace Contacts {
 		[Export ("style")]
 		CNContactFormatterStyle Style { get; set; }
 
+		[return: NullAllowed]
 		[Export ("stringFromContact:")]
 		string GetString (CNContact contact);
 
+		[return: NullAllowed]
 		[Export ("attributedStringFromContact:defaultAttributes:")]
 		NSAttributedString GetAttributedString (CNContact contact, [NullAllowed] NSDictionary attributes);
 
+		/// <summary>A string constant whose value is returned in calls to <see cref="Contacts.CNContactFormatter.GetAttributedString(Contacts.CNContact,Foundation.NSDictionary)" /> and <see cref="Contacts.CNContactFormatter.GetAttributedStringFrom(Contacts.CNContact,Contacts.CNContactFormatterStyle,Foundation.NSDictionary)" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContactPropertyAttribute")]
 		NSString ContactPropertyAttribute { get; }
+
+		[Static]
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("descriptorForRequiredKeysForDelimiter")]
+		ICNKeyDescriptor RequiredKeysForDelimiter { get; }
+
+		[Static]
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("descriptorForRequiredKeysForNameOrder")]
+		ICNKeyDescriptor RequiredKeysForNameOrder { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A tuple of values for a contact property, including the contact, the property's key and value and, for labeled values, the identifier and label.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactProperty_Class/index.html">Apple documentation for <c>CNContactProperty</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContactProperty : NSCopying, NSSecureCoding {
 
@@ -379,7 +489,10 @@ namespace Contacts {
 		string Label { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Defines a relationship between two <see cref="Contacts.CNContact" /> objects, as specified by a <see cref="Contacts.CNLabelContactRelationKey" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactRelation_Class/index.html">Apple documentation for <c>CNContactRelation</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContactRelation : NSCopying, NSSecureCoding, INSCopying, INSSecureCoding {
 
@@ -388,68 +501,1116 @@ namespace Contacts {
 		CNContactRelation FromName (string name);
 
 		[Export ("initWithName:")]
-		IntPtr Constructor (string name);
+		NativeHandle Constructor (string name);
 
 		[Export ("name")]
 		string Name { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Defines string constants whose values define various interpersonal relationships.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNLabelContactRelationKey {
 
+		/// <summary>Father.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationFather")]
 		NSString Father { get; }
 
+		/// <summary>Mother.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationMother")]
 		NSString Mother { get; }
 
+		/// <summary>Parent.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationParent")]
 		NSString Parent { get; }
 
+		/// <summary>Brother.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationBrother")]
 		NSString Brother { get; }
 
+		/// <summary>Sister.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationSister")]
 		NSString Sister { get; }
 
+		/// <summary>Child.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationChild")]
 		NSString Child { get; }
 
+		/// <summary>Just friends.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationFriend")]
 		NSString Friend { get; }
 
+		/// <summary>Spouse.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationSpouse")]
 		NSString Spouse { get; }
 
+		/// <summary>Partner. (see also <see cref="Contacts.CNLabelContactRelationKey.Spouse" />)</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationPartner")]
 		NSString Partner { get; }
 
+		/// <summary>Professional assistant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationAssistant")]
 		NSString Assistant { get; }
 
+		/// <summary>Manager.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationManager")]
 		NSString Manager { get; }
 
-		[iOS (11,0), Mac (10,13, onlyOn64: true)]
+		/// <summary>Son.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelContactRelationSon")]
-		[Watch (4,0)]
+		[MacCatalyst (13, 1)]
 		NSString Son { get; }
 
-		[iOS (11,0), Mac (10,13, onlyOn64: true)]
-		[Watch (4,0)]
+		/// <summary>Daughter.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CNLabelContactRelationDaughter")]
 		NSString Daughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationColleague")]
+		NSString Colleague { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationTeacher")]
+		NSString Teacher { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSibling")]
+		NSString Sibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerSibling")]
+		NSString YoungerSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderSibling")]
+		NSString ElderSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerSister")]
+		NSString YoungerSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungestSister")]
+		NSString YoungestSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderSister")]
+		NSString ElderSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationEldestSister")]
+		NSString EldestSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerBrother")]
+		NSString YoungerBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungestBrother")]
+		NSString YoungestBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderBrother")]
+		NSString ElderBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationEldestBrother")]
+		NSString EldestBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMaleFriend")]
+		NSString MaleFriend { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFemaleFriend")]
+		NSString FemaleFriend { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationWife")]
+		NSString Wife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationHusband")]
+		NSString Husband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMalePartner")]
+		NSString MalePartner { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFemalePartner")]
+		NSString FemalePartner { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGirlfriendOrBoyfriend")]
+		NSString GirlfriendOrBoyfriend { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGirlfriend")]
+		NSString Girlfriend { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBoyfriend")]
+		NSString Boyfriend { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandparent")]
+		NSString Grandparent { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandmother")]
+		NSString Grandmother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandmotherMothersMother")]
+		NSString GrandmotherMothersMother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandmotherFathersMother")]
+		NSString GrandmotherFathersMother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandfather")]
+		NSString Grandfather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandfatherMothersFather")]
+		NSString GrandfatherMothersFather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandfatherFathersFather")]
+		NSString GrandfatherFathersFather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandparent")]
+		NSString GreatGrandparent { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandmother")]
+		NSString GreatGrandmother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandfather")]
+		NSString GreatGrandfather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandchild")]
+		NSString Grandchild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGranddaughter")]
+		NSString Granddaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGranddaughterDaughtersDaughter")]
+		NSString GranddaughterDaughtersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGranddaughterSonsDaughter")]
+		NSString GranddaughterSonsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandson")]
+		NSString Grandson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandsonDaughtersSon")]
+		NSString GrandsonDaughtersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandsonSonsSon")]
+		NSString GrandsonSonsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandchild")]
+		NSString GreatGrandchild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGranddaughter")]
+		NSString GreatGranddaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandson")]
+		NSString GreatGrandson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentInLaw")]
+		NSString ParentInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMotherInLaw")]
+		NSString MotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMotherInLawWifesMother")]
+		NSString MotherInLawWifesMother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMotherInLawHusbandsMother")]
+		NSString MotherInLawHusbandsMother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFatherInLaw")]
+		NSString FatherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFatherInLawWifesFather")]
+		NSString FatherInLawWifesFather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFatherInLawHusbandsFather")]
+		NSString FatherInLawHusbandsFather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoParentInLaw")]
+		NSString CoParentInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoMotherInLaw")]
+		NSString CoMotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoFatherInLaw")]
+		NSString CoFatherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSiblingInLaw")]
+		NSString SiblingInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerSiblingInLaw")]
+		NSString YoungerSiblingInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderSiblingInLaw")]
+		NSString ElderSiblingInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLaw")]
+		NSString SisterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerSisterInLaw")]
+		NSString YoungerSisterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderSisterInLaw")]
+		NSString ElderSisterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawSpousesSister")]
+		NSString SisterInLawSpousesSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawWifesSister")]
+		NSString SisterInLawWifesSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawHusbandsSister")]
+		NSString SisterInLawHusbandsSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawBrothersWife")]
+		NSString SisterInLawBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawYoungerBrothersWife")]
+		NSString SisterInLawYoungerBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawElderBrothersWife")]
+		NSString SisterInLawElderBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLaw")]
+		NSString BrotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerBrotherInLaw")]
+		NSString YoungerBrotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderBrotherInLaw")]
+		NSString ElderBrotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawSpousesBrother")]
+		NSString BrotherInLawSpousesBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawHusbandsBrother")]
+		NSString BrotherInLawHusbandsBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawWifesBrother")]
+		NSString BrotherInLawWifesBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawSistersHusband")]
+		NSString BrotherInLawSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawYoungerSistersHusband")]
+		NSString BrotherInLawYoungerSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawElderSistersHusband")]
+		NSString BrotherInLawElderSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawWifesBrothersWife")]
+		NSString SisterInLawWifesBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSisterInLawHusbandsBrothersWife")]
+		NSString SisterInLawHusbandsBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawWifesSistersHusband")]
+		NSString BrotherInLawWifesSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationBrotherInLawHusbandsSistersHusband")]
+		NSString BrotherInLawHusbandsSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoSiblingInLaw")]
+		NSString CoSiblingInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoSisterInLaw")]
+		NSString CoSisterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCoBrotherInLaw")]
+		NSString CoBrotherInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationChildInLaw")]
+		NSString ChildInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationDaughterInLaw")]
+		NSString DaughterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSonInLaw")]
+		NSString SonInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousin")]
+		NSString Cousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousin")]
+		NSString YoungerCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousin")]
+		NSString ElderCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMaleCousin")]
+		NSString MaleCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFemaleCousin")]
+		NSString FemaleCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinParentsSiblingsChild")]
+		NSString CousinParentsSiblingsChild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinParentsSiblingsSon")]
+		NSString CousinParentsSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinParentsSiblingsSon")]
+		NSString YoungerCousinParentsSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinParentsSiblingsSon")]
+		NSString ElderCousinParentsSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinParentsSiblingsDaughter")]
+		NSString CousinParentsSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinParentsSiblingsDaughter")]
+		NSString YoungerCousinParentsSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinParentsSiblingsDaughter")]
+		NSString ElderCousinParentsSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinMothersSistersDaughter")]
+		NSString CousinMothersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersSistersDaughter")]
+		NSString YoungerCousinMothersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersSistersDaughter")]
+		NSString ElderCousinMothersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinMothersSistersSon")]
+		NSString CousinMothersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersSistersSon")]
+		NSString YoungerCousinMothersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersSistersSon")]
+		NSString ElderCousinMothersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinMothersBrothersDaughter")]
+		NSString CousinMothersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersBrothersDaughter")]
+		NSString YoungerCousinMothersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersBrothersDaughter")]
+		NSString ElderCousinMothersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinMothersBrothersSon")]
+		NSString CousinMothersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersBrothersSon")]
+		NSString YoungerCousinMothersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersBrothersSon")]
+		NSString ElderCousinMothersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinFathersSistersDaughter")]
+		NSString CousinFathersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinFathersSistersDaughter")]
+		NSString YoungerCousinFathersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinFathersSistersDaughter")]
+		NSString ElderCousinFathersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinFathersSistersSon")]
+		NSString CousinFathersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinFathersSistersSon")]
+		NSString YoungerCousinFathersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinFathersSistersSon")]
+		NSString ElderCousinFathersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinFathersBrothersDaughter")]
+		NSString CousinFathersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinFathersBrothersDaughter")]
+		NSString YoungerCousinFathersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinFathersBrothersDaughter")]
+		NSString ElderCousinFathersBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinFathersBrothersSon")]
+		NSString CousinFathersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinFathersBrothersSon")]
+		NSString YoungerCousinFathersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinFathersBrothersSon")]
+		NSString ElderCousinFathersBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinGrandparentsSiblingsChild")]
+		NSString CousinGrandparentsSiblingsChild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinGrandparentsSiblingsDaughter")]
+		NSString CousinGrandparentsSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinGrandparentsSiblingsSon")]
+		NSString CousinGrandparentsSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersSiblingsSonOrFathersSistersSon")]
+		NSString YoungerCousinMothersSiblingsSonOrFathersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersSiblingsSonOrFathersSistersSon")]
+		NSString ElderCousinMothersSiblingsSonOrFathersSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationYoungerCousinMothersSiblingsDaughterOrFathersSistersDaughter")]
+		NSString YoungerCousinMothersSiblingsDaughterOrFathersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationElderCousinMothersSiblingsDaughterOrFathersSistersDaughter")]
+		NSString ElderCousinMothersSiblingsDaughterOrFathersSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSibling")]
+		NSString ParentsSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsYoungerSibling")]
+		NSString ParentsYoungerSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsElderSibling")]
+		NSString ParentsElderSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingMothersSibling")]
+		NSString ParentsSiblingMothersSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingMothersYoungerSibling")]
+		NSString ParentsSiblingMothersYoungerSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingMothersElderSibling")]
+		NSString ParentsSiblingMothersElderSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingFathersSibling")]
+		NSString ParentsSiblingFathersSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingFathersYoungerSibling")]
+		NSString ParentsSiblingFathersYoungerSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationParentsSiblingFathersElderSibling")]
+		NSString ParentsSiblingFathersElderSibling { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAunt")]
+		NSString Aunt { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntParentsSister")]
+		NSString AuntParentsSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntParentsYoungerSister")]
+		NSString AuntParentsYoungerSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntParentsElderSister")]
+		NSString AuntParentsElderSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersSister")]
+		NSString AuntFathersSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersYoungerSister")]
+		NSString AuntFathersYoungerSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersElderSister")]
+		NSString AuntFathersElderSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersBrothersWife")]
+		NSString AuntFathersBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersYoungerBrothersWife")]
+		NSString AuntFathersYoungerBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntFathersElderBrothersWife")]
+		NSString AuntFathersElderBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntMothersSister")]
+		NSString AuntMothersSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntMothersYoungerSister")]
+		NSString AuntMothersYoungerSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntMothersElderSister")]
+		NSString AuntMothersElderSister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationAuntMothersBrothersWife")]
+		NSString AuntMothersBrothersWife { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandaunt")]
+		NSString Grandaunt { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncle")]
+		NSString Uncle { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleParentsBrother")]
+		NSString UncleParentsBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleParentsYoungerBrother")]
+		NSString UncleParentsYoungerBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleParentsElderBrother")]
+		NSString UncleParentsElderBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleMothersBrother")]
+		NSString UncleMothersBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleMothersYoungerBrother")]
+		NSString UncleMothersYoungerBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleMothersElderBrother")]
+		NSString UncleMothersElderBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleMothersSistersHusband")]
+		NSString UncleMothersSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersBrother")]
+		NSString UncleFathersBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersYoungerBrother")]
+		NSString UncleFathersYoungerBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersElderBrother")]
+		NSString UncleFathersElderBrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersSistersHusband")]
+		NSString UncleFathersSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersYoungerSistersHusband")]
+		NSString UncleFathersYoungerSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationUncleFathersElderSistersHusband")]
+		NSString UncleFathersElderSistersHusband { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGranduncle")]
+		NSString Granduncle { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSiblingsChild")]
+		NSString SiblingsChild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNiece")]
+		NSString Niece { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNieceSistersDaughter")]
+		NSString NieceSistersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNieceBrothersDaughter")]
+		NSString NieceBrothersDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNieceSistersDaughterOrWifesSiblingsDaughter")]
+		NSString NieceSistersDaughterOrWifesSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNieceBrothersDaughterOrHusbandsSiblingsDaughter")]
+		NSString NieceBrothersDaughterOrHusbandsSiblingsDaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephew")]
+		NSString Nephew { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephewSistersSon")]
+		NSString NephewSistersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephewBrothersSon")]
+		NSString NephewBrothersSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephewBrothersSonOrHusbandsSiblingsSon")]
+		NSString NephewBrothersSonOrHusbandsSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephewSistersSonOrWifesSiblingsSon")]
+		NSString NephewSistersSonOrWifesSiblingsSon { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandniece")]
+		NSString Grandniece { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandnieceSistersGranddaughter")]
+		NSString GrandnieceSistersGranddaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandnieceBrothersGranddaughter")]
+		NSString GrandnieceBrothersGranddaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandnephew")]
+		NSString Grandnephew { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandnephewSistersGrandson")]
+		NSString GrandnephewSistersGrandson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandnephewBrothersGrandson")]
+		NSString GrandnephewBrothersGrandson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepparent")]
+		NSString Stepparent { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepfather")]
+		NSString Stepfather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepmother")]
+		NSString Stepmother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepchild")]
+		NSString Stepchild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepson")]
+		NSString Stepson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepdaughter")]
+		NSString Stepdaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepbrother")]
+		NSString Stepbrother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationStepsister")]
+		NSString Stepsister { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationMotherInLawOrStepmother")]
+		NSString MotherInLawOrStepmother { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationFatherInLawOrStepfather")]
+		NSString FatherInLawOrStepfather { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationDaughterInLawOrStepdaughter")]
+		NSString DaughterInLawOrStepdaughter { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSonInLawOrStepson")]
+		NSString SonInLawOrStepson { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationCousinOrSiblingsChild")]
+		NSString CousinOrSiblingsChild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNieceOrCousin")]
+		NSString NieceOrCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationNephewOrCousin")]
+		NSString NephewOrCousin { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGrandchildOrSiblingsChild")]
+		NSString GrandchildOrSiblingsChild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationGreatGrandchildOrSiblingsGrandchild")]
+		NSString GreatGrandchildOrSiblingsGrandchild { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationDaughterInLawOrSisterInLaw")]
+		NSString DaughterInLawOrSisterInLaw { get; }
+
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelContactRelationSonInLawOrBrotherInLaw")]
+		NSString SonInLawOrBrotherInLaw { get; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Field ("CNLabelContactRelationGranddaughterOrNiece")]
+		NSString GranddaughterOrNiece { get; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Field ("CNLabelContactRelationGrandsonOrNephew")]
+		NSString GrandsonOrNephew { get; }
+
 	}
 
-	delegate void CNContactStoreRequestAccessHandler (bool granted, NSError error);
-#if !XAMCORE_4_0
-	delegate void CNContactStoreEnumerateContactsHandler (CNContact contact, bool stop);
-#endif
+	/// <summary>Completion handler for calls to <see cref="Contacts.CNContactStore.RequestAccess(Contacts.CNEntityType,Contacts.CNContactStoreRequestAccessHandler)" /></summary>
+	delegate void CNContactStoreRequestAccessHandler (bool granted, [NullAllowed] NSError error);
 	delegate void CNContactStoreListContactsHandler (CNContact contact, ref bool stop);
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	interface ICNChangeHistoryEventVisitor { }
+
+	[MacCatalyst (13, 1)]
+	[Protocol]
+	interface CNChangeHistoryEventVisitor {
+		[Abstract]
+		[Export ("visitDropEverythingEvent:")]
+		void DropEverything (CNChangeHistoryDropEverythingEvent @event);
+
+		[Abstract]
+		[Export ("visitAddContactEvent:")]
+		void AddContact (CNChangeHistoryAddContactEvent @event);
+
+		[Abstract]
+		[Export ("visitUpdateContactEvent:")]
+		void UpdateContact (CNChangeHistoryUpdateContactEvent @event);
+
+		[Abstract]
+		[Export ("visitDeleteContactEvent:")]
+		void DeleteContact (CNChangeHistoryDeleteContactEvent @event);
+
+		[Export ("visitAddGroupEvent:")]
+		void AddGroup (CNChangeHistoryAddGroupEvent @event);
+
+		[Export ("visitUpdateGroupEvent:")]
+		void UpdateGroup (CNChangeHistoryUpdateGroupEvent @event);
+
+		[Export ("visitDeleteGroupEvent:")]
+		void DeleteGroup (CNChangeHistoryDeleteGroupEvent @event);
+
+		[Export ("visitAddMemberToGroupEvent:")]
+		void AddMemberToGroup (CNChangeHistoryAddMemberToGroupEvent @event);
+
+		[Export ("visitRemoveMemberFromGroupEvent:")]
+		void RemoveMemberFromGroup (CNChangeHistoryRemoveMemberFromGroupEvent @event);
+
+		[Export ("visitAddSubgroupToGroupEvent:")]
+		void AddSubgroupToGroup (CNChangeHistoryAddSubgroupToGroupEvent @event);
+
+		[Export ("visitRemoveSubgroupFromGroupEvent:")]
+		void RemoveSubgroupFromGroup (CNChangeHistoryRemoveSubgroupFromGroupEvent @event);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryEvent : NSCopying, NSSecureCoding {
+		[Export ("acceptEventVisitor:")]
+		void AcceptEventVisitor (ICNChangeHistoryEventVisitor visitor);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	interface CNChangeHistoryDropEverythingEvent { }
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddContactEvent {
+		[Export ("contact", ArgumentSemantic.Strong)]
+		CNContact Contact { get; }
+
+		[NullAllowed, Export ("containerIdentifier", ArgumentSemantic.Strong)]
+		string ContainerIdentifier { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryUpdateContactEvent {
+		[Export ("contact", ArgumentSemantic.Strong)]
+		CNContact Contact { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryDeleteContactEvent {
+		[Export ("contactIdentifier", ArgumentSemantic.Strong)]
+		string ContactIdentifier { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddGroupEvent {
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+
+		[Export ("containerIdentifier", ArgumentSemantic.Strong)]
+		string ContainerIdentifier { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryUpdateGroupEvent {
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryDeleteGroupEvent {
+		[Export ("groupIdentifier", ArgumentSemantic.Strong)]
+		string GroupIdentifier { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddMemberToGroupEvent {
+		[Export ("member", ArgumentSemantic.Strong)]
+		CNContact Member { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryRemoveMemberFromGroupEvent {
+		[Export ("member", ArgumentSemantic.Strong)]
+		CNContact Member { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryAddSubgroupToGroupEvent {
+		[Export ("subgroup", ArgumentSemantic.Strong)]
+		CNGroup Subgroup { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNChangeHistoryEvent))]
+	[DisableDefaultCtor]
+	interface CNChangeHistoryRemoveSubgroupFromGroupEvent {
+		[Export ("subgroup", ArgumentSemantic.Strong)]
+		CNGroup Subgroup { get; }
+
+		[Export ("group", ArgumentSemantic.Strong)]
+		CNGroup Group { get; }
+	}
+
+	// this type is new in Xcode11 but is decorated with earlier versions since it's used as a
+	// base type for older types (and that confuse the generator for 32bits availability)
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNFetchRequest { }
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CNFetchRequest))]
+	interface CNChangeHistoryFetchRequest : NSSecureCoding {
+		[NullAllowed, Export ("startingToken", ArgumentSemantic.Copy)]
+		NSData StartingToken { get; set; }
+
+		[NullAllowed, Export ("additionalContactKeyDescriptors", ArgumentSemantic.Copy)]
+		ICNKeyDescriptor [] AdditionalContactKeyDescriptors { get; set; }
+
+		[Export ("shouldUnifyResults")]
+		bool ShouldUnifyResults { get; set; }
+
+		[Export ("mutableObjects")]
+		bool MutableObjects { get; set; }
+
+		[Export ("includeGroupChanges")]
+		bool IncludeGroupChanges { get; set; }
+
+		[NullAllowed]
+		[Export ("excludedTransactionAuthors", ArgumentSemantic.Copy)]
+		string [] ExcludedTransactionAuthors { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CNFetchResult<T> {
+		[Export ("value", ArgumentSemantic.Strong)]
+		NSObject Value { get; }
+
+		[Export ("currentHistoryToken", ArgumentSemantic.Copy)]
+		NSData CurrentHistoryToken { get; }
+	}
+
+	/// <summary>The system's contact database.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactStore_Class/index.html">Apple documentation for <c>CNContactStore</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContactStore {
 
@@ -457,43 +1618,66 @@ namespace Contacts {
 		[Export ("authorizationStatusForEntityType:")]
 		CNAuthorizationStatus GetAuthorizationStatus (CNEntityType entityType);
 
-		[Async]
+		[Async (XmlDocs = """
+			<param name="entityType">To be added.</param>
+			<summary>Requests access to the user's contacts.</summary>
+			<returns>
+			          <para>A task that represents the asynchronous RequestAccess operation.   The value of the TResult parameter is a Contacts.CNContactStoreRequestAccessHandler.</para>
+			        </returns>
+			<remarks>
+			          <para copied="true">The RequestAccessAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("requestAccessForEntityType:completionHandler:")]
 		void RequestAccess (CNEntityType entityType, CNContactStoreRequestAccessHandler completionHandler);
 
 		[Export ("unifiedContactsMatchingPredicate:keysToFetch:error:")]
 		[Protected] // we cannot use ICNKeyDescriptor as Apple (and others) can adopt it from categories
-		CNContact[] GetUnifiedContacts (NSPredicate predicate, NSArray keys, out NSError error);
+		[return: NullAllowed]
+		CNContact [] GetUnifiedContacts (NSPredicate predicate, NSArray keys, [NullAllowed] out NSError error);
 
 		[Export ("unifiedContactWithIdentifier:keysToFetch:error:")]
 		[Protected] // we cannot use ICNKeyDescriptor as Apple (and others) can adopt it from categories
-		CNContact GetUnifiedContact (string identifier, NSArray keys, out NSError error);
+		[return: NullAllowed]
+		CNContact GetUnifiedContact (string identifier, NSArray keys, [NullAllowed] out NSError error);
 
-		[NoiOS, NoWatch]
+		[NoiOS]
+		[NoMacCatalyst]
 		[Export ("unifiedMeContactWithKeysToFetch:error:")]
 		[Protected] // we cannot use ICNKeyDescriptor as Apple (and others) can adopt it from categories
-		NSObject GetUnifiedMeContact (NSArray keys, out NSError error);
+		[return: NullAllowed]
+		NSObject GetUnifiedMeContact (NSArray keys, [NullAllowed] out NSError error);
 
-#if !XAMCORE_4_0 && !WATCH
-		[Obsolete ("Use the overload that takes 'CNContactStoreListContactsHandler' instead.")]
-		[Export ("enumerateContactsWithFetchRequest:error:usingBlock:")]
-		bool EnumerateContacts (CNContactFetchRequest fetchRequest, out NSError error, CNContactStoreEnumerateContactsHandler handler);
+		[MacCatalyst (13, 1)]
+		[Export ("enumeratorForContactFetchRequest:error:")]
+		[return: NullAllowed]
+		CNFetchResult<NSEnumerator<CNContact>> GetEnumeratorForContact (CNContactFetchRequest request, [NullAllowed] out NSError error);
 
-		[Sealed] // We will introduce breaking changes anyways if XAMCORE_4_0 happens
-#endif
+		[MacCatalyst (13, 1)]
+		[Export ("enumeratorForChangeHistoryFetchRequest:error:")]
+		[return: NullAllowed]
+		CNFetchResult<NSEnumerator<CNChangeHistoryEvent>> GetEnumeratorForChangeHistory (CNChangeHistoryFetchRequest request, [NullAllowed] out NSError error);
+
 		[Export ("enumerateContactsWithFetchRequest:error:usingBlock:")]
-		bool EnumerateContacts (CNContactFetchRequest fetchRequest, out NSError error, CNContactStoreListContactsHandler handler);
+		bool EnumerateContacts (CNContactFetchRequest fetchRequest, [NullAllowed] out NSError error, CNContactStoreListContactsHandler handler);
 
 		[Export ("groupsMatchingPredicate:error:")]
-		CNGroup [] GetGroups ([NullAllowed] NSPredicate predicate, out NSError error);
+		[return: NullAllowed]
+		CNGroup [] GetGroups ([NullAllowed] NSPredicate predicate, [NullAllowed] out NSError error);
 
 		[Export ("containersMatchingPredicate:error:")]
-		CNContainer [] GetContainers ([NullAllowed] NSPredicate predicate, out NSError error);
+		[return: NullAllowed]
+		CNContainer [] GetContainers ([NullAllowed] NSPredicate predicate, [NullAllowed] out NSError error);
 
-#if !WATCH
 		[Export ("executeSaveRequest:error:")]
-		bool ExecuteSaveRequest (CNSaveRequest saveRequest, out NSError error);
-#endif
+		[return: NullAllowed]
+		bool ExecuteSaveRequest (CNSaveRequest saveRequest, [NullAllowed] out NSError error);
+
+		[MacCatalyst (13, 1)]
+		[NullAllowed]
+		[Export ("currentHistoryToken", ArgumentSemantic.Copy)]
+		NSData CurrentHistoryToken { get; }
 
 		[Export ("defaultContainerIdentifier")]
 		[NullAllowed]
@@ -504,7 +1688,13 @@ namespace Contacts {
 		NSString NotificationDidChange { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Holds default values, such as <see cref="Contacts.CNContactsUserDefaults.CountryCode" />, for <see cref="Contacts.CNContact" /> objects.</summary>
+	///     <remarks>
+	///       <para>(More documentation for this node is coming)</para>
+	///       <para tool="threads">The members of this class can be used from a background thread.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/Contacts/CNContactsUserDefaults">Apple documentation for <c>CNContactsUserDefaults</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[ThreadSafe (false)]
 	interface CNContactsUserDefaults {
@@ -520,7 +1710,10 @@ namespace Contacts {
 		string CountryCode { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides vCard serialization for <see cref="Contacts.CNContact" /> objects.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContactVCardSerialization_Class/index.html">Apple documentation for <c>CNContactVCardSerialization</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContactVCardSerialization {
 
@@ -529,38 +1722,22 @@ namespace Contacts {
 		ICNKeyDescriptor GetDescriptorFromRequiredKeys ();
 
 		[Static]
+		[return: NullAllowed]
 		[Export ("dataWithContacts:error:")]
 		NSData GetDataFromContacts (CNContact [] contacts, out NSError error);
 
 		[Static]
+		[return: NullAllowed]
 		[Export ("contactsWithData:error:")]
 		CNContact [] GetContactsFromData (NSData data, out NSError error);
 	}
 
-#if !XAMCORE_4_0
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
-	[Category (allowStaticMembers: true)]
-	[BaseType (typeof (CNContainer))]
-	interface CNContainer_PredicatesExtension {
-
-		[Obsolete ("Use 'CNContainer.CreatePredicateForContainers' instead.")]
-		[Static]
-		[Export ("predicateForContainersWithIdentifiers:")]
-		NSPredicate GetPredicateForContainers (string [] identifiers);
-
-		[Obsolete ("Use 'CNContainer.CreatePredicateForContainerOfContact' instead.")]
-		[Static]
-		[Export ("predicateForContainerOfContactWithIdentifier:")]
-		NSPredicate GetPredicateForContainerOfContact (string contactIdentifier);
-
-		[Obsolete ("Use 'CNContainer.CreatePredicateForContainerOfGroup' instead.")]
-		[Static]
-		[Export ("predicateForContainerOfGroupWithIdentifier:")]
-		NSPredicate GetPredicateForContainerOfGroup (string groupIdentifier);
-	}
-#endif
-
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>An object such as an Exchange or CalDAV account that contains zero or more <see cref="Contacts.CNContact" /> objects.</summary>
+	///     <remarks>
+	///       <para> A <see cref="Contacts.CNContact" /> may be a member of only one <see cref="Contacts.CNContainer" />. This is in contrast to <see cref="Contacts.CNGroup" /> objects.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNContainer_Class/index.html">Apple documentation for <c>CNContainer</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNContainer : NSCopying, NSSecureCoding {
 
@@ -573,91 +1750,81 @@ namespace Contacts {
 		[Export ("type", ArgumentSemantic.Assign)]
 		CNContainerType ContainerType { get; }
 
-#region comes from CNContainer (Predicates) Category
+		#region comes from CNContainer (Predicates) Category
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForContainersWithIdentifiers:")]
-#else
-		[Wrap ("(null as CNContainer).GetPredicateForContainers (identifiers)")]
-#endif
 		NSPredicate CreatePredicateForContainers (string [] identifiers);
 
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForContainerOfContactWithIdentifier:")]
-#else
-		[Wrap ("(null as CNContainer).GetPredicateForContainerOfContact (contactIdentifier)")]
-#endif
 		NSPredicate CreatePredicateForContainerOfContact (string contactIdentifier);
 
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForContainerOfGroupWithIdentifier:")]
-#else
-		[Wrap ("(null as CNContainer).GetPredicateForContainerOfGroup (groupIdentifier)")]
-#endif
 		NSPredicate CreatePredicateForContainerOfGroup (string groupIdentifier);
-#endregion
+		#endregion
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values should be used as keys when referencing properties of <see cref="Contacts.CNContainer" /> objects.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNContainerKey { // Can be used in KVO
 
+		/// <summary>The key for the <see cref="Contacts.CNContainer.Identifier" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContainerIdentifierKey")]
 		NSString Identifier { get; }
 
+		/// <summary>The key for the <see cref="Contacts.CNContainer.Name" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContainerNameKey")]
 		NSString Name { get; }
 
+		/// <summary>The key for the <see cref="Contacts.CNContainer.ContainerType" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNContainerTypeKey")]
 		NSString Type { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values identify the form of an error.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNErrorUserInfoKey {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNErrorUserInfoAffectedRecordsKey")]
 		NSString AffectedRecords { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNErrorUserInfoAffectedRecordIdentifiersKey")]
 		NSString AffectedRecordIdentifiers { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNErrorUserInfoValidationErrorsKey")]
 		NSString ValidationErrors { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNErrorUserInfoKeyPathsKey")]
 		NSString KeyPaths { get; }
 	}
 
-#if !XAMCORE_4_0
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
-	[Category (allowStaticMembers: true)]
-	[BaseType (typeof (CNGroup))]
-	interface CNGroup_PredicatesExtension {
-
-		[Obsolete ("Use 'CNGroup.CreatePredicateForGroups' instead.")]
-		[Static]
-		[Export ("predicateForGroupsWithIdentifiers:")]
-		NSPredicate GetPredicateForGroups (string [] identifiers);
-
-		[Obsolete ("Use 'CNGroup.CreatePredicateForSubgroupsInGroup' instead.")]
-		[NoiOS][NoWatch]
-		[Static]
-		[Export ("predicateForSubgroupsInGroupWithIdentifier:")]
-		NSPredicate GetPredicateForSubgroupsInGroup (string parentGroupIdentifier);
-
-		[Obsolete ("Use 'CNGroup.CreatePredicateForGroupsInContainer' instead.")]
-		[Static]
-		[Export ("predicateForGroupsInContainerWithIdentifier:")]
-		NSPredicate GetPredicateForGroupsInContainer (string containerIdentifier);
-	}
-#endif
-
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A group that contains <see cref="Contacts.CNContact" /> objects.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNGroup_Class/index.html">Apple documentation for <c>CNGroup</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNGroup : NSCopying, NSMutableCopying, NSSecureCoding {
 
@@ -667,52 +1834,51 @@ namespace Contacts {
 		[Export ("name")]
 		string Name { get; }
 
-#region comes from CNGroup (Predicates) Category
+		#region comes from CNGroup (Predicates) Category
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForGroupsWithIdentifiers:")]
-#else
-		[Wrap ("(null as CNGroup).GetPredicateForGroups (identifiers)")]
-#endif
 		NSPredicate CreatePredicateForGroups (string [] identifiers);
 
-		[NoiOS][NoWatch]
+		[NoiOS]
+		[NoMacCatalyst]
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForSubgroupsInGroupWithIdentifier:")]
-#else
-		[Wrap ("(null as CNGroup).GetPredicateForSubgroupsInGroup (parentGroupIdentifier)")]
-#endif
 		NSPredicate CreatePredicateForSubgroupsInGroup (string parentGroupIdentifier);
 
 		[Static]
-#if XAMCORE_4_0
 		[Export ("predicateForGroupsInContainerWithIdentifier:")]
-#else
-		[Wrap ("(null as CNGroup).GetPredicateForGroupsInContainer (containerIdentifier)")]
-#endif
 		NSPredicate CreatePredicateForGroupsInContainer (string containerIdentifier);
-#endregion
+		#endregion
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values are the names of properties common to all <see cref="Contacts.CNGroup" /> objects.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNGroupKey { // Can be used in KVO
 
+		/// <summary>Key for the <see cref="Contacts.CNGroup.Identifier" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNGroupIdentifierKey")]
 		NSString Identifier { get; }
 
+		/// <summary>Key for the <see cref="Contacts.CNGroup.Name" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNGroupNameKey")]
 		NSString Name { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Defines an address for an instant-message service.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNInstantMessageAddress_Class/index.html">Apple documentation for <c>CNInstantMessageAddress</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNInstantMessageAddress : NSCopying, NSSecureCoding, INSCopying, INSSecureCoding {
 
 		[Export ("initWithUsername:service:")]
-		IntPtr Constructor (string username, string service);
+		NativeHandle Constructor (string username, string service);
 
 		[Export ("username")]
 		string Username { get; }
@@ -729,59 +1895,99 @@ namespace Contacts {
 		string LocalizeService (NSString service);
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values are the common properties of all instant-message providers.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNInstantMessageAddressKey { // Can be used in KVO
 
+		/// <summary>A key identifying the <see cref="Contacts.CNInstantMessageAddress.Username" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageAddressUsernameKey")]
 		NSString Username { get; }
 
+		/// <summary>A key identifying the <see cref="Contacts.CNInstantMessageAddress.Service" /> property.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageAddressServiceKey")]
 		NSString Service { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values are the names of common providers of instant messaging services.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNInstantMessageServiceKey {
 
+		/// <summary>AOL Instant Messenger.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceAIM")]
 		NSString Aim { get; }
 
+		/// <summary>Facebook Messenger.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceFacebook")]
 		NSString Facebook { get; }
 
+		/// <summary>Gadu-Gadu (Polish).</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceGaduGadu")]
 		NSString GaduGadu { get; }
 
+		/// <summary>Google Talk.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceGoogleTalk")]
 		NSString GoogleTalk { get; }
 
+		/// <summary>ICQ.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceICQ")]
 		NSString Icq { get; }
 
+		/// <summary>Jabber.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceJabber")]
 		NSString Jabber { get; }
 
+		/// <summary>MSN Messenger.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceMSN")]
 		NSString Msn { get; }
 
+		/// <summary>Tencent QQ.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceQQ")]
 		NSString QQ { get; }
 
+		/// <summary>Microsoft Skype.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceSkype")]
 		NSString Skype { get; }
 
+		/// <summary>Yahoo Messenger.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNInstantMessageServiceYahoo")]
 		NSString Yahoo { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>An object that holds a value and the label for that value.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNLabeledValue_Class/index.html">Apple documentation for <c>CNLabeledValue</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNLabeledValue<ValueType> : NSCopying, NSSecureCoding
-		where ValueType : INSCopying, INSSecureCoding
-	{
+		where ValueType : INSCopying, INSSecureCoding {
 
 		[Export ("identifier")]
 		string Identifier { get; }
@@ -798,7 +2004,7 @@ namespace Contacts {
 		ValueType FromLabel ([NullAllowed] string label, ValueType value);
 
 		[Export ("initWithLabel:value:")]
-		IntPtr Constructor ([NullAllowed] string label, ValueType value);
+		NativeHandle Constructor ([NullAllowed] string label, ValueType value);
 
 		[Export ("labeledValueBySettingLabel:")]
 		ValueType GetLabeledValue ([NullAllowed] string label);
@@ -815,31 +2021,57 @@ namespace Contacts {
 		string LocalizeLabel (NSString labelKey);
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Defines string constants whose values define the names of various <see cref="Contacts.CNLabeledValue{ValueType}" /> objects.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNLabelKey {
 
+		/// <summary>The home of the user (as defined in the contact store).</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelHome")]
 		NSString Home { get; }
 
+		/// <summary>The user's work address (as defined in the contacts store).</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelWork")]
 		NSString Work { get; }
 
+		[MacCatalyst (13, 1)]
+		[Field ("CNLabelSchool")]
+		NSString School { get; }
+
+		/// <summary>A <see cref="Contacts.CNLabeledValue{ValueType}" /> with an unknown label.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelOther")]
 		NSString Other { get; }
 
+		/// <summary>An iCloud email.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelEmailiCloud")]
 		NSString EmailiCloud { get; }
 
+		/// <summary>The user's home page.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelURLAddressHomePage")]
 		NSString UrlAddressHomePage { get; }
 
+		/// <summary>A labeled anniversary.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelDateAnniversary")]
 		NSString DateAnniversary { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A <see cref="Contacts.CNContact" /> that can be modified after creation.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNMutableContact_Class/index.html">Apple documentation for <c>CNMutableContact</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CNContact))]
 	interface CNMutableContact {
 
@@ -887,8 +2119,7 @@ namespace Contacts {
 		[Export ("phoneticFamilyName")]
 		string PhoneticFamilyName { get; set; }
 
-		[iOS (10,0)][Mac (10,12, onlyOn64: true)]
-		[Watch (3,0)]
+		[MacCatalyst (13, 1)]
 		[New]
 		[Export ("phoneticOrganizationName")]
 		string PhoneticOrganizationName { get; set; }
@@ -957,7 +2188,10 @@ namespace Contacts {
 		CNLabeledValue<NSDateComponents> [] Dates { get; set; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A <see cref="Contacts.CNGroup" /> whose values can change after initialization.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNMutableGroup_Class/index.html">Apple documentation for <c>CNMutableGroup</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CNGroup))]
 	interface CNMutableGroup {
 
@@ -966,7 +2200,10 @@ namespace Contacts {
 		string Name { get; set; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A <see cref="Contacts.CNPostalAddress" /> whose values can be modified after initialization.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNMutablePostalAddress_Class/index.html">Apple documentation for <c>CNMutablePostalAddress</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CNPostalAddress))]
 	interface CNMutablePostalAddress {
 
@@ -974,8 +2211,7 @@ namespace Contacts {
 		[Export ("street")]
 		string Street { get; set; }
 
-		[iOS (10,3), Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		[MacCatalyst (13, 1)]
 		[New]
 		[Export ("subLocality")]
 		string SubLocality { get; set; }
@@ -984,8 +2220,7 @@ namespace Contacts {
 		[Export ("city")]
 		string City { get; set; }
 
-		[iOS (10,3), Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		[MacCatalyst (13, 1)]
 		[New]
 		[Export ("subAdministrativeArea")]
 		string SubAdministrativeArea { get; set; }
@@ -1007,7 +2242,10 @@ namespace Contacts {
 		string IsoCountryCode { get; set; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>An immutable phone number.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNPhoneNumber_Class/index.html">Apple documentation for <c>CNPhoneNumber</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // Apple doc: no handle (nil) if no string (or nil string) is given
 	interface CNPhoneNumber : NSCopying, NSSecureCoding, INSCopying, INSSecureCoding {
@@ -1017,56 +2255,84 @@ namespace Contacts {
 		CNPhoneNumber PhoneNumberWithStringValue (string stringValue);
 
 		[Export ("initWithStringValue:")]
-		IntPtr Constructor (string stringValue);
+		NativeHandle Constructor (string stringValue);
 
 		[Export ("stringValue")]
 		string StringValue { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Defines string constants whose values are labels for various types of phones.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNLabelPhoneNumberKey {
 
+		/// <summary>Not to be confused with a mere <see cref="Contacts.CNLabelPhoneNumberKey.Mobile" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberiPhone")]
 		NSString iPhone { get; }
 
+		[iOS (14, 3)]
+		[MacCatalyst (14, 3)]
+		[Field ("CNLabelPhoneNumberAppleWatch")]
+		NSString AppleWatch { get; }
+
+		/// <summary>A mobile phone number (see <see cref="Contacts.CNLabelPhoneNumberKey.iPhone" />).</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberMobile")]
 		NSString Mobile { get; }
 
+		/// <summary>The main phone number for a <see cref="Contacts.CNContact" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberMain")]
 		NSString Main { get; }
 
+		/// <summary>The user's home fax number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberHomeFax")]
 		NSString HomeFax { get; }
 
+		/// <summary>Number for a fax located at work.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberWorkFax")]
 		NSString WorkFax { get; }
 
+		/// <summary>A fax number (see <see cref="Contacts.CNLabelPhoneNumberKey.HomeFax" /> and <see cref="Contacts.CNLabelPhoneNumberKey.WorkFax" />).</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberOtherFax")]
 		NSString OtherFax { get; }
 
+		/// <summary>A pager number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNLabelPhoneNumberPager")]
 		NSString Pager { get; }
 	}
 
-	[iOS (9,0)] [Mac (10,11, onlyOn64: true)]
+	/// <summary>A mailing address for a contact.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNPostalAddress_Class/index.html">Apple documentation for <c>CNPostalAddress</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNPostalAddress : NSCopying, NSMutableCopying, NSSecureCoding, INSCopying, INSSecureCoding {
 
 		[Export ("street")]
 		string Street { get; }
 
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		[MacCatalyst (13, 1)]
 		[Export ("subLocality")]
 		string SubLocality { get; }
 
 		[Export ("city")]
 		string City { get; }
 
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		[MacCatalyst (13, 1)]
 		[Export ("subAdministrativeArea")]
 		string SubAdministrativeArea { get; }
 
@@ -1086,74 +2352,52 @@ namespace Contacts {
 		[Export ("localizedStringForKey:")]
 		string LocalizeProperty (NSString property);
 
+		/// <param name="option">To be added.</param>
+		///         <summary>The localized name for the property as modified by the option that is specified in <paramref name="option" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
-		[Wrap ("LocalizeProperty (option.GetConstant ())")]
+		[Wrap ("LocalizeProperty (option.GetConstant ()!)")]
 		string LocalizeProperty (CNPostalAddressKeyOption option);
 	}
 
-#if !XAMCORE_4_0
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
-	[Static]
-	[EditorBrowsable (EditorBrowsableState.Advanced)]
-	interface CNPostalAddressKey { // Can be used in KVO
-
-		[Field ("CNPostalAddressStreetKey")]
-		NSString Street { get; }
-
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Field ("CNPostalAddressSubLocalityKey")]
-		[Watch (3,3)]
-		NSString SubLocality { get; }
-
-		[Field ("CNPostalAddressCityKey")]
-		NSString City { get; }
-
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
-		[Field ("CNPostalAddressSubAdministrativeAreaKey")]
-		NSString SubAdministrativeArea { get; }
-
-		[Field ("CNPostalAddressStateKey")]
-		NSString State { get; }
-
-		[Field ("CNPostalAddressPostalCodeKey")]
-		NSString PostalCode { get; }
-
-		[Field ("CNPostalAddressCountryKey")]
-		NSString Country { get; }
-
-		[Field ("CNPostalAddressISOCountryCodeKey")]
-		NSString IsoCountryCode { get; }
-	}
-#endif
-
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Enumeration of properties of a <see cref="Contacts.CNPostalAddress" />.</summary>
+	[MacCatalyst (13, 1)]
 	public enum CNPostalAddressKeyOption {
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.Street" /> property.</summary>
 		[Field ("CNPostalAddressStreetKey")]
 		Street,
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.City" /> property.</summary>
 		[Field ("CNPostalAddressCityKey")]
 		City,
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.State" /> property.</summary>
 		[Field ("CNPostalAddressStateKey")]
 		State,
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.PostalCode" /> property.</summary>
 		[Field ("CNPostalAddressPostalCodeKey")]
 		PostalCode,
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.Country" /> property.</summary>
 		[Field ("CNPostalAddressCountryKey")]
 		Country,
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.IsoCountryCode" /> property.</summary>
 		[Field ("CNPostalAddressISOCountryCodeKey")]
 		IsoCountryCode,
 
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.SubLocality" /> property.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("CNPostalAddressSubLocalityKey")]
 		SubLocality,
 
-		[iOS (10,3)] [Mac (10,12,4, onlyOn64: true)]
-		[Watch (3,3)]
+		/// <summary>Corresponds to the <see cref="Contacts.CNPostalAddress.SubAdministrativeArea" /> property.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("CNPostalAddressSubAdministrativeAreaKey")]
 		SubAdministrativeArea,
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Formats postal addresses in the manner appropriate to the addresses.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNPostalAddressFormatter_Class/index.html">Apple documentation for <c>CNPostalAddressFormatter</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSFormatter))]
 	interface CNPostalAddressFormatter {
 
@@ -1174,15 +2418,23 @@ namespace Contacts {
 		[Export ("style")]
 		CNPostalAddressFormatterStyle Style { get; set; }
 
+		/// <summary>Get the <see cref="Contacts.CNPostalAddress" /> property key.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNPostalAddressPropertyAttribute")]
 		NSString PropertyAttribute { get; }
 
+		/// <summary>Returns the localized <see cref="Contacts.CNPostalAddress" /> property key.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNPostalAddressLocalizedPropertyNameAttribute")]
 		NSString LocalizedPropertyNameAttribute { get; }
 	}
 
-#if !WATCH
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>A request that performs a save operation for contacts.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNSaveRequest_Class/index.html">Apple documentation for <c>CNSaveRequest</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNSaveRequest {
 
@@ -1205,10 +2457,12 @@ namespace Contacts {
 		void DeleteGroup (CNMutableGroup group);
 
 		[NoiOS]
+		[NoMacCatalyst]
 		[Export ("addSubgroup:toGroup:")]
 		void AddSubgroup (CNGroup subgroup, CNGroup group);
 
 		[NoiOS]
+		[NoMacCatalyst]
 		[Export ("removeSubgroup:fromGroup:")]
 		void RemoveSubgroup (CNGroup subgroup, CNGroup group);
 
@@ -1217,10 +2471,20 @@ namespace Contacts {
 
 		[Export ("removeMember:fromGroup:")]
 		void RemoveMember (CNContact contact, CNGroup group);
-	}
-#endif // !WATCH
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+		[iOS (15, 0), MacCatalyst (15, 0)]
+		[NullAllowed, Export ("transactionAuthor")]
+		string TransactionAuthor { get; set; }
+
+		[iOS (15, 4), MacCatalyst (15, 4)]
+		[Export ("shouldRefetchContacts")]
+		bool ShouldRefetchContacts { get; set; }
+	}
+
+	/// <summary>A profile for a social network, such as Facebook or Twitter.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/Contacts/Reference/CNSocialProfile_Class/index.html">Apple documentation for <c>CNSocialProfile</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CNSocialProfile : NSCopying, NSSecureCoding, INSCopying, INSSecureCoding {
 
@@ -1237,15 +2501,19 @@ namespace Contacts {
 		string Service { get; }
 
 		[Export ("initWithUrlString:username:userIdentifier:service:")]
-		IntPtr Constructor ([NullAllowed] string url, [NullAllowed] string username, [NullAllowed] string userIdentifier, [NullAllowed] string service);
+		NativeHandle Constructor ([NullAllowed] string url, [NullAllowed] string username, [NullAllowed] string userIdentifier, [NullAllowed] string service);
 
 		[Static]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		[Export ("localizedStringForKey:")]
 		string LocalizeProperty (NSString key);
 
+		/// <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
-		[Wrap ("LocalizeProperty (key.GetConstant ())")]
+		[Wrap ("LocalizeProperty (key.GetConstant ()!)")]
 		string LocalizeProperty (CNPostalAddressKeyOption key);
 
 		[Static]
@@ -1253,57 +2521,95 @@ namespace Contacts {
 		string LocalizeService (NSString service);
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants whose values specify the properties of social services that are always fetched.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNSocialProfileKey { // Can be used in KVO
 
+		/// <summary>The key associated with <see cref="Contacts.CNSocialProfileOption.UrlString" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileURLStringKey")]
 		NSString UrlString { get; }
 
+		/// <summary>The key associated with <see cref="Contacts.CNSocialProfileOption.Username" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileUsernameKey")]
 		NSString Username { get; }
 
+		/// <summary>The key associated with <see cref="Contacts.CNSocialProfileOption.UserIdentifier" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileUserIdentifierKey")]
 		NSString UserIdentifier { get; }
 
+		/// <summary>The key associated with <see cref="Contacts.CNSocialProfileOption.Service" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceKey")]
 		NSString Service { get; }
 	}
 
-	[iOS (9,0), Mac (10,11, onlyOn64: true)]
+	/// <summary>Provides string constants naming known social networks.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	[EditorBrowsable (EditorBrowsableState.Advanced)]
 	interface CNSocialProfileServiceKey {
 
+		/// <summary>Facebook.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceFacebook")]
 		NSString Facebook { get; }
 
+		/// <summary>Flickr.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceFlickr")]
 		NSString Flickr { get; }
 
+		/// <summary>LinkedIn.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceLinkedIn")]
 		NSString LinkedIn { get; }
 
+		/// <summary>MySpace.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceMySpace")]
 		NSString MySpace { get; }
 
+		/// <summary>SinaWeibo.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceSinaWeibo")]
 		NSString SinaWeibo { get; }
 
+		/// <summary>TencentWeibo.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceTencentWeibo")]
 		NSString TencentWeibo { get; }
 
+		/// <summary>Twitter.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceTwitter")]
 		NSString Twitter { get; }
 
+		/// <summary>Yelp.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceYelp")]
 		NSString Yelp { get; }
 
+		/// <summary>Apple GameCenter.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CNSocialProfileServiceGameCenter")]
 		NSString GameCenter { get; }
 	}
-#endif // XAMCORE_2_0
 }
-
-

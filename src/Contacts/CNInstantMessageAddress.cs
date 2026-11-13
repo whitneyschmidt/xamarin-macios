@@ -1,4 +1,4 @@
-﻿//
+//
 // CNInstantMessageAddress.cs: Implements some nicer methods for CNInstantMessageAddress
 //
 // Authors:
@@ -7,33 +7,47 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using Foundation;
+#nullable enable
 
 namespace Contacts {
-#if XAMCORE_2_0 // The Contacts framework uses generics heavily, which is only supported in Unified (for now at least)
 	// Strong typed Keys to enum
+	/// <summary>Enumeration of values used by all instant-message services.</summary>
 	public enum CNInstantMessageAddressOption {
+		/// <summary>Associated with the <see cref="Contacts.CNInstantMessageAddress.Username" /> property.</summary>
 		Username,
-		Service
+		/// <summary>Associated with the <see cref="Contacts.CNInstantMessageAddress.Service" /> property.</summary>
+		Service,
 	}
 
 	// Strong typed Keys to enum
+	/// <summary>Enumerates common providers of instant messaging.</summary>
 	public enum CNInstantMessageServiceOption {
+		/// <summary>AOL Instant Messenger.</summary>
 		Aim,
+		/// <summary>Facebook Messenger.</summary>
 		Facebook,
+		/// <summary>Gadu-Gadu (Polish).</summary>
 		GaduGadu,
+		/// <summary>Google Talk.</summary>
 		GoogleTalk,
+		/// <summary>ICQ.</summary>
 		Icq,
+		/// <summary>Jabber.</summary>
 		Jabber,
+		/// <summary>MSN Messenger.</summary>
 		Msn,
+		/// <summary>Tencent QQ.</summary>
 		QQ,
+		/// <summary>Microsoft Skype.</summary>
 		Skype,
-		Yahoo
+		/// <summary>Yahoo Messenger.</summary>
+		Yahoo,
 	}
 
 	public partial class CNInstantMessageAddress {
 
+		/// <summary>Returns the localized property name for <paramref name="property" />.</summary>
+		/// <param name="property">The property.</param>
 		public static string LocalizeProperty (CNInstantMessageAddressOption property)
 		{
 			switch (property) {
@@ -46,6 +60,8 @@ namespace Contacts {
 			}
 		}
 
+		/// <summary>Returns the localized string for the specified <paramref name="serviceOption" />.</summary>
+		/// <param name="serviceOption">The service option.</param>
 		public static string LocalizeService (CNInstantMessageServiceOption serviceOption)
 		{
 			var srvc = ServiceOptionsToNSString (serviceOption);
@@ -80,6 +96,4 @@ namespace Contacts {
 			}
 		}
 	}
-#endif // XAMCORE_2_0
 }
-

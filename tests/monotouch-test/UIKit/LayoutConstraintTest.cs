@@ -1,24 +1,16 @@
 // Copyright 2012-2013 Xamarin Inc. All rights reserved
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class LayoutConstraintTest {
-		
+
 		[Test]
 		public void Create ()
 		{
@@ -50,10 +42,10 @@ namespace MonoTouchFixtures.UIKit {
 				dict ["button0"] = b0;
 				dict ["button1"] = b1;
 				var constaints = NSLayoutConstraint.FromVisualFormat ("[button0]-20-[button1]", NSLayoutFormatOptions.AlignAllBaseline, metrics, dict);
-				Assert.NotNull (constaints);
+				Assert.That (constaints, Is.Not.Null);
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

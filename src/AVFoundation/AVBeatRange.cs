@@ -22,26 +22,39 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 //
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
-
-	[iOS (9,0), Mac (10,11)]
+	/// <summary>Defines a range within a specific <see cref="AVFoundation.AVMusicTrack" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct AVBeatRange {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public double Start;
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public double Length;
 
+		/// <param name="startBeat">To be added.</param>
+		///         <param name="lengthInBeats">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AVBeatRange (double startBeat, double lengthInBeats)
 		{
 			Start = startBeat;
 			Length = lengthInBeats;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override string ToString ()
 		{
 			return $"(Start={Start},Length={Length})";
@@ -57,22 +70,33 @@ namespace AVFoundation {
 			return !left.Equals (right);
 		}
 
-		public override bool Equals (object obj)
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override bool Equals (object? obj)
 		{
 			if (!(obj is AVBeatRange))
 				return false;
 
-			return this.Equals ((AVBeatRange)obj);
+			return this.Equals ((AVBeatRange) obj);
 		}
 
+		/// <param name="other">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Equals (AVBeatRange other)
 		{
 			return Start == other.Start && Length == other.Length;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public override int GetHashCode ()
 		{
-			return Start.GetHashCode () ^ Length.GetHashCode ();
+			return HashCode.Combine (Start, Length);
 		}
 	}
 }

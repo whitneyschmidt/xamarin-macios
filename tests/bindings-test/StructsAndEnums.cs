@@ -1,26 +1,32 @@
-using System;
-using System.Runtime.InteropServices;
 
-#if !__UNIFIED__
-using nint=System.Int32;
+using SceneKit;
+
+using MatrixFloat2x2 = global::CoreGraphics.NMatrix2;
+using MatrixFloat3x3 = global::CoreGraphics.NMatrix3;
+using MatrixFloat4x3 = global::CoreGraphics.NMatrix4x3;
+using MatrixFloat4x4 = global::CoreGraphics.NMatrix4;
+
+#if __MACOS__
+using pfloat = System.Runtime.InteropServices.NFloat;
 #else
-using Foundation;
-using ObjCRuntime;
+using pfloat = System.Single;
 #endif
 
-using MatrixFloat2x2 = global::OpenTK.NMatrix2;
-using MatrixFloat3x3 = global::OpenTK.NMatrix3;
-using MatrixFloat4x3 = global::OpenTK.NMatrix4x3;
-using MatrixFloat4x4 = global::OpenTK.NMatrix4;
+public static class LibTest {
+	[DllImport ("__Internal")]
+	public static extern int theUltimateAnswer ();
+}
 
-namespace Bindings.Test
-{
+namespace Bindings.Test {
 	public static class CFunctions {
 		[DllImport ("__Internal")]
 		public static extern int theUltimateAnswer ();
 
 		[DllImport ("__Internal")]
 		public static extern void x_call_block (ref BlockLiteral block);
+
+		[DllImport ("__Internal")]
+		public static extern IntPtr x_call_func_3 (IntPtr fptr, IntPtr p1, IntPtr p2, IntPtr p3);
 
 		[DllImport ("__Internal")]
 		public static extern void x_get_matrix_float2x2 (IntPtr self, string sel, out float r0c0, out float r0c1, out float r1c0, out float r1c1);
@@ -75,7 +81,6 @@ namespace Bindings.Test
 				r2c0, r2c1, r2c2, r2c3);
 		}
 
-#if !__WATCHOS__
 		[DllImport ("__Internal")]
 		public static extern void x_mdltransformcomponent_get_local_transform (IntPtr self, double time, out float r0c0, out float r0c1, out float r0c2, out float r0c3, out float r1c0, out float r1c1, out float r1c2, out float r1c3, out float r2c0, out float r2c1, out float r2c2, out float r2c3, out float r3c0, out float r3c1, out float r3c2, out float r3c3);
 
@@ -117,7 +122,14 @@ namespace Bindings.Test
 				r2c0, r2c1, r2c2, r2c3,
 				r3c0, r3c1, r3c2, r3c3);
 		}
-#endif
+
+		[DllImport ("__Internal")]
+		public static extern SCNMatrix4 x_SCNMatrix4MakeTranslation (pfloat tx, pfloat ty, pfloat tz);
+
+		[DllImport ("__Internal")]
+		public static extern SCNMatrix4 x_SCNMatrix4MakeScale (pfloat tx, pfloat ty, pfloat tz);
+
+		[DllImport ("__Internal")]
+		public static extern SCNMatrix4 x_SCNMatrix4Translate (SCNMatrix4 m, pfloat tx, pfloat ty, pfloat tz);
 	}
 }
-

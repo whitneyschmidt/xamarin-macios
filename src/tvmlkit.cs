@@ -1,48 +1,43 @@
 // Copyright 2015 Xamarin Inc.
 // Copyright 2018 Microsoft Corporation
 
-using System;
 using System.ComponentModel;
 using AVFoundation;
-using Foundation;
 using JavaScriptCore;
-using ObjCRuntime;
 using UIKit;
 
 namespace TVMLKit {
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVColorType : long {
 		None,
 		Plain,
 		LinearGradientTopToBottom,
-		LinearGradientLeftToRight
+		LinearGradientLeftToRight,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementAlignment : long {
 		Undefined,
 		Left,
 		Center,
 		Right,
-		[TV (11,0)]
 		Leading,
-		[TV (11, 0)]
 		Trailing,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementContentAlignment : long {
 		Undefined,
 		Top,
 		Center,
-		Bottom
+		Bottom,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementPosition : long {
 		Undefined,
@@ -57,75 +52,61 @@ namespace TVMLKit {
 		BottomRight,
 		Header,
 		Footer,
-		[TV (11, 0)]
 		Leading,
-		[TV (11, 0)]
 		Trailing,
-		[TV (11, 0)]
 		TopLeading,
-		[TV (11, 0)]
 		TopTrailing,
-		[TV (11, 0)]
 		BottomLeading,
-		[TV (11, 0)]
 		BottomTrailing,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementEventType : long {
 		Play = 1,
 		Select,
 		HoldSelect,
 		Highlight,
-		Change
+		Change,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementUpdateType : long {
 		None,
 		Subtree,
-#if XAMCORE_4_0
-		[TV (10,0)]
 		Styles,
 		Children,
 		Self,
-#else
-		Children,
-		Self,
-		[TV (10,0)]
-		Styles,
-#endif
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVElementResettableProperty : long {
 		UpdateType,
-		AutoHighlightIdentifier
+		AutoHighlightIdentifier,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVImageType : long {
 		Image,
 		Fullscreen,
 		Decoration,
-		Hero
+		Hero,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	[ErrorDomain ("TVMLKitErrorDomain")]
 	public enum TVMLKitError : long {
 		Unknown = 1,
 		InternetUnavailable,
 		FailedToLaunch,
-		Last
+		Last,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVViewElementStyleType : long {
 		Integer = 1,
@@ -135,20 +116,20 @@ namespace TVMLKit {
 		Color,
 		Url,
 		Transform,
-		EdgeInsets
+		EdgeInsets,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVTextElementStyle : long {
 		None,
 		Title,
 		Subtitle,
 		Description,
-		Decoration
+		Decoration,
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVPlaybackState : long {
 		Undefined,
@@ -162,7 +143,7 @@ namespace TVMLKit {
 		End,
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVPlaylistRepeatMode : long {
 		None = 0,
@@ -170,7 +151,7 @@ namespace TVMLKit {
 		One,
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Native]
 	public enum TVPlaylistEndAction : long {
 		Stop = 0,
@@ -178,7 +159,7 @@ namespace TVMLKit {
 		WaitForMoreItems,
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	public enum TVMediaItemType {
 		// NS_TYPED_EXTENSIBLE_ENUM
 		[DefaultEnumValue]
@@ -190,7 +171,7 @@ namespace TVMLKit {
 		Video,
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	public enum TVMediaItemContentRatingDomain {
 		// NS_TYPED_EXTENSIBLE_ENUM
 		[DefaultEnumValue]
@@ -205,7 +186,7 @@ namespace TVMLKit {
 		Music,
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	interface TVApplicationControllerContext : NSCopying {
 		[Export ("javaScriptApplicationURL", ArgumentSemantic.Copy)]
@@ -215,10 +196,14 @@ namespace TVMLKit {
 		string StorageIdentifier { get; set; }
 
 		[Export ("launchOptions", ArgumentSemantic.Copy)]
-		NSDictionary<NSString,NSObject> LaunchOptions { get; set; }
+		NSDictionary<NSString, NSObject> LaunchOptions { get; set; }
+
+		[TV (14, 0)]
+		[Export ("supportsPictureInPicturePlayback")]
+		bool SupportsPictureInPicturePlayback { get; set; }
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Protocol, Model]
 	[BaseType (typeof (NSObject))]
 	interface TVApplicationControllerDelegate {
@@ -234,20 +219,20 @@ namespace TVMLKit {
 		[Export ("appController:didStopWithOptions:")]
 		void DidStop (TVApplicationController appController, [NullAllowed] NSDictionary<NSString, NSObject> options);
 
-		[TV (12,0)]
 		[Export ("playerForAppController:")]
 		[return: NullAllowed]
 		TVPlayer GetPlayer (TVApplicationController appController);
 	}
 
-	interface ITVApplicationControllerDelegate {}
-	
+	interface ITVApplicationControllerDelegate { }
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVApplicationController {
 		[Export ("initWithContext:window:delegate:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (TVApplicationControllerContext context, [NullAllowed] UIWindow window, [NullAllowed] ITVApplicationControllerDelegate @delegate);
+		NativeHandle Constructor (TVApplicationControllerContext context, [NullAllowed] UIWindow window, [NullAllowed] ITVApplicationControllerDelegate @delegate);
 
 		[NullAllowed, Export ("window")]
 		UIWindow Window { get; }
@@ -273,8 +258,8 @@ namespace TVMLKit {
 		void Stop ();
 	}
 
-	[TV (9,0)]
-	[BaseType (typeof(NSObject))]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (NSObject))]
 	interface TVColor : NSCopying {
 		[Export ("colorType")]
 		TVColorType ColorType { get; }
@@ -283,422 +268,13 @@ namespace TVMLKit {
 		UIColor Color { get; }
 
 		[NullAllowed, Export ("gradientColors")]
-		UIColor[] GradientColors { get; }
+		UIColor [] GradientColors { get; }
 
 		[NullAllowed, Export ("gradientPoints")]
-		NSNumber[] GradientPoints { get; }
+		NSNumber [] GradientPoints { get; }
 	}
 
-#if false // TVMLKit/TVElementTypes.h was removed from Xcode 7.1 beta 3 (mistake?)
-	[TV (9,0)]
-	[Static]
-	interface TVAttributeKey {
-		// FIXME: does it fit here ?
-		[Field ("TVAttributeCanonicalIdentifier")]
-		NSString CanonicalIdentifier { get; }
-
-		[Field ("TVAttributeKeyAccessibility")]
-		NSString Accessibility { get; }
-
-		[Field ("TVAttributeKeyAllowsZooming")]
-		NSString AllowsZooming { get; }
-
-		[Field ("TVAttributeKeyAspectFill")]
-		NSString AspectFill { get; }
-
-		[Field ("TVAttributeKeyAutoHighlight")]
-		NSString AutoHighlight { get; }
-
-		[Field ("TVAttributeKeyCentered")]
-		NSString Centered { get; }
-
-		[Field ("TVAttributeKeyDataMetrics")]
-		NSString DataMetrics { get; }
-
-		[Field ("TVAttributeKeyDisabled")]
-		NSString Disabled { get; }
-
-		[Field ("TVAttributeKeyFirstItem")]
-		NSString FirstItem { get; }
-
-		[Field ("TVAttributeKeyFirstName")]
-		NSString FirstName { get; }
-
-		[Field ("TVAttributeKeyFocusEnabled")]
-		NSString FocusEnabled { get; }
-
-		[Field ("TVAttributeKeyImg_Height")]
-		NSString Img_Height { get; }
-
-		[Field ("TVAttributeKeyImg_Src")]
-		NSString Img_Src { get; }
-
-		[Field ("TVAttributeKeyImg_Srcset")]
-		NSString Img_Srcset { get; }
-
-		[Field ("TVAttributeKeyImg_Width")]
-		NSString Img_Width { get; }
-
-		[Field ("TVAttributeKeyImpressionViewableThreshold")]
-		NSString ImpressionViewableThreshold { get; }
-
-		[Field ("TVAttributeKeyIndex")]
-		NSString Index { get; }
-
-		[Field ("TVAttributeKeyLastName")]
-		NSString LastName { get; }
-
-		[Field ("TVAttributeKeyMinLength")]
-		NSString MinLength { get; }
-
-		[Field ("TVAttributeKeyMode")]
-		NSString Mode { get; }
-
-		[Field ("TVAttributeKeyShowsScrollIndicator")]
-		NSString ShowsScrollIndicator { get; }
-
-		[Field ("TVAttributeKeyTextInput_KeyboardType")]
-		NSString TextInput_KeyboardType { get; }
-
-		[Field ("TVAttributeKeyTextInput_Secure")]
-		NSString TextInput_Secure { get; }
-
-		[Field ("TVAttributeKeyTheme")]
-		NSString Theme { get; }
-
-		[Field ("TVAttributeKeyType")]
-		NSString Type { get; }
-
-		[Field ("TVAttributeKeyValue")]
-		NSString Value { get; }
-
-		[Field ("TVAttributeMappedIndexPaths")]
-		NSString TVAttributeMappedIndexPaths { get; }
-
-		[Field ("TVAttributeNumStars")]
-		NSString TVAttributeNumStars { get; }
-
-		[Field ("TVAttributePageControl")]
-		NSString TVAttributePageControl { get; }
-
-		[Field ("TVAttributeSearchIdentifier")]
-		NSString TVAttributeSearchIdentifier { get; }
-
-		[Field ("TVAttributeSiriData")]
-		NSString TVAttributeSiriData { get; }
-	}
-
-	[TV (9,0)]
-	[Static]
-	interface TVElementKey {
-		[Field ("TVElementKeyActivityIndicator")]
-		NSString ActivityIndicator { get; }
-
-		[Field ("TVElementKeyAsset")]
-		NSString Asset { get; }
-
-		[Field ("TVElementKeyAudio")]
-		NSString Audio { get; }
-
-		[Field ("TVElementKeyBackground")]
-		NSString Background { get; }
-
-		[Field ("TVElementKeyAlertTemplate")]
-		NSString AlertTemplate { get; }
-
-		[Field ("TVElementKeyAppInfoCard")]
-		NSString AppInfoCard { get; }
-
-		[Field ("TVElementKeyAppProductTemplate")]
-		NSString AppProductTemplate { get; }
-
-		[Field ("TVElementKeyBadge")]
-		NSString Badge { get; }
-
-		[Field ("TVElementKeyButton")]
-		NSString Button { get; }
-
-		[Field ("TVElementKeyButtonLockup")]
-		NSString ButtonLockup { get; }
-
-		[Field ("TVElementKeyCard")]
-		NSString Card { get; }
-
-		[Field ("TVElementKeyCarousel")]
-		NSString Carousel { get; }
-
-		[Field ("TVElementKeyCatalogTemplate")]
-		NSString CatalogTemplate { get; }
-
-		[Field ("TVElementKeyCollectionList")]
-		NSString CollectionList { get; }
-
-		[Field ("TVElementKeyColumnList")]
-		NSString ColumnList { get; }
-
-		[Field ("TVElementKeyCommonSenseTemplate")]
-		NSString CommonSenseTemplate { get; }
-
-		[Field ("TVElementKeyCompilationTemplate")]
-		NSString CompilationTemplate { get; }
-
-		[Field ("TVElementKeyCuratedPlaylistImg")]
-		NSString CuratedPlaylistImg { get; }
-
-		[Field ("TVElementKeyDecorationImage")]
-		NSString DecorationImage { get; }
-
-		[Field ("TVElementKeyDecorationLabel")]
-		NSString DecorationLabel { get; }
-
-		[Field ("TVElementKeyDescription")]
-		NSString Description { get; }
-
-		[Field ("TVElementKeyDescriptiveAlertTemplate")]
-		NSString DescriptiveAlertTemplate { get; }
-
-		[Field ("TVElementKeyDialogTemplate")]
-		NSString DialogTemplate { get; }
-
-		[Field ("TVElementKeyDivTemplate")]
-		NSString DivTemplate { get; }
-
-		[Field ("TVElementKeyDocumentBanner")]
-		NSString DocumentBanner { get; }
-
-		[Field ("TVElementKeyFooter")]
-		NSString Footer { get; }
-
-		[Field ("TVElementKeyFormTemplate")]
-		NSString FormTemplate { get; }
-
-		[Field ("TVElementKeyFullscreenImg")]
-		NSString FullscreenImg { get; }
-
-		[Field ("TVElementKeyGalleryTemplate")]
-		NSString GalleryTemplate { get; }
-
-		[Field ("TVElementKeyGrid")]
-		NSString Grid { get; }
-
-		[Field ("TVElementKeyHead")]
-		NSString Head { get; }
-
-		[Field ("TVElementKeyHeader")]
-		NSString Header { get; }
-
-		[Field ("TVElementKeyHeroImage")]
-		NSString HeroImage { get; }
-
-		[Field ("TVElementKeyIdentityBanner")]
-		NSString IdentityBanner { get; }
-
-		[Field ("TVElementKeyImageDeck")]
-		NSString ImageDeck { get; }
-
-		[Field ("TVElementKeyImg")]
-		NSString Img { get; }
-
-		[Field ("TVElementKeyInfo")]
-		NSString Info { get; }
-
-		[Field ("TVElementKeyInfoList")]
-		NSString InfoList { get; }
-
-		[Field ("TVElementKeyInfoTable")]
-		NSString InfoTable { get; }
-
-		[Field ("TVElementKeyItemBanner")]
-		NSString ItemBanner { get; }
-
-		[Field ("TVElementKeyList")]
-		NSString List { get; }
-
-		[Field ("TVElementKeyListAltTemplate")]
-		NSString ListAltTemplate { get; }
-
-		[Field ("TVElementKeyListItemLockup")]
-		NSString ListItemLockup { get; }
-
-		[Field ("TVElementKeyListTemplate")]
-		NSString ListTemplate { get; }
-
-		[Field ("TVElementKeyLoadingTemplate")]
-		NSString LoadingTemplate { get; }
-
-		[Field ("TVElementKeyLockup")]
-		NSString Lockup { get; }
-
-		[Field ("TVElementKeyMainTemplate")]
-		NSString MainTemplate { get; }
-
-		[Field ("TVElementKeyMenuBar")]
-		NSString MenuBar { get; }
-
-		[Field ("TVElementKeyMenuBarTemplate")]
-		NSString MenuBarTemplate { get; }
-
-		[Field ("TVElementKeyMenuItem")]
-		NSString MenuItem { get; }
-
-		[Field ("TVElementKeyMonogram")]
-		NSString Monogram { get; }
-
-		[Field ("TVElementKeyMonogramLockup")]
-		NSString MonogramLockup { get; }
-
-		[Field ("TVElementKeyMusicVideoProductTemplate")]
-		NSString MusicVideoProductTemplate { get; }
-
-		[Field ("TVElementKeyOneupTemplate")]
-		NSString OneupTemplate { get; }
-
-		[Field ("TVElementKeyOrdinal")]
-		NSString Ordinal { get; }
-
-		[Field ("TVElementKeyOverlay")]
-		NSString Overlay { get; }
-
-		[Field ("TVElementKeyParadeTemplate")]
-		NSString ParadeTemplate { get; }
-
-		[Field ("TVElementKeyPhotoAlbumTemplate")]
-		NSString PhotoAlbumTemplate { get; }
-
-		[Field ("TVElementKeyPhotoLibraryTemplate")]
-		NSString PhotoLibraryTemplate { get; }
-
-		[Field ("TVElementKeyPlaceholder")]
-		NSString Placeholder { get; }
-
-		[Field ("TVElementKeyPlaylistFolderImg")]
-		NSString PlaylistFolderImg { get; }
-
-		[Field ("TVElementKeyPlaylistImg")]
-		NSString PlaylistImg { get; }
-
-		[Field ("TVElementKeyProductBundleTemplate")]
-		NSString ProductBundleTemplate { get; }
-
-		[Field ("TVElementKeyProductInfo")]
-		NSString ProductInfo { get; }
-
-		[Field ("TVElementKeyProductTemplate")]
-		NSString ProductTemplate { get; }
-
-		[Field ("TVElementKeyProgressBar")]
-		NSString ProgressBar { get; }
-
-		[Field ("TVElementKeyRatingBadge")]
-		NSString RatingBadge { get; }
-
-		[Field ("TVElementKeyRatingButton")]
-		NSString RatingButton { get; }
-
-		[Field ("TVElementKeyRatingCard")]
-		NSString RatingCard { get; }
-
-		[Field ("TVElementKeyRatingTemplate")]
-		NSString RatingTemplate { get; }
-
-		[Field ("TVElementKeyRelatedContent")]
-		NSString TVElementKeyRelatedContent { get; }
-
-		[Field ("TVElementKeyReviewCard")]
-		NSString ReviewCard { get; }
-
-		[Field ("TVElementKeyRow")]
-		NSString Row { get; }
-
-		[Field ("TVElementKeySearchField")]
-		NSString SearchField { get; }
-
-		[Field ("TVElementKeySearchTemplate")]
-		NSString SearchTemplate { get; }
-
-		[Field ("TVElementKeySeasonBadge")]
-		NSString SeasonBadge { get; }
-
-		[Field ("TVElementKeySection")]
-		NSString Section { get; }
-
-		[Field ("TVElementKeySegmentBar")]
-		NSString SegmentBar { get; }
-
-		[Field ("TVElementKeySegmentBarHeader")]
-		NSString SegmentBarHeader { get; }
-
-		[Field ("TVElementKeySegmentBarItem")]
-		NSString SegmentBarItem { get; }
-
-		[Field ("TVElementKeySeparator")]
-		NSString Separator { get; }
-
-		[Field ("TVElementKeyShelf")]
-		NSString Shelf { get; }
-
-		[Field ("TVElementKeyShowcaseTemplate")]
-		NSString ShowcaseTemplate { get; }
-
-		[Field ("TVElementKeySlideshow")]
-		NSString Slideshow { get; }
-
-		[Field ("TVElementKeySpriteLockup")]
-		NSString SpriteLockup { get; }
-
-		[Field ("TVElementKeyStack")]
-		NSString Stack { get; }
-
-		[Field ("TVElementKeyStackTemplate")]
-		NSString StackTemplate { get; }
-
-		[Field ("TVElementKeyStarBar")]
-		NSString StarBar { get; }
-
-		[Field ("TVElementKeyStarHistogram")]
-		NSString StarHistogram { get; }
-
-		[Field ("TVElementKeySubtitle")]
-		NSString Subtitle { get; }
-
-		[Field ("TVElementKeyText")]
-		NSString Text { get; }
-
-		[Field ("TVElementKeyTextBadge")]
-		NSString TextBadge { get; }
-
-		[Field ("TVElementKeyTextField")]
-		NSString TextField { get; }
-
-		[Field ("TVElementKeyTitle")]
-		NSString Title { get; }
-
-		[Field ("TVElementKeyTumblerBar")]
-		NSString TumblerBar { get; }
-
-		[Field ("TVElementKeyTumblerItem")]
-		NSString TumblerItem { get; }
-
-		[Field ("TVElementKeyVideo")]
-		NSString Video { get; }
-	}
-
-	// FIXME: enum'ify ?
-	[TV (9,0)]
-	[Static]
-	interface TVKeyboardType {
-		[Field ("TVKeyboardTypeEmailAddress")]
-		NSString EmailAddress { get; }
-
-		[Field ("TVKeyboardTypeNumberPad")]
-		NSString NumberPad { get; }
-
-		[Field ("TVKeyboardTypeURL")]
-		NSString TypeURL { get; }
-	}
-#endif
-
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	interface TVElementFactory {
 		// FIXME: provide System.Type overload
@@ -707,8 +283,8 @@ namespace TVMLKit {
 		void RegisterViewElementClass (Class elementClass, string elementName);
 	}
 
-	[TV (9,0)]
-	[BaseType (typeof(NSObject))]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (NSObject))]
 	interface TVViewElementStyle : NSCopying {
 		// FIXME: badly named, unsure of return value
 		[Export ("valueForStyleProperty:")]
@@ -734,7 +310,6 @@ namespace TVMLKit {
 		[Export ("margin")]
 		UIEdgeInsets Margin { get; }
 
-		[TV (10,0)]
 		[Export ("focusMargin")]
 		UIEdgeInsets FocusMargin { get; }
 
@@ -796,7 +371,7 @@ namespace TVMLKit {
 		TVColor TintColor { get; }
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	interface TVViewElement : NSCopying {
 		[Export ("elementIdentifier")]
@@ -809,7 +384,7 @@ namespace TVMLKit {
 		TVViewElement ParentViewElement { get; }
 
 		[NullAllowed, Export ("childViewElements")]
-		TVViewElement[] ChildViewElements { get; }
+		TVViewElement [] ChildViewElements { get; }
 
 		[NullAllowed, Export ("attributes")]
 		NSDictionary<NSString, NSString> Attributes { get; }
@@ -822,11 +397,13 @@ namespace TVMLKit {
 
 		[Export ("disabled")]
 		bool Disabled {
-			[Bind ("isDisabled")] get;
+			[Bind ("isDisabled")]
+			get;
 			set;
 		}
 
-		[Internal][Sealed]
+		[Internal]
+		[Sealed]
 		[Export ("updateType")]
 		TVElementUpdateType _UpdateType { get; }
 
@@ -840,10 +417,13 @@ namespace TVMLKit {
 		[Export ("dispatchEventWithName:canBubble:cancellable:extraInfo:completion:")]
 		[Async (ResultType = typeof (TVViewElementDispatchResult))]
 		void DispatchEvent (string eventName, bool canBubble, bool isCancellable, [NullAllowed] NSDictionary<NSString, NSObject> extraInfo, [NullAllowed] Action<bool, bool> completion);
+
+		[Export ("elementData")]
+		NSDictionary<NSString, NSObject> ElementData { get; }
 	}
 
-	[TV (9,0)]
-	[BaseType (typeof(TVViewElement))]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (TVViewElement))]
 	interface TVImageElement {
 		[NullAllowed, Export ("URL")]
 		NSUrl Url { get; }
@@ -855,7 +435,7 @@ namespace TVMLKit {
 		TVImageType ImageType { get; }
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Protocol]
 	interface TVInterfaceCreating {
 		[Export ("viewForElement:existingView:")]
@@ -870,25 +450,22 @@ namespace TVMLKit {
 		[return: NullAllowed]
 		NSUrl GetUrlForResource (string resourceName);
 
-		[TV (9,2)]
 		[Export ("imageForResource:")]
 		[return: NullAllowed]
 		UIImage GetImageForResource (string resourceName);
 
-		[TV (10,0)]
 		[Export ("collectionViewCellClassForElement:")]
 		[return: NullAllowed]
 		Class GetCollectionViewCellClass (TVViewElement element);
 
-		[TV (12,0)]
 		[Export ("playerViewControllerForPlayer:")]
 		[return: NullAllowed]
 		UIViewController GetPlayerViewController (TVPlayer player);
 	}
 
-	interface ITVInterfaceCreating {}
+	interface ITVInterfaceCreating { }
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	interface TVInterfaceFactory : TVInterfaceCreating {
 		[Static]
@@ -899,7 +476,7 @@ namespace TVMLKit {
 		ITVInterfaceCreating ExtendedInterfaceCreator { get; set; }
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	interface TVStyleFactory {
 		[Static]
@@ -907,7 +484,7 @@ namespace TVMLKit {
 		void RegisterStyle (string styleName, TVViewElementStyleType type, bool inherited);
 	}
 
-	[TV (9,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (TVViewElement))]
 	interface TVTextElement {
 		[NullAllowed, Export ("attributedText")]
@@ -923,9 +500,9 @@ namespace TVMLKit {
 		NSAttributedString GetAttributedString (UIFont font, [NullAllowed] UIColor foregroundColor, UITextAlignment alignment);
 	}
 
-	interface ITVPlaybackEventMarshaling {}
+	interface ITVPlaybackEventMarshaling { }
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[Protocol]
 	interface TVPlaybackEventMarshaling {
 		[Abstract]
@@ -936,12 +513,12 @@ namespace TVMLKit {
 		void ProcessReturn (JSValue value, JSContext jsContext);
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVPlaybackCustomEventUserInfo : TVPlaybackEventMarshaling {
 		[Export ("initWithProperties:expectsReturnValue:")]
-		IntPtr Constructor ([NullAllowed] NSDictionary<NSString, NSObject> properties, bool expectsReturnValue);
+		NativeHandle Constructor ([NullAllowed] NSDictionary<NSString, NSObject> properties, bool expectsReturnValue);
 
 		[Export ("expectsReturnValue")]
 		bool ExpectsReturnValue { get; set; }
@@ -950,12 +527,12 @@ namespace TVMLKit {
 		NSObject ReturnValue { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVPlaylist {
 		[Export ("mediaItems", ArgumentSemantic.Copy)]
-		TVMediaItem[] MediaItems { get; }
+		TVMediaItem [] MediaItems { get; }
 
 		[Export ("endAction", ArgumentSemantic.Assign)]
 		TVPlaylistEndAction EndAction { get; }
@@ -967,7 +544,7 @@ namespace TVMLKit {
 		NSDictionary<NSString, NSObject> UserInfo { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVMediaItem {
@@ -975,7 +552,7 @@ namespace TVMLKit {
 		[NullAllowed, Export ("type", ArgumentSemantic.Strong)]
 		NSString /* NS_TYPED_EXTENSIBLE_ENUM */ WeakType { get; }
 
-		[Wrap ("TVMediaItemTypeExtensions.GetValue (WeakType)")]
+		[Wrap ("TVMediaItemTypeExtensions.GetValue (WeakType!)")]
 		TVMediaItemType Type { get; }
 
 		[NullAllowed, Export ("url", ArgumentSemantic.Strong)]
@@ -1007,33 +584,37 @@ namespace TVMLKit {
 		bool ExplicitContent { get; }
 
 		[Export ("resumeTime")]
-		/* NSInterval */ double ResumeTime { get; }
+		/* NSInterval */
+		double ResumeTime { get; }
 
 		[Export ("interstitials", ArgumentSemantic.Strong)]
-		TVTimeRange[] Interstitials { get; }
+		TVTimeRange [] Interstitials { get; }
 
 		[Export ("highlightGroups", ArgumentSemantic.Strong)]
-		TVHighlightGroup[] HighlightGroups { get; }
+		TVHighlightGroup [] HighlightGroups { get; }
 
 		[Export ("userInfo", ArgumentSemantic.Strong)]
 		NSDictionary<NSString, NSObject> UserInfo { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVTimeRange {
 		[Export ("startTime")]
-		/* NSInterval */ double StartTime { get; }
+		/* NSInterval */
+		double StartTime { get; }
 
 		[Export ("endTime")]
-		/* NSInterval */ double EndTime { get; }
+		/* NSInterval */
+		double EndTime { get; }
 
 		[Export ("duration")]
-		/* NSInterval */ double Duration { get; }
+		/* NSInterval */
+		double Duration { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVHighlightGroup {
@@ -1041,10 +622,10 @@ namespace TVMLKit {
 		string LocalizedName { get; }
 
 		[Export ("highlights", ArgumentSemantic.Strong)]
-		TVHighlight[] Highlights { get; }
+		TVHighlight [] Highlights { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVHighlight {
@@ -1061,12 +642,12 @@ namespace TVMLKit {
 		NSUrl ImageUrl { get; }
 	}
 
-	[TV (12,0)]
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface TVPlayer {
 		[Export ("initWithPlayer:")]
-		IntPtr Constructor (AVPlayer player);
+		NativeHandle Constructor (AVPlayer player);
 
 		[Export ("player", ArgumentSemantic.Strong)]
 		AVPlayer Player { get; }
@@ -1101,5 +682,166 @@ namespace TVMLKit {
 
 		[Export ("changeToMediaItemAtIndex:")]
 		void ChangeToMediaItem (nint index);
+
+		[Export ("presentWithAnimation:")]
+		void Present (bool animated);
+	}
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[Native]
+	[ErrorDomain ("TVDocumentErrorDomain")]
+	public enum TVDocumentError : long {
+		Failed,
+		Cancelled,
+	}
+
+	interface ITVBrowserViewControllerDataSource { }
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[Protocol]
+	[Model]
+	[BaseType (typeof (NSObject))]
+	interface TVBrowserViewControllerDataSource {
+		[Abstract]
+		[Export ("browserViewController:documentViewControllerForElement:")]
+		[return: NullAllowed]
+		TVDocumentViewController GetCorrespondingDocumentViewController (TVBrowserViewController browserViewController, TVViewElement viewElement);
+	}
+
+	interface ITVBrowserViewControllerDelegate { }
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[Protocol]
+	[Model]
+	[BaseType (typeof (NSObject))]
+	interface TVBrowserViewControllerDelegate {
+		[Export ("browserViewController:willCenterOnViewElement:")]
+		void WillCenterOnViewElement (TVBrowserViewController browserViewController, TVViewElement viewElement);
+
+		[Export ("browserViewController:didCenterOnViewElement:")]
+		void DidCenterOnViewElement (TVBrowserViewController browserViewController, TVViewElement viewElement);
+	}
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (UIViewController))]
+	[DisableDefaultCtor]
+	interface TVBrowserViewController {
+
+		// inlined from base class
+		[DesignatedInitializer]
+		[Export ("initWithNibName:bundle:")]
+		NativeHandle Constructor ([NullAllowed] string nibName, [NullAllowed] NSBundle bundle);
+
+		[Export ("viewElement", ArgumentSemantic.Strong)]
+		TVViewElement ViewElement { get; }
+
+		[Export ("cornerRadius")]
+		nfloat CornerRadius { get; set; }
+
+		[Export ("interitemSpacing")]
+		nfloat InteritemSpacing { get; set; }
+
+		[Export ("maskInset", ArgumentSemantic.Assign)]
+		UIEdgeInsets MaskInset { get; set; }
+
+		[Export ("centeredViewElement", ArgumentSemantic.Strong)]
+		TVViewElement CenteredViewElement { get; set; }
+
+		[Wrap ("WeakDelegate")]
+		[NullAllowed]
+		ITVBrowserViewControllerDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Wrap ("WeakDataSource")]
+		[NullAllowed]
+		ITVBrowserViewControllerDataSource DataSource { get; set; }
+
+		[NullAllowed, Export ("dataSource", ArgumentSemantic.Weak)]
+		NSObject WeakDataSource { get; set; }
+
+		[Static]
+		[Export ("viewControllerForElement:")]
+		[return: NullAllowed]
+		TVBrowserViewController GetCorrespondingViewController (TVViewElement viewElement);
+	}
+
+	interface ITVDocumentViewControllerDelegate { }
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[Protocol]
+	[Model]
+	[BaseType (typeof (NSObject))]
+	interface TVDocumentViewControllerDelegate {
+
+		[Export ("documentViewControllerWillUpdate:")]
+		void WillUpdate (TVDocumentViewController documentViewController);
+
+		[Export ("documentViewControllerDidUpdate:")]
+		void DidUpdate (TVDocumentViewController documentViewController);
+
+		[Export ("documentViewController:didUpdateWithContext:")]
+		void DidUpdate (TVDocumentViewController documentViewController, NSDictionary<NSString, NSObject> context);
+
+		[Export ("documentViewController:didFailUpdateWithError:")]
+		void DidFailUpdate (TVDocumentViewController documentViewController, NSError error);
+
+		[Export ("documentViewController:handleEvent:withElement:")]
+		bool HandleEvent (TVDocumentViewController documentViewController, NSString /* TVDocumentEvent */ @event, TVViewElement element);
+	}
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	enum TVDocumentEvent {
+		[Field ("TVDocumentEventPlay")]
+		Play,
+		[Field ("TVDocumentEventSelect")]
+		Select,
+		[Field ("TVDocumentEventHoldSelect")]
+		HoldSelect,
+		[Field ("TVDocumentEventHighlight")]
+		Highlight,
+		[Field ("TVDocumentEventLoad")]
+		Load,
+		[Field ("TVDocumentEventUnload")]
+		Unload,
+		[Field ("TVDocumentEventAppear")]
+		Appear,
+		[Field ("TVDocumentEventDisappear")]
+		Disappear,
+	}
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (UIViewController))]
+	[DisableDefaultCtor]
+	interface TVDocumentViewController {
+
+		// initWithNibName:bundle: and initWithCoder: are both marked as unavailable (and not inlined)
+
+		[Export ("documentContext", ArgumentSemantic.Strong)]
+		NSDictionary<NSString, NSObject> DocumentContext { get; }
+
+		[NullAllowed, Export ("appController", ArgumentSemantic.Weak)]
+		TVApplicationController AppController { get; }
+
+		[Wrap ("WeakDelegate")]
+		[NullAllowed]
+		ITVDocumentViewControllerDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Static]
+		[Export ("viewControllerWithContext:forAppController:")]
+		TVDocumentViewController CreateViewController (NSDictionary<NSString, NSObject> context, TVApplicationController appController);
+
+		[Export ("updateUsingContext:")]
+		void Update (NSDictionary<NSString, NSObject> context);
+	}
+
+	[Deprecated (PlatformName.TvOS, 18, 0, message: "Use SwiftUI or UIKit instead.")]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface TVBrowserTransitionAnimator : UIViewControllerAnimatedTransitioning {
 	}
 }

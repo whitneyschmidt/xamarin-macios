@@ -25,204 +25,282 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
+#nullable enable
+
 using CoreFoundation;
-using Foundation;
 
 namespace MobileCoreServices {
 
-#if XAMCORE_2_0
-	static
-#endif
-	public partial class UTType {
-
-		[iOS (8,0)][Mac (10,10)]
+	public static partial class UTType {
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
 		[DllImport (Constants.CoreServicesLibrary)]
-		extern static int /* Boolean */ UTTypeIsDynamic (IntPtr /* CFStringRef */ handle);
-		
-		[iOS (8,0)][Mac (10,10)]
-		[DllImport (Constants.CoreServicesLibrary)]
-		extern static int /* Boolean */ UTTypeIsDeclared (IntPtr /* CFStringRef */ handle);
+		extern static byte /* Boolean */ UTTypeIsDynamic (IntPtr /* CFStringRef */ handle);
 
-		[iOS (8,0)][Mac (10,10)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[DllImport (Constants.CoreServicesLibrary)]
+		extern static byte /* Boolean */ UTTypeIsDeclared (IntPtr /* CFStringRef */ handle);
+
+		/// <param name="utType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
 		public static bool IsDynamic (string utType)
 		{
-			if (utType == null)
-				throw new ArgumentNullException ("utType");
+			if (utType is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (utType));
 
-			using (var x = new NSString (utType)) 
-				return UTTypeIsDynamic (x.Handle) != 0;
+			var ptr = CFString.CreateNative (utType);
+			var result = UTTypeIsDynamic (ptr);
+			CFString.ReleaseNative (ptr);
+			return result != 0;
 		}
 
-		[iOS (8,0)][Mac (10,10)]
+		/// <param name="utType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
 		public static bool IsDeclared (string utType)
 		{
-			if (utType == null)
-				throw new ArgumentNullException ("utType");
+			if (utType is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (utType));
 
-			using (var x = new NSString (utType)) 
-				return UTTypeIsDeclared (x.Handle) != 0;
+			var ptr = CFString.CreateNative (utType);
+			var result = UTTypeIsDeclared (ptr);
+			CFString.ReleaseNative (ptr);
+			return result != 0;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSString */ UTTypeCreatePreferredIdentifierForTag (IntPtr /* CFStringRef */ tagClassStr, IntPtr /* CFStringRef */ tagStr, IntPtr /* CFStringRef */ conformingToUtiStr);
 
-		public static string CreatePreferredIdentifier (string tagClass, string tag, string conformingToUti)
+		/// <param name="tagClass">To be added.</param>
+		///         <param name="tag">To be added.</param>
+		///         <param name="conformingToUti">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? CreatePreferredIdentifier (string tagClass, string tag, string conformingToUti)
 		{
-			var a = NSString.CreateNative (tagClass);
-			var b = NSString.CreateNative (tag);
-			var c = NSString.CreateNative (conformingToUti);
-			var ret = NSString.FromHandle (UTTypeCreatePreferredIdentifierForTag (a, b, c));
-			NSString.ReleaseNative (a);
-			NSString.ReleaseNative (b);
-			NSString.ReleaseNative (c);
+			var a = CFString.CreateNative (tagClass);
+			var b = CFString.CreateNative (tag);
+			var c = CFString.CreateNative (conformingToUti);
+			var ret = CFString.FromHandle (UTTypeCreatePreferredIdentifierForTag (a, b, c), true);
+			CFString.ReleaseNative (a);
+			CFString.ReleaseNative (b);
+			CFString.ReleaseNative (c);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSString Array */ UTTypeCreateAllIdentifiersForTag (IntPtr /* CFStringRef */ tagClassStr, IntPtr /* CFStringRef */ tagStr, IntPtr /* CFStringRef */ conformingToUtiStr);
 
-#if XAMCORE_2_0
-		static
-#endif
-		public string [] CreateAllIdentifiers (string tagClass, string tag, string conformingToUti)
+		/// <param name="tagClass">To be added.</param>
+		///         <param name="tag">To be added.</param>
+		///         <param name="conformingToUti">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? []? CreateAllIdentifiers (string tagClass, string tag, string conformingToUti)
 		{
-			if (tagClass == null)
-				throw new ArgumentNullException ("tagClass");
-			if (tag == null)
-				throw new ArgumentNullException ("tag");
+			if (tagClass is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tagClass));
+			if (tag is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tag));
 
-			var a = NSString.CreateNative (tagClass);
-			var b = NSString.CreateNative (tag);
-			var c = NSString.CreateNative (conformingToUti);
-			var ret = NSArray.StringArrayFromHandle (UTTypeCreateAllIdentifiersForTag (a, b, c));
-			NSString.ReleaseNative (a);
-			NSString.ReleaseNative (b);
-			NSString.ReleaseNative (c);
+			var a = CFString.CreateNative (tagClass);
+			var b = CFString.CreateNative (tag);
+			var c = CFString.CreateNative (conformingToUti);
+			var ret = CFArray.StringArrayFromHandle (UTTypeCreateAllIdentifiersForTag (a, b, c), true);
+			CFString.ReleaseNative (a);
+			CFString.ReleaseNative (b);
+			CFString.ReleaseNative (c);
 			return ret;
 		}
-		
-		[iOS (8,0)][Mac (10,10)]
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSString Array */ UTTypeCopyAllTagsWithClass (IntPtr /* CFStringRef */ utiStr, IntPtr /* CFStringRef */ tagClassStr);
-		
-		[iOS (8,0)][Mac (10,10)]
-#if XAMCORE_2_0
-		static
-#endif
-		public string [] CopyAllTags (string uti, string tagClass)
-		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
-			if (tagClass == null)
-				throw new ArgumentNullException ("tagClass");
 
-			var a = NSString.CreateNative (uti);
-			var b = NSString.CreateNative (tagClass);
-			var ret = NSArray.StringArrayFromHandle (UTTypeCopyAllTagsWithClass (a, b));
-			NSString.ReleaseNative (a);
-			NSString.ReleaseNative (b);
+		/// <param name="uti">To be added.</param>
+		///         <param name="tagClass">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		public static string? []? CopyAllTags (string uti, string tagClass)
+		{
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
+			if (tagClass is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tagClass));
+
+			var a = CFString.CreateNative (uti);
+			var b = CFString.CreateNative (tagClass);
+			var ret = CFArray.StringArrayFromHandle (UTTypeCopyAllTagsWithClass (a, b), true);
+			CFString.ReleaseNative (a);
+			CFString.ReleaseNative (b);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
-		extern static int /* Boolean */ UTTypeConformsTo (IntPtr /* CFStringRef */ utiStr, IntPtr /* CFStringRef */ conformsToUtiStr);
+		extern static byte /* Boolean */ UTTypeConformsTo (IntPtr /* CFStringRef */ utiStr, IntPtr /* CFStringRef */ conformsToUtiStr);
 
-#if XAMCORE_2_0
-		static
-#endif
-		public bool ConformsTo (string uti, string conformsToUti)
+		/// <param name="uti">To be added.</param>
+		///         <param name="conformsToUti">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static bool ConformsTo (string uti, string conformsToUti)
 		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
-			if (conformsToUti == null)
-				throw new ArgumentNullException ("conformsToUti");
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
+			if (conformsToUti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (conformsToUti));
 
-			var a = NSString.CreateNative (uti);
-			var b = NSString.CreateNative (conformsToUti);
+			var a = CFString.CreateNative (uti);
+			var b = CFString.CreateNative (conformsToUti);
 			var ret = UTTypeConformsTo (a, b);
-			NSString.ReleaseNative (a);
-			NSString.ReleaseNative (b);
+			CFString.ReleaseNative (a);
+			CFString.ReleaseNative (b);
 			return ret != 0;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSString */ UTTypeCopyDescription (IntPtr /* CFStringRef */ utiStr);
 
-#if XAMCORE_2_0
-		static
-#endif
-		public string GetDescription (string uti)
+		/// <param name="uti">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? GetDescription (string uti)
 		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
 
-			var a = NSString.CreateNative (uti);
-			var ret = NSString.FromHandle (UTTypeCopyDescription (a));
-			NSString.ReleaseNative (a);
+			var a = CFString.CreateNative (uti);
+			var ret = CFString.FromHandle (UTTypeCopyDescription (a), true);
+			CFString.ReleaseNative (a);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* CFStringRef */ UTTypeCopyPreferredTagWithClass (IntPtr /* CFStringRef */ uti, IntPtr /* CFStringRef */ tagClass);
 
-		public static string GetPreferredTag (string uti, string tagClass)
+		/// <param name="uti">To be added.</param>
+		///         <param name="tagClass">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? GetPreferredTag (string uti, string tagClass)
 		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
-			if (tagClass == null)
-				throw new ArgumentNullException ("tagClass");
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
+			if (tagClass is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tagClass));
 
-			var a = NSString.CreateNative (uti);
-			var b = NSString.CreateNative (tagClass);
-			var ret = NSString.FromHandle (UTTypeCopyPreferredTagWithClass (a, b));
-			NSString.ReleaseNative (a);
-			NSString.ReleaseNative (b);
+			var a = CFString.CreateNative (uti);
+			var b = CFString.CreateNative (tagClass);
+			var ret = CFString.FromHandle (UTTypeCopyPreferredTagWithClass (a, b), true);
+			CFString.ReleaseNative (a);
+			CFString.ReleaseNative (b);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSDictionary */ UTTypeCopyDeclaration (IntPtr utiStr);
 
-		public static NSDictionary GetDeclaration (string uti)
+		/// <param name="uti">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static NSDictionary? GetDeclaration (string uti)
 		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
 
-			var a = NSString.CreateNative (uti);
-			var ret = Runtime.GetNSObject <NSDictionary> (UTTypeCopyDeclaration (a));
-			NSString.ReleaseNative (a);
+			var a = CFString.CreateNative (uti);
+			var ret = Runtime.GetNSObject<NSDictionary> (UTTypeCopyDeclaration (a), true);
+			CFString.ReleaseNative (a);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
 		extern static IntPtr /* NSUrl */ UTTypeCopyDeclaringBundleURL (IntPtr utiStr);
 
-		public static NSUrl GetDeclaringBundleURL (string uti)
+		public static NSUrl? GetDeclaringBundleUrl (string uti)
 		{
-			if (uti == null)
-				throw new ArgumentNullException ("uti");
+			if (uti is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (uti));
 
-			var a = NSString.CreateNative (uti);
-			var ret = Runtime.GetNSObject <NSUrl> (UTTypeCopyDeclaringBundleURL (a));
-			NSString.ReleaseNative (a);
+			var a = CFString.CreateNative (uti);
+			var ret = Runtime.GetNSObject<NSUrl> (UTTypeCopyDeclaringBundleURL (a), true);
+			CFString.ReleaseNative (a);
 			return ret;
 		}
 
 		[DllImport (Constants.CoreServicesLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		static extern unsafe bool /* Boolean */ UTTypeEqual (/* CFStringRef */ IntPtr inUTI1, /* CFStringRef */ IntPtr inUTI2);
+		static extern unsafe byte /* Boolean */ UTTypeEqual (/* CFStringRef */ IntPtr inUTI1, /* CFStringRef */ IntPtr inUTI2);
 
-		[iOS (12,0)][TV (12,0)][Watch (5,0)]
+		/// <param name="uti1">To be added.</param>
+		///         <param name="uti2">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("macos11.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use the 'UniformTypeIdentifiers.UTType' API instead.")]
 		public static bool Equals (NSString uti1, NSString uti2)
 		{
-			if (uti1 == null)
-				return uti2 == null;
-			else if (uti2 == null)
+			if (uti1 is null)
+				return uti2 is null;
+			else if (uti2 is null)
 				return false;
-			return UTTypeEqual (uti1.Handle, uti2.Handle);
+			bool result = UTTypeEqual (uti1.Handle, uti2.Handle) != 0;
+			GC.KeepAlive (uti1);
+			GC.KeepAlive (uti2);
+			return result;
 		}
 	}
 }

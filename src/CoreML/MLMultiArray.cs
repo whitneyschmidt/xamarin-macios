@@ -1,4 +1,4 @@
-﻿//
+//
 // MLMultiArray.cs
 //
 // Authors:
@@ -7,85 +7,118 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace CoreML {
 	public partial class MLMultiArray {
-		static NSNumber[] ConvertArray (nint[] value)
+		static NSNumber [] ConvertArray (nint [] value)
 		{
-			if (value == null)
-				return null;
+			if (value is null)
+				return Array.Empty<NSNumber> ();
 
 			return Array.ConvertAll<nint, NSNumber> (value, NSNumber.FromNInt);
 		}
 
 		// NSArray<NSNumber> => nint[]
-		internal static nint[] ConvertArray (IntPtr handle)
+		internal static nint [] ConvertArray (IntPtr handle)
 		{
-			return NSArray.ArrayFromHandle<nint> (handle, (v) => Messaging.nint_objc_msgSend (v, Selector.GetHandle ("integerValue")));
+			return NSArray.NonNullArrayFromHandleDropNullElements<nint> (handle, (v) => (nint) Messaging.IntPtr_objc_msgSend (v, Selector.GetHandle ("integerValue")));
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+		/// <summary>Creates a new MLMultiArray with the specified shape and data type.</summary>
+		/// <param name="shape">The shape.</param>
+		/// <param name="dataType">The data type.</param>
+		/// <param name="error">The error.</param>
 		public MLMultiArray (nint [] shape, MLMultiArrayDataType dataType, out NSError error)
 			: this (ConvertArray (shape), dataType, out error)
 		{
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+		/// <summary>Creates a new MLMultiArray with the specified details.</summary>
+		/// <param name="dataPointer">The data pointer.</param>
+		/// <param name="shape">The shape.</param>
+		/// <param name="dataType">The data type.</param>
+		/// <param name="strides">The strides.</param>
+		/// <param name="deallocator">The deallocator.</param>
+		/// <param name="error">The error.</param>
 		public MLMultiArray (IntPtr dataPointer, nint [] shape, MLMultiArrayDataType dataType, nint [] strides, Action<IntPtr> deallocator, out NSError error)
 			: this (dataPointer, ConvertArray (shape), dataType, ConvertArray (strides), deallocator, out error)
 		{
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+		/// <summary>Retrieves the element at <paramref name="idx" />, as if the array were single-dimensional.</summary>
+		/// <param name="idx">A numeric identifier for the object to get or set.</param>
 		public NSNumber this [nint idx] {
 			get { return GetObject (idx); }
 			set { SetObject (value, idx); }
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public NSNumber this [params nint[] indices] {
+		/// <summary>Gets or sets the element at <paramref name="indices" />.</summary>
+		/// <param name="indices">A multidimensional coordinate for the object to get or set.</param>
+		public NSNumber this [params nint [] indices] {
 			get { return GetObject (indices); }
 			set { SetObject (value, indices); }
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+		/// <summary>Accesses the point in the multi-dimensional array identified by <paramref name="key" />.</summary>
+		/// <param name="key">A numeric identifier for the object to get or set.</param>
 		public NSNumber this [NSNumber [] key] {
 			get { return GetObject (key); }
 			set { SetObject (value, key); }
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public NSNumber GetObject (params nint[] indices)
+		/// <summary>Retrieves the element at <paramref name="indices" />.</summary>
+		/// <param name="indices">A multidimensional coordinate for the object to get.</param>
+		public NSNumber GetObject (params nint [] indices)
 		{
 			using (var arr = NSArray.FromNSObjects<nint> (NSNumber.FromNInt, indices))
-				return GetObject (arr.GetHandle ());
+				return GetObjectInternal (arr.GetHandle ());
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public void SetObject (NSNumber obj, params nint[] indices)
+		/// <summary>Sets the element at <paramref name="indices" />.</summary>
+		/// <param name="obj">The new value.</param>
+		/// <param name="indices">The multidimensional coordinate of the item to set.</param>
+		public void SetObject (NSNumber obj, params nint [] indices)
 		{
 			using (var arr = NSArray.FromNSObjects<nint> (NSNumber.FromNInt, indices))
-				SetObject (obj, arr.GetHandle ());
+				SetObjectInternal (obj, arr.GetHandle ());
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public nint[] Shape {
+		/// <summary>The dimensions of the array.</summary>
+		public nint [] Shape {
 			get {
 				return ConvertArray (_Shape);
 			}
 		}
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public nint[] Strides {
+		/// <summary>The number of elements to skip to advance an index value by one in the chosen direction.</summary>
+		/// <remarks>
+		///   <para>
+		///     <see cref="CoreML.MLMultiArray" /> objects can be treated as one-dimensional arrays. The <see cref="CoreML.MLMultiArray.Strides" /> property retrieves the number of elements in a one-dimensional array that are necessary to "skip over" in order to advance by 1 in the desired dimension.</para>
+		///   <example>
+		///     <code lang="csharp lang-csharp"><![CDATA[
+		/// NSError err;
+		/// var ma = new CoreML.MLMultiArray(new NSNumber[] { 3, 5, 7, 9 },CoreML.MLMultiArrayDataType.Int32, out err);
+		/// if (err is not null) 
+		/// {
+		///    HandleError(err);
+		///    return;
+		/// }
+		/// var strides = ma.Strides;
+		/// /*
+		/// strides[0] = 315
+		/// strides[1] =  63
+		/// strides[2] =   9
+		/// strides[3] =   1
+		/// */        
+		///
+		///     ]]></code>
+		///   </example>
+		/// </remarks>
+		public nint [] Strides {
 			get {
 				return ConvertArray (_Strides);
 			}
 		}
 	}
 }
-#endif

@@ -1,0 +1,28 @@
+#if __MACOS__
+//
+// Unit tests for the assembly itself
+//
+// Authors:
+//	Sebastien Pouliot  <sebastien@xamarin.com>
+//
+// Copyright 2013 Xamarin Inc. All rights reserved.
+//
+
+using System.Reflection;
+
+namespace MonoMacFixtures {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class AssemblyTest {
+
+		static byte [] pkt = { 0x84, 0xe0, 0x4f, 0xf9, 0xcf, 0xb7, 0x90, 0x65 };
+
+		[Test]
+		public void PublicKeyToken ()
+		{
+			Assert.That (typeof (NSObject).Assembly.GetName ().GetPublicKeyToken (), Is.EqualTo (pkt), "GetPublicKeyToken");
+		}
+	}
+}
+#endif // __MACOS__

@@ -1,28 +1,39 @@
-using System;
+#nullable enable
+
+#if !__MACCATALYST__
 using System.Threading.Tasks;
-using Foundation;
 
 namespace VideoSubscriberAccount {
 
+	/// <summary>Provides conversions between authentication scheme values and their native constants.</summary>
 	public static partial class VSAccountProviderAuthenticationSchemeExtensions {
 
 		// these are less common pattern so it's not automatically generated
 
-		public static NSString[] GetConstants (this VSAccountProviderAuthenticationScheme[] self)
+		/// <summary>Gets the native constants for the specified authentication schemes.</summary>
+		/// <param name="self">The authentication schemes to convert.</param>
+		/// <returns>The native constant for each authentication scheme. An element is <see langword="null" /> if the corresponding authentication scheme has no associated native constant on the current platform.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="self" /> is <see langword="null" />.</exception>
+		public static NSString? [] GetConstants (this VSAccountProviderAuthenticationScheme [] self)
 		{
-			if (self == null)
-				throw new ArgumentNullException (nameof (self));
-			
-			var array = new NSString [self.Length];
+			if (self is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (self));
+
+			var array = new NSString? [self.Length];
 			for (int n = 0; n < self.Length; n++)
 				array [n] = self [n].GetConstant ();
 			return array;
 		}
 
-		public static VSAccountProviderAuthenticationScheme[] GetValues (NSString[] constants)
+		/// <summary>Gets the authentication schemes for the specified native constants.</summary>
+		/// <param name="constants">The native constants to convert.</param>
+		/// <returns>The authentication scheme for each native constant.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="constants" /> is <see langword="null" />.</exception>
+		/// <exception cref="NotSupportedException">An element in <paramref name="constants" /> has no associated authentication scheme on the current platform.</exception>
+		public static VSAccountProviderAuthenticationScheme [] GetValues (NSString [] constants)
 		{
-			if (constants == null)
-				throw new ArgumentNullException (nameof (constants));
+			if (constants is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (constants));
 
 			var array = new VSAccountProviderAuthenticationScheme [constants.Length];
 			for (int n = 0; n < constants.Length; n++)
@@ -31,3 +42,4 @@ namespace VideoSubscriberAccount {
 		}
 	}
 }
+#endif // !__MACCATALYST__

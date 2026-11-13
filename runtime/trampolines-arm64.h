@@ -6,14 +6,21 @@ extern "C" {
 #endif
 
 struct BigDouble {
+	struct _f {
+		float f1;
+		float f2;
+		float f3;
+		float f4;
+	};
+	struct _d {
+		double d1;
+		double d2;
+	};
 	union {
 		__int128 bits;
-		long double d;
-		struct f {
-			float f1;
-			float f2;
-		};
-		struct f f;
+		long double q;
+		_f f;
+		_d d;
 	};
 };
 
@@ -50,8 +57,9 @@ struct XamarinCallState {
 
 struct ParamIterator {
 	struct XamarinCallState *state;
-	int ngrn; // Next General-purpose Register Number
-	int nsrn; // Next SIMD and Floating-point Register Number
+	unsigned int ngrn; // Next General-purpose Register Number
+	unsigned int nsrn; // Next SIMD and Floating-point Register Number
+	size_t ngrn_offset; // Offset into the current general purpose register number
 	uint8_t *nsaa; // Next stacked argument address.
 
 	// computed values

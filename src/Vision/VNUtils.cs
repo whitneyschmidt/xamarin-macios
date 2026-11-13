@@ -1,4 +1,4 @@
-﻿//
+//
 // VNUtils.cs
 //
 // Authors:
@@ -7,28 +7,38 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
+#nullable enable
 
-using System;
-using System.Runtime.InteropServices;
+using System.Numerics;
 using CoreGraphics;
-using ObjCRuntime;
-using Foundation;
-
-using Vector2 = global::OpenTK.Vector2;
 
 namespace Vision {
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A set of utility functions for working with images.</summary>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public static partial class VNUtils {
-	
-		[Field ("VNNormalizedIdentityRect", Constants.VisionLibrary)]
-		public static CGRect NormalizedIdentityRect { get; } = Dlfcn.GetCGRect (Libraries.Vision.Handle, "VNNormalizedIdentityRect");
 
 		[DllImport (Constants.VisionLibrary, EntryPoint = "VNNormalizedRectIsIdentityRect")]
-		public static extern bool IsIdentityRect (CGRect rect);
+		static extern byte _IsIdentityRect (CGRect rect);
+
+		/// <summary>Returns <see langword="true" /> if the <paramref name="rect" /> is [0, 0, 1, 1].</summary>
+		/// <param name="rect">The rect.</param>
+		public static bool IsIdentityRect (CGRect rect)
+		{
+			return _IsIdentityRect (rect) != 0;
+		}
 
 		[DllImport (Constants.VisionLibrary, EntryPoint = "VNImagePointForNormalizedPoint")]
 		public static extern CGPoint GetImagePoint (CGPoint normalizedPoint, nuint imageWidth, nuint imageHeight);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary, EntryPoint = "VNNormalizedPointForImagePoint")]
+		public static extern CGPoint GetNormalizedPoint (CGPoint imagePoint, nuint imageWidth, nuint imageHeight);
 
 		[DllImport (Constants.VisionLibrary, EntryPoint = "VNImageRectForNormalizedRect")]
 		public static extern CGRect GetImageRect (CGRect normalizedRect, nuint imageWidth, nuint imageHeight);
@@ -36,13 +46,44 @@ namespace Vision {
 		[DllImport (Constants.VisionLibrary, EntryPoint = "VNNormalizedRectForImageRect")]
 		public static extern CGRect GetNormalizedRect (CGRect imageRect, nuint imageWidth, nuint imageHeight);
 
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary, EntryPoint = "VNImagePointForNormalizedPointUsingRegionOfInterest")]
+		public static extern CGPoint GetImagePoint (CGPoint normalizedPoint, nuint imageWidth, nuint imageHeight, CGRect regionOfInterest);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary, EntryPoint = "VNNormalizedPointForImagePointUsingRegionOfInterest")]
+		public static extern CGPoint GetNormalizedPoint (CGPoint imagePoint, nuint imageWidth, nuint imageHeight, CGRect regionOfInterest);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary, EntryPoint = "VNImageRectForNormalizedRectUsingRegionOfInterest")]
+		public static extern CGRect GetImageRect (CGRect normalizedRect, nuint imageWidth, nuint imageHeight, CGRect regionOfInterest);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary, EntryPoint = "VNNormalizedRectForImageRectUsingRegionOfInterest")]
+		public static extern CGRect GetNormalizedRect (CGRect imageRect, nuint imageWidth, nuint imageHeight, CGRect regionOfInterest);
+
 		[DllImport ("__Internal", EntryPoint = "xamarin_CGPoint__VNNormalizedFaceBoundingBoxPointForLandmarkPoint_Vector2_CGRect_nuint_nuint_string")]
-		static extern CGPoint VNNormalizedFaceBoundingBoxPointForLandmarkPoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight, out IntPtr error);
+		unsafe static extern CGPoint VNNormalizedFaceBoundingBoxPointForLandmarkPoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight, IntPtr* error);
 
 		public static CGPoint GetNormalizedFaceBoundingBoxPoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight)
 		{
 			IntPtr error;
-			var result = VNNormalizedFaceBoundingBoxPointForLandmarkPoint (faceLandmarkPoint, faceBoundingBox, imageWidth, imageHeight, out error);
+			CGPoint result;
+			unsafe {
+				result = VNNormalizedFaceBoundingBoxPointForLandmarkPoint (faceLandmarkPoint, faceBoundingBox, imageWidth, imageHeight, &error);
+			}
 			if (error != IntPtr.Zero)
 				throw new InvalidOperationException (Marshal.PtrToStringAuto (error));
 
@@ -50,17 +91,48 @@ namespace Vision {
 		}
 
 		[DllImport ("__Internal", EntryPoint = "xamarin_CGPoint__VNImagePointForFaceLandmarkPoint_Vector2_CGRect_nuint_nuint_string")]
-		static extern CGPoint VNImagePointForFaceLandmarkPoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight, out IntPtr error);
+		unsafe static extern CGPoint VNImagePointForFaceLandmarkPoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight, IntPtr* error);
 
 		public static CGPoint GetImagePoint (Vector2 faceLandmarkPoint, CGRect faceBoundingBox, nuint imageWidth, nuint imageHeight)
 		{
 			IntPtr error;
-			var result = VNImagePointForFaceLandmarkPoint (faceLandmarkPoint, faceBoundingBox, imageWidth, imageHeight, out error);
+			CGPoint result;
+			unsafe {
+				result = VNImagePointForFaceLandmarkPoint (faceLandmarkPoint, faceBoundingBox, imageWidth, imageHeight, &error);
+			}
 			if (error != IntPtr.Zero)
 				throw new InvalidOperationException (Marshal.PtrToStringAuto (error));
 
 			return result;
 		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.VisionLibrary)]
+		static extern nuint VNElementTypeSize (nuint elementType);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static nuint GetElementTypeSize (VNElementType elementType) => VNElementTypeSize ((nuint) (ulong) elementType);
+	}
+
+	public partial class VNGeometryUtils {
+
+		public static VNCircle? CreateBoundingCircle (Vector2 [] points, out NSError error)
+		{
+			if (points is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (points));
+			if (points.Length == 0)
+				throw new ArgumentException ($"'{nameof (points)}' array must have more than zero elements.");
+
+			unsafe {
+				fixed (Vector2* points_ptr = points)
+					return CreateBoundingCircle ((IntPtr) points_ptr, points.Length, out error);
+			}
+		}
 	}
 }
-#endif

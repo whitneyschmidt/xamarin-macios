@@ -7,17 +7,8 @@
 // Copyright 2013 Xamarin Inc.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using ExternalAccessory;
-#else
-using MonoTouch.ExternalAccessory;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.ExternalAccessory {
 
@@ -31,25 +22,25 @@ namespace MonoTouchFixtures.ExternalAccessory {
 		public void Shared ()
 		{
 #if TVOS
-			TestRuntime.AssertXcodeVersion (8,0);
+			TestRuntime.AssertXcodeVersion (8, 0);
 #endif
 #if MONOMAC
-			TestRuntime.AssertXcodeVersion (9,0);
+			TestRuntime.AssertXcodeVersion (9, 0);
 #endif
 			// reported to throw an InvalidCastException on http://stackoverflow.com/q/18884195/220643
 			var am = EAAccessoryManager.SharedAccessoryManager;
 			// IsEmpty most of the time... unless you docked something, like a keyboard
-			Assert.IsNotNull (am.ConnectedAccessories, "ConnectedAccessories");
+			Assert.That (am.ConnectedAccessories, Is.Not.Null, "ConnectedAccessories");
 		}
 
-#if !MONOMAC
+#if !MONOMAC && !__MACCATALYST__
 		[Test]
 		public void ShowBluetoothAccessoryPicker ()
 		{
+			// The API here was introduced to Mac Catalyst later than for the other frameworks, so we have this additional check
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacCatalyst, 14, 0, throwIfOtherPlatform: false);
 			EAAccessoryManager.SharedAccessoryManager.ShowBluetoothAccessoryPicker (null, null);
 		}
 #endif
 	}
 }
-
-#endif // !__WATCHOS__

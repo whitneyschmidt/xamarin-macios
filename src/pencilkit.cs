@@ -1,0 +1,924 @@
+//
+// PencilKit C# bindings
+//
+// Authors:
+//	TJ Lambert  <t-anlamb@microsoft.com>
+//	Whitney Schmidt  <whschm@microsoft.com>
+//
+// Copyright 2019, 2020 Microsoft Corporation All rights reserved.
+//
+
+#if MONOMAC
+using AppKit;
+using UIColor = AppKit.NSColor;
+using UIImage = AppKit.NSImage;
+
+using UIBarButtonItem = Foundation.NSObject;
+using UIScrollViewDelegate = Foundation.NSObjectProtocol;
+using UIScrollView = Foundation.NSObject;
+using UIGestureRecognizer = Foundation.NSObject;
+using UIResponder = Foundation.NSObject;
+using UIView = Foundation.NSObject;
+using UIViewController = Foundation.NSObject;
+using UIWindow = Foundation.NSObject;
+using UIUserInterfaceStyle = Foundation.NSObject;
+using BezierPath = AppKit.NSBezierPath;
+#else
+using UIKit;
+using BezierPath = UIKit.UIBezierPath;
+#endif
+
+using System.ComponentModel;
+using CoreGraphics;
+
+namespace PencilKit {
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[Native]
+	enum PKEraserType : long {
+		Vector,
+		Bitmap,
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		FixedWidthBitmap,
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	enum PKInkType {
+		[Field ("PKInkTypePen")]
+		Pen,
+
+		[Field ("PKInkTypePencil")]
+		Pencil,
+
+		[Field ("PKInkTypeMarker")]
+		Marker,
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Field ("PKInkTypeMonoline")]
+		Monoline,
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Field ("PKInkTypeFountainPen")]
+		FountainPen,
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Field ("PKInkTypeWatercolor")]
+		Watercolor,
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Field ("PKInkTypeCrayon")]
+		Crayon,
+
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		[Field ("PKInkTypeReed")]
+		Reed,
+	}
+
+	[iOS (14, 0), NoMac]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[Native]
+	enum PKCanvasViewDrawingPolicy : ulong {
+		Default,
+		AnyInput,
+		PencilOnly,
+	}
+
+	[iOS (17, 0)]
+	[Introduced (PlatformName.MacCatalyst, 17, 0)]
+	[Native]
+	public enum PKContentVersion : long {
+		Version1 = 1,
+		Version2 = 2,
+		[iOS (17, 4), Mac (14, 4), MacCatalyst (17, 4)]
+		Version3 = 3,
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		Version4 = 4,
+		[iOS (27, 0), Mac (27, 0), MacCatalyst (27, 0)]
+		Version5 = 5,
+	}
+
+	[NoMac]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (NSObject))]
+	[Protocol, Model]
+	interface PKCanvasViewDelegate : UIScrollViewDelegate {
+
+		[Export ("canvasViewDrawingDidChange:")]
+		void DrawingDidChange (PKCanvasView canvasView);
+
+		[Export ("canvasViewDidFinishRendering:")]
+		void DidFinishRendering (PKCanvasView canvasView);
+
+		[Export ("canvasViewDidBeginUsingTool:")]
+		void DidBeginUsingTool (PKCanvasView canvasView);
+
+		[Export ("canvasViewDidEndUsingTool:")]
+		void EndUsingTool (PKCanvasView canvasView);
+
+		[iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("canvasViewSelectionDidChange:")]
+		void SelectionDidChange (PKCanvasView canvasView);
+
+#if !XAMCORE_5_0
+		[iOS (18, 1), NoMacCatalyst]
+		[Export ("canvasView:didRefineStrokes:withNewStrokes:")]
+		void DidRefineStrokes (PKCanvasView canvasView, PKStroke [] strokes, PKStroke [] newStrokes);
+#endif
+	}
+
+	interface IPKCanvasViewDelegate { }
+
+	[NoMac]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (UIScrollView))]
+	interface PKCanvasView : PKToolPickerObserver {
+
+		// This exists in the base class
+		// [Export ("delegate", ArgumentSemantic.Weak), NullAllowed]
+		// NSObject WeakDelegate { get; set; }
+
+		[Wrap ("WeakDelegate"), NullAllowed, New]
+		IPKCanvasViewDelegate Delegate { get; set; }
+
+		[Export ("drawing", ArgumentSemantic.Copy)]
+		PKDrawing Drawing { get; set; }
+
+		[Export ("tool", ArgumentSemantic.Copy)]
+		PKTool Tool { get; set; }
+
+		[Export ("rulerActive")]
+		bool RulerActive { [Bind ("isRulerActive")] get; set; }
+
+		[Export ("drawingGestureRecognizer")]
+		UIGestureRecognizer DrawingGestureRecognizer { get; }
+
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'DrawingPolicy' property instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'DrawingPolicy' property instead.")]
+		[Export ("allowsFingerDrawing")]
+		bool AllowsFingerDrawing { get; set; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("drawingPolicy", ArgumentSemantic.Assign)]
+		PKCanvasViewDrawingPolicy DrawingPolicy { get; set; }
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("maximumSupportedContentVersion", ArgumentSemantic.Assign)]
+		PKContentVersion MaximumSupportedContentVersion { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("drawingEnabled")]
+		bool DrawingEnabled {
+			[Bind ("isDrawingEnabled")]
+			get;
+			set;
+		}
+
+		[iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("selectedStrokeIDs", ArgumentSemantic.Copy)]
+		NSSet<NSUuid> SelectedStrokeIds { get; set; }
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (NSObject))]
+	[DesignatedDefaultCtor]
+	interface PKDrawing : NSCopying, NSSecureCoding {
+
+		[Field ("PKAppleDrawingTypeIdentifier")]
+		NSString AppleDrawingTypeIdentifier { get; }
+
+		[DesignatedInitializer]
+		[Export ("initWithData:error:")]
+		NativeHandle Constructor (NSData data, [NullAllowed] out NSError error);
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("initWithStrokes:")]
+		NativeHandle Constructor (PKStroke [] strokes);
+
+		[Export ("dataRepresentation")]
+		NSData DataRepresentation { get; }
+
+		[Export ("bounds")]
+		CGRect Bounds { get; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("strokes")]
+		PKStroke [] Strokes { get; }
+
+		[Export ("imageFromRect:scale:")]
+		UIImage GetImage (CGRect rect, nfloat scale);
+
+		[Export ("drawingByApplyingTransform:")]
+		PKDrawing GetDrawing (CGAffineTransform transform);
+
+		[Export ("drawingByAppendingDrawing:")]
+		PKDrawing GetDrawing (PKDrawing drawing);
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("drawingByAppendingStrokes:")]
+		PKDrawing GetDrawing (PKStroke [] strokes);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("drawingByErasingStrokePath:mask:transform:")]
+		PKDrawing GetDrawing (PKStrokePath eraserPath, [NullAllowed] BezierPath mask, CGAffineTransform transform);
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("requiredContentVersion")]
+		PKContentVersion RequiredContentVersion { get; }
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (PKTool))]
+	[DisableDefaultCtor]
+	interface PKEraserTool {
+
+		[Export ("eraserType")]
+		PKEraserType EraserType { get; }
+
+		[DesignatedInitializer]
+		[Export ("initWithEraserType:")]
+		NativeHandle Constructor (PKEraserType eraserType);
+
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		[Export ("initWithEraserType:width:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (PKEraserType eraserType, nfloat width);
+
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		[Export ("width")]
+		nfloat Width { get; }
+
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		[Static]
+		[Export ("defaultWidthForEraserType:")]
+		nfloat GetDefaultWidth (PKEraserType eraserType);
+
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		[Static]
+		[Export ("minimumWidthForEraserType:")]
+		nfloat GetMinimumWidth (PKEraserType eraserType);
+
+		[iOS (16, 4), MacCatalyst (16, 4)]
+		[Static]
+		[Export ("maximumWidthForEraserType:")]
+		nfloat GetMaximumWidth (PKEraserType eraserType);
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (PKTool))]
+	[DisableDefaultCtor]
+	interface PKInkingTool {
+
+		[DesignatedInitializer]
+		[Export ("initWithInkType:color:width:")]
+		NativeHandle Constructor ([BindAs (typeof (PKInkType))] NSString type, UIColor color, nfloat width);
+
+		[Export ("initWithInkType:color:")]
+		NativeHandle Constructor ([BindAs (typeof (PKInkType))] NSString type, UIColor color);
+
+		[Mac (26, 0), iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("initWithInkType:color:width:azimuth:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor ([BindAs (typeof (PKInkType))] NSString type, UIColor color, nfloat width, nfloat azimuth);
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("initWithInk:width:")]
+		NativeHandle Constructor (PKInk ink, nfloat width);
+
+		[Static]
+		[Export ("defaultWidthForInkType:")]
+		nfloat GetDefaultWidth ([BindAs (typeof (PKInkType))] NSString inkType);
+
+		[Static]
+		[Export ("minimumWidthForInkType:")]
+		nfloat GetMinimumWidth ([BindAs (typeof (PKInkType))] NSString inkType);
+
+		[Static]
+		[Export ("maximumWidthForInkType:")]
+		nfloat GetMaximumWidth ([BindAs (typeof (PKInkType))] NSString inkType);
+
+		[Export ("inkType")]
+		[BindAs (typeof (PKInkType))]
+		NSString InkType { get; }
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Static]
+		[Export ("convertColor:fromUserInterfaceStyle:to:")]
+		UIColor ConvertColor (UIColor color, UIUserInterfaceStyle fromUserInterfaceStyle, UIUserInterfaceStyle toUserInterfaceStyle);
+
+		[Export ("color")]
+		UIColor Color { get; }
+
+		[Export ("width")]
+		nfloat Width { get; }
+
+		[Mac (26, 0), iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("azimuth")]
+		nfloat Azimuth { get; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("ink")]
+		PKInk Ink { get; }
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("requiredContentVersion")]
+		PKContentVersion RequiredContentVersion { get; }
+
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		[Static]
+		[Export ("invertColor:")]
+		CGColor InvertColor (CGColor color);
+	}
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (PKTool))]
+	[DesignatedDefaultCtor]
+	interface PKLassoTool { }
+
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKTool : NSCopying { }
+
+	interface IPKToolPickerObserver { }
+
+	[NoMac]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[Protocol]
+	interface PKToolPickerObserver {
+
+		[Deprecated (PlatformName.iOS, 18, 0, message: "Use 'SelectedToolItemDidChange' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 18, 0, message: "Use 'SelectedToolItemDidChange' instead.")]
+		[Export ("toolPickerSelectedToolDidChange:")]
+		void SelectedToolDidChange (PKToolPicker toolPicker);
+
+		[Export ("toolPickerIsRulerActiveDidChange:")]
+		void IsRulerActiveDidChange (PKToolPicker toolPicker);
+
+		[Export ("toolPickerVisibilityDidChange:")]
+		void VisibilityDidChange (PKToolPicker toolPicker);
+
+		[Export ("toolPickerFramesObscuredDidChange:")]
+		void FramesObscuredDidChange (PKToolPicker toolPicker);
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("toolPickerSelectedToolItemDidChange:")]
+		void SelectedToolItemDidChange (PKToolPicker toolPicker);
+	}
+
+	[NoMac]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (NSObject))]
+	interface PKToolPicker {
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("init")]
+		NativeHandle Constructor ();
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("initWithToolItems:")]
+		NativeHandle Constructor (PKToolPickerItem [] items);
+
+		[Export ("addObserver:")]
+		void AddObserver (IPKToolPickerObserver observer);
+
+		[Export ("removeObserver:")]
+		void RemoveObserver (IPKToolPickerObserver observer);
+
+		[Export ("setVisible:forFirstResponder:")]
+		void SetVisible (bool visible, UIResponder responder);
+
+		[Deprecated (PlatformName.iOS, 18, 0, message: "Use 'SelectedToolItem' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 18, 0, message: "Use 'SelectedToolItem' instead.")]
+		[Export ("selectedTool", ArgumentSemantic.Strong)]
+		PKTool SelectedTool { get; set; }
+
+		[Export ("rulerActive")]
+		bool RulerActive { [Bind ("isRulerActive")] get; set; }
+
+		[Export ("isVisible")]
+		bool IsVisible { get; }
+
+		[Export ("frameObscuredInView:")]
+		CGRect GetFrameObscured (UIView view);
+
+		[Export ("overrideUserInterfaceStyle", ArgumentSemantic.Assign)]
+		UIUserInterfaceStyle OverrideUserInterfaceStyle { get; set; }
+
+		[Export ("colorUserInterfaceStyle", ArgumentSemantic.Assign)]
+		UIUserInterfaceStyle ColorUserInterfaceStyle { get; set; }
+
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Create individual instances instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Create individual instances instead.")]
+		[Static]
+		[return: NullAllowed]
+		[Export ("sharedToolPickerForWindow:")]
+		PKToolPicker GetSharedToolPicker (UIWindow window);
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Export ("showsDrawingPolicyControls")]
+		bool ShowsDrawingPolicyControls { get; set; }
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[NullAllowed]
+		[Export ("stateAutosaveName")]
+		string StateAutosaveName { get; set; }
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("maximumSupportedContentVersion", ArgumentSemantic.Assign)]
+		PKContentVersion MaximumSupportedContentVersion { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("selectedToolItem", ArgumentSemantic.Strong)]
+		PKToolPickerItem SelectedToolItem { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("selectedToolItemIdentifier", ArgumentSemantic.Copy)]
+		string SelectedToolItemIdentifier { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("toolItems")]
+		PKToolPickerItem [] ToolItems { get; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("accessoryItem", ArgumentSemantic.Strong), NullAllowed]
+		UIBarButtonItem AccessoryItem { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("delegate", ArgumentSemantic.Weak), NullAllowed]
+		NSObject WeakDelegate { get; set; }
+
+		[iOS (18, 0), MacCatalyst (18, 0)]
+		[Wrap ("WeakDelegate"), NullAllowed]
+		IPKToolPickerDelegate Delegate { get; set; }
+
+		[iOS (26, 0), MacCatalyst (26, 0)]
+		[Static]
+		[Export ("defaultToolItems")]
+		PKToolPickerItem [] DefaultToolItems { get; }
+
+		[iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("colorMaximumLinearExposure")]
+		nfloat ColorMaximumLinearExposure { get; set; }
+	}
+
+	[iOS (14, 0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (NSObject))]
+	interface PKInk : NSCopying {
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("initWithInkType:color:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (/* enum PKInkType */ NSString type, UIColor color);
+
+		[Wrap ("this (type.GetConstant ()!, color)")]
+		NativeHandle Constructor (PKInkType type, UIColor color);
+
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Export ("inkType")]
+		NSString WeakInkType { get; }
+
+		[Wrap ("PKInkTypeExtensions.GetValue(WeakInkType)")]
+		PKInkType InkType { get; }
+
+		[Export ("color")]
+		UIColor Color { get; }
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("requiredContentVersion")]
+		PKContentVersion RequiredContentVersion { get; }
+	}
+
+	[iOS (14, 0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (NSObject))]
+	interface PKFloatRange : NSCopying {
+		[Export ("initWithLowerBound:upperBound:")]
+		NativeHandle Constructor (nfloat lowerBound, nfloat upperBound);
+
+		[Export ("lowerBound")]
+		nfloat LowerBound { get; }
+
+		[Export ("upperBound")]
+		nfloat UpperBound { get; }
+	}
+
+	[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (NSObject))]
+	interface PKStrokeRenderState : NSCopying, NSSecureCoding {
+		[Export ("grainOffset", ArgumentSemantic.Assign)]
+		CGPoint GrainOffset { get; set; }
+	}
+
+	[iOS (14, 0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (NSObject))]
+	interface PKStroke : NSCopying {
+		[Export ("initWithInk:strokePath:transform:mask:")]
+		NativeHandle Constructor (PKInk ink, PKStrokePath path, CGAffineTransform transform, [NullAllowed] BezierPath mask);
+
+		[iOS (16, 0), MacCatalyst (16, 0)]
+		[Export ("initWithInk:strokePath:transform:mask:randomSeed:")]
+		NativeHandle Constructor (PKInk ink, PKStrokePath strokePath, CGAffineTransform transform, [NullAllowed] BezierPath mask, uint randomSeed);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("initWithInk:strokePath:transform:mask:randomSeed:strokeID:renderGroupID:renderState:")]
+		NativeHandle Constructor (PKInk ink, PKStrokePath strokePath, CGAffineTransform transform, [NullAllowed] BezierPath mask, uint randomSeed, NSUuid strokeId, [NullAllowed] NSUuid renderGroupId, [NullAllowed] PKStrokeRenderState renderState);
+
+		[Export ("ink")]
+		PKInk Ink { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("strokeID")]
+		NSUuid StrokeId { get; }
+
+		[Export ("transform")]
+		CGAffineTransform Transform { get; }
+
+		[Export ("path")]
+		PKStrokePath Path { get; }
+
+		[NullAllowed, Export ("mask")]
+		BezierPath Mask { get; }
+
+		[Export ("renderBounds")]
+		CGRect RenderBounds { get; }
+
+		[Export ("maskedPathRanges")]
+		PKFloatRange [] MaskedPathRanges { get; }
+
+		[iOS (16, 0), MacCatalyst (16, 0)]
+		[Export ("randomSeed")]
+		uint RandomSeed { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[NullAllowed, Export ("renderGroupID")]
+		NSUuid RenderGroupId { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[NullAllowed, Export ("renderState")]
+		PKStrokeRenderState RenderState { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("substrokeWithRange:")]
+		PKStroke GetSubStroke (PKFloatRange range);
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("requiredContentVersion")]
+		PKContentVersion RequiredContentVersion { get; }
+	}
+
+	[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKConvertedBezierPoint {
+		[Export ("index")]
+		nint Index { get; }
+
+		[Export ("pointCount")]
+		nint PointCount { get; }
+
+		[Export ("location", ArgumentSemantic.Assign)]
+		CGPoint Location { get; }
+
+		[Export ("bezierSegmentIndex")]
+		nint BezierSegmentIndex { get; }
+	}
+
+	[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+	delegate PKStrokePoint PKStrokePathPointProvider (PKConvertedBezierPoint convertedPoint);
+
+	delegate void PKInterpolatedPointsEnumeratorHandler (PKStrokePoint strokePoint, out bool stop);
+
+	[iOS (14, 0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (NSObject))]
+	interface PKStrokePath : NSCopying {
+		[Export ("initWithControlPoints:creationDate:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (PKStrokePoint [] controlPoints, NSDate creationDate);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("initWithControlPoints:creationDate:strokePathID:")]
+		NativeHandle Constructor (PKStrokePoint [] controlPoints, NSDate creationDate, NSUuid strokePathId);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("initWithBezierPath:creationDate:pointProvider:")]
+		NativeHandle Constructor (CGPath bezierPath, NSDate creationDate, PKStrokePathPointProvider pointProvider);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("strokePathID")]
+		NSUuid StrokePathId { get; }
+
+		[Export ("count")]
+		nuint Count { get; }
+
+		[Export ("creationDate")]
+		NSDate CreationDate { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("bezierRepresentation")]
+		CGPath BezierRepresentation { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("subpathWithRange:")]
+		PKStrokePath GetSubpath (PKFloatRange range);
+
+		[Export ("pointAtIndex:")]
+		PKStrokePoint GetPoint (nuint index);
+
+		[Export ("objectAtIndexedSubscript:")]
+		PKStrokePoint GetObject (nuint indexedSubscript);
+
+		[Export ("interpolatedLocationAt:")]
+		CGPoint GetInterpolatedLocation (nfloat parametricValue);
+
+		[Export ("interpolatedPointAt:")]
+		PKStrokePoint GetInterpolatedPoint (nfloat parametricValue);
+
+		[Export ("enumerateInterpolatedPointsInRange:strideByDistance:usingBlock:")]
+		void EnumerateInterpolatedPointsByDistanceStep (PKFloatRange range, nfloat distanceStep, PKInterpolatedPointsEnumeratorHandler enumeratorHandler);
+
+		[Export ("enumerateInterpolatedPointsInRange:strideByTime:usingBlock:")]
+		void EnumerateInterpolatedPointsByTimeStep (PKFloatRange range, double timeStep, PKInterpolatedPointsEnumeratorHandler enumeratorHandler);
+
+		[Export ("enumerateInterpolatedPointsInRange:strideByParametricStep:usingBlock:")]
+		void EnumerateInterpolatedPointsByParametricStep (PKFloatRange range, nfloat parametricStep, PKInterpolatedPointsEnumeratorHandler enumeratorHandler);
+
+		[Export ("parametricValue:offsetByDistance:")]
+		nfloat GetParametricValue (nfloat parametricValue, nfloat distanceStep);
+
+		[Export ("parametricValue:offsetByTime:")]
+		nfloat GetParametricValue (nfloat parametricValue, double timeStep);
+	}
+
+	[iOS (14, 0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKStrokePoint : NSCopying {
+		[Export ("initWithLocation:timeOffset:size:opacity:force:azimuth:altitude:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (CGPoint location, double timeOffset, CGSize size, nfloat opacity, nfloat force, nfloat azimuth, nfloat altitude);
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("initWithLocation:timeOffset:size:opacity:force:azimuth:altitude:secondaryScale:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (CGPoint location, double timeOffset, CGSize size, nfloat opacity, nfloat force, nfloat azimuth, nfloat altitude, nfloat secondaryScale);
+
+		[Mac (26, 0), iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("initWithLocation:timeOffset:size:opacity:force:azimuth:altitude:secondaryScale:threshold:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (CGPoint location, double timeOffset, CGSize size, nfloat opacity, nfloat force, nfloat azimuth, nfloat altitude, nfloat secondaryScale, nfloat threshold);
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("initWithLocation:timeOffset:size:opacity:force:azimuth:altitude:secondaryScale:threshold:lateralJitter:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (CGPoint location, double timeOffset, CGSize size, nfloat opacity, nfloat force, nfloat azimuth, nfloat altitude, nfloat secondaryScale, nfloat threshold, nfloat lateralJitter);
+
+		[Export ("location")]
+		CGPoint Location { get; }
+
+		[Export ("timeOffset")]
+		double TimeOffset { get; }
+
+		[Export ("size")]
+		CGSize Size { get; }
+
+		[Export ("opacity")]
+		nfloat Opacity { get; }
+
+		[Export ("azimuth")]
+		nfloat Azimuth { get; }
+
+		[Export ("force")]
+		nfloat Force { get; }
+
+		[Export ("altitude")]
+		nfloat Altitude { get; }
+
+		[iOS (17, 0), MacCatalyst (17, 0)]
+		[Export ("secondaryScale")]
+		nfloat SecondaryScale { get; }
+
+		[Mac (26, 0), iOS (26, 0), MacCatalyst (26, 0)]
+		[Export ("threshold")]
+		nfloat Threshold { get; }
+
+		[Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("lateralJitter")]
+		nfloat LateralJitter { get; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[BaseType (typeof (PKToolPickerItem))]
+	[DisableDefaultCtor]
+	interface PKToolPickerCustomItem {
+		[Export ("initWithConfiguration:")]
+		NativeHandle Constructor (PKToolPickerCustomItemConfiguration configuration);
+
+		[Export ("configuration")]
+		PKToolPickerCustomItemConfiguration Configuration { get; }
+
+		[Export ("color", ArgumentSemantic.Strong)]
+		UIColor Color { get; set; }
+
+		[Export ("allowsColorSelection", ArgumentSemantic.Assign)]
+		bool AllowsColorSelection { get; set; }
+
+		[Export ("width", ArgumentSemantic.Assign)]
+		nfloat Width { get; set; }
+
+		[Export ("reloadImage")]
+		void ReloadImage ();
+	}
+
+	delegate UIImage PKToolPickerCustomItemConfigurationImageProviderCallback (PKToolPickerCustomItem toolPickerItem);
+	delegate UIViewController PKToolPickerCustomItemConfigurationViewControllerProvider (PKToolPickerCustomItem toolPickerItem);
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKToolPickerCustomItemConfiguration : NSCopying {
+		[Export ("initWithIdentifier:name:")]
+		NativeHandle Constructor (string identifier, string name);
+
+		[Export ("identifier", ArgumentSemantic.Copy)]
+		string Identifier { get; set; }
+
+		[Export ("name", ArgumentSemantic.Copy)]
+		string Name { get; set; }
+
+		[Export ("imageProvider", ArgumentSemantic.Copy), NullAllowed]
+		PKToolPickerCustomItemConfigurationImageProviderCallback ImageProvider { get; set; }
+
+		[Export ("viewControllerProvider", ArgumentSemantic.Copy), NullAllowed]
+		PKToolPickerCustomItemConfigurationViewControllerProvider ViewControllerProvider { get; set; }
+
+		[Export ("defaultWidth", ArgumentSemantic.Assign)]
+		nfloat DefaultWidth { get; set; }
+
+		[Export ("widthVariants", ArgumentSemantic.Copy)]
+		NSDictionary<NSNumber, UIImage> WidthVariants { get; set; }
+
+		[Export ("defaultColor", ArgumentSemantic.Strong)]
+		UIColor DefaultColor { get; set; }
+
+		[Export ("allowsColorSelection", ArgumentSemantic.Assign)]
+		bool AllowsColorSelection { get; set; }
+
+		[Export ("toolAttributeControls", ArgumentSemantic.Assign)]
+		PKToolPickerCustomItemControlOptions ToolAttributeControls { get; set; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), Mac (26, 0)]
+	[BaseType (typeof (PKToolPickerItem))]
+	[DisableDefaultCtor]
+	interface PKToolPickerEraserItem {
+		[Export ("initWithEraserType:")]
+		NativeHandle Constructor (PKEraserType eraserType);
+
+		[Export ("initWithEraserType:width:")]
+		NativeHandle Constructor (PKEraserType eraserType, nfloat width);
+
+		[Export ("eraserTool")]
+		PKEraserTool EraserTool { get; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), Mac (26, 0)]
+	[BaseType (typeof (PKToolPickerItem))]
+	[DisableDefaultCtor]
+	interface PKToolPickerInkingItem {
+		[Export ("initWithInkType:")]
+		NativeHandle Constructor (NSString inkType);
+
+		[Wrap ("this (inkType.GetConstant ()!)")]
+		NativeHandle Constructor (PKInkType inkType);
+
+		[Export ("initWithInkType:color:")]
+		NativeHandle Constructor (NSString inkType, UIColor color);
+
+		[Wrap ("this (inkType.GetConstant ()!, color)")]
+		NativeHandle Constructor (PKInkType inkType, UIColor color);
+
+		[Export ("initWithInkType:width:")]
+		NativeHandle Constructor (NSString inkType, nfloat width);
+
+		[Wrap ("this (inkType.GetConstant ()!, width)")]
+		NativeHandle Constructor (PKInkType inkType, nfloat width);
+
+		[Export ("initWithInkType:color:width:")]
+		NativeHandle Constructor (NSString inkType, UIColor color, nfloat width);
+
+		[Wrap ("this (inkType.GetConstant ()!, color, width)")]
+		NativeHandle Constructor (PKInkType inkType, UIColor color, nfloat width);
+
+		[Export ("initWithInkType:color:width:identifier:")]
+		NativeHandle Constructor (NSString inkType, UIColor color, nfloat width, [NullAllowed] string identifier);
+
+		[Wrap ("this (inkType.GetConstant ()!, color, width, identifier)")]
+		NativeHandle Constructor (PKInkType inkType, UIColor color, nfloat width, [NullAllowed] string identifier);
+
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		[Export ("initWithInkType:color:width:azimuth:identifier:")]
+		NativeHandle Constructor (NSString inkType, UIColor color, nfloat width, nfloat azimuth, [NullAllowed] string identifier);
+
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		[Wrap ("this (inkType.GetConstant ()!, color, width, azimuth, identifier)")]
+		NativeHandle Constructor (PKInkType inkType, UIColor color, nfloat width, nfloat azimuth, [NullAllowed] string identifier);
+
+		[Export ("inkingTool")]
+		PKInkingTool InkingTool { get; }
+
+		[Export ("allowsColorSelection", ArgumentSemantic.Assign)]
+		bool AllowsColorSelection { get; set; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), Mac (26, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKToolPickerItem : NSCopying {
+		[Export ("identifier")]
+		string Identifier { get; }
+
+		[iOS (26, 0), Mac (26, 0), MacCatalyst (26, 0)]
+		[Export ("tool")]
+		[NullAllowed]
+		PKTool Tool { get; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[BaseType (typeof (PKToolPickerItem))]
+	interface PKToolPickerLassoItem {
+		[Export ("lassoTool")]
+		PKLassoTool LassoTool { get; }
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[BaseType (typeof (PKToolPickerItem))]
+	interface PKToolPickerRulerItem {
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[BaseType (typeof (PKToolPickerItem))]
+	interface PKToolPickerScribbleItem {
+	}
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[Protocol (BackwardsCompatibleCodeGeneration = false), Model]
+	[BaseType (typeof (NSObject))]
+	interface PKToolPickerDelegate {
+	}
+
+	interface IPKToolPickerDelegate { }
+
+	[iOS (18, 0), MacCatalyst (18, 0), NoMac]
+	[Native]
+	[Flags]
+	enum PKToolPickerCustomItemControlOptions : ulong {
+		None = 0,
+		Width = 1 << 0,
+		Opacity = 1 << 1,
+	}
+
+	[iOS (26, 0), NoMac, MacCatalyst (26, 0)]
+	[Native]
+	public enum PKToolPickerVisibility : long {
+		Inherited,
+		Inactive,
+		Hidden,
+		Visible,
+	}
+
+	[iOS (26, 0), NoMac, MacCatalyst (26, 0)]
+	[BaseType (typeof (NSObject))]
+	interface PKResponderState {
+		[Export ("toolPickerVisibility", ArgumentSemantic.Assign)]
+		PKToolPickerVisibility ToolPickerVisibility { get; set; }
+
+		[NullAllowed, Export ("activeToolPicker", ArgumentSemantic.Strong)]
+		PKToolPicker ActiveToolPicker { get; set; }
+	}
+
+	[iOS (26, 0), NoMac, MacCatalyst (26, 0)]
+	[Category]
+	[BaseType (typeof (UIResponder))]
+	interface UIResponder_PKResponderState {
+		[Export ("pencilKitResponderState")]
+		PKResponderState GetPencilKitResponderState ();
+	}
+}

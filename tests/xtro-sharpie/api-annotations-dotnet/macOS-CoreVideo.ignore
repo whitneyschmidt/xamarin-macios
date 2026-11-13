@@ -1,0 +1,3 @@
+# opengl was deprecated
+!missing-field! kCVPixelBufferIOSurfaceOpenGLFBOCompatibilityKey not bound
+!missing-field! kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey not bound

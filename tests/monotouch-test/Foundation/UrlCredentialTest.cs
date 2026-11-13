@@ -7,25 +7,16 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.Security.Cryptography.X509Certificates;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
 using Security;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.Security;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 using MonoTouchFixtures.Security;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.Foundation {
 
@@ -35,7 +26,7 @@ namespace MonoTouchFixtures.Foundation {
 
 		SecTrust GetTrust ()
 		{
-			X509Certificate x = new X509Certificate (CertificateTest.mail_google_com);
+			var x = X509CertificateLoader.LoadCertificate (CertificateTest.mail_google_com);
 			using (var policy = SecPolicy.CreateBasicX509Policy ())
 				return new SecTrust (x, policy);
 		}
@@ -45,17 +36,12 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var trust = GetTrust ())
 			using (var creds = new NSUrlCredential (trust)) {
-				Assert.Null (creds.Certificates, "Certificates");
-				Assert.False (creds.HasPassword, "HasPassword");
-				Assert.Null (creds.SecIdentity, "SecIdentity");
-				Assert.Null (creds.Password, "Password");
-				var expectedPersistence = NSUrlCredentialPersistence.ForSession;
-#if __MACOS__
-				if (!TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 8))
-					expectedPersistence = (NSUrlCredentialPersistence) uint.MaxValue;
-#endif
-				Assert.That (creds.Persistence, Is.EqualTo (expectedPersistence), "Persistence");
-				Assert.Null (creds.User, "User");
+				Assert.That (creds.Certificates, Is.Null, "Certificates");
+				Assert.That (creds.HasPassword, Is.False, "HasPassword");
+				Assert.That (creds.SecIdentity, Is.Null, "SecIdentity");
+				Assert.That (creds.Password, Is.Null, "Password");
+				Assert.That (creds.Persistence, Is.EqualTo (NSUrlCredentialPersistence.ForSession), "Persistence");
+				Assert.That (creds.User, Is.Null, "User");
 			}
 		}
 
@@ -64,17 +50,12 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var trust = GetTrust ())
 			using (var creds = NSUrlCredential.FromTrust (trust)) {
-				Assert.Null (creds.Certificates, "Certificates");
-				Assert.False (creds.HasPassword, "HasPassword");
-				Assert.Null (creds.SecIdentity, "SecIdentity");
-				Assert.Null (creds.Password, "Password");
-				var expectedPersistence = NSUrlCredentialPersistence.ForSession;
-#if __MACOS__
-				if (!TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 8))
-					expectedPersistence = (NSUrlCredentialPersistence)uint.MaxValue;
-#endif
-				Assert.That (creds.Persistence, Is.EqualTo (expectedPersistence), "Persistence");
-				Assert.Null (creds.User, "User");
+				Assert.That (creds.Certificates, Is.Null, "Certificates");
+				Assert.That (creds.HasPassword, Is.False, "HasPassword");
+				Assert.That (creds.SecIdentity, Is.Null, "SecIdentity");
+				Assert.That (creds.Password, Is.Null, "Password");
+				Assert.That (creds.Persistence, Is.EqualTo (NSUrlCredentialPersistence.ForSession), "Persistence");
+				Assert.That (creds.User, Is.Null, "User");
 			}
 		}
 	}

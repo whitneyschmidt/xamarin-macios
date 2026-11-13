@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NSCoder
 //
 // Authors:
@@ -6,19 +6,6 @@
 //
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
-
-using System;
-using System.IO;
-using System.Net;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
 
@@ -28,9 +15,8 @@ namespace MonoTouchFixtures.Foundation {
 		[Test]
 		public void EncodeDecodeTest ()
 		{
-			var buffer = new byte[] { 3, 14, 15 };
+			var buffer = new byte [] { 3, 14, 15 };
 			var obj = new NSString ();
-			byte[] data;
 			var ptr = Marshal.AllocHGlobal (buffer.Length);
 
 			for (int i = 0; i < buffer.Length; i++)
@@ -45,36 +31,31 @@ namespace MonoTouchFixtures.Foundation {
 					coder.Encode (double.MaxValue, "double");
 					coder.Encode (true, "bool");
 					coder.Encode (long.MaxValue, "long");
-					coder.Encode (buffer, 2, 1, "buffer2");
-#if XAMCORE_2_0
+					coder.Encode (buffer, 1, 1, "buffer2");
 					coder.Encode (nint.MaxValue, "nint");
-#endif
 					coder.EncodeBlock (ptr, buffer.Length, "block");
 					coder.FinishEncoding ();
 				}
 
 				using (var decoder = new NSKeyedUnarchiver (mutableData)) {
-					Assert.IsNotNull (decoder.DecodeObject ("obj"));
+					Assert.That (decoder.DecodeObject ("obj"), Is.Not.Null);
 					var buf = decoder.DecodeBytes ("buffer");
-					Assert.AreEqual (buf.Length, buffer.Length, "buffer.length");
+					Assert.That (buffer.Length, Is.EqualTo (buf.Length), "buffer.length");
 					for (int i = 0; i < buf.Length; i++)
-						Assert.AreEqual (buf [i], buffer [i], "buffer [" + i.ToString () + "]");
-					Assert.AreEqual (Int32.MaxValue, decoder.DecodeInt ("int32"));
-					Assert.AreEqual (float.MaxValue, decoder.DecodeFloat ("float"));
-					Assert.AreEqual (true, decoder.DecodeBool ("bool"));
-					Assert.AreEqual (long.MaxValue, decoder.DecodeLong ("long"));
+						Assert.That (buffer [i], Is.EqualTo (buf [i]), "buffer [" + i.ToString () + "]");
+					Assert.That (decoder.DecodeInt ("int32"), Is.EqualTo (Int32.MaxValue));
+					Assert.That (decoder.DecodeFloat ("float"), Is.EqualTo (float.MaxValue));
+					Assert.That (decoder.DecodeBool ("bool"), Is.EqualTo (true));
+					Assert.That (decoder.DecodeLong ("long"), Is.EqualTo (long.MaxValue));
 					buf = decoder.DecodeBytes ("buffer2");
-					Assert.AreEqual (buf.Length, buffer.Length, "buffer2.length");
-					for (int i = 0; i < buf.Length; i++)
-						Assert.AreEqual (buf [i], buffer [i], "buffer2 [" + i.ToString () + "]");
-#if XAMCORE_2_0
-					Assert.AreEqual (nint.MaxValue, decoder.DecodeNInt ("nint"));
-#endif
+					Assert.That (buf.Length, Is.EqualTo (1), "buffer2.length");
+					Assert.That (buf [0], Is.EqualTo (buffer [1]), "buffer2 [0]");
+					Assert.That (decoder.DecodeNInt ("nint"), Is.EqualTo (nint.MaxValue));
 
 					buf = decoder.DecodeBytes ("block");
-					Assert.AreEqual (buf.Length, buffer.Length, "block.length");
+					Assert.That (buffer.Length, Is.EqualTo (buf.Length), "block.length");
 					for (int i = 0; i < buf.Length; i++)
-						Assert.AreEqual (buf [i], buffer [i], "block [" + i.ToString () + "]");
+						Assert.That (buffer [i], Is.EqualTo (buf [i]), "block [" + i.ToString () + "]");
 				}
 			}
 

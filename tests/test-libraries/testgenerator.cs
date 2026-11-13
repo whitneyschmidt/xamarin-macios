@@ -6,11 +6,10 @@ using System.Text;
 
 static class C {
 	[Flags]
-	enum Architecture
-	{
+	enum Architecture {
 		None = 0,
-		Sim32 = 1,
-		Sim64 = 2,
+		X86 = 1,
+		X64 = 2,
 		Arm32 = 4,
 		Armv7k = 8,
 		// Arm64 is never stret
@@ -22,18 +21,29 @@ static class C {
 	// ARM64: never
 	// armv7k: > 16, except homogeneous types with no more than 4 elements (i.e. structs with 3 or 4 doubles).
 	// the numbers below are bitmasks of Architecture values.
+	// Some tests cases are commented out because they trigger https://github.com/dotnet/runtime/issues/112850.
 	static string [] structs_and_stret =  {
 		/* integral types */
-		"c:0", "cc:4", "ccc:5",  "cccc:4",
-		"s:0", "ss:4", "sss:5",  "ssss:4",
+		"c:0", "cc:4", "ccc:5",  "cccc:4", // "cccccccc:0",
+		// new string ('c', 15) + ":0", new string ('c', 16) + ":0", new string ('c', 17) + ":2",
+		// new string ('c', 31) + ":2", new string ('c', 32) + ":2", new string ('c', 33) + ":2",
+		"s:0", "ss:4", "sss:5",  "ssss:4", // "ssssssss:0", "sssssssss:2",
 		"i:0", "ii:4", "iii:5",  "iiii:5",  "iiiii:15",
 		"l:4", "ll:5", "lll:15", "llll:15", "lllll:15",
 		/* floating point types */
 		"f:4", "ff:4", "fff:5", "ffff:5",  "fffff:15",
 		"d:4", "dd:5", "ddd:7", "dddd:7",  "ddddd:15",
+		// "fd:0", "df:0",  "dddf:2", "fffd:2",
+		"ffd:0", "dff:0",
 		/* mixed types */
 		"if:4", "fi:4", // 8 bytes
 		"iff:5", // 12 bytes
+		"ffi:0", // 12 bytes
+		"fif:5", // 12 bytes
+		"fii:0",
+		"ifi:0",
+		"iif:0",
+		"ffii:5", // 16 bytes
 		"iiff:5", // 16 bytes
 		"id:5", "di:5", // 16 bytes
 		"iid:5", // 16 bytes
@@ -45,23 +55,35 @@ static class C {
 		"ldld:15",
 		"fifi:5",
 		"ifif:5",
+		"lllf:2",
+		"llld:2",
+		"fcccc:0",
+		"ffcccc:0",
+		"fffcccc:0",
+		"fccfcc:0",
+		"fcfc:0",
+		"sfsf:0",
+		"cfcf:0",
+		"scfscf:0",
+		"sfccfs:2",
 	};
+
+	const int MaxArgCountInStruct = 12;
 
 	static string [] structs = structs_and_stret.Select ((v) => v.IndexOf (':') >= 0 ? v.Substring (0, v.IndexOf (':')) : v).ToArray ();
 	static Architecture [] strets = structs_and_stret.Select ((v) => v.IndexOf (':') >= 0 ? (Architecture) int.Parse (v.Substring (v.IndexOf (':') + 1)) : Architecture.None).ToArray ();
 
-	class BindAsData
-	{
-		public string Managed;
-		public string Native;
-		public string ManagedCondition;
-		public string ManagedNewExpression;
-		public string Map;
-		public string MapFrom;
-		public Version MinXcodeVersion;
-		public Version MinMacOSVersion;
-		public string ToNSNumberCastExpression;
-		public string FromNSNumberCastExpression;
+	class BindAsData {
+		public string? Managed;
+		public string? Native;
+		public string? ManagedCondition;
+		public string? ManagedNewExpression;
+		public string? Map;
+		public string? MapFrom;
+		public Version? MinXcodeVersion;
+		public Version? MinMacOSVersion;
+		public string? ToNSNumberCastExpression;
+		public string? FromNSNumberCastExpression;
 	}
 
 	static BindAsData [] bindas_nsnumber = new [] {
@@ -81,7 +103,7 @@ static class C {
 		new BindAsData { Managed = "Boolean", Native = "BOOL", ManagedNewExpression = "true", Map = ".BoolValue" },
 		new BindAsData { Managed = "NSStreamStatus", Native = "NSStreamStatus", ManagedNewExpression = "NSStreamStatus.Closed", Map = ".UInt64Value", ToNSNumberCastExpression = "(ulong) ", FromNSNumberCastExpression = "(NSStreamStatus) " },
 	};
-	static BindAsData[] bindas_nsvalue = new [] {
+	static BindAsData [] bindas_nsvalue = new [] {
 		new BindAsData { Managed = "CGAffineTransform", Native = "CGAffineTransform", ManagedCondition = "!__MACOS__", ManagedNewExpression = "new CGAffineTransform (1, 2, 3, 4, 5, 6)", Map = ".CGAffineTransformValue", MapFrom = "FromCGAffineTransform" },
 		new BindAsData { Managed = "NSRange", Native = "NSRange", ManagedNewExpression = "new NSRange (7, 8)", Map = ".RangeValue", MapFrom = "FromRange" },
 		new BindAsData { Managed = "CGVector", Native = "CGVector", ManagedCondition = "!__MACOS__", ManagedNewExpression = "new CGVector (9, 10)", Map = ".CGVectorValue", MapFrom = "FromCGVector", MinXcodeVersion = new Version (8, 0) },
@@ -89,16 +111,17 @@ static class C {
 		new BindAsData { Managed = "CLLocationCoordinate2D", Native = "CLLocationCoordinate2D", ManagedNewExpression = "new CLLocationCoordinate2D (11, 12)", Map = ".CoordinateValue", MapFrom = "FromMKCoordinate", MinMacOSVersion = new Version (10, 9) },
 		new BindAsData { Managed = "SCNVector3", Native = "SCNVector3", ManagedNewExpression = "new SCNVector3 (13, 14, 15)", Map = ".Vector3Value", MapFrom = "FromVector", MinMacOSVersion = new Version (10, 8), MinXcodeVersion = new Version (8, 0) },
 		new BindAsData { Managed = "SCNVector4", Native = "SCNVector4", ManagedNewExpression = "new SCNVector4 (16, 17, 18, 19)", Map = ".Vector4Value", MapFrom = "FromVector", MinMacOSVersion = new Version (10, 8), MinXcodeVersion = new Version (8, 0) },
-		new BindAsData { Managed = "CGPoint", Native = "CGPoint", ManagedCondition = "XAMCORE_2_0 && !__MACOS__", ManagedNewExpression = "new CGPoint (19, 20)", Map = ".CGPointValue", MapFrom = "FromCGPoint" },
-		new BindAsData { Managed = "CGSize", Native = "CGSize", ManagedCondition = "XAMCORE_2_0 && !__MACOS__", ManagedNewExpression = "new CGSize (21, 22)", Map = ".CGSizeValue", MapFrom = "FromCGSize" },
-		new BindAsData { Managed = "CGRect", Native = "CGRect", ManagedCondition = "XAMCORE_2_0 && !__MACOS__", ManagedNewExpression = "new CGRect (23, 24, 25, 26)", Map = ".CGRectValue", MapFrom = "FromCGRect" },
+		new BindAsData { Managed = "CGPoint", Native = "CGPoint", ManagedCondition = "!__MACOS__", ManagedNewExpression = "new CGPoint (19, 20)", Map = ".CGPointValue", MapFrom = "FromCGPoint" },
+		new BindAsData { Managed = "CGSize", Native = "CGSize", ManagedCondition = "!__MACOS__", ManagedNewExpression = "new CGSize (21, 22)", Map = ".CGSizeValue", MapFrom = "FromCGSize" },
+		new BindAsData { Managed = "CGRect", Native = "CGRect", ManagedCondition = "!__MACOS__", ManagedNewExpression = "new CGRect (23, 24, 25, 26)", Map = ".CGRectValue", MapFrom = "FromCGRect" },
 		new BindAsData { Managed = "UIEdgeInsets", Native = "UIEdgeInsets", ManagedCondition = "HAVE_UIKIT", ManagedNewExpression = "new UIEdgeInsets (27, 28, 29, 30)", Map = ".UIEdgeInsetsValue", MapFrom = "FromUIEdgeInsets" },
 		new BindAsData { Managed = "UIOffset", Native = "UIOffset", ManagedCondition = "HAVE_UIKIT", ManagedNewExpression = "new UIOffset (31, 32)", Map = ".UIOffsetValue", MapFrom = "FromUIOffset" },
 		new BindAsData { Managed = "MKCoordinateSpan", Native = "MKCoordinateSpan", ManagedCondition = "HAVE_MAPKIT", ManagedNewExpression = "new MKCoordinateSpan (33, 34)", Map = ".CoordinateSpanValue", MapFrom = "FromMKCoordinateSpan", MinMacOSVersion = new Version (10, 9) },
 		new BindAsData { Managed = "CMTimeRange", Native = "CMTimeRange", ManagedCondition = "HAVE_COREMEDIA", ManagedNewExpression = "new CMTimeRange { Duration = new CMTime (37, 38), Start = new CMTime (39, 40) }", Map = ".CMTimeRangeValue", MapFrom = "FromCMTimeRange"  },
 		new BindAsData { Managed = "CMTime", Native = "CMTime", ManagedCondition = "HAVE_COREMEDIA",  ManagedNewExpression = "new CMTime (35, 36)", Map = ".CMTimeValue", MapFrom = "FromCMTime"  },
 		new BindAsData { Managed = "CMTimeMapping", Native = "CMTimeMapping", ManagedCondition = "HAVE_COREMEDIA", ManagedNewExpression = "new CMTimeMapping { Source = new CMTimeRange { Duration = new CMTime (42, 43), Start = new CMTime (44, 45) } }", Map = ".CMTimeMappingValue", MapFrom = "FromCMTimeMapping"  },
-		new BindAsData { Managed = "CATransform3D", Native = "CATransform3D", ManagedCondition = "HAVE_COREANIMATION", ManagedNewExpression = "new CATransform3D { m11 = 41 }", Map = ".CATransform3DValue", MapFrom = "FromCATransform3D"  },
+		new BindAsData { Managed = "CMVideoDimensions", Native = "CMVideoDimensions", ManagedCondition = "HAVE_COREMEDIA", ManagedNewExpression = "new CMVideoDimensions { Height = 51, Width = 52 }", Map = ".CMVideoDimensionsValue", MapFrom = "FromCMVideoDimensions", MinXcodeVersion = new Version (14, 0) },
+		new BindAsData { Managed = "CATransform3D", Native = "CATransform3D", ManagedCondition = "HAVE_COREANIMATION", ManagedNewExpression = "new CATransform3D { M11 = 41 }", Map = ".CATransform3DValue", MapFrom = "FromCATransform3D"  },
 		new BindAsData { Managed = "NSDirectionalEdgeInsets", Native = "NSDirectionalEdgeInsets", ManagedCondition = "HAVE_UIKIT", ManagedNewExpression = "new NSDirectionalEdgeInsets (42, 43, 44, 45)", Map = ".DirectionalEdgeInsetsValue", MapFrom = "FromDirectionalEdgeInsets", MinXcodeVersion = new Version (9, 0) },
 	};
 
@@ -138,6 +161,11 @@ static class C {
 	{
 		switch (t) {
 		case 'c':
+			byte byteValue;
+			unchecked {
+				byteValue = (byte) ((i + 1) * multiplier);
+			}
+			return byteValue.ToString (CultureInfo.InvariantCulture);
 		case 's':
 		case 'i':
 		case 'l': return ((i + 1) * multiplier).ToString (CultureInfo.InvariantCulture);
@@ -270,6 +298,35 @@ static class C {
 			w.AppendLine ();
 		}
 
+		w.AppendLine ();
+		foreach (var s in structs) {
+			w.AppendLine ($"\t-(void) setProperty{s}: (struct S{s}) value;");
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setProperty{s}: (void *) p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine (";");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setPropertyFloat{s}: (float) f1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine (";");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setPropertyDouble{s}: (double) d1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine (";");
+			}
+		}
+
 		File.WriteAllText ("libtest.methods.h", w.ToString ());
 	}
 
@@ -321,16 +378,59 @@ static class C {
 			w.AppendLine ();
 		}
 
+		w.AppendLine ();
+		foreach (var s in structs) {
+			w.AppendLine ($"\t-(void) setProperty{s}: (struct S{s}) value {{ self.PS{s} = value; }}");
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setProperty{s}: (void *) p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine ($" {{");
+				for (var x = 1; x < i; x++)
+					w.AppendLine ($"\t\tself.VoidArg{x} = p{x};");
+				w.AppendLine ($"\t\tself.PS{s} = p{i};");
+				w.AppendLine ($"\t\tself.VoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t}}");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setPropertyFloat{s}: (float) f1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine ($" {{");
+				w.AppendLine ($"\t\tself.FloatArg1 = f1;");
+				for (var x = 2; x < i; x++)
+					w.AppendLine ($"\t\tself.VoidArg{x} = p{x};");
+				w.AppendLine ($"\t\tself.PS{s} = p{i};");
+				w.AppendLine ($"\t\tself.VoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t}}");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t-(void) setPropertyDouble{s}: (double) d1");
+				for (var x = 2; x < i; x++)
+					w.Append ($" p{x}:(void *)p{x}");
+				w.Append ($" p{i}:(struct S{s})p{i}");
+				w.Append ($" p{i + 1}:(void *)p{i + 1}");
+				w.AppendLine ($" {{");
+				w.AppendLine ($"\t\tself.DoubleArg1 = d1;");
+				for (var x = 2; x < i; x++)
+					w.AppendLine ($"\t\tself.VoidArg{x} = p{x};");
+				w.AppendLine ($"\t\tself.PS{s} = p{i};");
+				w.AppendLine ($"\t\tself.VoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t}}");
+			}
+		}
+
 		File.WriteAllText ("libtest.methods.m", w.ToString ());
 	}
 
 	static void WriteFrameworkDefines (StringBuilder w)
 	{
 		w.AppendLine (@"
-#if __UNIFIED__
-#define XAMCORE_2_0
-#endif
-
 #if __IOS__ || __MACOS__ || __TVOS__
 #define HAVE_COREANIMATION
 #endif
@@ -339,14 +439,13 @@ static class C {
 #define HAVE_COREMEDIA
 #endif
 
-#if __IOS__ || __WATCHOS__ || __TVOS__
+#if __IOS__ || __TVOS__
 #define HAVE_UIKIT
 #endif
 
-#if XAMCORE_2_0
 #define HAVE_MAPKIT
-#endif");
-		
+");
+
 	}
 
 	static void WriteApiDefinition ()
@@ -356,7 +455,6 @@ static class C {
 		w.AppendLine (@"
 using System;
 
-#if __UNIFIED__
 using AVFoundation;
 #if HAVE_COREANIMATION
 using CoreAnimation;
@@ -376,29 +474,59 @@ using Security;
 #if HAVE_UIKIT
 using UIKit;
 #endif
-#else
-#if !__WATCHOS__
-using System.Drawing;
-#endif
-using MonoTouch.ObjCRuntime;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
 
 namespace Bindings.Test {
 	partial interface ObjCRegistrarTest {
 
 ");
-		
+
 		foreach (var s in structs) {
 			w.AppendLine ($"\t\t[Export (\"PS{s}\")]");
 			w.AppendLine ($"\t\tS{s} PS{s} {{ get; set; }}");
 			w.AppendLine ();
+
+			w.AppendLine ($"\t\t[Export (\"setProperty{s}:\")]");
+			w.AppendLine ($"\t\tvoid SetProperty{s} (S{s} value);");
+			w.AppendLine ();
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t[Export (\"setProperty{s}:");
+				for (var x = 2; x < i; x++)
+					w.Append ($"p{x}:");
+				w.AppendLine ($"p{i}:p{i + 1}:\")]");
+				w.Append ($"\t\tvoid SetProperty{s} (nint p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1});");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t[Export (\"setPropertyFloat{s}:");
+				for (var x = 2; x < i; x++)
+					w.Append ($"p{x}:");
+				w.AppendLine ($"p{i}:p{i + 1}:\")]");
+				w.Append ($"\t\tvoid SetPropertyFloat{s} (float f1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1});");
+			}
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t[Export (\"setPropertyDouble{s}:");
+				for (var x = 2; x < i; x++)
+					w.Append ($"p{x}:");
+				w.AppendLine ($"p{i}:p{i + 1}:\")]");
+				w.Append ($"\t\tvoid SetPropertyDouble{s} (double d1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1});");
+			}
 		}
 
 		w.AppendLine ("\t\t// BindAs: NSNumber");
 		foreach (var v in bindas_nsnumber) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			// no BindAs
@@ -418,7 +546,7 @@ namespace Bindings.Test {
 			w.AppendLine ($"\t\t[return: BindAs (typeof ({v.Managed}))]");
 			w.AppendLine ($"\t\t[return: NullAllowed] // This should be the default");
 			w.AppendLine ($"\t\tNSNumber Get{v.Managed}NumberNonNullable ();");
-			
+
 			w.AppendLine ();
 			w.AppendLine ($"\t\t[Export (\"set{v.Managed}NumberNonNullable:\")]");
 			w.AppendLine ($"\t\tvoid Set{v.Managed}NumberNonNullable ([BindAs (typeof ({v.Managed}))] NSNumber value);");
@@ -508,14 +636,14 @@ namespace Bindings.Test {
 			//w.AppendLine ($"\t\t[BindAs (typeof ({v.Managed}?[][]))]");
 			//w.AppendLine ($"\t\tNSNumber[][] P{v.Managed}NullableMulti2ArrayValue {{ get; set; }}");
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
 
 		w.AppendLine ("\t\t// BindAs: NSValue");
 		foreach (var v in bindas_nsvalue) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			// no BindAs
@@ -627,14 +755,14 @@ namespace Bindings.Test {
 			//w.AppendLine ($"\t\tNSValue[][] P{v.Managed}NullableMulti2ArrayValue {{ get; set; }}");
 
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
 
 		w.AppendLine ("\t\t// BindAs: NSString");
 		foreach (var v in bindas_nsstring) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 			// plain value
 			w.AppendLine ($"\t\t[return: BindAs (typeof ({v.Managed}))]");
@@ -718,7 +846,7 @@ namespace Bindings.Test {
 			//w.AppendLine ($"\t\t[Export (\"PSmart{v.Managed}PropertiesMulti:\")]");
 			//w.AppendLine ($"\t\tNSString[,] PSmart{v.Managed}PropertiesMulti {{ get; set; }}");
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
@@ -739,21 +867,16 @@ namespace Bindings.Test {
 		w.AppendLine (@"using System;
 using System.Runtime.InteropServices;
 
-#if !__UNIFIED__
-using nint=System.Int32;
-#endif
-
 namespace Bindings.Test
 {
 ");
 
 		foreach (var s in structs) {
+			w.AppendLine ($"\t[StructLayout (LayoutKind.Sequential)]");
 			w.AppendLine ($"\tpublic struct S{s} {{ ");
-			w.Append ("\t\t");
 			for (int i = 0; i < s.Length; i++) {
-				w.Append ("public ").Append (GetManagedName (s [i])).Append (" x").Append (i).Append ("; ");
+				w.Append ("\t\tpublic ").Append (GetManagedName (s [i])).Append (" x").Append (i).Append (";").AppendLine ();
 			}
-			w.AppendLine ();
 			w.Append ($"\t\tpublic override string ToString () {{ return $\"S{s} [");
 			for (int i = 0; i < s.Length; i++) {
 				w.Append ("{x").Append (i).Append ("};");
@@ -772,12 +895,12 @@ namespace Bindings.Test
 	static void WriteAsserts (StringBuilder w, BindAsData v)
 	{
 		w.AppendLine ($"\t\t\tAssertIfIgnored ();");
-		if (v.MinXcodeVersion != null) {
+		if (v.MinXcodeVersion is not null) {
 			w.AppendLine ($"\t\t\tTestRuntime.AssertXcodeVersion ({v.MinXcodeVersion.Major}, {v.MinXcodeVersion.Minor});");
 			w.AppendLine ();
 		}
-		if (v.MinMacOSVersion != null) {
-			w.AppendLine ($"\t\t\tTestRuntime.AssertSystemVersion (PlatformName.MacOSX, {v.MinMacOSVersion.Major}, {v.MinMacOSVersion.Minor}, throwIfOtherPlatform: false);");
+		if (v.MinMacOSVersion is not null) {
+			w.AppendLine ($"\t\t\tTestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, {v.MinMacOSVersion.Major}, {v.MinMacOSVersion.Minor}, throwIfOtherPlatform: false);");
 			w.AppendLine ();
 		}
 	}
@@ -789,7 +912,6 @@ namespace Bindings.Test
 		WriteFrameworkDefines (w);
 		w.AppendLine (@"
 using System;
-#if XAMCORE_2_0
 using AVFoundation;
 #if HAVE_COREANIMATION
 using CoreAnimation;
@@ -810,22 +932,12 @@ using Security;
 using UIKit;
 #endif
 using MonoTouchException=ObjCRuntime.RuntimeException;
-#if __MACOS__
-using NativeException=Foundation.ObjCException;
-#else
-using NativeException=Foundation.MonoTouchException;
-#endif
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouchException=MonoTouch.RuntimeException;
-using NativeException=MonoTouch.Foundation.MonoTouchException;
-#endif
+using NativeException=ObjCRuntime.ObjCException;
 using NUnit.Framework;
 using Bindings.Test;
 
 using XamarinTests.ObjCRuntime;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.ObjCRuntime {
 
@@ -841,7 +953,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t\tusing (var tc = new ObjCRegistrarTest ()) {");
 			w.AppendLine ($"\t\t\t\tvar s = tc.PS{s};");
 			for (int i = 0; i < s.Length; i++)
-				w.AppendLine ($"\t\t\t\tAssert.AreEqual (0, s.x{i}, \"pre-#{i}\");");
+				w.AppendLine ($"\t\t\t\tAssert.That (s.x{i}, Is.EqualTo (0), \"pre-#{i}\");");
 			w.Append ($"\t\t\t\tvar k = new S{s} () {{ ");
 			for (int i = 0; i < s.Length; i++)
 				w.Append ($"x{i} = ").Append (GetValue (s [i], i)).Append (", ");
@@ -850,7 +962,21 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\t\ttc.PS{s} = k;");
 			w.AppendLine ($"\t\t\t\ts = tc.PS{s};");
 			for (int i = 0; i < s.Length; i++)
-				w.AppendLine ($"\t\t\t\tAssert.AreEqual (k.x{i}, s.x{i}, \"post-#{i}\");");
+				w.AppendLine ($"\t\t\t\tAssert.That (s.x{i}, Is.EqualTo (k.x{i}), \"post-#{i}\");");
+
+			w.AppendLine ();
+			w.Append ($"\t\t\t\tvar v = new S{s} () {{ ");
+			for (int i = 0; i < s.Length; i++) {
+				if (i > 0)
+					w.Append (", ");
+				w.Append ($"x{i} = ").Append (GetValue (s [i], i));
+			}
+			w.AppendLine ("};");
+			w.AppendLine ($"\t\t\t\ttc.SetProperty{s} (v);");
+			w.AppendLine ($"\t\t\t\ts = tc.PS{s};");
+			for (int i = 0; i < s.Length; i++)
+				w.AppendLine ($"\t\t\t\tAssert.That (s.x{i}, Is.EqualTo (v.x{i}), \"set-#{i}\");");
+
 			w.AppendLine ("\t\t\t}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -860,7 +986,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 
 		w.AppendLine ("\t\t\t// BindAs: NSNumber");
 		foreach (var v in bindas_nsnumber) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			w.AppendLine ($"\t\t\t{v.Managed}? _{v.Managed};");
@@ -876,14 +1002,14 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\tpublic override {v.Managed}[] Get{v.Managed}Array () {{ return _{v.Managed}Array; }}");
 			w.AppendLine ($"\t\t\tpublic override void Set{v.Managed}Array ({v.Managed}[] value) {{ _{v.Managed}Array = value; }}");
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
 
 		w.AppendLine ("\t\t\t// BindAs: NSValue");
 		foreach (var v in bindas_nsvalue) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			w.AppendLine ($"\t\t\t{v.Managed}? _{v.Managed};");
@@ -899,14 +1025,14 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\tpublic override {v.Managed}[] Get{v.Managed}Array () {{ return _{v.Managed}Array; }}");
 			w.AppendLine ($"\t\t\tpublic override void Set{v.Managed}Array ({v.Managed}[] value) {{ _{v.Managed}Array = value; }}");
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
 
 		w.AppendLine ("\t\t\t// BindAs: NSString");
 		foreach (var v in bindas_nsstring) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			w.AppendLine ($"\t\t\t{v.Managed}? _{v.Managed};");
@@ -924,14 +1050,14 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\tpublic override {v.Managed}[] GetSmart{v.Managed}Values () {{ return _{v.Managed}Array; }}");
 			w.AppendLine ($"\t\t\tpublic override void SetSmart{v.Managed}Values ({v.Managed}[] value) {{ _{v.Managed}Array = value; }}");
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 			w.AppendLine ();
 		}
 		w.AppendLine ("\t\t}");
 
 		foreach (var v in bindas_nsnumber) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			// Bindings
@@ -940,32 +1066,32 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Number, \"initial null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}NumberNullable, \"initial nullable null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}NumberNullable (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Number, Is.Null, \"initial null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNullable, Is.Null, \"initial nullable null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNullable (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}? value = default ({v.Managed});");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}NumberNonNullable (value.Value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}NumberNullable, \"nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.P{v.Managed}NumberNonNullable, \"non-nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}NumberNullable (), \"nullable get method after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.Get{v.Managed}NumberNonNullable (), \"non-nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNullable, Is.EqualTo (value), \"nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNonNullable, Is.EqualTo (value.Value), \"non-nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNullable (), Is.EqualTo (value), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNonNullable (), Is.EqualTo (value.Value), \"non-nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}NumberNonNullable (value.Value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}NumberNullable, \"nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.P{v.Managed}NumberNonNullable, \"non-nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}NumberNullable (), \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.Get{v.Managed}NumberNonNullable (), \"non-nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNullable, Is.EqualTo (value), \"nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNonNullable, Is.EqualTo (value.Value), \"non-nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNullable (), Is.EqualTo (value), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNonNullable (), Is.EqualTo (value.Value), \"non-nullable get method after setting custom value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}NumberNullable (value);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Number, \"null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}NumberNullable, \"nullable null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}NumberNullable (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Number, Is.Null, \"null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}NumberNullable, Is.Null, \"nullable null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}NumberNullable (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -976,43 +1102,43 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new BindAsTestClassGenerated ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Number, \"initial null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Number, Is.Null, \"initial null\");");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}NumberNullable:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Number, \"null after setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Number, Is.Null, \"null after setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Number = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}NumberNullable:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Number, \"null after re-setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Number, Is.Null, \"null after re-setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvar value = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tusing (var input = new NSNumber ({v.ToNSNumberCastExpression}value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}NumberNullable:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.{v.Managed}Number, \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Number, Is.EqualTo (value), \"after setting A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Number = null;");
 			w.AppendLine ($"\t\t\t\tusing (var input = new NSNumber ({v.ToNSNumberCastExpression}value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}NumberNonNullable:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.{v.Managed}Number.Value, \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Number.Value, Is.EqualTo (value), \"after setting B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Number = null;");
 			w.AppendLine ($"\t\t\t\tvar number = Runtime.GetNSObject<NSNumber> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}NumberNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (number, \"null from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (number, Is.Null, \"null from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Number = value;");
 			w.AppendLine ($"\t\t\t\tnumber = Runtime.GetNSObject<NSNumber> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}NumberNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, {v.FromNSNumberCastExpression}number{v.Map}, \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.FromNSNumberCastExpression}number{v.Map}, Is.EqualTo (value), \"getter B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Number = value;");
 			w.AppendLine ($"\t\t\t\tnumber = Runtime.GetNSObject<NSNumber> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}NumberNonNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, {v.FromNSNumberCastExpression}number{v.Map}, \"getter C\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.FromNSNumberCastExpression}number{v.Map}, Is.EqualTo (value), \"getter C\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 
@@ -1022,28 +1148,28 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Array, \"initial null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}Array (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.Null, \"initial null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}[] value = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}Array, \"nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}Array (), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.EqualTo (value), \"nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.EqualTo (value), \"nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.P{v.Managed}Array.Length, \"nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.Get{v.Managed}Array ().Length, \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.P{v.Managed}Array [0], \"nullable property after setting custom value element\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.Get{v.Managed}Array () [0], \"nullable get method after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array.Length, Is.EqualTo (1), \"nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array ().Length, Is.EqualTo (1), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array [0], Is.EqualTo (value [0]), \"nullable property after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array () [0], Is.EqualTo (value [0]), \"nullable get method after setting custom value element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Array, \"null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}Array (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.Null, \"null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -1054,46 +1180,46 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new BindAsTestClassGenerated ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"initial null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"initial null\");");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"null after setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"null after setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"null after re-setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"null after re-setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvar value = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => new NSNumber ({v.ToNSNumberCastExpression}v), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.{v.Managed}Array.Length, \"after setting A\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.{v.Managed}Array [0], \"after setting A element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array.Length, Is.EqualTo (value.Length), \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array [0], Is.EqualTo (value [0]), \"after setting A element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = null;");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => new NSNumber ({v.ToNSNumberCastExpression}v), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.{v.Managed}Array.Length, \"after setting B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.{v.Managed}Array [0], \"after setting B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array.Length, Is.EqualTo (value.Length), \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array [0], Is.EqualTo (value [0]), \"after setting B element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = null;");
 			w.AppendLine ($"\t\t\t\tvar array = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}Array\")));");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (array, \"null from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array, Is.Null, \"null from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = value;");
 			w.AppendLine ($"\t\t\t\tarray = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}Array\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, array.Count, \"getter B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], {v.FromNSNumberCastExpression}array.GetItem<NSNumber> (0){v.Map}, \"getter B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array.Count, Is.EqualTo ((nuint) value.Length), \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.FromNSNumberCastExpression}array.GetItem<NSNumber> (0){v.Map}, Is.EqualTo (value [0]), \"getter B element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 
-			if  (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 
 			w.AppendLine ();
@@ -1101,7 +1227,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 
 
 		foreach (var v in bindas_nsvalue) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			// Bindings
@@ -1110,32 +1236,32 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Value, \"initial null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}ValueNullable, \"initial nullable null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}ValueNullable (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Value, Is.Null, \"initial null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNullable, Is.Null, \"initial nullable null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNullable (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}? value = default ({v.Managed});");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}ValueNonNullable (value.Value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}ValueNullable, \"nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.P{v.Managed}ValueNonNullable, \"non-nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}ValueNullable (), \"nullable get method after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.Get{v.Managed}ValueNonNullable (), \"non-nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNullable, Is.EqualTo (value), \"nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNonNullable, Is.EqualTo (value.Value), \"non-nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNullable (), Is.EqualTo (value), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNonNullable (), Is.EqualTo (value.Value), \"non-nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}ValueNonNullable (value.Value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}ValueNullable, \"nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.P{v.Managed}ValueNonNullable, \"non-nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}ValueNullable (), \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.Get{v.Managed}ValueNonNullable (), \"non-nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNullable, Is.EqualTo (value), \"nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNonNullable, Is.EqualTo (value.Value), \"non-nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNullable (), Is.EqualTo (value), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNonNullable (), Is.EqualTo (value.Value), \"non-nullable get method after setting custom value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}ValueNullable (value);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Value, \"null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}ValueNullable, \"nullable null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}ValueNullable (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Value, Is.Null, \"null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}ValueNullable, Is.Null, \"nullable null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}ValueNullable (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -1146,43 +1272,43 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new BindAsTestClassGenerated ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Value, \"initial null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Value, Is.Null, \"initial null\");");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}ValueNullable:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Value, \"null after setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Value, Is.Null, \"null after setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Value = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}ValueNullable:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Value, \"null after re-setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Value, Is.Null, \"null after re-setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvar value = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSValue.{v.MapFrom} (value))");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}ValueNullable:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.{v.Managed}Value, \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Value, Is.EqualTo (value), \"after setting A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Value = null;");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSValue.{v.MapFrom} (value))");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}ValueNonNullable:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.{v.Managed}Value, \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Value, Is.EqualTo (value), \"after setting B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Value = null;");
 			w.AppendLine ($"\t\t\t\tvar Value = Runtime.GetNSObject<NSValue> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}ValueNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (Value, \"null from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (Value, Is.Null, \"null from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Value = value;");
 			w.AppendLine ($"\t\t\t\tValue = Runtime.GetNSObject<NSValue> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}ValueNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, Value{v.Map}, \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (Value{v.Map}, Is.EqualTo (value), \"getter B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Value = value;");
 			w.AppendLine ($"\t\t\t\tValue = Runtime.GetNSObject<NSValue> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}ValueNonNullable\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, Value{v.Map}, \"getter C\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (Value{v.Map}, Is.EqualTo (value), \"getter C\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 
@@ -1192,28 +1318,28 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Array, \"initial null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}Array (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.Null, \"initial null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}[] value = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.P{v.Managed}Array, \"nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.Get{v.Managed}Array (), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.EqualTo (value), \"nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.EqualTo (value), \"nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.P{v.Managed}Array.Length, \"nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.Get{v.Managed}Array ().Length, \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.P{v.Managed}Array [0], \"nullable property after setting custom value element\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.Get{v.Managed}Array () [0], \"nullable get method after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array.Length, Is.EqualTo (1), \"nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array ().Length, Is.EqualTo (1), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array [0], Is.EqualTo (value [0]), \"nullable property after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array () [0], Is.EqualTo (value [0]), \"nullable get method after setting custom value element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.Set{v.Managed}Array (value);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.P{v.Managed}Array, \"null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.Get{v.Managed}Array (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.P{v.Managed}Array, Is.Null, \"null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.Get{v.Managed}Array (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -1224,52 +1350,52 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new BindAsTestClassGenerated ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"initial null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"initial null\");");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"null after setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"null after setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.{v.Managed}Array, \"null after re-setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array, Is.Null, \"null after re-setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvar value = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => NSValue.{v.MapFrom} (v), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.{v.Managed}Array.Length, \"after setting A\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.{v.Managed}Array [0], \"after setting A element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array.Length, Is.EqualTo (value.Length), \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array [0], Is.EqualTo (value [0]), \"after setting A element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = null;");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => NSValue.{v.MapFrom} (v), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"set{v.Managed}Array:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.{v.Managed}Array.Length, \"after setting B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.{v.Managed}Array [0], \"after setting B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array.Length, Is.EqualTo (value.Length), \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.{v.Managed}Array [0], Is.EqualTo (value [0]), \"after setting B element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = null;");
 			w.AppendLine ($"\t\t\t\tvar array = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}Array\")));");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (array, \"null from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array, Is.Null, \"null from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.{v.Managed}Array = value;");
 			w.AppendLine ($"\t\t\t\tarray = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"get{v.Managed}Array\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, array.Count, \"getter B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], array.GetItem<NSValue> (0){v.Map}, \"getter B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array.Count, Is.EqualTo ((nuint) value.Length), \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array.GetItem<NSValue> (0){v.Map}, Is.EqualTo (value [0]), \"getter B element\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
-			
+
 			w.AppendLine ();
 		}
 
 		foreach (var v in bindas_nsstring) {
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ($"#if {v.ManagedCondition}");
 
 			// Bindings
@@ -1280,28 +1406,28 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
 			w.AppendLine ($"\t\t\t\tAssert.Throws<ArgumentNullException> (() => {{ Console.WriteLine (obj.PSmart{v.Managed}Property); }}, \"initial zero property\");");
 			w.AppendLine ($"\t\t\t\tAssert.Throws<ArgumentNullException> (() => {{ Console.WriteLine (obj.GetSmart{v.Managed}Value ()); }}, \"initial zero method\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.GetSmartNullable{v.Managed}Value (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmartNullable{v.Managed}Value (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}? value = default ({v.Managed});");
 			w.AppendLine ($"\t\t\t\tobj.SetSmartNullable{v.Managed}Value (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.PSmart{v.Managed}Property, \"zero property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.GetSmart{v.Managed}Value (), \"non-nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.GetSmartNullable{v.Managed}Value (), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Property, Is.EqualTo (value.Value), \"zero property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Value (), Is.EqualTo (value.Value), \"non-nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmartNullable{v.Managed}Value (), Is.EqualTo (value), \"nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.SetSmart{v.Managed}Value (value.Value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.PSmart{v.Managed}Property, \"non-nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.GetSmartNullable{v.Managed}Value (), \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Value, obj.GetSmart{v.Managed}Value (), \"non-nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Property, Is.EqualTo (value.Value), \"non-nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmartNullable{v.Managed}Value (), Is.EqualTo (value), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Value (), Is.EqualTo (value.Value), \"non-nullable get method after setting custom value\");");
 			w.AppendLine ();
 
-			w.AppendLine ($"\t\t\t\tvalue = null;");	
+			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.SetSmartNullable{v.Managed}Value (value);");
 			w.AppendLine ($"\t\t\t\tAssert.Throws<ArgumentNullException> (() => {{ Console.WriteLine (obj.PSmart{v.Managed}Property); }}, \"null property after setting null value\");");
 			w.AppendLine ($"\t\t\t\tAssert.Throws<ArgumentNullException> (() => {{ Console.WriteLine (obj.GetSmart{v.Managed}Value ()); }}, \"non-nullable method after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.GetSmartNullable{v.Managed}Value (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmartNullable{v.Managed}Value (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -1325,30 +1451,30 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ($"\t\t\t\tvar value = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tusing (var input = value.GetConstant ())");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmartNullable{v.Managed}Value:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.PSmart{v.Managed}Property, \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Property, Is.EqualTo (value), \"after setting A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Property = 0;");
 			w.AppendLine ($"\t\t\t\tusing (var input = value.GetConstant ())");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmart{v.Managed}Value:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.PSmart{v.Managed}Property, \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Property, Is.EqualTo (value), \"after setting B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Property = 0;");
 			w.AppendLine ($"\t\t\t\tvar Value = Runtime.GetNSObject<NSString> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"getSmartNullable{v.Managed}Value\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (default ({v.Managed}).GetConstant ().ToString (), Value.ToString (), \"zero from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (Value.ToString (), Is.EqualTo (default ({v.Managed}).GetConstant ().ToString ()), \"zero from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Property = value;");
 			w.AppendLine ($"\t\t\t\tValue = Runtime.GetNSObject<NSString> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"getSmartNullable{v.Managed}Value\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, {v.Managed}Extensions.GetValue (Value), \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.Managed}Extensions.GetValue (Value), Is.EqualTo (value), \"getter B\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = {v.ManagedNewExpression};");
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Property = value;");
 			w.AppendLine ($"\t\t\t\tValue = Runtime.GetNSObject<NSString> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"getSmart{v.Managed}Value\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, {v.Managed}Extensions.GetValue (Value), \"getter C\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.Managed}Extensions.GetValue (Value), Is.EqualTo (value), \"getter C\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 
@@ -1358,28 +1484,28 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new ObjCRegistrarTest ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.PSmart{v.Managed}Properties, \"initial null property\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.GetSmart{v.Managed}Values (), \"initial null method\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.Null, \"initial null property\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Values (), Is.Null, \"initial null method\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\t{v.Managed}[] value = null;");
 			w.AppendLine ($"\t\t\t\tobj.SetSmart{v.Managed}Values (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.PSmart{v.Managed}Properties, \"nullable property after setting default value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value, obj.GetSmart{v.Managed}Values (), \"nullable get method after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.EqualTo (value), \"nullable property after setting default value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Values (), Is.EqualTo (value), \"nullable get method after setting default value\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.SetSmart{v.Managed}Values (value);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.PSmart{v.Managed}Properties.Length, \"nullable property after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (1, obj.GetSmart{v.Managed}Values ().Length, \"nullable get method after setting custom value\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.PSmart{v.Managed}Properties [0], \"nullable property after setting custom value element\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.GetSmart{v.Managed}Values () [0], \"nullable get method after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties.Length, Is.EqualTo (1), \"nullable property after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Values ().Length, Is.EqualTo (1), \"nullable get method after setting custom value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties [0], Is.EqualTo (value [0]), \"nullable property after setting custom value element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Values () [0], Is.EqualTo (value [0]), \"nullable get method after setting custom value element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = null;");
 			w.AppendLine ($"\t\t\t\tobj.SetSmart{v.Managed}Values (value);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.PSmart{v.Managed}Properties, \"null property after setting null value\");");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.GetSmart{v.Managed}Values (), \"null method after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.Null, \"null property after setting null value\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.GetSmart{v.Managed}Values (), Is.Null, \"null method after setting null value\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
@@ -1390,45 +1516,45 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ("\t\t{");
 			WriteAsserts (w, v);
 			w.AppendLine ($"\t\t\tusing (var obj = new BindAsTestClassGenerated ()) {{");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.PSmart{v.Managed}Properties, \"initial null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.Null, \"initial null\");");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmart{v.Managed}Values:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.PSmart{v.Managed}Properties, \"null after setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.Null, \"null after setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Properties = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmart{v.Managed}Values:\"), IntPtr.Zero);");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (obj.PSmart{v.Managed}Properties, \"null after re-setting null\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties, Is.Null, \"null after re-setting null\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvar value = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => v.GetConstant (), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmart{v.Managed}Values:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.PSmart{v.Managed}Properties.Length, \"after setting A\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.PSmart{v.Managed}Properties [0], \"after setting A element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties.Length, Is.EqualTo (value.Length), \"after setting A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties [0], Is.EqualTo (value [0]), \"after setting A element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Properties = null;");
 			w.AppendLine ($"\t\t\t\tusing (var input = NSArray.FromNSObjects<{v.Managed}> ((v) => v.GetConstant (), value))");
 			w.AppendLine ($"\t\t\t\t\tMessaging.void_objc_msgSend_IntPtr (obj.Handle, Selector.GetHandle (\"setSmart{v.Managed}Values:\"), input.Handle);");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, obj.PSmart{v.Managed}Properties.Length, \"after setting B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], obj.PSmart{v.Managed}Properties [0], \"after setting B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties.Length, Is.EqualTo (value.Length), \"after setting B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.PSmart{v.Managed}Properties [0], Is.EqualTo (value [0]), \"after setting B element\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Properties = null;");
 			w.AppendLine ($"\t\t\t\tvar array = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"getSmart{v.Managed}Values\")));");
-			w.AppendLine ($"\t\t\t\tAssert.IsNull (array, \"null from getter A\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array, Is.Null, \"null from getter A\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\tvalue = new {v.Managed} [] {{ {v.ManagedNewExpression} }};");
 			w.AppendLine ($"\t\t\t\tobj.PSmart{v.Managed}Properties = value;");
 			w.AppendLine ($"\t\t\t\tarray = Runtime.GetNSObject<NSArray> (Messaging.IntPtr_objc_msgSend (obj.Handle, Selector.GetHandle (\"getSmart{v.Managed}Values\")));");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value.Length, array.Count, \"getter B\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (value [0], {v.Managed}Extensions.GetValue (array.GetItem<NSString> (0)), \"getter B element\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (array.Count, Is.EqualTo ((nuint) value.Length), \"getter B\");");
+			w.AppendLine ($"\t\t\t\tAssert.That ({v.Managed}Extensions.GetValue (array.GetItem<NSString> (0)), Is.EqualTo (value [0]), \"getter B element\");");
 			w.AppendLine ($"\t\t\t}}");
 			w.AppendLine ("\t\t}");
 			w.AppendLine ();
 
-			if (v.ManagedCondition != null)
+			if (v.ManagedCondition is not null)
 				w.AppendLine ("#endif");
 
 			w.AppendLine ();
@@ -1448,18 +1574,13 @@ namespace MonoTouchFixtures.ObjCRuntime {
 using System;
 using System.Runtime.InteropServices;
 
-#if XAMCORE_2_0
 using Foundation;
 using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 using NUnit.Framework;
 using Bindings.Test;
 
 using XamarinTests.ObjCRuntime;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.ObjCRuntime {
 
@@ -1520,6 +1641,63 @@ namespace MonoTouchFixtures.ObjCRuntime {
 		}
 		w.AppendLine ("\t\t}");
 
+		w.AppendLine ("\t\t[Preserve (AllMembers = true)]");
+		w.AppendLine ("\t\tpublic class OverrideRegistrarTest : ObjCRegistrarTest {");
+		for (var i = 1; i < MaxArgCountInStruct + 1; i++)
+			w.AppendLine ($"\t\t\tpublic nint ManagedVoidArg{i};");
+		for (var i = 1; i < 2; i++)
+			w.AppendLine ($"\t\t\tpublic float ManagedFloatArg{i};");
+		for (var i = 1; i < 2; i++)
+			w.AppendLine ($"\t\t\tpublic double ManagedDoubleArg{i};");
+		foreach (var s in structs)
+			w.AppendLine ($"\t\t\tpublic S{s} V{s};");
+		w.AppendLine ();
+		foreach (var s in structs) {
+			w.AppendLine ($"\t\t\tpublic override void SetProperty{s} (S{s} value) {{ V{s} = value; TestRuntime.NSLog ($\"SetProperty ({{value}});\"); base.SetProperty{s} (value); }}");
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t\tpublic override void SetProperty{s} (nint p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1}) {{");
+				for (var x = 1; x < i; x++)
+					w.AppendLine ($"\t\t\t\tManagedVoidArg{x} = p{x};");
+				w.AppendLine ($"\t\t\t\tV{s} = p{i};");
+				w.AppendLine ($"\t\t\t\tManagedVoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t\t\t}}");
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t\tpublic override void SetPropertyFloat{s} (float p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1}) {{");
+				w.AppendLine ($"\t\t\t\tManagedFloatArg1 = p1;");
+				for (var x = 2; x < i; x++)
+					w.AppendLine ($"\t\t\t\tManagedVoidArg{x} = p{x};");
+				w.AppendLine ($"\t\t\t\tV{s} = p{i};");
+				w.AppendLine ($"\t\t\t\tManagedVoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t\t\t}}");
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.Append ($"\t\t\tpublic override void SetPropertyDouble{s} (double p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.Append ($", S{s} p{i}");
+				w.AppendLine ($", nint p{i + 1}) {{");
+				w.AppendLine ($"\t\t\t\tManagedDoubleArg1 = p1;");
+				for (var x = 2; x < i; x++)
+					w.AppendLine ($"\t\t\t\tManagedVoidArg{x} = p{x};");
+				w.AppendLine ($"\t\t\t\tV{s} = p{i};");
+				w.AppendLine ($"\t\t\t\tManagedVoidArg{i + 1} = p{i + 1};");
+				w.AppendLine ($"\t\t\t}}");
+			}
+		}
+		w.AppendLine ("\t\t}");
+
 		foreach (var s in structs) {
 			bool never;
 			w.AppendLine ();
@@ -1542,7 +1720,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend (obj.Handle, new Selector (\"Test_{s}Struct\").Handle);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 1)}).ToString (), rv.ToString (), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 1)}).ToString ()), \"a\");");
 			w.AppendLine ();
 
 			WriteStretConditions (w, s, out never);
@@ -1554,7 +1732,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend (class_ptr, new Selector (\"Test_Static{s}Struct\").Handle);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 2)}).ToString (), rv.ToString (), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 2)}).ToString ()), \"a\");");
 			w.AppendLine ();
 
 			WriteStretConditions (w, s, out never);
@@ -1566,7 +1744,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend (obj.Handle, new Selector (\"Test_{s}StructProperty\").Handle);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 3)}).ToString (), rv.ToString (), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 3)}).ToString ()), \"a\");");
 			w.AppendLine ();
 
 			WriteStretConditions (w, s, out never);
@@ -1578,7 +1756,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend (class_ptr, new Selector (\"Test_Static{s}StructProperty\").Handle);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 4)}).ToString (), rv.ToString (), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 4)}).ToString ()), \"a\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\trvd = 0;");
@@ -1591,8 +1769,8 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend_out_double (obj.Handle, new Selector (\"Test_{s}Struct_out_double:\").Handle, out rvd);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 5)}).ToString (), rv.ToString (), \"a\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (3.14, rvd, \"double out\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 5)}).ToString ()), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rvd, Is.EqualTo (3.14), \"double out\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t\trvf = 0;");
@@ -1605,11 +1783,98 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.AppendLine ($"\t\t\t\t\trv = S{s}_objc_msgSend_out_float (class_ptr, new Selector (\"Test_Static{s}Struct_out_float:\").Handle, out rvf);");
 				w.AppendLine ($"\t\t\t\t}}");
 			}
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (({GenerateNewExpression (s, 6)}).ToString (), rv.ToString (), \"a\");");
-			w.AppendLine ($"\t\t\t\tAssert.AreEqual (3.15f, rvf, \"float out\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rv.ToString (), Is.EqualTo (({GenerateNewExpression (s, 6)}).ToString ()), \"a\");");
+			w.AppendLine ($"\t\t\t\tAssert.That (rvf, Is.EqualTo (3.15f), \"float out\");");
 			w.AppendLine ();
 
 			w.AppendLine ($"\t\t\t}}");
+
+			w.AppendLine ();
+			w.AppendLine ($"\t\t\tusing (var obj = new OverrideRegistrarTest ()) {{");
+			w.AppendLine ($"\t\t\t\tvar structValue = {GenerateNewExpression (s, 7)};");
+			w.AppendLine ($"\t\t\t\tvoid_objc_msgSend_{s} (obj.Handle, Selector.GetHandle (\"setProperty{s}:\"), structValue);");
+			w.AppendLine ($"\t\t\t\tAssert.That (obj.V{s}.ToString (), Is.EqualTo (structValue.ToString ()), \"SetProperty#1\");");
+			w.AppendLine ($"\t\t\t}}");
+			w.AppendLine ();
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ($"\t\t\tusing (var obj = new OverrideRegistrarTest ()) {{");
+				w.AppendLine ($"\t\t\t\tvar structValue = {GenerateNewExpression (s, i + 8)};");
+
+				w.Append ($"\t\t\t\tvoid_objc_msgSend_{s} (obj.Handle, Selector.GetHandle (\"setProperty{s}:");
+				for (var x = 2; x <= i + 1; x++)
+					w.Append ($"p{x}:");
+				w.Append ($"\"), ");
+				w.Append ($"(nint) 1, ");
+				for (var x = 2; x < i; x++)
+					w.Append ($"(nint) {x}, ");
+				w.Append ($"structValue, ");
+				w.AppendLine ($"(nint) {i + 1});");
+
+				for (var x = 1; x <= i + 1; x++) {
+					if (x == i) {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.V{s}.ToString (), Is.EqualTo (structValue.ToString ()), \"SetProperty#2-S{x}\");");
+					} else {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.ManagedVoidArg{x}, Is.EqualTo ((nint) {x}), \"SetProperty#2-X{x}\");");
+					}
+				}
+				w.AppendLine ($"\t\t\t}}");
+				w.AppendLine ();
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ($"\t\t\tusing (var obj = new OverrideRegistrarTest ()) {{");
+				w.AppendLine ($"\t\t\t\tvar structValue = {GenerateNewExpression (s, i + 8)};");
+
+				w.Append ($"\t\t\t\tvoid_objc_msgSend_{s} (obj.Handle, Selector.GetHandle (\"setPropertyFloat{s}:");
+				for (var x = 2; x <= i + 1; x++)
+					w.Append ($"p{x}:");
+				w.Append ($"\"), ");
+				w.Append ($"(float) 1, ");
+				for (var x = 2; x < i; x++)
+					w.Append ($"(nint) {x}, ");
+				w.Append ($"structValue, ");
+				w.AppendLine ($"(nint) {i + 1});");
+
+				for (var x = 1; x <= i + 1; x++) {
+					if (x == 1) {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.ManagedFloatArg{x}, Is.EqualTo ((float) {x}), \"SetProperty#3-X{x}\");");
+					} else if (x == i) {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.V{s}.ToString (), Is.EqualTo (structValue.ToString ()), \"SetProperty#3-S{x}\");");
+					} else {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.ManagedVoidArg{x}, Is.EqualTo ((nint) {x}), \"SetProperty#3-X{x}\");");
+					}
+				}
+				w.AppendLine ($"\t\t\t}}");
+				w.AppendLine ();
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ($"\t\t\tusing (var obj = new OverrideRegistrarTest ()) {{");
+				w.AppendLine ($"\t\t\t\tvar structValue = {GenerateNewExpression (s, i + 8)};");
+
+				w.Append ($"\t\t\t\tvoid_objc_msgSend_{s} (obj.Handle, Selector.GetHandle (\"setPropertyDouble{s}:");
+				for (var x = 2; x <= i + 1; x++)
+					w.Append ($"p{x}:");
+				w.Append ($"\"), ");
+				w.Append ($"(double) 1, ");
+				for (var x = 2; x < i; x++)
+					w.Append ($"(nint) {x}, ");
+				w.Append ($"structValue, ");
+				w.AppendLine ($"(nint) {i + 1});");
+
+				for (var x = 1; x <= i + 1; x++) {
+					if (x == 1) {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.ManagedDoubleArg{x}, Is.EqualTo ((double) {x}), \"SetProperty#3-X{x}\");");
+					} else if (x == i) {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.V{s}.ToString (), Is.EqualTo (structValue.ToString ()), \"SetProperty#3-S{x}\");");
+					} else {
+						w.AppendLine ($"\t\t\t\tAssert.That (obj.ManagedVoidArg{x}, Is.EqualTo ((nint) {x}), \"SetProperty#3-X{x}\");");
+					}
+				}
+				w.AppendLine ($"\t\t\t}}");
+				w.AppendLine ();
+			}
 			w.AppendLine ($"\t\t}}");
 
 
@@ -1637,6 +1902,37 @@ namespace MonoTouchFixtures.ObjCRuntime {
 			w.AppendLine ();
 			w.AppendLine ($"\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend_stret\")]");
 			w.AppendLine ($"\t\textern static void S{s}_objc_msgSend_stret_out_double (out S{s} rv, IntPtr received, IntPtr selector, out double x1);");
+
+			w.AppendLine ();
+			w.AppendLine ($"\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+			w.AppendLine ($"\t\textern static void void_objc_msgSend_{s} (IntPtr receiver, IntPtr selector, S{s} x1);");
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ();
+				w.AppendLine ($"\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+				w.Append ($"\t\textern static void void_objc_msgSend_{s} (IntPtr receiver, IntPtr selector, nint p1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.AppendLine ($", S{s} p{i}, nint p{i + 1});");
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ();
+				w.AppendLine ($"\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+				w.Append ($"\t\textern static void void_objc_msgSend_{s} (IntPtr receiver, IntPtr selector, float f1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.AppendLine ($", S{s} p{i}, nint p{i + 1});");
+			}
+
+			for (var i = 2; i < MaxArgCountInStruct; i++) {
+				w.AppendLine ();
+				w.AppendLine ($"\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+				w.Append ($"\t\textern static void void_objc_msgSend_{s} (IntPtr receiver, IntPtr selector, double d1");
+				for (var x = 2; x < i; x++)
+					w.Append ($", nint p{x}");
+				w.AppendLine ($", S{s} p{i}, nint p{i + 1});");
+			}
 		}
 
 		w.AppendLine (@"	}
@@ -1657,10 +1953,10 @@ namespace MonoTouchFixtures.ObjCRuntime {
 				w.Append ("TrampolineTest.IsArm32 || ");
 			if ((stret & Architecture.Armv7k) == Architecture.Armv7k)
 				w.Append ("TrampolineTest.IsArmv7k || ");
-			if ((stret & Architecture.Sim32) == Architecture.Sim32)
-				w.Append ("TrampolineTest.IsSim32 || ");
-			if ((stret & Architecture.Sim64) == Architecture.Sim64)
-				w.Append ("TrampolineTest.IsSim64 || ");
+			if ((stret & Architecture.X86) == Architecture.X86)
+				w.Append ("TrampolineTest.IsX86 || ");
+			if ((stret & Architecture.X64) == Architecture.X64)
+				w.Append ("TrampolineTest.IsX64 || ");
 			w.Length -= 4;
 			w.AppendLine (") {");
 		}
@@ -1670,8 +1966,13 @@ namespace MonoTouchFixtures.ObjCRuntime {
 	{
 		var sb = new StringBuilder ();
 		sb.Append ($"new S{s} () {{ ");
-		for (int i = 0; i < s.Length; i++)
-			sb.Append ("x").Append (i).Append (" = ").Append (GetValue (s [i], i, multiplier)).Append (", ");
+		for (int i = 0; i < s.Length; i++) {
+			sb.Append ("x");
+			sb.Append (i);
+			sb.Append (" = ");
+			sb.Append (GetValue (s [i], i, multiplier));
+			sb.Append (", ");
+		}
 		sb.Length -= 2;
 		sb.Append (" }");
 		return sb.ToString ();
@@ -1680,7 +1981,7 @@ namespace MonoTouchFixtures.ObjCRuntime {
 	static void Main ()
 	{
 		while (Path.GetFileName (Environment.CurrentDirectory) != "test-libraries")
-			Environment.CurrentDirectory = Path.GetDirectoryName (Environment.CurrentDirectory);
+			Environment.CurrentDirectory = Path.GetDirectoryName (Environment.CurrentDirectory)!;
 
 		/* native code */
 		WriteLibTestStructH ();

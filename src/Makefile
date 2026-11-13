@@ -2,906 +2,542 @@ TOP=..
 include $(TOP)/Make.config
 
 BUILD_DIR=build
+RSP_DIR=rsp
+DOTNET_BUILD_DIR=$(BUILD_DIR)/dotnet
 PROJECT_DIR=.
 
 include $(TOP)/src/frameworks.sources
 include $(TOP)/mk/rules.mk
+include $(TOP)/mk/xamarin.mk
 
-include $(TOP)/src/system-drawing.sources
-include $(TOP)/src/touch-unit.sources
+MACOS_DOTNET_BUILD_DIR=$(DOTNET_BUILD_DIR)/macos
+IOS_DOTNET_BUILD_DIR=$(DOTNET_BUILD_DIR)/ios
+TVOS_DOTNET_BUILD_DIR=$(DOTNET_BUILD_DIR)/tvos
+MACCATALYST_DOTNET_BUILD_DIR=$(DOTNET_BUILD_DIR)/maccatalyst
 
-export MD_MTOUCH_SDK_ROOT=$(IOS_DESTDIR)/$(MONOTOUCH_PREFIX)
-export XamarinMacFrameworkRoot=$(MAC_DESTDIR)/Library/Frameworks/Xamarin.Mac.framework/Versions/Current
+GENERATOR_FLAGS=-process-enums -core -nostdlib -native-exception-marshalling --ns:ObjCRuntime
 
-MAC_BUILD_DIR=$(BUILD_DIR)/mac
-IOS_BUILD_DIR=$(BUILD_DIR)/ios
-WATCH_BUILD_DIR=$(BUILD_DIR)/watch
-TVOS_BUILD_DIR=$(BUILD_DIR)/tvos
+GENERATOR_TF_VERSION=$(subst net,,$(DOTNET_TFM))
 
-include $(TOP)/opentk/Makefile.include
+DOTNET_REFERENCES = \
+	/r:$(DOTNET_BCL_DIR)/System.Buffers.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Collections.Concurrent.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Collections.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Collections.NonGeneric.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Console.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Diagnostics.Debug.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Diagnostics.Tools.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Diagnostics.StackTrace.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Drawing.Primitives.dll \
+	/r:$(DOTNET_BCL_DIR)/System.IO.Compression.dll \
+	/r:$(DOTNET_BCL_DIR)/System.IO.FileSystem.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Linq.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Memory.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.Http.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.HttpListener.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.NameResolution.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.Primitives.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.Requests.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.Security.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.ServicePoint.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Net.Sockets.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Numerics.Vectors.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Resources.ResourceManager.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Runtime.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Runtime.CompilerServices.Unsafe.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Runtime.Extensions.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Runtime.InteropServices.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Runtime.Loader.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Security.Cryptography.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Security.Cryptography.X509Certificates.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Text.RegularExpressions.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Threading.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Threading.Tasks.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Threading.Thread.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Xml.dll \
+	/r:$(DOTNET_BCL_DIR)/System.Xml.ReaderWriter.dll \
+
+DOTNET_OR_GREATER_DEFINES:=$(foreach version,$(shell seq 6 $(firstword $(subst ., ,$(subst net,,$(DOTNET_TFM))))),/define:NET$(version)_0_OR_GREATER)
+DOTNET_FLAGS=/warnaserror+ /nostdlib+ /deterministic /features:strict /nologo /target:library /debug /unsafe /define:NET $(DOTNET_OR_GREATER_DEFINES) $(DOTNET_REFERENCES) /fullpaths -nullable+
+
+ifeq ($(XCODE_IS_STABLE),true)
+DOTNET_FLAGS+=/define:XCODE_IS_STABLE
+endif
+
+DOTNET_GENERATOR_FLAGS=$(GENERATOR_FLAGS) --lib=$(DOTNET_BCL_DIR) -attributelib:$(DOTNET_BINDING_ATTRIBUTES) $(DOTNET_REFERENCES)
+DOTNET_GENERATOR=$(DOTNET_BUILD_DIR)/bgen/bgen
+DOTNET_BINDING_ATTRIBUTES=$(DOTNET_BUILD_DIR)/Xamarin.Apple.BindingAttributes.dll
+APPLE_DOC_READER=$(TOP)/packages/appledocreader.$(ADR_RUNTIME_IDENTIFIER)/$(ADR_NUGET_VERSION)/tools/any/$(ADR_RUNTIME_IDENTIFIER)/AppleDocReader
+APPLE_DOC_READER_LOCK=$(BUILD_DIR)/.appledocreader.lock
+
+# AppleDocReader (ADR) enriches our generated XML documentation (Microsoft.iOS.xml,
+# Microsoft.tvOS.xml, ...) with links to Apple's documentation. It does this by reading Apple's
+# *offline* documentation cache that historically shipped inside Xcode as a SQLite database at:
+#
+#     <Xcode.app>/Contents/SharedFrameworks/DNTDocumentationSupport.framework/Versions/A/Resources/external/cache.db
+#
+# Starting with Xcode 27, Apple REMOVED this bundled offline documentation cache. In Xcode 27 that
+# directory contains only a tombstone file literally named "deleted", and a content-based scan of
+# the entire Xcode 27 app bundle finds no replacement documentation database (only an unrelated
+# AppIntentSchemas.sqlite). Instead, Xcode 27 downloads documentation on demand into a CoreSpotlight
+# index at:
+#
+#     ~/Library/Developer/Xcode/DocumentationCache/<cacheVersion>/<xcodeVersion>/DeveloperDocumentation.index
+#
+# which is a proprietary Spotlight metadata store (file magic "8tsd"), not SQLite. That on-demand
+# cache is unsuitable as a build input because it:
+#   * is not part of the Xcode bundle, so it cannot be a hermetic build input;
+#   * only exists after an interactive/on-demand documentation download, so it is absent on clean
+#     and CI machines;
+#   * is only queryable through Apple's private CoreDocumentation XPC service (there is no public API
+#     to query a standalone .index bundle), and its binary format is undocumented and changes between
+#     Xcode betas.
+#
+# As a result, AppleDocReader cannot enrich documentation when building with Xcode 27 or later. Rather
+# than fail the build, we detect the absence of the legacy offline cache and skip the enrichment step,
+# copying the XML documentation through unchanged (identical to the NO_XCODE behavior below). This only
+# affects whether <appledoc> links are present; the XML documentation is otherwise complete and correct.
+#
+# ENABLE_APPLE_DOC_READER is therefore set only when an Xcode with the legacy offline cache is
+# available. This is capability-based on purpose: if a future Xcode restores an offline cache at the
+# expected path, enrichment turns back on automatically with no further changes here.
+#
+# Follow-up: re-implementing documentation enrichment against a hermetic source (e.g. Apple's online
+# DocC render JSON at https://developer.apple.com/tutorials/data/documentation/<framework>/<symbol>.json,
+# which still carries the Clang USR, e.g. "c:objc(cs)UIView", that ADR keys on) should be tracked
+# separately.
+ifdef NO_XCODE
+ENABLE_APPLE_DOC_READER :=
+else
+APPLE_DOC_READER_CACHE_DB := $(abspath $(DEVELOPER_DIR)/../../Contents/SharedFrameworks/DNTDocumentationSupport.framework/Versions/A/Resources/external/cache.db)
+ENABLE_APPLE_DOC_READER := $(if $(wildcard $(APPLE_DOC_READER_CACHE_DB)),1,)
+ifneq ($(ENABLE_APPLE_DOC_READER),1)
+$(warning AppleDocReader: the Xcode offline documentation cache was not found at $(APPLE_DOC_READER_CACHE_DB) (Xcode 27+ no longer ships it); XML documentation will be generated WITHOUT Apple documentation links.)
+endif
+endif
 
 #
 # Specific warnings that we want reported as errors by generator
 # It takes a comma separated list, but an empty list means
 # reporting all warnings as errors.
 #
-GENERATOR_WARNASERROR=
+# https://github.com/dotnet/roslyn/issues/41605
+NULLABILITY_WARNINGS=nullable
+GENERATOR_WARNASERROR=-warnaserror:
 IOS_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
-WATCH_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
 TVOS_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
-MAC_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
+MACOS_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
+MACCATALYST_GENERATOR_WARNASERROR=$(GENERATOR_WARNASERROR)
+
+# this is due to deprecated APIs used in the generated code.
+BGEN_WARNINGS_TO_FIX=BI1234
+
+# We ignore some xml docs warnings when building the core and apidefinition assemblies, because
+# the xml docs might want to reference generated APIs, so the compiler would warn about not
+# finding those APIs (because they haven't been generated yet).
+XML_DOCS_WARNINGS=CS0419,CS1574,CS1580
 
 #
-# This is the "you are redefining the member", probably we should remove
-# those from the contract
+# Specific warnings we're ignoring from the C# compiler
+# We should look into each of these and see if they're really needed,
+# and if so, document why.
 #
-IOS_WARNINGS_THAT_YOU_SHOULD_FIX=108
+CSC_WARNINGS_TO_FIX=108,219,618,114,414,1635,3021,4014
 
-include ./OpenGLES/Makefile-1.0.include
+# warning CS1591: Missing XML comment for publicly visible type or member
+# We (will) post-process xml documentation to add missing members, so
+# we can ignore this warning.
+CSC_WARNINGS_TO_FIX:=$(CSC_WARNINGS_TO_FIX),1591
+
+# warning CS8981: The type name 'nfloat' only contains lower-cased ascii characters. Such names may become reserved for the language.
+CSC_WARNINGS_TO_FIX:=$(CSC_WARNINGS_TO_FIX),CS8981
+
+# availability warnings, need to fix https://github.com/dotnet/macios/pull/21185 to stop ignoring this.
+CSC_WARNINGS_TO_FIX:=$(CSC_WARNINGS_TO_FIX),CA1416,CA1422
+
+WARNINGS_TO_FIX = -nowarn:$(CSC_WARNINGS_TO_FIX)
+CORE_WARNINGS_TO_FIX = -nowarn:$(CSC_WARNINGS_TO_FIX),$(BGEN_WARNINGS_TO_FIX)
+
+DOTNET_WARNINGS_TO_FIX = -nowarn:$(CSC_WARNINGS_TO_FIX)
+DOTNET_CORE_WARNINGS_TO_FIX = -nowarn:$(CSC_WARNINGS_TO_FIX),$(BGEN_WARNINGS_TO_FIX)
+
 include ./Makefile.generator
-
+include ./Makefile.rgenerator
 include ./generator-diff.mk
 
-COMMON_TARGET_DIRS = \
-	$(BUILD_DIR)/common             \
-	$(BUILD_DIR)/common/NativeTypes \
+SHARED_RESX = $(TOP)/tools/mtouch/Errors.resx
+SHARED_DESIGNER_CS = $(DOTNET_BUILD_DIR)/common/Errors.Designer.cs
 
-ARGS_32 = -define:ARCH_32
-ARGS_64 = -define:ARCH_64
+include $(TOP)/scripts/generate-errors/fragment.mk
+$(SHARED_DESIGNER_CS): $(SHARED_RESX) $(GENERATE_ERRORS) | $(DOTNET_BUILD_DIR)/common
+	$(Q_GEN) $(GENERATE_ERRORS_EXEC) $(SHARED_RESX) $(SHARED_DESIGNER_CS)
 
-CURRENT_BRANCH_SED_ESCAPED:=$(subst |,\|,$(subst &,\&,$(subst $$,\$$,$(subst /,\/,$(CURRENT_BRANCH))))))
+DOTNET_TARGETS_DIRS += $(DOTNET_BUILD_DIR)/common
 
-#
-# Xamarin.iOS
-#
+define DotNetVariables
 
-# Add new bindings + source files in frameworks.sources, not here.
+$(2)_DEFINES += -d:__$(2)__
 
-IOS_EXTRA_SOURCES = \
-	$(IOS_OPENTK_1_0_CORE_SOURCES)   \
-	$(IOS_BUILD_DIR)/Constants.cs    \
-	$(IOS_BUILD_DIR)/AssemblyInfo.cs \
-	Compat.iOS.cs                    \
-	$(SHARED_SYSTEM_DRAWING_SOURCES) \
+## Add new bindings + source files in frameworks.sources, not here.
 
-IOS_HTTP_SOURCES = \
-	Foundation/NSUrlSessionHandler.cs \
-	System.Net.Http/CFContentStream.cs \
-	System.Net.Http/CFNetworkHandler.cs \
+$(2)_DOTNET_EXTRA_SOURCES = \
+	$($(2)_DOTNET_BUILD_DIR)/Constants.cs    \
+	$($(2)_DOTNET_BUILD_DIR)/Constants.generated.cs \
+	$($(2)_DOTNET_BUILD_DIR)/AssemblyInfo.cs \
+	$(SHARED_DESIGNER_CS) \
 
-IOS_CORE_SOURCES += $(IOS_EXTRA_SOURCES)
-IOS_SOURCES += $(IOS_EXTRA_SOURCES) $(IOS_HTTP_SOURCES)
+$(2)_DOTNET_CORE_SOURCES += $$($(2)_DOTNET_EXTRA_SOURCES)
 
-IOS_GENERATOR_FLAGS = -inline-selectors -d:IOS -process-enums -warnaserror:$(IOS_GENERATOR_WARNASERROR)
-IOS_GENERATOR_native_FLAGS = -d:XAMCORE_2_0 -d:__UNIFIED__
-IOS_DEFINES = -define:IPHONE -define:IOS -define:MONOTOUCH -d:NET_2_0 -d:__IOS__ $(APPLETLS_DEFINES) -d:SYSTEM_NET_HTTP
-IOS_native_DEFINES = -d:XAMCORE_2_0 -d:__UNIFIED__
-IOS_LIBDIR = $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1
-IOS_BMONO = MONO_PATH=$(IOS_LIBDIR) $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/btouch-mono
-IOS_GENERATOR=$(BUILD_DIR)/common/bgen.exe
-IOS_GENERATE=$(SYSTEM_MONO) --debug $(IOS_GENERATOR)
-$(IOS_BUILD_DIR)/Constants.cs: Constants.iOS.cs.in Makefile $(TOP)/Make.config.inc | $(IOS_BUILD_DIR)
-	$(call Q_PROF_GEN,ios) sed \
-		-e "s/@VERSION@/$(IOS_PACKAGE_VERSION_MAJOR).$(IOS_PACKAGE_VERSION_MINOR).$(IOS_PACKAGE_VERSION_REV)/g" \
-		-e 's/@REVISION@/$(IOS_COMMIT_DISTANCE) ($(CURRENT_BRANCH_SED_ESCAPED): $(shell git log -1 --pretty=%h))/g' \
-		-e "s/@IOS_SDK_VERSION@/$(IOS_SDK_VERSION)/g" \
-		$< > $@
+$(2)_DOTNET_SOURCES += $$($(2)_DOTNET_EXTRA_SOURCES)
 
-$(IOS_BUILD_DIR)/AssemblyInfo.cs: $(TOP)/src/AssemblyInfo.cs.in
-	$(Q) mkdir -p $(IOS_BUILD_DIR)
-	$(call Q_PROF_GEN,ios) sed < $< > $@ 's|@PRODUCT_NAME@|$(IOS_PRODUCT)|g; s|@PACKAGE_HEAD_REV@|$(PACKAGE_HEAD_REV)|g; s|@PACKAGE_HEAD_BRANCH@|$(CURRENT_BRANCH_SED_ESCAPED)|g; s|@PACKAGE_VERSION_MAJOR@|$(IOS_PACKAGE_VERSION_MAJOR)|g; s|@PACKAGE_VERSION_MINOR@|$(IOS_PACKAGE_VERSION_MINOR)|g; s|@PACKAGE_VERSION_REV@|$(IOS_PACKAGE_VERSION_REV)|g; s|@PACKAGE_VERSION_BUILD@|$(IOS_PACKAGE_VERSION_BUILD)|g'
+$($(2)_DOTNET_BUILD_DIR)/Constants.cs: Constants.$(1).cs.in Makefile $(TOP)/Make.config.inc | $($(2)_DOTNET_BUILD_DIR)
+	$$(call Q_PROF_GEN,$(3)) sed \
+		-e "s/@VERSION@/$($(2)_NUGET_VERSION_MAJOR).$($(2)_NUGET_VERSION_MINOR).$($(2)_NUGET_VERSION_PATCH)/g" \
+		-e 's/@REVISION@/$($(2)_NUGET_COMMIT_DISTANCE) ($(CURRENT_BRANCH_SED_ESCAPED): $(shell git log -1 --pretty=%h))/g' \
+		-e "s/@$(2)_SDK_VERSION@/$($(2)_SDK_VERSION)/g" \
+		$$< > $$@
 
-# core.dll
-$(IOS_BUILD_DIR)/native/core.dll: $(IOS_CORE_SOURCES) frameworks.sources
-	$(Q) mkdir -p $(IOS_BUILD_DIR)native
-	$(call Q_PROF_CSC,ios) $(IOS_CSC) -nologo -out:$@ -target:library -debug -unsafe \
-		-nowarn:219,618,114,414,1635,3021,$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		-define:COREBUILD $(IOS_DEFINES) \
-		$(IOS_native_DEFINES) \
-		$(IOS_CORE_SOURCES)
-
-# generated_sources
-$(IOS_BUILD_DIR)/native/generated_sources: $(IOS_GENERATOR) $(IOS_APIS) $(IOS_BUILD_DIR)/native/core.dll $(IOS_BUILD_DIR)/native/Xamarin.iOS.BindingAttributes.dll $(BUILD_DIR)/ios.rsp
-	$(call Q_PROF_GEN,ios) $(IOS_GENERATE) @$(BUILD_DIR)/ios.rsp
-
-$(BUILD_DIR)/ios.rsp: Makefile Makefile.generator frameworks.sources
-	$(Q_GEN) echo \
-		$(IOS_GENERATOR_FLAGS) \
-		$(IOS_GENERATOR_native_FLAGS) \
-		-core \
-		-sourceonly=$(IOS_BUILD_DIR)/native/generated_sources \
-		-compiler=$(IOS_CSC) \
-		-nologo -nostdlib -noconfig \
-		-tmpdir=$(IOS_BUILD_DIR)/native \
-		-baselib=$(IOS_BUILD_DIR)/native/core.dll \
-		-attributelib=$(IOS_BUILD_DIR)/native/Xamarin.iOS.BindingAttributes.dll \
-		-native-exception-marshalling \
-		--ns=ObjCRuntime \
-		--target-framework=Xamarin.iOS,v1.0 \
-		$(IOS_APIS) \
-		> $@
-
-define IOS_TARGETS_template
-# Xamarin.iOS.dll
-$(IOS_BUILD_DIR)/native-$(1)%Xamarin.iOS.dll $(IOS_BUILD_DIR)/native-$(1)%Xamarin.iOS.pdb: $$(IOS_SOURCES) $(IOS_BUILD_DIR)/native/generated_sources $(PRODUCT_KEY_PATH)
-	@mkdir -p $(IOS_BUILD_DIR)/native-$(1)
-	$$(call Q_PROF_CSC,ios/$(1) bit) $$(IOS_CSC) -nologo -out:$$@ -target:library -debug -unsafe -optimize \
-		-deterministic \
-		$$(ARGS_$(1)) \
-		-publicsign -keyfile:$(PRODUCT_KEY_PATH) $$(IOS_DEFINES) \
-		$$(IOS_native_DEFINES) \
-		-nowarn:219,618,114,414,1635,3021,$$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		$$(IOS_CSC_FLAGS_XI) \
-		$$(IOS_SOURCES) @$(IOS_BUILD_DIR)/native/generated_sources
-
+$($(2)_DOTNET_BUILD_DIR)/AssemblyInfo.cs: $(TOP)/src/AssemblyInfo.cs.in | $($(2)_DOTNET_BUILD_DIR)
+	$$(call Q_PROF_GEN,$(3)) sed \
+		-e 's|@PACKAGE_HEAD_REV@|$(PACKAGE_HEAD_REV)|g' \
+		-e 's|@PACKAGE_HEAD_BRANCH@|$(CURRENT_BRANCH_SED_ESCAPED)|g' \
+		-e 's|@NUGET_VERSION_NO_METADATA@|$($(2)_NUGET_VERSION_NO_METADATA)|g' \
+		-e 's|@NUGET_VERSION_MAJOR@|$($(2)_NUGET_VERSION_MAJOR)|g' \
+		-e 's|@NUGET_VERSION_MINOR@|$($(2)_NUGET_VERSION_MINOR)|g' \
+		-e 's|@NUGET_VERSION_REV@|$($(2)_NUGET_VERSION_PATCH)|g' \
+		-e 's|@NUGET_VERSION_BUILD@|$($(2)_NUGET_COMMIT_DISTANCE)|g' \
+		-e 's|@DOTNET_PLATFORM@|iOS|g' \
+		-e 's|@XCODE_VERSION@|$(subst .,_,$(XCODE_VERSION))|g' \
+		< $$< > $$@.tmp
+	$$(Q) diff $$@ $$@.tmp >/dev/null 2>&1 || mv -f $$@.tmp $$@
+	$$(Q) rm -f $$@.tmp
+	$$(Q) touch $$@
 endef
 
-$(IOS_BUILD_DIR)/compat/%: $(MACIOS_BINARIES_PATH)/% | $(IOS_BUILD_DIR)/compat
-	$(Q) $(CP) $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/%: $(IOS_BUILD_DIR)/compat/%
-	$(Q) $(CP) $< $@
-
-$(eval $(call IOS_TARGETS_template,32))
-$(eval $(call IOS_TARGETS_template,64))
-
-# MonoTouch.Dialog-1
-$(IOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll: $(MACIOS_BINARIES_PATH)/MonoTouch.Dialog-Unified/ios/MonoTouch.Dialog-1.dll | $(IOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-$(IOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.pdb: $(MACIOS_BINARIES_PATH)/MonoTouch.Dialog-Unified/ios/MonoTouch.Dialog-1.pdb | $(IOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-# MonoTouch.NUnitLite
-$(IOS_BUILD_DIR)/reference%MonoTouch.NUnitLite.dll $(IOS_BUILD_DIR)/reference%MonoTouch.NUnitLite.pdb: $(IOS_TOUCHUNIT_SOURCES) $(IOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll $(PRODUCT_KEY_PATH) $(IOS_BUILD_DIR)/reference/Xamarin.iOS.dll
-	$(call Q_PROF_CSC,ios) $(IOS_CSC) -nologo -out:$(basename $@).dll -target:library -debug:portable -optimize -publicsign \
-		-deterministic \
-		-keyfile:$(PRODUCT_KEY_PATH) -r:$(IOS_BUILD_DIR)/reference/Xamarin.iOS.dll -define:XAMCORE_2_0 -define:__UNIFIED__ -r:$(IOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll -r:$(MONOTOUCH_MONO_PATH)/System.dll -r:$(MONOTOUCH_MONO_PATH)/System.Xml.dll \
-		-nowarn:3006,612,649,414,1635 \
-		-define:NUNITLITE,CLR_4_0,NET_4_5,__MOBILE__ $(IOS_DEFINES) \
-		$(IOS_TOUCHUNIT_SOURCES)
-
-# System.Drawing
-# not installed or shipped yet - must be compiled manually using "make System.Drawing.dll"
-$(IOS_BUILD_DIR)/reference/System.Drawing.dll: $(IOS_SYSTEM_DRAWING_SOURCES) monotouch.dll $(PRODUCT_KEY_PATH)
-	$(call Q_PROF_CSC,ios/reference) $(IOS_CSC) -nologo -out:$@ -target:library -debug:portable -optimize -publicsign \
-		-keyfile:$(PRODUCT_KEY_PATH) -r:$(IOS_BUILD_DIR)/reference/Xamarin.iOS.dll -define:XAMCORE_2_0 -define:__UNIFIED__ \
-		-nowarn:114,169,414,1635 $(IOS_DEFINES) \
-		$(IOS_SYSTEM_DRAWING_SOURCES)
-
-$(IOS_BUILD_DIR)/reference/Xamarin.iOS.dll: $(IOS_BUILD_DIR)/native-64/Xamarin.iOS.dll | $(IOS_BUILD_DIR)/reference
-	$(Q_STRIP) mono-cil-strip -q $< $@
-
-$(IOS_BUILD_DIR)/reference/Xamarin.iOS.pdb: $(IOS_BUILD_DIR)/native-64/Xamarin.iOS.pdb | $(IOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/% : $(MACIOS_BINARIES_PATH)/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1
-	$(Q) $(CP) $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades/% : $(MACIOS_BINARIES_PATH)/Facades/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades
-	$(Q) $(CP) $< $@
-
-$(IOS_BUILD_DIR)/compat/%: $(MACIOS_BINARIES_PATH)/% | $(IOS_BUILD_DIR)/compat
-	$(Q) $(CP) $< $@
-
-clean-local::
-	rm -rf build
-	rm -f $(IOS_TARGETS) generated_sources *.mdb *.pdb
-
-IOS_TARGETS_DIRS += \
-	$(IOS_BUILD_DIR)                                           \
-	$(IOS_BUILD_DIR)/compat                                    \
-	$(IOS_BUILD_DIR)/compat/Facades                            \
-	$(IOS_BUILD_DIR)/reference                                 \
-	$(IOS_BUILD_DIR)/reference/Facades                         \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin                      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/share/doc/MonoTouch      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS     \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1             \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades     \
-
-IOS_TARGETS += \
-	$(PROJECT_DIR)/xamios.csproj                                                   \
-	$(PROJECT_DIR)/MonoTouch.NUnitLite.csproj                                      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/monotouch.dll                   \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/monotouch.dll.mdb               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/OpenTK.dll                      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/OpenTK.pdb                      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/OpenTK-1.0.dll                  \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/OpenTK-1.0.pdb                  \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/OpenTK-1.0.dll.config           \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/MonoTouch.Dialog-1.dll          \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/MonoTouch.Dialog-1.pdb          \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/MonoTouch.NUnitLite.dll         \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/MonoTouch.NUnitLite.pdb         \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades/System.Drawing.Primitives.dll     \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades/netstandard.dll         \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/Xamarin.iOS.dll         \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/Xamarin.iOS.pdb     \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/MonoTouch.Dialog-1.dll  \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/MonoTouch.Dialog-1.pdb  \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/MonoTouch.NUnitLite.dll \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/MonoTouch.NUnitLite.pdb \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/OpenTK-1.0.dll          \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/OpenTK-1.0.pdb          \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/OpenTK-1.0.dll.config   \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.iOS.dll                   \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.iOS.pdb               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.iOS.dll                   \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.iOS.pdb               \
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/%.dll: $(IOS_BUILD_DIR)/compat/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1 $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/Facades
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/%.pdb: $(IOS_BUILD_DIR)/compat/%.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/%.mdb: $(IOS_BUILD_DIR)/compat/%.mdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1/%.config: $(IOS_BUILD_DIR)/compat/%.config | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/2.1
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/share/doc/MonoTouch/%: api-diffs/% | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/share/doc/MonoTouch
-	$(Q) install -m 0644 $< $@
-
-# reference assemblies, this is just for compilation with XS
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/%.dll: $(IOS_BUILD_DIR)/reference/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/Facades
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/%.pdb: $(IOS_BUILD_DIR)/reference/%.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS/%.config: $(IOS_BUILD_DIR)/reference/%.config | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.iOS
-	$(Q) install -m 0644 $< $@
-
-# the actual architecture-specific versions
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.iOS.dll: $(IOS_BUILD_DIR)/native-32/Xamarin.iOS.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.iOS.pdb: $(IOS_BUILD_DIR)/native-32/Xamarin.iOS.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.iOS.dll: $(IOS_BUILD_DIR)/native-64/Xamarin.iOS.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.iOS.pdb: $(IOS_BUILD_DIR)/native-64/Xamarin.iOS.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits
-	$(Q) install -m 0644 $< $@
-
-$(IOS_TARGETS_DIRS):
-	$(Q) mkdir -p $@
-
-$(PROJECT_DIR)/xamios.csproj: xamios.tmpl.csproj Makefile $(wildcard $(TOP)/src/*.sources)
-	@sed -e 's*<!--%FILES%-->*$(foreach file,$(IOS_SOURCES),<Compile Include="$(file)"/>)*' -e 's*<!--%APIS%-->*$(foreach file,$(IOS_APIS),<None Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-$(PROJECT_DIR)/MonoTouch.NUnitLite.csproj: MonoTouch.NUnitLite.templ.csproj Makefile touch-unit.sources $(TOP)/Make.config
-	$(Q) sed -e 's*<!--%FILES%-->*$(foreach file,$(IOS_TOUCHUNIT_SOURCES),<Compile Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-PROJECT_FILES += $(PROJECT_DIR)/xamios.csproj $(PROJECT_DIR)/MonoTouch.NUnitLite.csproj
-
-all-ios: $(IOS_TARGETS)
-install-ios: $(IOS_TARGETS)
-
-ifdef INCLUDE_IOS
-INSTALL_TARGETS+=install-ios
-ALL_TARGETS+=all-ios
-endif
+# Template variables:
+# 1: Platform (correct case)
+# 2: PLATFORM (all upper case)
+# 3: platform (all lower case)
+# pseudo-code:
+#     foreach (var platform in DOTNET_PLATFORMS)
+#        BuildDotNetIntermediateAssembly (platform, platform.ToUpper (), platform.ToLower ())
+$(foreach platform,$(DOTNET_PLATFORMS),$(eval $(call DotNetVariables,$(platform),$(call uppercase,$(platform)),$(call lowercase,$(platform)))))
 
 #
-# Xamarin.Mac
+# iOS
 #
 
-MAC_WARNINGS_TO_FIX := 114,108
-# 4014 is "The statement is not awaited and execution of current method continues before the call is completed. Consider using `await' operator or calling `Wait' method"
-MAC_WARNINGS_TO_FIX := $(MAC_WARNINGS_TO_FIX),4014
+IOS_DEFINES += -d:IOS
+IOS_GENERATOR_FLAGS = -inline-selectors
 
-MAC_COMMON_DEFINES = -define:NET_2_0,XAMARIN_MAC,MONOMAC,XAMCORE_2_0,__UNIFIED__
-MAC_full_ARGS = -define:NO_SYSTEM_DRAWING -define:XAMMAC_SYSTEM_MONO
-MAC_mobile_ARGS = 
-MAC_BOOTSTRAP_DEFINES = $(MAC_COMMON_DEFINES),COREBUILD
-MAC_GENERATED_DEFINES = -d:MONOMAC -d:XAMARIN_MAC -d:XAMCORE_2_0 -d:__UNIFIED__
+#
+# macOS
+#
 
-$(MAC_BUILD_DIR)/$(1)/$(3).pdb: $(MAC_BUILD_DIR)/$(1)/$(3).dll
+MACOS_DEFINES += -d:MONOMAC
+MACOS_GENERATOR_FLAGS =
 
-SN_KEY = $(PRODUCT_KEY_PATH)
+#
+# tvOS
+#
 
-MAC_EXTRA_CORE_SOURCES += \
-	$(MAC_BUILD_DIR)/Constants.cs \
+TVOS_DEFINES += -d:TVOS
+TVOS_GENERATOR_FLAGS = -inline-selectors
 
-# Add new bindings + source files in frameworks.sources, not here.
+#
+# Mac Catalyst
+#
 
-MAC_CORE_SOURCES += \
-	$(MAC_EXTRA_CORE_SOURCES) \
+# MacCatalyst is a variant of iOS, so it defines the iOS variables as well.
+# Note that we have to define __IOS__ here, because it won't be in IOS_DEFINES unless iOS is an included platform.
+MACCATALYST_DEFINES += $(IOS_DEFINES) -d:__IOS__ -d:MACCATALYST
+MACCATALYST_GENERATOR_FLAGS = -inline-selectors
 
-MAC_SOURCES += \
-	$(MAC_EXTRA_CORE_SOURCES) \
-	$(MAC_BUILD_DIR)/AssemblyInfo.cs \
-	Obsoletes.cs \
-	Darwin/KernelNotification.cs \
-	Darwin/SystemLog.cs \
+### .NET ###
 
-# CFNetwork is shipped:
-# * In a separate library (XamMac.CFNetwork.dll) for Classic.
-# * Inside the other platform assemblies (Xamarin.Mac.dll) for all the other profiles.
-# This means we can't use the standard framework logic for these sources.
+include $(TOP)/scripts/generate-sourcelink-json/fragment.mk
+include $(TOP)/scripts/rsp-to-csproj/fragment.mk
 
-MAC_CFNETWORK_SOURCES = \
-	CFNetwork/Content.cs \
-	CFNetwork/MessageHandler.cs \
-	CFNetwork/WebRequestStream.cs \
-	CFNetwork/WebResponseStream.cs \
-	CFNetwork/WorkerThread.cs
+define BuildDotNetIntermediateAssembly
 
-MAC_HTTP_SOURCES = \
-	Foundation/NSUrlSessionHandler.cs \
-	System.Net.Http/CFContentStream.cs \
-	System.Net.Http/CFNetworkHandler.cs \
+CORE_$(1)_CSPROJ = $(DOTNET_BUILD_DIR)/$(1)/csproj/core/Core.$(1).csproj
+CSPROJECTS += $$(CORE_$(1)_CSPROJ)
+$$(CORE_$(1)_CSPROJ): $($(2)_DOTNET_BUILD_DIR)/core-$(3).rsp $(RSP_TO_CSPROJ)
+	$$(Q) rm -f $$@
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(call Q_PROF_GEN,$(1)) $(RSP_TO_CSPROJ_EXEC) \
+		--rsp $(abspath $$<) \
+		--working-directory $(abspath .) \
+		--target-framework $(DOTNET_TFM) \
+		--property=LowerCasePlatform=$(3) \
+		--output $$@.tmp
+	$$(Q) mv $$@.tmp $$@
 
-$(MAC_BUILD_DIR)/Constants.cs: Constants.mac.cs.in Makefile $(TOP)/Make.config.inc | $(MAC_BUILD_DIR)
-	$(Q) sed \
-			-e "s/@VERSION@/$(MAC_PACKAGE_VERSION_MAJOR).$(MAC_PACKAGE_VERSION_MINOR).$(MAC_PACKAGE_VERSION_REV)/g" \
-			-e 's/@REVISION@/$(MAC_COMMIT_DISTANCE) ($(CURRENT_BRANCH_SED_ESCAPED): $(shell git log -1 --pretty=%h))/g' \
-			-e "s/@OSX_SDK_VERSION@/$(OSX_SDK_VERSION)/g" \
-			-e "s/@MIN_XM_MONO_VERSION@/$(MIN_XM_MONO_VERSION)/g" \
-		$< > $@
+rsp:: $($(2)_DOTNET_BUILD_DIR)/core-$(3).rsp
+$($(2)_DOTNET_BUILD_DIR)/core-$(3).rsp: Makefile frameworks.sources $($(2)_DOTNET_BUILD_DIR)/GeneratedMSBuildEditorConfig.editorconfig $(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q_DOTNET_GEN) echo \
+		$(DOTNET_FLAGS) \
+		$(DOTNET_CORE_WARNINGS_TO_FIX) \
+		@$(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp \
+		$($(2)_DEFINES) \
+		-d:COREBUILD \
+		$($(2)_DOTNET_CORE_SOURCES) \
+		-warnaserror+ \
+		-nowarn:1591 \
+		-nowarn:$(XML_DOCS_WARNINGS) \
+		-out:$($(2)_DOTNET_BUILD_DIR)/core-$(3).dll \
+		-doc:$($(2)_DOTNET_BUILD_DIR)/core-$(3).xml \
+		> $$@.tmp
+	$$(Q) mv $$@.tmp $$@
 
-$(PROJECT_DIR)/xammac.csproj: xammac.tmpl.csproj Makefile $(wildcard $(TOP)/src/*.sources)
-	@sed -e 's*<!--%FILES%-->*$(foreach file,$(MAC_SOURCES) $(SHARED_SYSTEM_DRAWING_SOURCES),<Compile Include="$(file)"/>)*' -e 's*<!--%APIS%-->*$(foreach file,$(MAC_APIS),<None Include="$(file)"/>)*' $< | xmllint --format - > $@
+core:: $($(2)_DOTNET_BUILD_DIR)/core-$(3).dll
+$($(2)_DOTNET_BUILD_DIR)/core-$(3).dll: $($(2)_DOTNET_CORE_SOURCES) $($(2)_DOTNET_BUILD_DIR)/core-$(3).rsp | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q_DOTNET_GEN) $(DOTNET_CSC) @$($(2)_DOTNET_BUILD_DIR)/core-$(3).rsp
 
-PROJECT_FILES += $(PROJECT_DIR)/xammac.csproj
-
-$(MAC_BUILD_DIR)/AssemblyInfo.cs: $(TOP)/src/AssemblyInfo.cs.in
-	@mkdir -p $(MAC_BUILD_DIR)
-	$(call Q_PROF_GEN,mac) sed < $< > $@ 's|@PRODUCT_NAME@|$(MAC_PRODUCT)|g; s|@PACKAGE_HEAD_REV@|$(PACKAGE_HEAD_REV)|g; s|@PACKAGE_HEAD_BRANCH@|$(CURRENT_BRANCH_SED_ESCAPED)|g; s|@PACKAGE_VERSION_MAJOR@|$(MAC_PACKAGE_VERSION_MAJOR)|g; s|@PACKAGE_VERSION_MINOR@|$(MAC_PACKAGE_VERSION_MINOR)|g; s|@PACKAGE_VERSION_REV@|$(MAC_PACKAGE_VERSION_REV)|g; s|@PACKAGE_VERSION_BUILD@|$(MAC_PACKAGE_VERSION_BUILD)|g'
-
-# We can't pass the --target-framework values as parameters to the templates, because the commas interfere with Make's parameter parsing.
-xm_full_profile=--target-framework=Xamarin.Mac,Version=v4.5,Profile=Full
-xm_mobile_profile=--target-framework=Xamarin.Mac,Version=v2.0,Profile=Mobile
-
-MAC_GENERATOR=$(BUILD_DIR)/common/bgen.exe
-MAC_GENERATE=$(SYSTEM_MONO) --debug $(MAC_GENERATOR)
-MAC_full_GENERATOR=$(MAC_GENERATOR)
-MAC_full_GENERATE=$(MAC_GENERATE)
-MAC_mobile_GENERATOR=$(MAC_GENERATOR)
-MAC_mobile_GENERATE=$(MAC_GENERATE)
-
-define MAC_GENERATOR_template
-$(MAC_BUILD_DIR)/$(1)/core.dll: $(MAC_CORE_SOURCES) frameworks.sources
-	@mkdir -p $(MAC_BUILD_DIR)/$(1)
-	$$(call Q_PROF_CSC,mac/$(1)) \
-		$$(MAC_$(1)_CSC) -nologo -out:$$@ -target:library -debug -unsafe -nowarn:3021,612,618,1635 \
-		$$(MAC_BOOTSTRAP_DEFINES) \
-		$(3) \
-		$$(MAC_CORE_SOURCES)
-
-$(MAC_BUILD_DIR)/$(1)/generated-sources: $$(MAC_$(1)_GENERATOR) $(MAC_APIS) $(MAC_BUILD_DIR)/$(1)/core.dll $(MAC_BUILD_DIR)/$(7) $(BUILD_DIR)/mac-$(1).rsp
-	$$(call Q_PROF_GEN,mac/$(1)) $$(MAC_$(1)_GENERATE) @$(BUILD_DIR)/mac-$(1).rsp
-
-$(BUILD_DIR)/mac-$(1).rsp: Makefile Makefile.generator frameworks.sources
-	$$(Q_GEN) echo \
-		$(MAC_GENERATED_DEFINES) \
-		-compiler:$$(MAC_$(1)_CSC) \
+$($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).rsp: Makefile frameworks.sources $($(2)_DOTNET_BUILD_DIR)/GeneratedMSBuildEditorConfig.editorconfig $(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q_DOTNET_GEN) echo \
+		-debug \
+		-unsafe \
+		-target:library \
+		-nowarn:436,1591,CA1416,CS8981 \
+		-nowarn:$(XML_DOCS_WARNINGS) \
+		-warnaserror+ \
+		-nullable+ \
+		-out:$($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll \
+		-doc:$($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).xml \
+		-r:$($(2)_DOTNET_BUILD_DIR)/core-$(3).dll \
+		-nostdlib \
 		-nologo \
-		-process-enums \
-		-warnaserror:$(MAC_GENERATOR_WARNASERROR) \
-		-native-exception-marshalling \
-		-core \
-		-sourceonly:$(MAC_BUILD_DIR)/$(1)/generated-sources \
-		-tmpdir:$(MAC_BUILD_DIR)/$(1) \
-		-baselib:$(MAC_BUILD_DIR)/$(1)/core.dll \
-		-attributelib:$(MAC_BUILD_DIR)/$(7) \
-		-d:NO_SYSTEM_DRAWING \
-		$(2) \
-		$(3) \
-		$(xm_$(1)_profile) \
-		$(MAC_APIS) \
+		-r:$(DOTNET_BINDING_ATTRIBUTES) \
+		$($(2)_APIS) \
+		$($(2)_DEFINES) \
+		@$(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp \
+		> $$@.tmp
+	$$(Q) mv $$@.tmp $$@
+
+APIDEFINITION_$(1)_CSPROJ = $(DOTNET_BUILD_DIR)/$(1)/csproj/api/ApiDefinition.$(1).csproj
+CSPROJECTS += $$(APIDEFINITION_$(1)_CSPROJ)
+$$(APIDEFINITION_$(1)_CSPROJ): $($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).rsp $(RSP_TO_CSPROJ)
+	$$(Q) rm -f $$@
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(call Q_PROF_GEN,$(1)) $(RSP_TO_CSPROJ_EXEC) \
+		--rsp $(abspath $$<) \
+		--working-directory $(abspath .) \
+		--target-framework $(DOTNET_TFM) \
+		--property=LowerCasePlatform=$(3) \
+		--output $$@.tmp
+	$$(Q) mv $$@.tmp $$@
+
+apidefinition:: $($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll
+$($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll: $($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).rsp $($(2)_DOTNET_BUILD_DIR)/core-$(3).dll $(DOTNET_BINDING_ATTRIBUTES) $($(2)_APIS)
+	$$(Q_GEN) $(DOTNET_CSC) $(DOTNET_FLAGS) @$$<
+
+apidefinition:: $(3)-apidefinition
+$(3)-apidefinition: $($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll
+
+$($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources: $(DOTNET_GENERATOR) $($(2)_DOTNET_APIS) $($(2)_DOTNET_BUILD_DIR)/core-$(3).dll $($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll $(DOTNET_BINDING_ATTRIBUTES) $($(2)_DOTNET_BUILD_DIR)/$(3).rsp | $($(2)_DOTNET_BUILD_DIR)/generated-sources
+	$$(Q_DOTNET_GEN) $$< @$($(2)_DOTNET_BUILD_DIR)/$(3).rsp
+
+$($(2)_DOTNET_BUILD_DIR)/$(3).rsp: Makefile Makefile.generator Makefile.rgenerator frameworks.sources $(ROSLYN_GENERATOR) $(ROSLYN_ANALYZER) | $($(2)_DOTNET_BUILD_DIR)
+	$(Q) echo \
+		$($(2)_GENERATOR_FLAGS) \
+		$(DOTNET_GENERATOR_FLAGS) \
+		$($(2)_GENERATOR_WARNASERROR) \
+		-sourceonly=$($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources \
+		-tmpdir=$($(2)_DOTNET_BUILD_DIR)/generated-sources \
+		-baselib=$($(2)_DOTNET_BUILD_DIR)/core-$(3).dll \
+		--target-framework=.NETCoreApp,Version=$(GENERATOR_TF_VERSION),Profile=$(3) \
+		--compiled-api-definition-assembly=$($(2)_DOTNET_BUILD_DIR)/apidefinition-$(3).dll \
 		> $$@
+
+DOTNET_TARGETS_$(3) += \
+	$($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).dll \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)/Microsoft.$(1).dll \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)/Microsoft.$(1).xml \
+
+DOTNET_TARGETS_DIRS_$(3) += \
+	$($(2)_DOTNET_BUILD_DIR) \
+	$($(2)_DOTNET_BUILD_DIR)/generated-sources \
+	$($(2)_DOTNET_BUILD_DIR)/ref \
+	$($(2)_DOTNET_BUILD_DIR)/doc \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM) \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/doc/$(DOTNET_TFM) \
+
+dotnet-gen-$(3):: $($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources
+dotnet-gen:: dotnet-gen-$(3)
+
+$($(2)_DOTNET_BUILD_DIR)/GeneratedMSBuildEditorConfig.editorconfig: | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q) rm -f "$$@.tmp"
+	$$(Q) printf "is_global = true\n" >> "$$@.tmp"
+	$$(Q) printf "build_property.TargetFramework = $(DOTNET_TFM)-$(3)\n" >> "$$@.tmp"
+	$$(Q) printf "build_property.TargetFrameworkIdentifier = .NETCoreApp\n" >> "$$@.tmp"
+	$$(Q) printf "build_property.TargetFrameworkVersion = v$(DOTNET_MAJOR_VERSION).0\n" >> "$$@.tmp"
+	$$(Q) mv "$$@.tmp" "$$@"
+
+$($(2)_DOTNET_BUILD_DIR)/ILLink.LinkAttributes.xml: $(TOP)/src/ILLink.LinkAttributes.xml.in | $($(2)_DOTNET_BUILD_DIR)
+	$$(call Q_PROF_GEN,$(3)) sed < $$< > $$@ 's|@PRODUCT_NAME@|Microsoft.$(1)|g;'
+
+$($(2)_DOTNET_BUILD_DIR)/SourceLink.json: $($(2)_DOTNET_BUILD_DIR) $(GENERATE_SOURCELINK_JSON)
+	$$(Q) $(GENERATE_SOURCELINK_JSON_EXEC) "$(PACKAGE_HEAD_REV)" "$(abspath $(TOP)/src)" "$$@"
+
+$($(2)_DOTNET_BUILD_DIR)/embed-files.rsp: $($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources $($(2)_DOTNET_SOURCES) $(TOP)/src/generate-embed-files.sh
+	$$(Q) $(TOP)/src/generate-embed-files.sh $($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources "$($(2)_DOTNET_SOURCES)" > $$@.tmp
+	$$(Q) mv $$@.tmp $$@
+
+$($(2)_DOTNET_BUILD_DIR)/ILLink.Substitutions.xml: $(TOP)/src/ILLink.Substitutions.$(1).xml | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q) $(CP) $$< $$@
+
+$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)/Microsoft.$(1).dll: $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).dll | $(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)
+	$$(Q) $(CP) $$< $$@
+
+$(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)/Microsoft.$(1).xml: $($(2)_DOTNET_BUILD_DIR)/doc/Microsoft.$(1).xml | $(DOTNET_DESTDIR)/$($(2)_NUGET_REF_NAME)/ref/$(DOTNET_TFM)
+	$$(Q) $(CP) $$< $$@
+
+ifeq ($(ENABLE_APPLE_DOC_READER),1)
+# AppleDocReader backs up a shared Xcode SQLite database, so serialize invocations.
+$($(2)_DOTNET_BUILD_DIR)/doc/Microsoft.$(1).xml: $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).xml $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).dll build/.build-adr-stamp | $($(2)_DOTNET_BUILD_DIR)/doc
+	$$(Q_GEN) /usr/bin/lockf "$(APPLE_DOC_READER_LOCK)" "$(APPLE_DOC_READER)" inject docs --assembly="$(abspath $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).dll)" --input="$(abspath $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).xml)" --output="$(abspath $$@)" --xcode="$(DEVELOPER_DIR)/../.." --runtimeDll="$(DOTNET_BCL_DIR)/System.Runtime.dll" -f
+else
+# Skip AppleDocReader and just copy the XML. This happens either when building without Xcode
+# (NO_XCODE), or when the Xcode in use does not ship the offline documentation cache that
+# AppleDocReader reads (Xcode 27+). See the ENABLE_APPLE_DOC_READER comment near the top of this file.
+$($(2)_DOTNET_BUILD_DIR)/doc/Microsoft.$(1).xml: $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).xml | $($(2)_DOTNET_BUILD_DIR)/doc
+	$(Q) $(CP) $$< $$@
+endif
 endef
 
-$(eval $(call MAC_GENERATOR_template,full,--ns=ObjCRuntime,-d:NO_SYSTEM_DRAWING,,,full,Xamarin.Mac-full.BindingAttributes.dll))
-$(eval $(call MAC_GENERATOR_template,mobile,--ns=ObjCRuntime,$(SHARED_SYSTEM_DRAWING_SOURCES),,,mobile,Xamarin.Mac-mobile.BindingAttributes.dll))
+ifeq ($(ENABLE_APPLE_DOC_READER),1)
+build/.build-adr-stamp:
+	$(MAKE) -C $(TOP)/tools/adr
+	$(Q) touch $@
+endif
 
-define MAC_TARGETS_template
-$(MAC_BUILD_DIR)/$(1)/$(2): $(MAC_BUILD_DIR)/$(3)/generated-sources $(MAC_SOURCES) $(MAC_CFNETWORK_SOURCES) $(MAC_CLASSIC_SOURCES) $(SN_KEY)
-	@mkdir -p $(MAC_BUILD_DIR)/$(1)
-	$$(call Q_PROF_CSC,mac/$(1)) \
-		$$(MAC_$(3)_CSC) -nologo -out:$$@ -target:library -debug -unsafe \
-		-deterministic \
-		$$(MAC_COMMON_DEFINES),OBJECT_REF_TRACKING \
-		$$(MAC_$(3)_ARGS) \
-		$$(ARGS_$(6)) \
-		-publicsign -keyfile:$(SN_KEY) \
-		-nowarn:3021,1635,612,618,0219,0414,$(MAC_WARNINGS_TO_FIX) \
-		$$(MAC_CSC_FLAGS_XM) \
-		$(4) \
-		$$(MAC_SOURCES) \
-		@$$<
+# Template variables:
+# 1: Platform (correct case)
+# 2: PLATFORM (all upper case)
+# 3: platform (all lower case)
+# pseudo-code:
+#     foreach (var platform in DOTNET_PLATFORMS)
+#        BuildDotNetIntermediateAssembly (platform, platform.ToUpper (), platform.ToLower ())
+$(foreach platform,$(DOTNET_PLATFORMS),$(eval $(call BuildDotNetIntermediateAssembly,$(platform),$(call uppercase,$(platform)),$(call lowercase,$(platform)))))
 
-$(MAC_BUILD_DIR)/$(1)/$(2:.dll=.pdb): $(MAC_BUILD_DIR)/$(1)/$(2)
+define BuildDotNetPlatformAssembly
+$(2)_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES = \
+	$($(2)_DOTNET_SOURCES) \
+	$($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp \
+	$($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources \
+	$($(2)_DOTNET_BUILD_DIR)/SourceLink.json \
+	$($(2)_DOTNET_BUILD_DIR)/embed-files.rsp \
+	$($(2)_DOTNET_BUILD_DIR)/ILLink.LinkAttributes.xml \
+	$($(2)_DOTNET_BUILD_DIR)/ILLink.Substitutions.xml \
+	$(PRODUCT_KEY_PATH) \
+
+$(2)_DOTNET_PLATFORM_ASSEMBLY_DIR_DEPENDENCIES = \
+	$($(2)_DOTNET_BUILD_DIR)/$(4) \
+	$($(2)_DOTNET_BUILD_DIR)/ref \
+
+PLATFORM_$(1)_CSPROJ = $(DOTNET_BUILD_DIR)/$(1)/csproj/platform/Microsoft.$(1).csproj
+CSPROJECTS += $$(PLATFORM_$(1)_CSPROJ)
+$$(PLATFORM_$(1)_CSPROJ): $($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp Makefile $(RSP_TO_CSPROJ) $($(2)_DOTNET_BUILD_DIR)/embed-files.rsp
+	$$(Q) rm -f $$@
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(call Q_PROF_GEN,$(1)) $(RSP_TO_CSPROJ_EXEC) \
+		--rsp $(abspath $($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp) \
+		--working-directory $(abspath .) \
+		--target-framework $(DOTNET_TFM) \
+		--property=LowerCasePlatform=$(3) \
+		--output $$@.tmp
+	$$(Q) mv $$@.tmp $$@
+
+rsp:: $($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp
+
+$($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp: Makefile frameworks.sources $(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp | $($(2)_DOTNET_BUILD_DIR)
+	$$(Q) rm -f $$@
+	$$(Q) echo \
+		$(DOTNET_FLAGS) \
+		/analyzer:$(ROSLYN_GENERATOR_COMMON) \
+		/analyzer:$(ROSLYN_GENERATOR) \
+		/analyzer:$(ROSLYN_ANALYZER) \
+		/generatedfilesout:$($(2)_DOTNET_BUILD_DIR)/generated-sources \
+		$$(if $(V),/reportanalyzer:$(ROSLYN_GENERATOR),) \
+		$$(if $(V),/reportanalyzer:$(ROSLYN_ANALYZER),) \
+		-unsafe \
+		-optimize \
+		$$(ARGS_$(1)) \
+		-publicsign -keyfile:$(PRODUCT_KEY_PATH) \
+		-refout:$($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).dll \
+		-doc:$($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1).xml \
+		-sourcelink:$($(2)_DOTNET_BUILD_DIR)/SourceLink.json \
+		@$$(abspath $($(2)_DOTNET_BUILD_DIR)/embed-files.rsp) \
+		$$($(2)_DEFINES) \
+		$$(DOTNET_WARNINGS_TO_FIX) \
+		@$$(abspath $(RSP_DIR)/dotnet/$(3)-defines-dotnet.rsp) \
+		-res:$($(2)_DOTNET_BUILD_DIR)/ILLink.LinkAttributes.xml \
+		-res:$($(2)_DOTNET_BUILD_DIR)/ILLink.Substitutions.xml \
+		-warnaserror+ \
+		$$($(2)_DOTNET_SOURCES) \
+		@$$(abspath $($(2)_DOTNET_BUILD_DIR)/$(3)-generated-sources) \
+		-out:$($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll \
+		> $$@.tmp
+	$$(Q) mv $$@.tmp $$@
+
+$($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1)%dll $($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1)%pdb $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1)%dll $($(2)_DOTNET_BUILD_DIR)/ref/Microsoft.$(1)%xml: $$($(2)_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES) $$(ROSLYN_GENERATOR) $$(ROSLYN_ANALYZER) | $$($(2)_DOTNET_PLATFORM_ASSEMBLY_DIR_DEPENDENCIES)
+	$$(call Q_PROF_CSC,dotnet) $(DOTNET_CSC) @$($(2)_DOTNET_BUILD_DIR)/Microsoft.$(1).rsp
+
+ifdef SERIALIZE_CSC
+# This is to serialize the csc commands for the platform assembly. The platform assembly takes a while to compile (maxing out the CPU), and csc is already multi-threaded, which
+# means that if we're running multiple long csc tasks simultaneously, the CPU of the machine will get absolutely thrashed. csc (aka Roslyn) isn't exactly a cheapskate with memory either...
+# It looks a bit weird, but the idea is that in this template, every platform assembly depends on the assembly from the previous template expansion.
+# It's opt-in, because it slows down the build a bit.
+$($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll: $(LAST_DLL)
+LAST_DLL=$($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll
+endif
+
+dotnet-$(3):: $($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll
+
+DOTNET_TARGETS_$(3) += \
+	$($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)/Microsoft.$(1).dll \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)/Microsoft.$(1).pdb \
+
+DOTNET_TARGETS_DIRS_$(3) += \
+	$($(2)_DOTNET_BUILD_DIR)/$(4) \
+	$(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM) \
+
+$(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)/Microsoft.$(1).dll: $($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).dll | $(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)
+	$(Q) $(CP) $$< $$@
+
+$(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)/Microsoft.$(1).pdb: $($(2)_DOTNET_BUILD_DIR)/$(4)/Microsoft.$(1).pdb | $(DOTNET_DESTDIR)/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)
+	$(Q) $(CP) $$< $$@
+
+DOTNET_TARGETS += $$(DOTNET_TARGETS_$(3))
+DOTNET_TARGETS_DIRS += $$(DOTNET_TARGETS_DIRS_$(3))
+
+dotnet-$(3):: $$(DOTNET_TARGETS_$(3))
 
 endef
 
-$(eval $(call MAC_TARGETS_template,mobile-32,Xamarin.Mac.dll,mobile,$(MAC_CFNETWORK_SOURCES) $(MAC_HTTP_SOURCES) $(SHARED_SYSTEM_DRAWING_SOURCES) $(APPLETLS_DEFINES) -D:XAMARIN_MODERN -D:UNIFIED -D:__UNIFIED__,mobile-32,32))
-$(eval $(call MAC_TARGETS_template,mobile-64,Xamarin.Mac.dll,mobile,$(MAC_CFNETWORK_SOURCES) $(MAC_HTTP_SOURCES) $(SHARED_SYSTEM_DRAWING_SOURCES) $(APPLETLS_DEFINES) -D:XAMARIN_MODERN -D:UNIFIED -D:__UNIFIED__,mobile-64,64))
-$(eval $(call MAC_TARGETS_template,full-32,Xamarin.Mac.dll,full,$(MAC_CFNETWORK_SOURCES) $(MAC_HTTP_SOURCES) -D:XAMARIN_MODERN -D:UNIFIED -D:__UNIFIED__,full-32,32))
-$(eval $(call MAC_TARGETS_template,full-64,Xamarin.Mac.dll,full,$(MAC_CFNETWORK_SOURCES) $(MAC_HTTP_SOURCES) -D:XAMARIN_MODERN -D:UNIFIED -D:__UNIFIED__,full-64,64))
-
-$(MAC_BUILD_DIR)/%-reference/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/%-64/Xamarin.Mac.dll
-	@mkdir -p $(@D)
-	$(Q) $(CP) $^ $@
-
-$(MAC_BUILD_DIR)/%-reference/Xamarin.Mac.pdb: $(MAC_BUILD_DIR)/%-64/Xamarin.Mac.pdb
-	@mkdir -p $(@D)
-	$(Q) $(CP) $^ $@
-
-$(MAC_BUILD_DIR)/compat/XamMac.CFNetwork.dll: $(MACIOS_BINARIES_PATH)/XamMac.CFNetwork.dll | $(MAC_BUILD_DIR)/compat
-	$(Q) $(CP) $< $@
-	$(Q) $(CP) $<.mdb $@.mdb
-
-$(MAC_BUILD_DIR)/compat/XamMac.dll: $(MACIOS_BINARIES_PATH)/XamMac.dll | $(MAC_BUILD_DIR)/compat
-	$(Q) $(CP) $< $@
-	$(Q) $(CP) $<.mdb $@.mdb
-
-MAC_VARIANTS_TARGETS = \
-	$(MAC_BUILD_DIR)/compat/XamMac.dll \
-	$(MAC_BUILD_DIR)/mobile-32/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/mobile-64/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/full-32/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/full-64/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/mobile-reference/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/full-reference/Xamarin.Mac.dll \
-	$(MAC_BUILD_DIR)/compat/XamMac.CFNetwork.dll
-
-INSTALL_TARGETS+=install-mac
-ALL_TARGETS+=all-mac
-
-MAC_TARGETS_DIRS += \
-	$(MAC_BUILD_DIR) \
-	$(MAC_BUILD_DIR)/mobile \
-	$(MAC_BUILD_DIR)/mobile/Facades \
-	$(MAC_BUILD_DIR)/full \
-	$(MAC_BUILD_DIR)/compat \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile      \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full        \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile    \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full      \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full   \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/net_4_5   \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono             \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5         \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/bin                  \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/pkgconfig        \
-
-MAC_TARGETS += \
-	$(PROJECT_DIR)/xammac.csproj                                                        \
-	$(MAC_VARIANTS_TARGETS)                                                             \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/XamMac.dll                      \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile/Xamarin.Mac.dll     \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile/Xamarin.Mac.pdb     \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full/Xamarin.Mac.dll       \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full/Xamarin.Mac.pdb       \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile/Xamarin.Mac.dll        \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile/Xamarin.Mac.pdb        \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile/Xamarin.Mac.dll          \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile/Xamarin.Mac.pdb          \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full/Xamarin.Mac.dll          \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full/Xamarin.Mac.pdb          \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full/Xamarin.Mac.dll            \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full/Xamarin.Mac.pdb            \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/XamMac.CFNetwork.dll            \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac/Xamarin.Mac.dll     \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac/Xamarin.Mac.pdb     \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5/Xamarin.Mac.dll             \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5/Xamarin.Mac.pdb             \
-	$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/pkgconfig/xammac.pc
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/XamMac.dll: $(MAC_BUILD_DIR)/compat/XamMac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono
-	$(Q) install -m 0755 $< $@
-	$(Q) install -m 0644 $<.mdb $@.mdb
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/mobile-reference/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile
-	$(Q) install -m 0755 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile/Xamarin.Mac.pdb: $(MAC_BUILD_DIR)/mobile-reference/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/mobile
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/mobile-64/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile
-	$(Q) install -m 0755 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile/Xamarin.Mac.pdb: $(MAC_BUILD_DIR)/mobile-64/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/mobile
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/mobile-32/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile
-	$(Q) install -m 0755 $< $@
-	
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile/Xamarin.Mac.pdb: $(MAC_BUILD_DIR)/mobile-32/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/mobile
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/full-reference/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full
-	$(Q) install -m 0755 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full/Xamarin.Mac.pdb : $(MAC_BUILD_DIR)/full-reference/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/reference/full
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/full-64/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full
-	$(Q) install -m 0755 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full/Xamarin.Mac.pdb: $(MAC_BUILD_DIR)/full-64/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/x86_64/full
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full/Xamarin.Mac.dll: $(MAC_BUILD_DIR)/full-32/Xamarin.Mac.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full
-	$(Q) install -m 0755 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full/Xamarin.Mac.pdb : $(MAC_BUILD_DIR)/full-32/Xamarin.Mac.pdb | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/i386/full
-	$(Q) install -m 0644 $< $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/XamMac.CFNetwork.dll: $(MAC_BUILD_DIR)/compat/XamMac.CFNetwork.dll | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono
-	$(Q) install -m 0755 $< $@
-	$(Q) install -m 0644 $< $(@:.dll=.pdb)
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac/Xamarin.Mac.dll $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac/Xamarin.Mac.pdb: | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/Xamarin.Mac
-	$(Q) ln -sF ../../reference/mobile/$(@F) $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5/Xamarin.Mac.dll $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5/Xamarin.Mac.pdb: | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/mono/4.5
-	$(Q) ln -sF ../../reference/full/$(@F) $@
-
-$(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/pkgconfig/xammac.pc: $(TOP)/Make.config | $(MAC_DESTDIR)$(MAC_FRAMEWORK_CURRENT_DIR)/lib/pkgconfig
-	$(Q) sed -e "s/@PACKAGE_VERSION@/$(MAC_PACKAGE_VERSION)/g" xammac.pc.in > $@
-	$(Q) chmod 0644 $@
-
-$(MAC_TARGETS_DIRS):
-	$(Q) mkdir -p $@
-
-install-mac: $(MAC_TARGETS)
-all-mac: $(MAC_TARGETS)
-
+# Template variables:
+# 1: Platform (correct case)
+# 2: PLATFORM (all upper case)
+# 3: platform (all lower case)
+# 4: 64 (bits)
 #
-# Xamarin.WatchOS
-#
+# pseudo-code:
+#     foreach (var platform in DOTNET_PLATFORMS)
+#        BuildDotNetPlatformAssembly (platform, platform.ToUpper (), platform.ToLower (), 64)
+$(foreach platform,$(DOTNET_PLATFORMS),$(eval $(call BuildDotNetPlatformAssembly,$(platform),$(call uppercase,$(platform)),$(call lowercase,$(platform)),64)))
 
-WATCH_DEFINES = -define:IPHONE -define:MONOTOUCH -d:NET_2_0 -d:WATCH -d:XAMCORE_2_0 -d:XAMCORE_3_0 -d:__WATCHOS__ -d:__UNIFIED__ -d:SYSTEM_NET_HTTP
-WATCH_LIBDIR = $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS
-WATCH_BMONO = MONO_PATH=$(WATCH_LIBDIR)/repl $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/bwatch-mono
-WATCH_GENERATOR=$(BUILD_DIR)/common/bgen.exe
-WATCH_GENERATE=$(SYSTEM_MONO) --debug $(WATCH_GENERATOR)
-WATCH_GENERATED_DEFINES= -d:WATCH -d:XAMCORE_3_0 -d:XAMCORE_2_0 -d:__UNIFIED__
+define DefineTargets
+$(1)_NUGET_TARGETS = \
+	$(DOTNET_DESTDIR)/$($(1)_NUGET_SDK_NAME)/tools/TrimAttributes.LinkDescription.xml \
 
-WATCHOS_EXTRA_CORE_SOURCES = \
-    $(WATCH_BUILD_DIR)/Constants.cs    \
-    $(WATCH_BUILD_DIR)/AssemblyInfo.cs \
-    $(IOS_OPENTK_1_0_CORE_SOURCES)     \
-    AudioToolbox/AudioBuffers.cs       \
-    AudioToolbox/AudioType.cs          \
-    $(SHARED_SYSTEM_DRAWING_SOURCES)   \
-    System.Drawing/ColorKnownColorTypeForwarders.cs \
+$(DOTNET_DESTDIR)/$($(1)_NUGET_SDK_NAME)/tools/TrimAttributes.LinkDescription.xml: TrimAttributes.LinkDescription.xml
+	$$(Q) $(CP) $$< $$@
 
-WATCHOS_HTTP_SOURCES = \
-	Foundation/NSUrlSessionHandler.cs \
-
-WATCHOS_CORE_SOURCES +=           \
-    $(WATCHOS_EXTRA_CORE_SOURCES) \
-
-WATCHOS_SOURCES +=                \
-    $(WATCHOS_EXTRA_CORE_SOURCES) \
-    $(WATCHOS_HTTP_SOURCES)        \
-
-$(WATCH_BUILD_DIR)/Constants.cs: $(TOP)/src/Constants.watch.cs.in Makefile $(TOP)/Make.config.inc | $(WATCH_BUILD_DIR)
-	$(call Q_PROF_GEN,watch) sed \
-		-e "s/@VERSION@/$(IOS_PACKAGE_VERSION_MAJOR).$(IOS_PACKAGE_VERSION_MINOR).$(IOS_PACKAGE_VERSION_REV)/g" \
-		-e 's/@REVISION@/$(IOS_COMMIT_DISTANCE) ($(CURRENT_BRANCH_SED_ESCAPED): $(shell git log -1 --pretty=%h))/g' \
-		-e "s/@WATCH_SDK_VERSION@/$(WATCH_SDK_VERSION)/g" \
-		$< > $@
-
-$(WATCH_BUILD_DIR)/AssemblyInfo.cs: $(TOP)/src/AssemblyInfo.cs.in $(TOP)/Make.config  $(TOP)/.git/HEAD | $(WATCH_BUILD_DIR)
-	$(call Q_PROF_GEN,watch) sed \
-		-e 's|@PRODUCT_NAME@|Xamarin.WatchOS|g' \
-		-e 's|@PACKAGE_HEAD_REV@|$(PACKAGE_HEAD_REV)|g' \
-		-e 's|@PACKAGE_HEAD_BRANCH@|$(CURRENT_BRANCH_SED_ESCAPED)|g' \
-		-e 's|@PACKAGE_VERSION_MAJOR@|$(IOS_PACKAGE_VERSION_MAJOR)|g' \
-		-e 's|@PACKAGE_VERSION_MINOR@|$(IOS_PACKAGE_VERSION_MINOR)|g' \
-		-e 's|@PACKAGE_VERSION_REV@|$(IOS_PACKAGE_VERSION_REV)|g' \
-		-e 's|@PACKAGE_VERSION_BUILD@|$(IOS_PACKAGE_VERSION_BUILD)|g' \
-		$< > $@.tmp
-	$(Q) diff $@ $@.tmp >/dev/null 2>&1 || mv -f $@.tmp $@
-	$(Q) rm -f $@.tmp
-	$(Q) touch $@
-
-$(WATCH_BUILD_DIR)/watch/core.dll: $(WATCHOS_CORE_SOURCES) frameworks.sources | $(WATCH_BUILD_DIR)/watch
-	@mkdir -p $(WATCH_BUILD_DIR)/watch
-	$(call Q_PROF_CSC,watch) $(WATCH_CSC) -nologo -out:$@ -target:library -debug -unsafe \
-		-nowarn:219,618,114,414,1635,3021,$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		-define:COREBUILD    \
-		$(WATCH_DEFINES)     \
-		$(WATCHOS_CORE_SOURCES)
-
-# generated_sources
-$(WATCH_BUILD_DIR)/watch/generated_sources: $(WATCH_GENERATOR) $(WATCHOS_APIS) $(WATCH_BUILD_DIR)/watch/core.dll $(WATCH_BUILD_DIR)/Xamarin.WatchOS.BindingAttributes.dll $(BUILD_DIR)/watchos.rsp
-	$(call Q_PROF_GEN,watch) $(WATCH_GENERATE) @$(BUILD_DIR)/watchos.rsp
-
-$(BUILD_DIR)/watchos.rsp: Makefile Makefile.generator frameworks.sources
-	$(Q_GEN) echo  \
-		-inline-selectors                                        \
-		-process-enums                                           \
-		-warnaserror:$(WATCH_GENERATOR_WARNASERROR)              \
-		-core                                                    \
-		-sourceonly=$(WATCH_BUILD_DIR)/watch/generated_sources   \
-		-compiler=$(WATCH_CSC) \
-		-nologo -nostdlib -noconfig                              \
-		-tmpdir=$(WATCH_BUILD_DIR)/watch                         \
-		-baselib=$(WATCH_BUILD_DIR)/watch/core.dll               \
-		-attributelib=$(WATCH_BUILD_DIR)/Xamarin.WatchOS.BindingAttributes.dll \
-		-ns=MonoTouch.ObjCRuntime                                \
-		-native-exception-marshalling                            \
-		$(WATCH_GENERATED_DEFINES)				\
-		--ns:ObjCRuntime                                         \
-		$(WATCHOS_APIS)                                            \
-		--target-framework=Xamarin.WatchOS,v1.0                     \
-		> $@
-
-$(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS%dll $(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS%pdb: $(WATCHOS_SOURCES) $(WATCH_BUILD_DIR)/watch/generated_sources $(PRODUCT_KEY_PATH) | $(WATCH_BUILD_DIR)/watch-32
-	$(call Q_PROF_CSC,watch) $(WATCH_CSC) -nologo -out:$(basename $@).dll -target:library -debug -unsafe -optimize \
-		-publicsign -keyfile:$(PRODUCT_KEY_PATH) $(WATCH_DEFINES) \
-		-deterministic \
-		$(ARGS_32) \
-		-nowarn:219,618,114,414,1635,3021,$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		$(WATCHOS_SOURCES) @$(WATCH_BUILD_DIR)/watch/generated_sources
-
-$(WATCH_BUILD_DIR)/reference/Xamarin.WatchOS.dll: $(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS.dll | $(WATCH_BUILD_DIR)/reference
-	$(Q_STRIP) mono-cil-strip -q $< $@
-
-$(WATCH_BUILD_DIR)/reference/Xamarin.WatchOS.pdb: $(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS.pdb | $(WATCH_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-# MonoTouch.NUnitLite
-$(WATCH_BUILD_DIR)/reference/MonoTouch.NUnitLite%dll $(WATCH_BUILD_DIR)/reference/MonoTouch.NUnitLite%pdb: $(WATCHOS_TOUCHUNIT_SOURCES) $(PRODUCT_KEY_PATH) $(WATCH_BUILD_DIR)/reference/Xamarin.WatchOS.dll
-	$(call Q_PROF_CSC,watch) $(SYSTEM_CSC) -nologo -out:$(basename $@).dll -target:library -debug:portable -optimize -publicsign -noconfig -nostdlib \
-		-keyfile:$(PRODUCT_KEY_PATH) -r:$(WATCH_BUILD_DIR)/reference/Xamarin.WatchOS.dll -r:$(MONOTOUCH_WATCH_MONO_PATH)/mscorlib.dll -r:$(MONOTOUCH_WATCH_MONO_PATH)/System.dll -r:$(MONOTOUCH_WATCH_MONO_PATH)/System.Xml.dll \
-		-nowarn:3006,612,649,414,1635 \
-		-define:NUNITLITE,CLR_4_0,NET_4_5,__MOBILE__ $(WATCH_DEFINES) \
-		-deterministic \
-		$(WATCHOS_TOUCHUNIT_SOURCES)
-
-$(PROJECT_DIR)/xamwatch.csproj: xamwatch.tmpl.csproj Makefile $(wildcard $(TOP)/*.sources)
-	@sed -e 's*<!--%FILES%-->*$(foreach file,$(WATCHOS_SOURCES),<Compile Include="$(file)"/>)*' -e 's*<!--%APIS%-->*$(foreach file,$(WATCHOS_APIS),<None Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-$(PROJECT_DIR)/MonoTouch.NUnitLite.watchos.csproj: MonoTouch.NUnitLite.watchos.templ.csproj Makefile touch-unit.sources $(TOP)/Make.config
-	$(Q) sed -e 's*<!--%FILES%-->*$(foreach file,$(WATCHOS_TOUCHUNIT_SOURCES),<Compile Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-PROJECT_FILES += $(PROJECT_DIR)/xamwatch.csproj $(PROJECT_DIR)/MonoTouch.NUnitLite.watchos.csproj
-
-clean-watch:
-	$(Q) rm -rf $(WATCH_BUILD_DIR)
-	$(Q) rm -f $(WATCH_TARGETS)
-
-WATCH_TARGETS_DIRS +=                                          \
-	$(WATCH_BUILD_DIR)                                         \
-	$(WATCH_BUILD_DIR)/watch                                   \
-	$(WATCH_BUILD_DIR)/watch-32                                \
-	$(WATCH_BUILD_DIR)/reference                               \
-	$(WATCH_BUILD_DIR)/reference/Facades                       \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/share/doc/Xamarin.WatchOS\
-
-WATCH_TARGETS += \
-	$(PROJECT_DIR)/xamwatch.csproj                                                          \
-	$(PROJECT_DIR)/MonoTouch.NUnitLite.watchos.csproj                                       \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/Xamarin.WatchOS.dll          \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/Xamarin.WatchOS.pdb      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.WatchOS.dll                        \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.WatchOS.pdb                    \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/MonoTouch.NUnitLite.dll      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/MonoTouch.NUnitLite.pdb
-
-# reference assemblies, this is just for compilation with XS
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/%.dll: $(WATCH_BUILD_DIR)/reference/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/Facades
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/%.pdb: $(WATCH_BUILD_DIR)/reference/%.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS/%.config: $(WATCH_BUILD_DIR)/reference/%.config | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.WatchOS
-	$(Q) install -m 0644 $< $@
-
-# the actual architecture-specific versions
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.WatchOS.dll: $(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits/Xamarin.WatchOS.pdb: $(WATCH_BUILD_DIR)/watch-32/Xamarin.WatchOS.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/32bits
-	$(Q) install -m 0644 $< $@
-
-$(WATCH_TARGETS_DIRS):
-	$(Q) mkdir -p $@
-
-all-watch: $(WATCH_TARGETS)
-install-watch: $(WATCH_TARGETS)
-
-ifdef INCLUDE_WATCH
-ALL_TARGETS += all-watch
-INSTALL_TARGETS += install-watch
-endif
-
-#
-# Xamarin.TVOS
-#
-
-TVOS_DEFINES = -define:IPHONE -define:MONOTOUCH -d:NET_2_0 -d:TVOS -d:XAMCORE_2_0 -d:XAMCORE_3_0 -d:__TVOS__ $(APPLETLS_DEFINES) -d:__UNIFIED__ -d:SYSTEM_NET_HTTP
-TVOS_LIBDIR = $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS
-TVOS_BMONO = MONO_PATH=$(TVOS_LIBDIR)/repl $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/bin/btv-mono
-TVOS_GENERATOR=$(BUILD_DIR)/common/bgen.exe
-TVOS_GENERATE=$(SYSTEM_MONO) --debug $(TVOS_GENERATOR)
-TVOS_GENERATED_DEFINES= -d:TVOS -d:XAMCORE_3_0 -d:XAMCORE_2_0 -d:__UNIFIED__
-
-TVOS_EXTRA_CORE_SOURCES = \
-	$(TVOS_BUILD_DIR)/Constants.cs    \
-    $(TVOS_BUILD_DIR)/AssemblyInfo.cs \
-	$(IOS_OPENTK_1_0_CORE_SOURCES)    \
-	$(SHARED_SYSTEM_DRAWING_SOURCES) \
-
-TVOS_CORE_SOURCES +=           \
-	$(TVOS_EXTRA_CORE_SOURCES) \
-
-TVOS_HTTP_SOURCES = \
-	Foundation/NSUrlSessionHandler.cs \
-	System.Net.Http/CFContentStream.cs \
-	System.Net.Http/CFNetworkHandler.cs \
-
-TVOS_SOURCES +=                \
-	$(TVOS_EXTRA_CORE_SOURCES) \
-	$(TVOS_HTTP_SOURCES)     \
-
-$(TVOS_BUILD_DIR)/Constants.cs: $(TOP)/src/Constants.tvos.cs.in Makefile $(TOP)/Make.config.inc | $(TVOS_BUILD_DIR)
-	$(call Q_PROF_GEN,tvos) sed \
-		-e "s/@VERSION@/$(IOS_PACKAGE_VERSION_MAJOR).$(IOS_PACKAGE_VERSION_MINOR).$(IOS_PACKAGE_VERSION_REV)/g" \
-		-e 's/@REVISION@/$(IOS_COMMIT_DISTANCE) ($(CURRENT_BRANCH_SED_ESCAPED): $(shell git log -1 --pretty=%h))/g' \
-		-e "s/@TVOS_SDK_VERSION@/$(TVOS_SDK_VERSION)/g" \
-		$< > $@
-
-$(TVOS_BUILD_DIR)/AssemblyInfo.cs: $(TOP)/src/AssemblyInfo.cs.in $(TOP)/Make.config  $(TOP)/.git/HEAD | $(TVOS_BUILD_DIR)
-	$(call Q_PROF_GEN,tvos) sed \
-		-e 's|@PRODUCT_NAME@|Xamarin.TVOS|g' \
-		-e 's|@PACKAGE_HEAD_REV@|$(PACKAGE_HEAD_REV)|g' \
-		-e 's|@PACKAGE_HEAD_BRANCH@|$(CURRENT_BRANCH_SED_ESCAPED)|g' \
-		-e 's|@PACKAGE_VERSION_MAJOR@|$(IOS_PACKAGE_VERSION_MAJOR)|g' \
-		-e 's|@PACKAGE_VERSION_MINOR@|$(IOS_PACKAGE_VERSION_MINOR)|g' \
-		-e 's|@PACKAGE_VERSION_REV@|$(IOS_PACKAGE_VERSION_REV)|g' \
-		-e 's|@PACKAGE_VERSION_BUILD@|$(IOS_PACKAGE_VERSION_BUILD)|g' \
-		$< > $@.tmp
-	$(Q) diff $@ $@.tmp >/dev/null 2>&1 || mv -f $@.tmp $@
-	$(Q) rm -f $@.tmp
-	$(Q) touch $@
-
-
-$(TVOS_BUILD_DIR)/tvos/core.dll: $(TVOS_CORE_SOURCES) frameworks.sources Makefile | $(TVOS_BUILD_DIR)/tvos
-	@mkdir -p $(TVOS_BUILD_DIR)/tvos
-	$(call Q_PROF_CSC,tvos) $(TV_CSC) -nologo -out:$@ -target:library -debug -unsafe \
-		-nowarn:219,618,114,414,1635,3021,$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		-define:COREBUILD    \
-		$(TVOS_DEFINES)     \
-		$(TVOS_CORE_SOURCES)
-
-# generated_sources
-$(TVOS_BUILD_DIR)/tvos/generated_sources: $(TVOS_GENERATOR) $(TVOS_APIS) $(TVOS_BUILD_DIR)/tvos/core.dll $(TVOS_BUILD_DIR)/Xamarin.TVOS.BindingAttributes.dll $(BUILD_DIR)/tvos.rsp
-	$(call Q_PROF_GEN,tvos) $(TVOS_GENERATE) @$(BUILD_DIR)/tvos.rsp
-
-$(BUILD_DIR)/tvos.rsp: Makefile Makefile.generator frameworks.sources
-	$(Q_GEN) echo \
-		-inline-selectors                                        \
-		-process-enums                                           \
-		-warnaserror:$(TVOS_GENERATOR_WARNASERROR)               \
-		-core                                                    \
-		-sourceonly=$(TVOS_BUILD_DIR)/tvos/generated_sources     \
-		-compiler=$(TV_CSC) \
-		-nologo -nostdlib -noconfig                              \
-		-tmpdir=$(TVOS_BUILD_DIR)/tvos                         \
-		-baselib=$(TVOS_BUILD_DIR)/tvos/core.dll               \
-		-attributelib=$(TVOS_BUILD_DIR)/Xamarin.TVOS.BindingAttributes.dll \
-		$(TVOS_GENERATED_DEFINES)				\
-		-ns=MonoTouch.ObjCRuntime                                \
-		-native-exception-marshalling                            \
-		--ns:ObjCRuntime                                         \
-		$(TVOS_APIS)                                            \
-		--target-framework=Xamarin.TVOS,v1.0                     \
-		> $@
-
-$(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS%dll $(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS%pdb: $(TVOS_SOURCES) $(TVOS_BUILD_DIR)/tvos/generated_sources $(PRODUCT_KEY_PATH) | $(TVOS_BUILD_DIR)/tvos-64
-	$(call Q_PROF_CSC,tvos) $(TV_CSC) -nologo -out:$(basename $@).dll -target:library -debug -unsafe -optimize \
-		-publicsign -keyfile:$(PRODUCT_KEY_PATH) $(TVOS_DEFINES) \
-		-deterministic \
-		$(ARGS_64) \
-		-nowarn:219,618,114,414,1635,3021,$(IOS_WARNINGS_THAT_YOU_SHOULD_FIX) \
-		$(TVOS_SOURCES) @$(TVOS_BUILD_DIR)/tvos/generated_sources
-
-$(TVOS_BUILD_DIR)/reference/Xamarin.TVOS.dll: $(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS.dll | $(TVOS_BUILD_DIR)/reference
-	$(Q_STRIP) mono-cil-strip -q $< $@
-
-$(TVOS_BUILD_DIR)/reference/Xamarin.TVOS.pdb: $(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS.pdb | $(TVOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-# MonoTouch.NUnitLite
-$(TVOS_BUILD_DIR)/reference/MonoTouch.NUnitLite%dll $(TVOS_BUILD_DIR)/reference/MonoTouch.NUnitLite%pdb: $(TVOS_TOUCHUNIT_SOURCES) $(PRODUCT_KEY_PATH) $(TVOS_BUILD_DIR)/reference/Xamarin.TVOS.dll $(TVOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll
-	$(call Q_PROF_CSC,tvos) $(SYSTEM_CSC) -nologo -r:$(MONOTOUCH_TV_MONO_PATH)/mscorlib.dll -out:$(basename $@).dll -target:library -debug:portable -optimize -noconfig -nostdlib -publicsign \
-		-keyfile:$(PRODUCT_KEY_PATH) -r:$(TVOS_BUILD_DIR)/reference/Xamarin.TVOS.dll -r:$(TVOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll -r:$(MONOTOUCH_TV_MONO_PATH)/System.dll -r:$(MONOTOUCH_TV_MONO_PATH)/System.Xml.dll \
-		-nowarn:3006,612,649,414,1635 \
-		-define:NUNITLITE,CLR_4_0,NET_4_5,__MOBILE__ $(TVOS_DEFINES) \
-		-deterministic \
-		$(TVOS_TOUCHUNIT_SOURCES)
-
-# MonoTouch.Dialog-1
-$(TVOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.dll: $(MACIOS_BINARIES_PATH)/MonoTouch.Dialog-Unified/tvos/MonoTouch.Dialog-1.dll | $(TVOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-$(TVOS_BUILD_DIR)/reference/MonoTouch.Dialog-1.pdb: $(MACIOS_BINARIES_PATH)/MonoTouch.Dialog-Unified/tvos/MonoTouch.Dialog-1.pdb | $(TVOS_BUILD_DIR)/reference
-	$(Q) $(CP) $< $@
-
-$(PROJECT_DIR)/xamtvos.csproj: xamtvos.tmpl.csproj Makefile $(wildcard $(TOP)/*.sources)
-	@sed -e 's*<!--%FILES%-->*$(foreach file,$(TVOS_SOURCES),<Compile Include="$(file)"/>)*' -e 's*<!--%APIS%-->*$(foreach file,$(TVOS_APIS),<None Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-$(PROJECT_DIR)/MonoTouch.NUnitLite.tvos.csproj: MonoTouch.NUnitLite.tvos.templ.csproj Makefile touch-unit.sources $(TOP)/Make.config
-	$(Q) sed -e 's*<!--%FILES%-->*$(foreach file,$(TVOS_TOUCHUNIT_SOURCES),<Compile Include="$(file)"/>)*' $< | xmllint --format - > $@
-
-PROJECT_FILES += $(PROJECT_DIR)/xamtvos.csproj $(PROJECT_DIR)/MonoTouch.NUnitLite.tvos.csproj
-
-clean-tvos:
-	$(Q) rm -rf $(TVOS_BUILD_DIR)
-	$(Q) rm -f $(TVOS_TARGETS)
-
-TVOS_TARGETS_DIRS +=                                          \
-	$(TVOS_BUILD_DIR)                                         \
-	$(TVOS_BUILD_DIR)/tvos                                    \
-	$(TVOS_BUILD_DIR)/tvos-64                                 \
-	$(TVOS_BUILD_DIR)/reference                               \
-	$(TVOS_BUILD_DIR)/reference/Facades                       \
-	$(TVOS_BUILD_DIR)/NativeTypes                             \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS   \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/Facades \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/share/doc/Xamarin.TVOS  \
-
-TVOS_TARGETS += \
-	$(PROJECT_DIR)/xamtvos.csproj                                                        \
-	$(PROJECT_DIR)/MonoTouch.NUnitLite.tvos.csproj                                       \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/Xamarin.TVOS.dll             \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/Xamarin.TVOS.pdb             \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.TVOS.dll                        \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.TVOS.pdb                        \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/OpenTK-1.0.dll               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/OpenTK-1.0.pdb               \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/OpenTK-1.0.dll.config        \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/MonoTouch.Dialog-1.dll       \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/MonoTouch.Dialog-1.pdb       \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/MonoTouch.NUnitLite.dll      \
-	$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/MonoTouch.NUnitLite.pdb
-
-# reference assemblies, this is just for compilation with XS
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/%.dll: $(TVOS_BUILD_DIR)/reference/%.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/Facades
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/%.pdb: $(TVOS_BUILD_DIR)/reference/%.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS
-	$(Q) install -m 0644 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS/%.config: $(TVOS_BUILD_DIR)/reference/%.config | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/mono/Xamarin.TVOS
-	$(Q) install -m 0644 $< $@
-
-# the actual architecture-specific versions
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.TVOS.dll: $(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS.dll | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits
-	$(Q) install -m 0755 $< $@
-
-$(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits/Xamarin.TVOS.pdb: $(TVOS_BUILD_DIR)/tvos-64/Xamarin.TVOS.pdb | $(IOS_DESTDIR)$(MONOTOUCH_PREFIX)/lib/64bits
-	$(Q) install -m 0644 $< $@
-
-$(TVOS_TARGETS_DIRS):
-	$(Q) mkdir -p $@
-
-all-tvos: $(TVOS_TARGETS)
-install-tvos: $(TVOS_TARGETS)
-
-ifdef INCLUDE_TVOS
-ALL_TARGETS += all-tvos
-INSTALL_TARGETS += install-tvos
-endif
+DOTNET_TARGETS += $$($(1)_NUGET_TARGETS)
+endef
+$(foreach platform,$(DOTNET_PLATFORMS),$(eval $(call DefineTargets,$(platform))))
 
 #
 # Global targets
@@ -911,16 +547,91 @@ SHARED_PATH := ../runtime
 $(SHARED_PATH)/Delegates.generated.cs: $(SHARED_PATH)/Delegates.cs.t4 $(SHARED_PATH)/delegates.t4
 	$(Q) $(MAKE) -C $(SHARED_PATH) Delegates.generated.cs
 
-$(BUILD_DIR)/common/NativeTypes/%.cs: $(TOP)/src/NativeTypes/%.tt | $(BUILD_DIR)/common/NativeTypes
-	$(Q_GEN) $(TT) $< -o $@ 1>/dev/null
-
 $(COMMON_TARGET_DIRS):
 	$(Q) mkdir -p $@
+
+# This rule means: generate a Constants.<platform>.generated.cs for the frameworks in the variable <PLATFORM>_FRAMEWORKS
+include $(TOP)/scripts/generate-frameworks-constants/fragment.mk
+$(DOTNET_BUILD_DIR)/%/Constants.generated.cs: Makefile $(GENERATE_FRAMEWORKS_CONSTANTS) | $(DOTNET_BUILD_DIR)
+	$(Q) $(GENERATE_FRAMEWORKS_CONSTANTS_EXEC) "$*" "$@.tmp"
+	$(Q) mv "$@.tmp" "$@"
+
+# This target builds all the generated project files. It's not really useful by itself,
+# except to validate that the csproj files actually work.
+build-csproj: $(CSPROJECTS) $(foreach platform,$(DOTNET_PLATFORMS),$($(call uppercase,$(platform))_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES))
+	$(Q) set -e; \
+	for csproj in $(CSPROJECTS); do \
+		echo "Building $$csproj..."; \
+		$(DOTNET) build $$csproj /bl:"$$(dirname $$csproj)/$$(basename -s .csproj $$csproj).binlog" $(DOTNET_BUILD_VERBOSITY); \
+		echo "Built $$csproj successfully."; \
+	done
+
+# This targets runs 'dotnet format' on the generated project files.
+format-csproj: $(CSPROJECTS) $(foreach platform,$(DOTNET_PLATFORMS),$($(call uppercase,$(platform))_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES))
+	$(Q) set -e; \
+	for csproj in $(CSPROJECTS); do \
+		echo "Formatting $$csproj..."; \
+		$(DOTNET) format whitespace $$csproj; \
+		echo "Formatted $$csproj successfully."; \
+	done
+
+# This builds the project files, enabling C# analyzers
+analyze:
+	$(Q) $(MAKE) -j $(CSPROJECTS) $(foreach platform,$(DOTNET_PLATFORMS),$($(call uppercase,$(platform))_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES))
+	$(Q) set -e; \
+	for csproj in $(CSPROJECTS); do \
+		echo "Analyzing $$csproj..."; \
+		$(DOTNET) clean $$csproj; \
+		$(DOTNET) build $$csproj /p:ANALYZE_CSPROJ=true /p:TreatWarningsAsErrors=false /p:DOTNET_ANALYZERS_DIR=$(DOTNET_ANALYZERS_DIR) /bl:$$csproj-analyze.binlog; \
+		echo "Analyzed $$csproj successfully."; \
+	done
+
+# This target builds the generated project files with StyleCop enabled.
+stylecop-csproj: $(CSPROJECTS) $(foreach platform,$(DOTNET_PLATFORMS),$($(call uppercase,$(platform))_DOTNET_PLATFORM_ASSEMBLY_DEPENDENCIES))
+	$(Q) set -e; \
+	for csproj in $(CSPROJECTS); do \
+		echo "Building $$csproj with StyleCop enabled..."; \
+		$(DOTNET) build $$csproj $(DOTNET_BUILD_VERBOSITY) /p:EnableStyleCop=true; \
+		echo "Built $$csproj with StyleCop successfully."; \
+	done
+
+csproj:: $(CSPROJECTS)
+ALL_TARGETS += $(CSPROJECTS)
 
 install-local:: $(INSTALL_TARGETS)
 all-local:: $(ALL_TARGETS)
 
-project-files: $(PROJECT_FILES)
+$(DOTNET_TARGETS_DIRS):
+	$(Q) mkdir -p $@
+
+dotnet: $(DOTNET_TARGETS)
+all-local:: $(DOTNET_TARGETS)
+
+$(TOP)/tools/common/SdkVersions.cs: $(TOP)/tools/common/SdkVersions.in.cs
+	@$(MAKE) -C $(TOP)/tools/mtouch ../common/SdkVersions.cs
+
+COMMA=,
+MinimumVersions.cs: MinimumVersions.cs.in Makefile $(TOP)/Make.config
+	$(Q_GEN) sed \
+		-e 's/@DOTNET_MIN_IOS_SDK_VERSION@/$(DOTNET_MIN_IOS_SDK_VERSION)/g' \
+		-e 's/@DOTNET_MIN_TVOS_SDK_VERSION@/$(DOTNET_MIN_TVOS_SDK_VERSION)/' \
+		-e 's/@DOTNET_MIN_MACOS_SDK_VERSION@/$(DOTNET_MIN_MACOS_SDK_VERSION)/' \
+		-e 's/@DOTNET_MIN_MACCATALYST_SDK_VERSION@/$(DOTNET_MIN_MACCATALYST_SDK_VERSION)/g' \
+		$< > $@
+
+# Some validations
+
+SOURCE_FILES_IN_GIT:=$(shell git ls-files -- */*.cs DotNetGlobals.cs MinimumVersions.cs MonoNativeFunctionWrapperAttribute.cs MonoPInvokeCallbackAttribute.cs | grep -v '^bgen/' | sort -u)
+SOURCE_FILES_IN_MK:=$(shell grep '[.]cs' frameworks.sources | grep -v '\#' | grep -v ':=' | grep -v 'MinimumVersions.cs' | grep -v ../runtime/Delegates.generated.cs | sed -e 's/\\//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$$//' | sort -u)
+
+SOURCE_FILES_ONLY_IN_MK:=$(filter-out $(SOURCE_FILES_IN_GIT),$(SOURCE_FILES_IN_MK))
+SOURCE_FILES_ONLY_IN_GIT:=$(filter-out $(SOURCE_FILES_IN_MK),$(SOURCE_FILES_IN_GIT))
+
+all-local:: verify
+verify:
+	@if [[ "$(words $(SOURCE_FILES_ONLY_IN_MK))" != "0" ]]; then echo "Found $(words $(SOURCE_FILES_ONLY_IN_MK)) file(s) in frameworks.sources not in source control: $(SOURCE_FILES_ONLY_IN_MK) (if you just added these files, commit them to fix this error)"; fi
+	@if [[ "$(words $(SOURCE_FILES_ONLY_IN_GIT))" != "0" ]]; then echo "Found $(words $(SOURCE_FILES_ONLY_IN_GIT)) file(s) in source control, but not in frameworks.sources: : $(SOURCE_FILES_ONLY_IN_GIT) (did you add this files, but forget to add them to frameworks.sources?)"; fi
+	@if [[ "$(words $(SOURCE_FILES_ONLY_IN_MK))$(words $(SOURCE_FILES_ONLY_IN_GIT))" != "00" ]]; then exit 1; fi
 
 # Using .SECONDARY can cause make to go into an infinite loop.
 # See https://github.com/xamarin/maccore/issues/762.

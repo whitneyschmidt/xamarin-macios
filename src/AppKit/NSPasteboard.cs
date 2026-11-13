@@ -1,32 +1,15 @@
-using System;
-using System.Runtime.InteropServices;
+#if !__MACCATALYST__
 
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AppKit {
 	public partial class NSPasteboard {
-#if !XAMCORE_2_0
-		// This is a stable API we can't break, even if it is all kinds of wrong
-		public bool WriteObjects (NSPasteboardReading [] objects)
-		{
-			var nsa_pasteboardReading = NSArray.FromNSObjects (objects);
-			bool result = WriteObjects (nsa_pasteboardReading.Handle);
-			nsa_pasteboardReading.Dispose ();
-			return result;
-		}
-#endif
-
+		/// <summary>Writes the specified objects to the pasteboard.</summary>
+		/// <param name="objects">The objects to write to the pasteboard.</param>
+		/// <returns><see langword="true" /> if the objects were written successfully; otherwise, <see langword="false" />.</returns>
 		public bool WriteObjects (INSPasteboardWriting [] objects)
-		{
-			var nsa_pasteboardReading = NSArray.FromNSObjects (objects);
-			bool result = WriteObjects (nsa_pasteboardReading.Handle);
-			nsa_pasteboardReading.Dispose ();
-			return result;
-		}
-		
-		public bool WriteObjects (NSPasteboardWriting [] objects)
 		{
 			var nsa_pasteboardReading = NSArray.FromNSObjects (objects);
 			bool result = WriteObjects (nsa_pasteboardReading.Handle);
@@ -35,3 +18,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

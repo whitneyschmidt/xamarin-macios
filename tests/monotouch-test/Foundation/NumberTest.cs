@@ -7,24 +7,6 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
@@ -86,12 +68,9 @@ namespace MonoTouchFixtures.Foundation {
 		{
 			using (var a = new NSNumber (1))
 			using (var b = new NSNumber (1d)) {
-#if !XAMCORE_2_0
-				Assert.True (a.IsEqualToNumber (b), "IsEqualToNumber");
-#endif
 				// Two objects that are equal return hash codes that are equal.
-				Assert.True (a.Equals (b), "Equals(NSNumber)");
-				Assert.True (b.Equals ((object) a), "Equals(Object)");
+				Assert.That (a.Equals (b), Is.True, "Equals(NSNumber)");
+				Assert.That (b.Equals ((object) a), Is.True, "Equals(Object)");
 				Assert.That (a.GetHashCode (), Is.EqualTo (b.GetHashCode ()), "GetHashCode");
 			}
 		}

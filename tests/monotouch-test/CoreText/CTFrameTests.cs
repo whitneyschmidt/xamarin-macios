@@ -7,25 +7,15 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using CoreText;
 using CoreGraphics;
-using ObjCRuntime;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreText {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class CTFrameTests {
-		
+
 		[Test] // #4677
 		public void GetPathTest ()
 		{
@@ -47,10 +37,10 @@ namespace MonoTouchFixtures.CoreText {
 			using (var framesetter = new CTFramesetter (new NSAttributedString ("Testing, testing, 1, 2, 3...")))
 			using (var type = framesetter.GetTypesetter ())
 			using (var newFrame = CTFramesetter.Create (type)) {
-				Assert.NotNull (type, "Create");
+				Assert.That (type, Is.Not.Null, "Create");
 				var type2 = newFrame.GetTypesetter ();
-				Assert.NotNull (type, "type2");
-				Assert.AreEqual (type.Handle, type2.Handle, "Same typesetter");
+				Assert.That (type, Is.Not.Null, "type2");
+				Assert.That (type2.Handle, Is.EqualTo (type.Handle), "Same typesetter");
 			}
 		}
 	}

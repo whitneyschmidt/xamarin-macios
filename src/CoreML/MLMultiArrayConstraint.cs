@@ -1,4 +1,4 @@
-﻿//
+//
 // MLMultiArrayConstraint.cs
 //
 // Authors:
@@ -7,19 +7,16 @@
 // Copyright 2017 Microsoft Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace CoreML {
 	public partial class MLMultiArrayConstraint {
-		public nint[] Shape {
+		/// <summary>Gets an array of array dimensions for the multidimensional arrays.</summary>
+		/// <value>An array of dimension sizes.</value>
+		public nint [] Shape {
 			get {
 				return MLMultiArray.ConvertArray (_Shape);
 			}
 		}
 	}
 }
-#endif

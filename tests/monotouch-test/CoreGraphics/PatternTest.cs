@@ -7,13 +7,7 @@
 // Copyright 2019 Microsoft Corp. All rights reserved.
 //
 
-using System;
-using System.Drawing;
-using System.Runtime.InteropServices;
-
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
 #if __MACOS__
 using AppKit;
 using UIImage = AppKit.NSImage;
@@ -21,8 +15,6 @@ using UIColor = AppKit.NSColor;
 #else
 using UIKit;
 #endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
@@ -34,7 +26,7 @@ namespace MonoTouchFixtures.CoreGraphics {
 		{
 			// Render an image with a pattern, and show it briefly on screen.
 			// It's supposed to show a blue oval with green plus signs inside.
-			TestRuntime.RunAsync (DateTime.Now.AddSeconds (0.1), () => { }, () => true, GetRenderedPattern ());
+			TestRuntime.RunAsync (TimeSpan.FromSeconds (0.1), () => { }, () => true, GetRenderedPattern ());
 		}
 
 		public UIImage GetRenderedPattern ()

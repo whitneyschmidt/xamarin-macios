@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CTParagraphStyle
 //
 // Authors:
@@ -7,28 +7,9 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using NUnit.Framework;
 using System.Linq;
 
-#if XAMCORE_2_0
-using Foundation;
 using CoreText;
-#else
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-#endif
-
-
-#if XAMCORE_2_0
-using RectangleF = CoreGraphics.CGRect;
-using SizeF = CoreGraphics.CGSize;
-using PointF = CoreGraphics.CGPoint;
-#else
-using nfloat = global::System.Single;
-using nint = global::System.Int32;
-using nuint = global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreText {
 
@@ -61,24 +42,24 @@ namespace MonoTouchFixtures.CoreText {
 
 			var style = new CTParagraphStyle (settings);
 			Assert.DoesNotThrow (() => {
-				Assert.AreEqual (settings.TailIndent, style.TailIndent, "TailIndent");
-				Assert.AreEqual (settings.ParagraphSpacingBefore, style.ParagraphSpacingBefore, "ParagraphSpacingBefore");
-				Assert.AreEqual (settings.ParagraphSpacing, style.ParagraphSpacing, "ParagraphSpacing");
-				Assert.AreEqual (settings.LineSpacing, style.LineSpacing, "LineSpacing");
-				Assert.AreEqual (settings.MinimumLineHeight, style.MinimumLineHeight, "MinimumLineHeight");
-				Assert.AreEqual (settings.MaximumLineHeight, style.MaximumLineHeight, "MaximumLineHeight");
-				Assert.AreEqual (settings.LineHeightMultiple, style.LineHeightMultiple, "LineHeightMultiple");
-				Assert.AreEqual (settings.DefaultTabInterval, style.DefaultTabInterval, "DefaultTabInterval");
-				Assert.AreEqual (settings.HeadIndent, style.HeadIndent, "HeadIndent");
-				Assert.AreEqual (settings.FirstLineHeadIndent, style.FirstLineHeadIndent, "FirstLineHeadIndent");
-				Assert.AreEqual (settings.LineBreakMode, style.LineBreakMode, "LineBreakMode");
-				Assert.AreEqual (settings.BaseWritingDirection, style.BaseWritingDirection, "LineBreakMode");
-				Assert.AreEqual (settings.Alignment, style.Alignment, "Alignment");
+				Assert.That ((nfloat) style.TailIndent, Is.EqualTo (settings.TailIndent), "TailIndent");
+				Assert.That ((nfloat) style.ParagraphSpacingBefore, Is.EqualTo (settings.ParagraphSpacingBefore), "ParagraphSpacingBefore");
+				Assert.That ((nfloat) style.ParagraphSpacing, Is.EqualTo (settings.ParagraphSpacing), "ParagraphSpacing");
+				Assert.That ((nfloat) style.LineSpacing, Is.EqualTo (settings.LineSpacing), "LineSpacing");
+				Assert.That ((nfloat) style.MinimumLineHeight, Is.EqualTo (settings.MinimumLineHeight), "MinimumLineHeight");
+				Assert.That ((nfloat) style.MaximumLineHeight, Is.EqualTo (settings.MaximumLineHeight), "MaximumLineHeight");
+				Assert.That ((nfloat) style.LineHeightMultiple, Is.EqualTo (settings.LineHeightMultiple), "LineHeightMultiple");
+				Assert.That ((nfloat) style.DefaultTabInterval, Is.EqualTo (settings.DefaultTabInterval), "DefaultTabInterval");
+				Assert.That ((nfloat) style.HeadIndent, Is.EqualTo (settings.HeadIndent), "HeadIndent");
+				Assert.That ((nfloat) style.FirstLineHeadIndent, Is.EqualTo (settings.FirstLineHeadIndent), "FirstLineHeadIndent");
+				Assert.That (style.LineBreakMode, Is.EqualTo (settings.LineBreakMode), "LineBreakMode");
+				Assert.That (style.BaseWritingDirection, Is.EqualTo (settings.BaseWritingDirection), "LineBreakMode");
+				Assert.That (style.Alignment, Is.EqualTo (settings.Alignment), "Alignment");
 
 				var styleTabStops = style.GetTabStops ();
-				Assert.AreEqual (settings.TabStops.Count (), styleTabStops.Length, "TabStops");
-				Assert.True (styleTabStops.Any (t => t.Location == 2 && t.TextAlignment == CTTextAlignment.Justified));
-				Assert.True (styleTabStops.Any (t => t.Location == 1 && t.TextAlignment == CTTextAlignment.Natural));
+				Assert.That (styleTabStops.Length, Is.EqualTo (settings.TabStops.Count ()), "TabStops");
+				Assert.That (styleTabStops.Any (t => t.Location == 2 && t.TextAlignment == CTTextAlignment.Justified), Is.True, "Has Justified tab at 2");
+				Assert.That (styleTabStops.Any (t => t.Location == 1 && t.TextAlignment == CTTextAlignment.Natural), Is.True, "Has Natural tab at 1");
 			});
 		}
 	}

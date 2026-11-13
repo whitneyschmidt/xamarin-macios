@@ -25,25 +25,24 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if !WATCH
-
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
 	// Convenience enum for native strings - AVAnimation.h
-	public enum AVLayerVideoGravity
-	{
-		ResizeAspect ,
+	/// <summary>An enumeration whose values specify how a video should resize itself to display within a layer's <see cref="CoreAnimation.CALayer.Bounds" />.</summary>
+	///     <remarks>To be added.</remarks>
+	public enum AVLayerVideoGravity {
+		/// <summary>To be added.</summary>
+		ResizeAspect,
+		/// <summary>To be added.</summary>
 		ResizeAspectFill,
-		Resize
+		/// <summary>To be added.</summary>
+		Resize,
 	}
 
-	partial class AVPlayerLayer
-	{
+	partial class AVPlayerLayer {
 		static internal AVLayerVideoGravity KeyToEnum (NSString key, bool clamp = true)
 		{
 			if (key == AVPlayerLayer.GravityResize)
@@ -57,7 +56,7 @@ namespace AVFoundation {
 			return (AVLayerVideoGravity) (-1);
 		}
 
-		static internal NSString EnumToKey (AVLayerVideoGravity vg)
+		static internal NSString EnumToKey (AVLayerVideoGravity? vg)
 		{
 			switch (vg) {
 			case AVLayerVideoGravity.ResizeAspect:
@@ -67,19 +66,16 @@ namespace AVFoundation {
 			case AVLayerVideoGravity.Resize:
 				return AVPlayerLayer.GravityResize;
 			default:
-				return null;
+				return null!;
 			}
 		}
-		
-		
+
+
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
-		{
+		/// <summary>Gets or sets a value that controls how the visual content is displayed within the bounds of the layer.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public AVLayerVideoGravity VideoGravity {
 			set {
 				WeakVideoGravity = EnumToKey (value);
 			}
@@ -90,16 +86,12 @@ namespace AVFoundation {
 	}
 
 #if !TVOS
-	partial class AVCaptureVideoPreviewLayer
-	{
+	partial class AVCaptureVideoPreviewLayer {
 		// Should be VideoGravity only but previous binding was wrong
-		public AVLayerVideoGravity 
-#if XAMCORE_2_0
-			VideoGravity
-#else
-			LayerVideoGravity
-#endif
-		{
+		/// <summary>Gets or sets how the video is displayed within the layer's <see cref="CoreAnimation.CALayer.Bounds" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public AVLayerVideoGravity VideoGravity {
 			set {
 				WeakVideoGravity = AVPlayerLayer.EnumToKey (value);
 			}
@@ -110,14 +102,14 @@ namespace AVFoundation {
 	}
 #endif
 
-	partial class AVPlayer
-	{
+	partial class AVPlayer {
+		/// <summary>The technique used to modify the video playback aspect ratio during external playback.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AVLayerVideoGravity? ExternalPlaybackVideoGravity {
-			[iOS (6,0)]
 			set {
-				WeakExternalPlaybackVideoGravity = value.HasValue ? AVPlayerLayer.EnumToKey (value.Value) : null;
+				WeakExternalPlaybackVideoGravity = AVPlayerLayer.EnumToKey (value);
 			}
-			[iOS (6,0)]
 			get {
 				var r = AVPlayerLayer.KeyToEnum (WeakExternalPlaybackVideoGravity, false);
 				if (((int) r) == -1)
@@ -127,5 +119,3 @@ namespace AVFoundation {
 		}
 	}
 }
-
-#endif

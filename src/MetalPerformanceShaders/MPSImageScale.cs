@@ -1,17 +1,16 @@
-#if XAMCORE_2_0 || !MONOMAC
 // Copyright 2015 Xamarin Inc. All rights reserved.
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
+#nullable enable
+
 using Metal;
-using ObjCRuntime;
 
 namespace MetalPerformanceShaders {
 
 	public partial class MPSImageScale {
-		static int size_of_scale_transform = Marshal.SizeOf (typeof(MPSScaleTransform));
+		static int size_of_scale_transform = Marshal.SizeOf<MPSScaleTransform> ();
 
+		/// <summary>Gets or sets the scale transform applied to the image.</summary>
+		/// <value>The scale transform, or <see langword="null" /> if no transform is set.</value>
 		public virtual MPSScaleTransform? ScaleTransform {
 			get {
 				var ptr = _GetScaleTransform ();
@@ -25,8 +24,7 @@ namespace MetalPerformanceShaders {
 					try {
 						Marshal.StructureToPtr<MPSScaleTransform> (value.Value, ptr, false);
 						_SetScaleTransform (ptr);
-					}
-					finally {
+					} finally {
 						Marshal.FreeHGlobal (ptr);
 					}
 				} else {
@@ -36,4 +34,3 @@ namespace MetalPerformanceShaders {
 		}
 	}
 }
-#endif

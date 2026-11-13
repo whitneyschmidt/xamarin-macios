@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGFont
 //
 // Authors:
@@ -7,25 +7,12 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
 using CoreGraphics;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
@@ -49,13 +36,13 @@ namespace MonoTouchFixtures.CoreGraphics {
 		[Test]
 		public void CreateFromProvider ()
 		{
-			Assert.Null (CGFont.CreateFromProvider (null), "CreateFromProvider");
+			Assert.That (CGFont.CreateFromProvider (null), Is.Null, "CreateFromProvider");
 		}
 
 		[Test]
 		public void CreateWithFontName ()
 		{
-			Assert.Null (CGFont.CreateWithFontName (null), "CreateWithFontName");
+			Assert.That (CGFont.CreateWithFontName (null), Is.Null, "CreateWithFontName");
 		}
 
 		[Test]

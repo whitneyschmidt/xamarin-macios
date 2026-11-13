@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGColorConversionInfo
 //
 // Authors:
@@ -7,33 +7,23 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
+
+using GColorConversionInfoTriple = CoreGraphics.CGColorConversionInfoTriple;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class ColorConversionInfoTest {
 
 		[Test]
 		public void CreateNone ()
 		{
-			TestRuntime.AssertXcodeVersion (8,0);
+			TestRuntime.AssertXcodeVersion (8, 0);
 
-			Assert.Throws<ArgumentNullException> (() => new CGColorConversionInfo (null, (CGColorSpace)null), "null");
-			Assert.Throws<ArgumentNullException> (() => new CGColorConversionInfo ((NSDictionary) null, (GColorConversionInfoTriple [])null), "null-2");
+			Assert.Throws<ArgumentNullException> (() => new CGColorConversionInfo (null, (CGColorSpace) null), "null");
+			Assert.Throws<ArgumentNullException> (() => new CGColorConversionInfo ((NSDictionary) null, (GColorConversionInfoTriple []) null), "null-2");
 			Assert.Throws<ArgumentNullException> (() => new CGColorConversionInfo ((NSDictionary) null, new GColorConversionInfoTriple [0]), "empty");
 		}
 
@@ -107,7 +97,7 @@ namespace MonoTouchFixtures.CoreGraphics {
 		public void CreateTooMany ()
 		{
 			TestRuntime.AssertXcodeVersion (8, 0);
-			Assert.Throws<ArgumentException> (() => new CGColorConversionInfo ((CGColorConversionOptions) null, new GColorConversionInfoTriple [4]));
+			Assert.Throws<ArgumentException> (() => new CGColorConversionInfo ((CGColorConversionOptions) null, new GColorConversionInfoTriple [5]));
 		}
 
 		[Test]
@@ -132,8 +122,8 @@ namespace MonoTouchFixtures.CoreGraphics {
 
 			using (var from = CGColorSpace.CreateGenericGray ())
 			using (var to = CGColorSpace.CreateGenericRgb ()) {
-				var handle = CGColorConversionInfoCreate (from == null ? IntPtr.Zero : from.Handle,
-														   to == null ? IntPtr.Zero : to.Handle);
+				var handle = CGColorConversionInfoCreate (from is null ? IntPtr.Zero : from.Handle,
+														   to is null ? IntPtr.Zero : to.Handle);
 				using (var o = Runtime.GetINativeObject<CGColorConversionInfo> (handle, false)) {
 					Assert.That (o.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
 				}
@@ -153,6 +143,39 @@ namespace MonoTouchFixtures.CoreGraphics {
 				Assert.Throws<Exception> (() => new CGColorConversionInfo (from, to));
 			}
 		}
+
+		[Test]
+		public void CGColorSpace_CGColorSpace_NSDictionary ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using (var from = CGColorSpace.CreateGenericGray ())
+			using (var to = CGColorSpace.CreateGenericRgb ()) {
+				using (var converter = new CGColorConversionInfo (from, to, (NSDictionary) null)) {
+					Assert.That (converter.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle - null");
+				}
+				using (var d = new NSDictionary ())
+				using (var converter = new CGColorConversionInfo (from, to, d)) {
+					Assert.That (converter.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
+				}
+			}
+		}
+
+		[Test]
+		public void CGColorSpace_CGColorSpace_CGColorConversionOptions ()
+		{
+			TestRuntime.AssertXcodeVersion (11, 0);
+			using (var from = CGColorSpace.CreateGenericGray ())
+			using (var to = CGColorSpace.CreateGenericRgb ()) {
+				using (var converter = new CGColorConversionInfo (from, to, (CGColorConversionOptions) null)) {
+					Assert.That (converter.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle-null");
+				}
+
+				var o = new CGColorConversionOptions ();
+				o.BlackPointCompensation = true;
+				using (var converter = new CGColorConversionInfo (from, to, o)) {
+					Assert.That (converter.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
+				}
+			}
+		}
 	}
 }
-

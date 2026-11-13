@@ -25,33 +25,37 @@
 //
 #pragma warning disable 414
 
-#if !WATCH // doesn't show up in watch headers
-#if XAMCORE_2_0 || !MONOMAC
-
-using System;
 using System.Threading.Tasks;
 using System.Threading;
-using Foundation;
+
+#nullable enable
 
 namespace MapKit {
 	public partial class MKLocalSearch {
 
-		public virtual Task<MKLocalSearchResponse> StartAsync (CancellationToken token)
+		/// <summary>Asynchronously starts the local search.</summary>
+		/// <param name="token">A cancellation token that can be used to cancel the search.</param>
+		/// <returns>A task that represents the asynchronous search operation. The result may be <see langword="null" /> if the search was cancelled.</returns>
+		/// <remarks>
+		///   <para tool="threads">This can be used from a background thread.</para>
+		/// </remarks>
+		public virtual Task<MKLocalSearchResponse?> StartAsync (CancellationToken token)
 		{
-			var tcs = new TaskCompletionSource<MKLocalSearchResponse> ();
+			var tcs = new TaskCompletionSource<MKLocalSearchResponse?> ();
 
 			if (token.IsCancellationRequested) {
 				tcs.SetCanceled ();
 			} else {
 				var tcr = token.Register (() => { this.Cancel (); tcs.TrySetCanceled (); });
-				Start((response, error) => {
+				Start ((response, error) => {
 					tcr.Dispose ();
 					if (token.IsCancellationRequested) {
 						tcs.TrySetCanceled ();
 					} else {
-						if (error != null)
-							tcs.SetException (new NSErrorException(error));
+						if (error is not null)
+							tcs.SetException (new NSErrorException (error));
 						else
+							// response can be null if the search was cancelled
 							tcs.SetResult (response);
 					}
 				});
@@ -61,5 +65,3 @@ namespace MapKit {
 		}
 	}
 }
-#endif
-#endif // !WATCH

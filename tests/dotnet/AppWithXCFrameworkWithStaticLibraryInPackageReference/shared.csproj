@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<ApplicationTitle>AppWithXCFrameworkWithStaticLibraryInPackageReference</ApplicationTitle>
+		<ApplicationId>com.xamarin.appwithxcframeworkwithstaticlibraryinpackagereference</ApplicationId>
+		<ApplicationVersion>1.0</ApplicationVersion>
+	</PropertyGroup>
+
+	<Import Project="../../common/shared-dotnet.csproj" />
+
+	<ItemGroup>
+		<PackageReference Include="Xamarin.Tests.XCFrameworkWithStaticLibraryInRuntimesNativeDirectory" Version="1.0.0" />
+		<!-- Improve the below when https://github.com/xamarin/xamarin-macios/issues/17665 is fixed -->
+		<_NativeExecutableFrameworks Include="CoreLocation" />
+		<_NativeExecutableFrameworks Include="ModelIO" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="../*.cs" />
+	</ItemGroup>
+</Project>

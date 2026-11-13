@@ -11,40 +11,69 @@ fi
 #git clean -xfdq
 
 DIR=$(pwd)/mac-test-package/mac-test-package
-ZIP=$DIR.zip
-rm -Rf $DIR
-mkdir -p $DIR
+rm -Rf "$DIR"
+mkdir -p "$DIR"
 
 make test.config
-source test.config
-export MD_APPLE_SDK_ROOT=$(dirname $(dirname $XCODE_DEVELOPER_ROOT))
-export XAMMAC_FRAMEWORK_PATH=$MAC_DESTDIR/Library/Frameworks/Xamarin.Mac.framework/Versions/Current
-export XamarinMacFrameworkRoot=$MAC_DESTDIR/Library/Frameworks/Xamarin.Mac.framework/Versions/Current
-export TargetFrameworkFallbackSearchPaths=$MAC_DESTDIR/Library/Frameworks/Mono.framework/External/xbuild-frameworks
-export MSBuildExtensionsPathFallbackPathsOverride=$MAC_DESTDIR/Library/Frameworks/Mono.framework/External/xbuild
+cat test.config
+INCLUDE_MAC=$(grep ^INCLUDE_MAC= test.config | sed 's/.*=//')
+INCLUDE_MACCATALYST=$(grep ^INCLUDE_MACCATALYST= test.config | sed 's/.*=//')
+XCODE_DEVELOPER_ROOT=$(grep ^XCODE_DEVELOPER_ROOT= test.config | sed 's/.*=//')
+export DEVELOPER_DIR="$(dirname "$(dirname "$XCODE_DEVELOPER_ROOT")")"
+export RootTestsDirectory="$(pwd)"
 
 make
-make .stamp-configure-projects-mac
-../tools/xibuild/xibuild -- bindings-test/bindings-test-mac.csproj
-make build-mac-dontlink build-mac-apitest build-mac-introspection build-mac-linksdk build-mac-linkall build-mac-xammac_tests build-mac-system-dontlink -j8
+make -C ../tools/spawner
 
-for app in */bin/x86/*/*.app linker/mac/*/bin/x86/*/*.app introspection/Mac/bin/x86/*/*.app; do
+TEST_SUITE_DEPENDENCIES+=(bindings-test)
+TEST_SUITE_DEPENDENCIES+=(EmbeddedResources)
+TEST_SUITE_DEPENDENCIES+=(fsharplibrary)
+TEST_SUITE_DEPENDENCIES+=(BundledResources)
+
+for dep in "${TEST_SUITE_DEPENDENCIES[@]}"; do
+	if test -n "$INCLUDE_MAC"; then
+		make -C "$dep"/dotnet/macOS build
+	fi
+	if test -n "$INCLUDE_MACCATALYST"; then
+		make -C "$dep"/dotnet/MacCatalyst build
+	fi
+done
+
+TEST_SUITES+=(build-dontlink)
+TEST_SUITES+=(build-linksdk)
+TEST_SUITES+=(build-linkall)
+TEST_SUITES+=(build-introspection)
+TEST_SUITES+=(build-monotouch-test)
+
+make -f packaged-macos-tests.mk "${TEST_SUITES[@]}" $MAKE_FLAGS
+
+for app in linker/*/dotnet/*/bin/*/*/*/*.app */dotnet/*/bin/*/*/*/*.app; do
 	mkdir -p "$DIR/tests/$app"
 	$CP -R "$app" "$DIR/tests/$app/.."
 done
 
-$CP -p Makefile-mac.inc $DIR/tests
-$CP -p common.mk $DIR/tests
-$CP -p Makefile $DIR/tests
-$CP -p ../Make.config $DIR
-$CP -p ../Make.versions $DIR
-$CP -p test-dependencies.sh $DIR
-$CP -p ../system-dependencies.sh $DIR
-mkdir -p $DIR/mk
-$CP -p ../Make.config $DIR
-$CP -p ../mk/subdirs.mk $DIR/mk
-$CP -p ../mk/rules.mk $DIR/mk
-$CP -p ../mk/quiet.mk $DIR/mk
+$CP -p packaged-macos-tests.mk "$DIR/tests"
+$CP -p ../Make.config "$DIR"
+$CP -p ../Make.versions "$DIR"
+$CP -p test-dependencies.sh "$DIR"
+$CP -p ../system-dependencies.sh "$DIR"
+if test -f ../configure.inc; then
+	$CP -p ../configure.inc "$DIR"
+fi
+mkdir -p "$DIR/mk"
+$CP -p ../mk/subdirs.mk "$DIR/mk"
+$CP -p ../mk/rules.mk "$DIR/mk"
+$CP -p ../mk/quiet.mk "$DIR/mk"
+$CP -cp ../Directory.Build.props "$DIR/"
+mkdir -p "$DIR/scripts/run-with-timeout"
+$CP -cp ../scripts/Directory.Build.props "$DIR/scripts/"
+$CP -cp ../scripts/*.mk "$DIR/scripts/"
+$CP -cp ../scripts/run-with-timeout/*.cs* "$DIR/scripts/run-with-timeout/"
+$CP -cp ../scripts/run-with-timeout/*.mk "$DIR/scripts/run-with-timeout/"
+mkdir -p "$DIR/scripts/run-packaged-macos-tests"
+$CP -cp ../scripts/run-packaged-macos-tests/*.cs* "$DIR/scripts/run-packaged-macos-tests/"
+$CP -cp ../scripts/run-packaged-macos-tests/*.mk "$DIR/scripts/run-packaged-macos-tests/"
+mkdir -p "$DIR/tools/spawner"
+$CP -p ../tools/spawner/spawner "$DIR/tools/spawner/"
 
-# 7za compresses better, because there are many duplicated files
-cd mac-test-package && zip -r ../mac-test-package.zip *
+cd mac-test-package && 7z a ../mac-test-package.7z ./*

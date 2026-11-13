@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for MidiEndpointTest
 //
 // Authors:
@@ -8,11 +8,8 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 && !__TVOS__ && !__WATCHOS__
-using System;
-using Foundation;
+#if !__TVOS__
 using CoreMidi;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreMidi {
 	[TestFixture]

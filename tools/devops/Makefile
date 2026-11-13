@@ -1,0 +1,25 @@
+TOP=../..
+include $(TOP)/Make.config
+
+LocProject.json: generate-loc-project.sh Makefile $(TOP)/Make.config
+	$(Q_GEN) $(TOP)/tools/devops/generate-loc-project.sh "$(CURDIR)" "$(TOP)" > $(TOP)/Localize/$@;
+
+all check: check-sh check-yaml
+	@true
+
+check-sh:
+	$(Q) if ! type shellcheck >/dev/null; then echo "shellcheck is not installed. Install it like this: 'brew install shellcheck'"; exit 1; fi
+	$(Q) shellcheck $(shell find . -name '*.sh')
+
+check-yml check-yaml:
+	$(Q) if ! type yamllint >/dev/null; then echo "yamllint is not installed. Install it like this: 'brew install yamllint'"; exit 1; fi
+	$(Q) yamllint -c .yamllint.yml $(shell find . -name '*.yml')
+
+print-abspath-variable:
+	@echo $(VARIABLE)=$(abspath $($(VARIABLE)))
+
+print-variable:
+	@echo $(VARIABLE)=$($(VARIABLE))
+
+print-variable-value-to-file:
+	@echo $($(VARIABLE)) > "$(FILE)"

@@ -6,43 +6,54 @@
 // Copyright (C) 2009 Novell, Inc
 //
 
-using System;
+#nullable enable
+
 using System.Collections;
 using System.Collections.Generic;
 
 using AddressBook;
-using Foundation;
-using ObjCRuntime;
 
 namespace AddressBookUI {
 
 	delegate T ABFunc<T> ();
 
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
+	/// <summary>A collection of <see cref="AddressBook.ABPersonProperty" />s returned by the <see cref="AddressBookUI.ABPeoplePickerNavigationController.DisplayedProperties" /> and <see cref="AddressBookUI.ABPersonViewController.DisplayedProperties" /> properties.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[ObsoletedOSPlatform ("ios", "Use the 'Contacts' API instead.")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("macos")]
+	[UnsupportedOSPlatform ("tvos")]
 	public class DisplayedPropertiesCollection : ICollection<ABPersonProperty> {
 
-		ABFunc<NSNumber[]> g;
-		Action<NSNumber[]> s;
+		ABFunc<NSNumber []?> g;
+		Action<NSNumber []?> s;
 
-		internal DisplayedPropertiesCollection (ABFunc<NSNumber[]> g, Action<NSNumber[]> s)
+		internal DisplayedPropertiesCollection (ABFunc<NSNumber []?> g, Action<NSNumber []?> s)
 		{
 			this.g = g;
 			this.s = s;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public int Count {
-			get {return g ().Length;}
+			get { return g ()!.Length; }
 		}
 
 		bool ICollection<ABPersonProperty>.IsReadOnly {
-			get {return false;}
+			get { return false; }
 		}
 
+		/// <param name="item">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Add (ABPersonProperty item)
 		{
 			List<NSNumber> values;
 			var dp = g ();
-			if (dp != null)
+			if (dp is not null)
 				values = new List<NSNumber> (dp);
 			else
 				values = new List<NSNumber> ();
@@ -50,16 +61,22 @@ namespace AddressBookUI {
 			s (values.ToArray ());
 		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Clear ()
 		{
 			s (new NSNumber [0]);
 		}
 
+		/// <param name="item">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Contains (ABPersonProperty item)
 		{
 			int id = ABPersonPropertyId.ToId (item);
 			var values = g ();
-			if (values == null)
+			if (values is null)
 				return false;
 
 			for (int i = 0; i < values.Length; ++i)
@@ -68,10 +85,14 @@ namespace AddressBookUI {
 			return false;
 		}
 
-		public void CopyTo (ABPersonProperty[] array, int arrayIndex)
+		/// <param name="array">To be added.</param>
+		///         <param name="arrayIndex">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void CopyTo (ABPersonProperty [] array, int arrayIndex)
 		{
-			if (array == null)
-				throw new ArgumentNullException ("array");
+			if (array is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (array));
 			if (arrayIndex < 0)
 				throw new ArgumentOutOfRangeException ("arrayIndex");
 			if (arrayIndex > array.Length)
@@ -84,15 +105,19 @@ namespace AddressBookUI {
 				array [arrayIndex++] = e.Current;
 		}
 
+		/// <param name="item">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Remove (ABPersonProperty item)
 		{
 			var dp = g ();
-			if (dp == null)
+			if (dp is null)
 				return false;
 			var id = ABPersonPropertyId.ToId (item);
 			var values = new List<NSNumber> (dp);
 			bool found = false;
-			for (int i = values.Count-1; i >= 0; --i)
+			for (int i = values.Count - 1; i >= 0; --i)
 				if (values [i].Int32Value == id) {
 					values.RemoveAt (i);
 					found = true;
@@ -102,14 +127,23 @@ namespace AddressBookUI {
 			return true;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		IEnumerator IEnumerable.GetEnumerator ()
 		{
 			return GetEnumerator ();
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IEnumerator<ABPersonProperty> GetEnumerator ()
 		{
 			var values = g ();
+			if (values is null) {
+				yield break;
+			}
 			for (int i = 0; i < values.Length; ++i)
 				yield return ABPersonPropertyId.ToPersonProperty (values [i].Int32Value);
 		}

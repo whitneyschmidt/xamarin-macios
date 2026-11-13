@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -8,12 +8,12 @@ using Mono.Cecil;
 using Xamarin.Bundler;
 using Registrar;
 
-namespace Xamarin.Bundler
-{
-	class PInvokeWrapperGenerator
-	{
-		public Application App;
-		public Dictionary<string,string> signatures = new Dictionary<string, string> ();
+#nullable enable
+
+namespace Xamarin.Bundler {
+	class PInvokeWrapperGenerator {
+		public required Application App { get; set; }
+		public Dictionary<string, string> signatures = new Dictionary<string, string> ();
 		public List<Exception> exceptions = new List<Exception> ();
 		public StringBuilder signature = new StringBuilder ();
 		public HashSet<string> names = new HashSet<string> ();
@@ -23,10 +23,10 @@ namespace Xamarin.Bundler
 		AutoIndentStringBuilder decls = new AutoIndentStringBuilder ();
 		AutoIndentStringBuilder mthds = new AutoIndentStringBuilder ();
 		AutoIndentStringBuilder ifaces = new AutoIndentStringBuilder ();
-						
-		public StaticRegistrar Registrar;
-		public string HeaderPath;
-		public string SourcePath;
+
+		public required StaticRegistrar Registrar { get; set; }
+		public required string HeaderPath { get; set; }
+		public required string SourcePath { get; set; }
 
 		bool first;
 
@@ -37,25 +37,17 @@ namespace Xamarin.Bundler
 		}
 
 		public void Start ()
-		{							
+		{
 			if (App.EnableDebug)
 				hdr.WriteLine ("#define DEBUG 1");
 
 			hdr.WriteLine ("#include <stdarg.h>");
-#if MMP
-			if (Driver.IsClassic) {
-				hdr.WriteLine ("#include <xamarin-classic/xamarin.h>");
-			} else {
-				hdr.WriteLine ("#include <xamarin/xamarin.h>");
-			}
-#else
 			hdr.WriteLine ("#include <xamarin/xamarin.h>");
-#endif
 			hdr.WriteLine ("#include <objc/objc.h>");
 			hdr.WriteLine ("#include <objc/runtime.h>");
 			hdr.WriteLine ("#include <objc/message.h>");
 
-			Registrar.GeneratePInvokeWrappersStart (hdr, decls, mthds, ifaces) ;
+			Registrar.GeneratePInvokeWrappersStart (hdr, decls, mthds, ifaces);
 
 			mthds.WriteLine ($"#include \"{Path.GetFileName (HeaderPath)}\"");
 
@@ -78,8 +70,8 @@ namespace Xamarin.Bundler
 
 			Registrar.GeneratePInvokeWrappersEnd ();
 
-			Driver.WriteIfDifferent (HeaderPath, hdr.ToString () + "\n" + decls.ToString () + "\n" + ifaces.ToString () + "\n", true);
-			Driver.WriteIfDifferent (SourcePath, mthds.ToString () + "\n" + sb.ToString () + "\n", true);
+			Driver.WriteIfDifferent (App, HeaderPath, hdr.ToString () + "\n" + decls.ToString () + "\n" + ifaces.ToString () + "\n", true);
+			Driver.WriteIfDifferent (App, SourcePath, mthds.ToString () + "\n" + sb.ToString () + "\n", true);
 		}
 
 		public void ProcessMethod (MethodDefinition method)
@@ -93,4 +85,3 @@ namespace Xamarin.Bundler
 		}
 	}
 }
-

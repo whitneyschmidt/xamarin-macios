@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CTStringAttributes
 //
 // Authors:
@@ -7,49 +7,55 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 using UIColor = AppKit.NSColor;
 #else
-using ObjCRuntime;
 using UIKit;
 #endif
 using CoreGraphics;
 using CoreText;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 using System.Drawing;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-
-namespace MonoTouchFixtures.CoreText
-{
+namespace MonoTouchFixtures.CoreText {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class CTLineTests
-	{
+	public class CTLineTests {
+		[TestCase (false)]
+		[TestCase (true)]
+		public void EnumerateCaretOffsetsKeepsLineAlive (bool stopAfterFirst)
+		{
+			TestRuntime.AssertXcodeVersion (7, 0);
+			using var text = new NSAttributedString ("Hello");
+			var line = new CTLine (text);
+			var reference = new WeakReference (line);
+			var handle = line.Handle;
+			var alive = true;
+			var count = 0;
+
+			// An independent native retain makes a lifetime regression fail without crashing.
+			TestRuntime.CFRetain (handle);
+			try {
+				line.EnumerateCaretOffsets ((double offset, nint charIndex, bool leadingEdge, ref bool stop) => {
+					GC.Collect ();
+					GC.WaitForPendingFinalizers ();
+					alive &= reference.IsAlive;
+					count++;
+					stop = stopAfterFirst;
+				});
+				Assert.That (alive, Is.True, "Line must remain alive during enumeration");
+				Assert.That (count, stopAfterFirst ? Is.EqualTo (1) : Is.GreaterThan (1), "Callbacks");
+			} finally {
+				TestRuntime.CFRelease (handle);
+			}
+		}
+
 		[Test]
 		public void EnumerateCaretOffsets ()
 		{
 			if (!TestRuntime.CheckXcodeVersion (7, 0))
 				Assert.Ignore ("Requires iOS9+ or macOS 10.11+");
-			
+
 			var sa = new CTStringAttributes ();
 			sa.ForegroundColor = TestRuntime.GetCGColor (UIColor.Blue);
 			sa.Font = new CTFont ("Georgia-BoldItalic", 24);
@@ -61,14 +67,10 @@ namespace MonoTouchFixtures.CoreText
 
 			var line = new CTLine (attributedString);
 			bool executed = false;
-#if XAMCORE_2_0
 			line.EnumerateCaretOffsets ((double o, nint charIndex, bool leadingEdge, ref bool stop) => {
-#else
-			line.EnumerateCaretOffsets ((double o, int charIndex, bool leadingEdge, ref bool stop) => {
-#endif
 				executed = true;
 			});
-			Assert.IsTrue (executed);
+			Assert.That (executed, Is.True);
 		}
 
 		[Test]
@@ -76,7 +78,7 @@ namespace MonoTouchFixtures.CoreText
 		{
 			using (var a = new NSAttributedString ())
 			using (var l = new CTLine (a)) {
-				Assert.True (l.GetImageBounds (null).IsEmpty, "GetImageBounds");
+				Assert.That (l.GetImageBounds (null).IsEmpty, Is.True, "GetImageBounds");
 			}
 		}
 	}

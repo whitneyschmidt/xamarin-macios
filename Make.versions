@@ -1,47 +1,125 @@
 #
-# A release branch requires updating the following two variables at the bottom of this file:
+# A release branch requires updating the following four variables further down in this file:
 #
-# IOS_PACKAGE_VERSION (major/minor/revision #)
-# MAC_PACKAGE_VERSION (major/minor/revision #)
+# IOS_NUGET_VERSION (major/minor/patch #)
+# TVOS_NUGET_VERSION (major/minor/patch #)
+# MACOS_NUGET_VERSION (major/minor/patch #)
+# MACCATALYST_NUGET_VERSION (major/minor/patch #)
 #
-# Update version numbers on master as well, to the next version
-#
-
-#
-# ** Version numbers **
-#
-# Versions are defined as: Major.Minor.Revison.Build
-#
-# Major/minor (first/second numbers - max 2 digits each):
-# - Bump for major/minor releases.
-#
-# Revision (third number - max 2 digits):
-# - Reset to 0 after a major or minor bump (do not use 99 for Xcode preview
-#   branches (use 0 instead), because otherwise we can't bump it further if
-#   needed).
-# - Bump for service releases and previews.
-# - Bump if commit distance becomes > 999.
-# - Can also be bumped for other reasons (in particular there's no correlation
-#   between Preview/Service Release #X and Revision #Y).
-#   - Bumping revision to a high enough number to make it clear that there's
-#     no correlation is a valid reason to bump.
-# - The revision must be bumped at the same time for both iOS and Mac
-#   (otherwise the commit distance will differ).
-# - Also bump if the [IOS|MAC]_PACKAGE_VERSION lines change for any other
-#   reason (otherwise we end up with repeating version numbers, since the
-#   commit distance would restart at 0, while the other numbers wouldn't
-#   change).
-# - Any other problem can also usually be solved by bumping the revision.
-# - Do not refactor the revision to a separate variable, because the reason
-#   bumping the revision is a general solution for many problems is that it
-#   also resets the commit distance (which wouldn't happen if the revision was
-#   refactored to a separate variable).
-#
-# Build (fourth number - max 3 digits):
-# - Automatically calculated as the number of commits since the last time any
-#   of the other three numbers changed (technically since the corresponding
-#   line changed in git).
+# Update version numbers on main as well, to the next version
 #
 
-IOS_PACKAGE_VERSION=12.15.0.$(IOS_COMMIT_DISTANCE)
-MAC_PACKAGE_VERSION=5.15.0.$(MAC_COMMIT_DISTANCE)
+#
+# ** NuGet package version numbers **
+#
+# See dotnet/VERSIONS.md.
+#
+# Rules:
+# * The first two numbers represent the major and minor version of the corresponding OS.
+# * A third number will be added later (the commit distance).
+#
+# IMPORTANT: There must be *no* managed API differences unless the two first
+# numbers (major.minor) changes.
+
+IOS_NUGET_OS_VERSION=27.2
+TVOS_NUGET_OS_VERSION=27.2
+MACOS_NUGET_OS_VERSION=27.2
+MACCATALYST_NUGET_OS_VERSION=27.2
+
+# The following are the OS versions we first supported with the current .NET version.
+# These versions must *not* change with minor .NET updates, only major .NET releases.
+IOS_TARGET_PLATFORM_VERSION_LIBRARY=27.2
+TVOS_TARGET_PLATFORM_VERSION_LIBRARY=27.2
+MACOS_TARGET_PLATFORM_VERSION_LIBRARY=27.2
+MACCATALYST_TARGET_PLATFORM_VERSION_LIBRARY=27.2
+
+# In theory we should define the default platform version if it's not specified in the TFM. The default should not change for a given .NET version:
+# * We release support for iOS 14.5 with .NET 6
+# * Apple releases iOS 15.0, we're still using .NET 6. This default continues to be iOS 14.5
+# * .NET 7 is shipped, and at this point we bump the default to iOS 15.0
+# Basically: this should be the last OS version of the platform in question when the current major .NET version is first released to stable.
+# Ref: https://github.com/dotnet/designs/blob/8e6394406d44f75f30ea2259a425cb9e38d75b69/accepted/2020/net5/net5.md#os-versions
+
+# However, this doesn't work well for Apple platforms: Whenever Apple releases
+# new Xcode versions, our existing workloads might not be compatible with the
+# new Xcode. We'll of course ship updateds workload with support for the new
+# Xcode, but defaulting to an older target platform version would mean that
+# developers wouldn't get the new workload, they'd get the old one. This is
+# exacerbated by the fact that Apple aggressively auto-updates Xcode on
+# developers' machines: they might wake up one day to a broken build - the
+# obvious fix ("dotnet workload update") doesn't fix anything - even if we've
+# shipped updated workloads - because the default is to use the old one.
+# They'd have to manually specify the target platform version in the target
+# platform to get the updated workload ("net8.0-ios17.2" to use the iOS 17.2
+# workload instead of "net8.0-ios", which would use the default
+# (old/initial/17.0) .NET 8 workload) - and then update _again_ when the next
+# Xcode comes around. At this point the point of having a sane default value
+# is totally out the window, because everybody would have to specify (and
+# continuously update) a platform version in their project files to keep their
+# projects building.
+
+# So we've made the decision that the default target platform version is
+# always the latest target platform version.
+
+# However, this turns out to be somewhat of a complication for library developers,
+# because they typically don't need Xcode to build their projects, and if we auto-
+# update their TargetPlatformVersion to the latest, then all their customers
+# have to also update their workloads, which for some people end up being a rather
+# nasty surprise (because with the above algorithm it happens without developer
+# action). Thus we follow .NET's default platform version scheme for library projects:
+# it won't change in minor .NET releases.
+
+#
+# Here we list all the releases we support for each platform.
+#
+# Format: space-separated list of TargetFramework-OSVersion
+#
+# Example:
+#
+#    SUPPORTED_API_VERSIONS_IOS=net8.0-17.0 net8.0-17.2
+#
+# This means the iOS workload shipped from the current branch supports projects with:
+#    <TargetFramework>net8.0-17.0</TargetFramework>
+# and
+#    <TargetFramework>net8.0-17.2</TargetFramework>
+# and even:
+#    <TargetFrameworks>net8.0-17.0;net8.0-17.2</TargetFrameworks>
+#
+# When shipping support for a preview Xcode, we might add entries here for a preview release into a stable release.
+#
+# Example:
+#
+#     SUPPORTED_API_VERSIONS_IOS=net9.0-18.0
+#
+# If the current branch is stable .NET 8 using Xcode 15.0 (aka iOS 17.0), this
+# would add support for trying the preview release by doing:
+#
+#     <TargetFramework>net9.0-18.0</TargetFramework>
+#     <NoWarn>XCODE_16_0_PREVIEW;$(NoWarn)</NoWarn>
+#
+# Note that any SUPPORTED_API_VERSIONS entry below for older OS versions need a corresponding entry in
+# the eng/Version.Details.xml file.
+#
+
+# First add the versions for the current branch. DO NOT TOUCH THIS. Add older branches below.
+
+SUPPORTED_API_VERSIONS_IOS=$(DOTNET_TFM)-$(IOS_NUGET_OS_VERSION)
+SUPPORTED_API_VERSIONS_TVOS=$(DOTNET_TFM)-$(TVOS_NUGET_OS_VERSION)
+SUPPORTED_API_VERSIONS_MACOS=$(DOTNET_TFM)-$(MACOS_NUGET_OS_VERSION)
+SUPPORTED_API_VERSIONS_MACCATALYST=$(DOTNET_TFM)-$(MACCATALYST_NUGET_OS_VERSION)
+
+# Add older versions here!
+
+SUPPORTED_API_VERSIONS_IOS+=net11.0-27.2
+SUPPORTED_API_VERSIONS_TVOS+=net11.0-27.2
+SUPPORTED_API_VERSIONS_MACOS+=net11.0-27.2
+SUPPORTED_API_VERSIONS_MACCATALYST+=net11.0-27.2
+
+# Add beta versions here! (using BETA_API_VERSIONS_* variables)
+
+# Don't change these (even if there aren't any beta versions)!
+
+SUPPORTED_API_VERSIONS_IOS+=$(BETA_API_VERSIONS_IOS)
+SUPPORTED_API_VERSIONS_TVOS+=$(BETA_API_VERSIONS_TVOS)
+SUPPORTED_API_VERSIONS_MACOS+=$(BETA_API_VERSIONS_MACOS)
+SUPPORTED_API_VERSIONS_MACCATALYST+=$(BETA_API_VERSIONS_MACCATALYST)

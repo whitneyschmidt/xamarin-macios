@@ -1,20 +1,8 @@
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Collections.Generic;
 using System.Reflection;
 
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 	[Preserve (AllMembers = true)]
@@ -26,11 +14,18 @@ namespace Introspection {
 		/// <param name="type">Type to be tested</param>
 		protected virtual bool Skip (Type type)
 		{
+			// Dictionary entries are not Objective-C properties and have no argument semantics.
+			if (typeof (DictionaryContainer).IsAssignableFrom (type))
+				return true;
+
 			switch (type.Name) {
-				case "LinkWithAttribute": // LinkWithAttribute.WeakFrameworks
+			case "LinkWithAttribute": // LinkWithAttribute.WeakFrameworks
+				return true;
+			// Xcode 14, this properties have been added as a compat layer
+			case "GKPeerPickerController":
 				return true;
 			}
-			return false;
+			return SkipDueToRejectedTypes (type);
 		}
 
 		/// <summary>
@@ -42,11 +37,32 @@ namespace Introspection {
 			switch (property.Name) {
 			// the selector starts with `weak`
 			case "WeakRelatedUniqueIdentifier":
-				return property.DeclaringType.Name == "CSSearchableItemAttributeSet";
+				return property.DeclaringType?.Name == "CSSearchableItemAttributeSet";
 			// this is a weakly typed API (not a weak reference) with a [NotImplemented] so there's no [Export]
 			case "WeakSignificantEvent":
-				return property.DeclaringType.Name == "HMSignificantTimeEvent";
+				return property.DeclaringType?.Name == "HMSignificantTimeEvent";
+			case "WeakMeasurementUnits":
+				// this is a weakly typed API (not a weak reference), so there's no [Export]
+				return property.DeclaringType?.Name == "NSRulerView";
+#if !XAMCORE_5_0
+			case "WeakEnabled":
+				// this is from a strongly typed dictionary, and "Weak" here means nullable (bool) as opposed to a plain bool - and this is fixed in XAMCORE_5_0 so that the Enabled property is nullable and thus we won't need the WeakEnabled version anymore.
+				return property.DeclaringType?.Name == "CTFontDescriptorAttributes";
+#endif
+			case "WeakDynamicRangePolicy":
+				switch (property.DeclaringType?.Name) {
+				case "AVAssetImageGenerator":
+					// This is a weakly typed version of a NSString enum property, so not overridable [Export] (the property is [Sealed])
+					return true;
+				}
+				return false;
 			}
+
+			switch (property.DeclaringType?.Name) {
+			case "CHHapticPatternDefinition":
+				return property.Name == "WeakParameterCurve" || property.Name == "WeakParameterCurveControlPoints";
+			}
+
 			return false;
 		}
 
@@ -79,27 +95,26 @@ namespace Introspection {
 					if (!name.StartsWith ("Weak", StringComparison.Ordinal))
 						continue;
 
-					string error;
-					if (CheckArgumentSemantic (p.GetMethod, out error)) {
+					if (CheckArgumentSemantic (p.GetMethod!, out var error)) {
 						ReportError (error);
-						failed_properties.Add (p.ToString ());
+						failed_properties.Add (p.ToString ()!);
 					}
-					if (CheckArgumentSemantic (p.SetMethod, out error)) {
+					if (CheckArgumentSemantic (p.SetMethod!, out error)) {
 						ReportError (error);
-						failed_properties.Add (p.ToString ());
+						failed_properties.Add (p.ToString ()!);
 					}
 					n++;
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} fields validated: {2}", Errors, n, string.Join (", ", failed_properties));
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} fields validated: {string.Join (", ", failed_properties)}");
 		}
 
-		bool CheckArgumentSemantic (MethodInfo meth, out string error)
+		bool CheckArgumentSemantic (MethodInfo meth, [NotNullWhen (true)] out string? error)
 		{
 			error = null;
 			var export = meth.GetCustomAttribute<ExportAttribute> ();
-			if (export == null) {
-				error = String.Format ("{0}.{1} has no [Export]", meth.DeclaringType.FullName, meth.Name);
+			if (export is null) {
+				error = String.Format ("{0}.{1} has no [Export]", meth.DeclaringType?.FullName, meth.Name);
 				return true;
 			}
 
@@ -110,7 +125,7 @@ namespace Introspection {
 			case ArgumentSemantic.Weak:
 				return false;
 			default:
-				error = String.Format ("{0}.{1} has incorrect ArgumentSemantics: {2}", meth.DeclaringType.FullName, meth.Name, export.ArgumentSemantic);
+				error = String.Format ("{0}.{1} has incorrect ArgumentSemantics: {2}", meth.DeclaringType?.FullName, meth.Name, export.ArgumentSemantic);
 				return true;
 			}
 		}

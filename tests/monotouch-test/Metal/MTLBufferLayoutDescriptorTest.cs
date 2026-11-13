@@ -1,18 +1,10 @@
-#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
-	
+
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLBufferLayoutDescriptorTest {
 
 		[SetUp]
@@ -27,27 +19,25 @@ namespace MonoTouchFixtures.Metal {
 			uint stride = 8;
 			var descriptor = new MTLBufferLayoutDescriptor ();
 			descriptor.Stride = stride;
-			Assert.AreEqual (stride, descriptor.Stride);
+			Assert.That (descriptor.Stride, Is.EqualTo ((nuint) stride));
 		}
-		
+
 		[Test]
 		public void GetSetStepFunctionTest ()
 		{
 			var func = MTLStepFunction.Constant;
 			var descriptor = new MTLBufferLayoutDescriptor ();
 			descriptor.StepFunction = func;
-			Assert.AreEqual (func, descriptor.StepFunction);
+			Assert.That (descriptor.StepFunction, Is.EqualTo (func));
 		}
-		
+
 		[Test]
 		public void GetSetStepRate ()
 		{
 			uint step = 8;
 			var descriptor = new MTLBufferLayoutDescriptor ();
 			descriptor.StepRate = step;
-			Assert.AreEqual (step, descriptor.StepRate);
+			Assert.That (descriptor.StepRate, Is.EqualTo ((nuint) step));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

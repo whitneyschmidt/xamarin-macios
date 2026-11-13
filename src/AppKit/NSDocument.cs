@@ -1,25 +1,27 @@
-using System;
+#if !__MACCATALYST__
 using System.Collections.Generic;
 
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace AppKit {
-		
+
 	public partial class NSDocument {
+		/// <summary>Handles completion of a document duplication request.</summary>
+		/// <param name="document">The document for which duplication was requested.</param>
+		/// <param name="didDuplicate">Whether the document was duplicated.</param>
 		public delegate void DuplicateCallback (NSDocument document, bool didDuplicate);
 
 		[Register ("__NSDocumentDuplicateCallback")]
 		internal class Callback : NSObject {
 			DuplicateCallback callback;
-			
+
 			public Callback (DuplicateCallback callback)
 			{
 				this.callback = callback;
 				IsDirectBinding = false;
 				DangerousRetain ();
 			}
-			
+
 			[Export ("document:didDuplicate:contextInfo:")]
 			void SelectorCallback (NSDocument source, bool didDuplicate, IntPtr contextInfo)
 			{
@@ -30,10 +32,13 @@ namespace AppKit {
 				}
 			}
 		}
-		
-		public void DuplicateDocument (DuplicateCallback callback)
+
+		/// <param name="callback">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void DuplicateDocument (DuplicateCallback? callback)
 		{
-			if (callback == null) {
+			if (callback is null) {
 				_DuplicateDocument (null, null, IntPtr.Zero);
 			} else {
 				_DuplicateDocument (new Callback (callback), new Selector ("document:didDuplicate:contextInfo:"), IntPtr.Zero);
@@ -41,3 +46,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

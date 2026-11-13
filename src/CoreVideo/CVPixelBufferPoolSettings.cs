@@ -25,28 +25,40 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreVideo {
 
-	[Watch (4,0)]
-	public class CVPixelBufferPoolSettings : DictionaryContainer
-	{
+	/// <summary>Manages pixel buffer settings.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CVPixelBufferPoolSettings : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPixelBufferPoolSettings ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPixelBufferPoolSettings (NSDictionary dictionary)
 			: base (dictionary)
 		{
 		}
 
+		/// <summary>The minimum number of buffers allowed in the pixel buffer pool.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferPoolMinimumBufferCountKey value to access the underlying dictionary.</remarks>
 		public int? MinimumBufferCount {
 			set {
 				SetNumberValue (CVPixelBufferPool.MinimumBufferCountKey, value);
@@ -56,6 +68,9 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The maximum allowable age in seconds for a buffer in the pixel buffer pool.</summary>
+		///         <value>Using zero value will disable the age out procedure completely.</value>
+		///         <remarks>The property uses constant kCVPixelBufferPoolMaximumBufferAgeKey value to access the underlying dictionary.</remarks>
 		public double? MaximumBufferAgeInSeconds {
 			set {
 				SetNumberValue (CVPixelBufferPool.MaximumBufferAgeKey, value);
@@ -67,19 +82,31 @@ namespace CoreVideo {
 #endif
 	}
 
-	[Watch (4,0)]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public partial class CVPixelBufferPoolAllocationSettings : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPixelBufferPoolAllocationSettings ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CVPixelBufferPoolAllocationSettings (NSDictionary dictionary)
 			: base (dictionary)
 		{
 		}
 
+		/// <summary>The maximum allowed pixel buffer allocations in the pixel buffer pool.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferPoolAllocationThresholdKey value to access the underlying dictionary.</remarks>
 		public int? Threshold {
 			set {
 				SetNumberValue (ThresholdKey, value);

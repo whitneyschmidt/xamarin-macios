@@ -21,17 +21,22 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
-	
+
 	public partial class NSSpeechSynthesizer {
-		
+
 		// note: if needed override the protected Get|Set methods
-		public string Voice { 
+		/// <summary>Gets or sets the voice used by the speech synthesizer.</summary>
+		/// <value>The identifier of the voice.</value>
+		public string Voice {
 			get { return GetVoice (); }
 			// ignore return value (bool)
 			set { SetVoice (value); }
 		}
 	}
 }
+#endif // !__MACCATALYST__

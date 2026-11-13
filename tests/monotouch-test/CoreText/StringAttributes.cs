@@ -7,9 +7,6 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 using UIColor = AppKit.NSColor;
@@ -18,32 +15,40 @@ using UIKit;
 #endif
 using CoreGraphics;
 using CoreText;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.CoreText;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 using System.Drawing;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-
-namespace MonoTouchFixtures.CoreText
-{
+namespace MonoTouchFixtures.CoreText {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class StringAttributesTests
-	{
-#if !MONOMAC // No UIGraphics on mac
+	public class StringAttributesTests {
+		[Test]
+		public void NoCTLine ()
+		{
+			var sa = new CTStringAttributes ();
+			sa.ForegroundColor = UIColor.Blue.CGColor;
+			sa.Font = new CTFont ("Georgia-BoldItalic", 24);
+			sa.UnderlineStyle = CTUnderlineStyle.Double; // It does not seem to do anything
+			sa.UnderlineColor = UIColor.Blue.CGColor;
+			sa.UnderlineStyleModifiers = CTUnderlineStyleModifiers.PatternDashDotDot;
+
+			Assert.That (sa.BaselineClass, Is.Null, "#0");
+			sa.BaselineClass = CTBaselineClass.IdeographicHigh;
+			Assert.That (sa.BaselineClass, Is.EqualTo (CTBaselineClass.IdeographicHigh), "#1");
+
+			sa.SetBaselineInfo (CTBaselineClass.Roman, 13);
+			sa.SetBaselineInfo (CTBaselineClass.IdeographicHigh, 3);
+			sa.SetWritingDirection (CTWritingDirection.LeftToRight);
+
+			if (TestRuntime.CheckXcodeVersion (11, 0))
+				sa.TrackingAdjustment = 1.0f;
+
+			AdaptiveImageProvider? provider = null;
+			if (TestRuntime.CheckXcodeVersion (16, 0)) {
+				sa.AdaptiveImageProvider = provider = new AdaptiveImageProvider ();
+				Assert.That (sa.AdaptiveImageProvider, Is.SameAs (provider), "AdaptiveImageProvider");
+			}
+		}
+
 		[Test]
 		public void SimpleValuesSet ()
 		{
@@ -54,29 +59,64 @@ namespace MonoTouchFixtures.CoreText
 			sa.UnderlineColor = UIColor.Blue.CGColor;
 			sa.UnderlineStyleModifiers = CTUnderlineStyleModifiers.PatternDashDotDot;
 
-			Assert.IsNull (sa.BaselineClass, "#0");
+			Assert.That (sa.BaselineClass, Is.Null, "#0");
 			sa.BaselineClass = CTBaselineClass.IdeographicHigh;
-			Assert.AreEqual (CTBaselineClass.IdeographicHigh, sa.BaselineClass, "#1");
+			Assert.That (sa.BaselineClass, Is.EqualTo (CTBaselineClass.IdeographicHigh), "#1");
 
-			sa.SetBaselineInfo (CTBaselineClass.Roman, 13);
-			sa.SetBaselineInfo (CTBaselineClass.IdeographicHigh, 3);
+			// Calling sa.SetBaselineInfo makes the CTLine ctor crash (https://github.com/xamarin/maccore/issues/2947)
+			// so don't do that here.
+			if (TestRuntime.CheckXcodeVersion (16, 2)) {
+				// Crash was fixed in Xcode 16.2
+				sa.SetBaselineInfo (CTBaselineClass.Roman, 13);
+				sa.SetBaselineInfo (CTBaselineClass.IdeographicHigh, 3);
+			}
 			sa.SetWritingDirection (CTWritingDirection.LeftToRight);
 
-			var size = new SizeF (300, 300);
+			if (TestRuntime.CheckXcodeVersion (11, 0))
+				sa.TrackingAdjustment = 1.0f;
+
+			AdaptiveImageProvider? provider = null;
+			if (TestRuntime.CheckXcodeVersion (16, 0))
+				sa.AdaptiveImageProvider = provider = new AdaptiveImageProvider ();
+
+			var size = new CGSize (300, 300);
+#if MONOMAC
+			using var imageRep = new NSBitmapImageRep (IntPtr.Zero, (nint) size.Width, (nint) size.Height, 8, 4, true, false, NSColorSpace.DeviceRGB, 4 * (int) size.Width, 32);
+			using var graphicsContext = NSGraphicsContext.FromBitmap (imageRep);
+			using var img = new NSImage (size);
+			img.AddRepresentation (imageRep);
+			img.LockFocus ();
+			using var gctx = graphicsContext.CGContext;
+#else
 			UIGraphics.BeginImageContext (size);
-			var gctx = UIGraphics.GetCurrentContext ();
-            
+			using var gctx = UIGraphics.GetCurrentContext ();
+#endif
+
 			gctx.SetFillColor (UIColor.Green.CGColor);
-            
+
 			var attributedString = new NSAttributedString ("Test_ME~`", sa);
-                
-			using (var textLine = new CTLine (attributedString)) { 
+
+			using (var textLine = new CTLine (attributedString)) {
 				textLine.Draw (gctx);
 			}
 
+			if (TestRuntime.CheckXcodeVersion (16, 0))
+				Assert.That (provider!.Count, Is.EqualTo (1), "AdaptiveImageProvider #0");
+
+			attributedString = new NSAttributedString ("🙈`", sa);
+			using (var textLine = new CTLine (attributedString)) {
+				textLine.Draw (gctx);
+			}
+
+			if (TestRuntime.CheckXcodeVersion (16, 0))
+				Assert.That (provider!.Count, Is.EqualTo (2), "AdaptiveImageProvider #1");
+
+#if MONOMAC
+			img.UnlockFocus ();
+#else
 			UIGraphics.EndImageContext ();
-		}
 #endif
+		}
 
 		[Test]
 		public void BackgroundColor ()
@@ -92,6 +132,17 @@ namespace MonoTouchFixtures.CoreText
 			var sa = new CTStringAttributes ();
 			Assert.DoesNotThrow (() => { sa.HorizontalInVerticalForms = 1; }, "#0");
 			Assert.DoesNotThrow (() => { var x = sa.HorizontalInVerticalForms; }, "#1");
+		}
+	}
+
+	class AdaptiveImageProvider : NSObject, ICTAdaptiveImageProviding {
+		public int Count;
+		public CGImage? GetImage (CGSize proposedSize, nfloat scaleFactor, out CGPoint imageOffset, out CGSize imageSize)
+		{
+			imageOffset = default (CGPoint);
+			imageSize = default (CGSize);
+			Count++;
+			return null;
 		}
 	}
 }

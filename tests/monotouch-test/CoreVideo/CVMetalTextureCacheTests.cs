@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CVMetalTextureCache
 //
 // Authors:
@@ -7,13 +7,8 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 && !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-using Foundation;
-using NUnit.Framework;
-using Foundation;
-using ObjCRuntime;
 using CoreVideo;
 using Metal;
 
@@ -34,7 +29,7 @@ namespace MonoTouchFixtures.CoreVideo {
 				Usage = MTLTextureUsage.PixelFormatView
 			});
 
-			Assert.NotNull (cache);
+			Assert.That (cache, Is.Not.Null);
 		}
 
 		[Test]
@@ -48,7 +43,7 @@ namespace MonoTouchFixtures.CoreVideo {
 				Usage = MTLTextureUsage.PixelFormatView
 			});
 
-			Assert.NotNull (cache);
+			Assert.That (cache, Is.Not.Null);
 		}
 	}
 }

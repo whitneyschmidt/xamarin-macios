@@ -4,8 +4,77 @@
 #include <objc/objc.h>
 #include <objc/runtime.h>
 #include <objc/message.h>
+#include <dispatch/dispatch.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <zlib.h>
 #include "libtest.h"
+
+NSString *x_GlobalString = @"There's nothing cruvus here!";
+
+// Strong enum
+NSString *StrongEnumA = @"A";
+NSString *StrongEnumB = @"B";
+NSString *StrongEnumC = @"C";
+
+// Strong dictionary keys
+
+// simple types
+NSString *StrongDictionarySByteField = @"StrongDictionarySByteField";
+NSString *StrongDictionaryInt16Field = @"StrongDictionaryInt16Field";
+NSString *StrongDictionaryInt32Field = @"StrongDictionaryInt32Field";
+NSString *StrongDictionaryInt64Field = @"StrongDictionaryInt64Field";
+NSString *StrongDictionaryByteField = @"StrongDictionaryByteField";
+NSString *StrongDictionaryUInt16Field = @"StrongDictionaryUInt16Field";
+NSString *StrongDictionaryUInt32Field = @"StrongDictionaryUInt32Field";
+NSString *StrongDictionaryUInt64Field = @"StrongDictionaryUInt64Field";
+NSString *StrongDictionaryNIntField = @"StrongDictionaryNIntField";
+NSString *StrongDictionaryNUIntField = @"StrongDictionaryNUIntField";
+NSString *StrongDictionarySingleField = @"StrongDictionarySingleField";
+NSString *StrongDictionaryDoubleField = @"StrongDictionaryDoubleField";
+NSString *StrongDictionaryNFloatField = @"StrongDictionaryNFloatField";
+NSString *StrongDictionaryNSObjectField = @"StrongDictionaryNSObjectField";
+NSString *StrongDictionaryBooleanField = @"StrongDictionaryBooleanField";
+NSString *StrongDictionaryNSStringField = @"StrongDictionaryNSStringField";
+NSString *StrongDictionaryNSDateField = @"StrongDictionaryNSDateField";
+NSString *StrongDictionaryNSDictionaryField = @"StrongDictionaryNSDictionaryField";
+NSString *StrongDictionaryStrongDictionaryField = @"StrongDictionaryStrongDictionaryField";
+NSString *StrongDictionaryStrongEnumField = @"StrongDictionaryStrongEnumField";
+NSString *StrongDictionaryNormalEnumField = @"StrongDictionaryNormalEnumField";
+// arrays of the above
+NSString *StrongDictionaryArrayOfSByteField = @"StrongDictionaryArrayOfSByteField";
+NSString *StrongDictionaryArrayOfInt16Field = @"StrongDictionaryArrayOfInt16Field";
+NSString *StrongDictionaryArrayOfInt32Field = @"StrongDictionaryArrayOfInt32Field";
+NSString *StrongDictionaryArrayOfInt64Field = @"StrongDictionaryArrayOfInt64Field";
+NSString *StrongDictionaryArrayOfByteField = @"StrongDictionaryArrayOfByteField";
+NSString *StrongDictionaryArrayOfUInt16Field = @"StrongDictionaryArrayOfUInt16Field";
+NSString *StrongDictionaryArrayOfUInt32Field = @"StrongDictionaryArrayOfUInt32Field";
+NSString *StrongDictionaryArrayOfUInt64Field = @"StrongDictionaryArrayOfUInt64Field";
+NSString *StrongDictionaryArrayOfNIntField = @"StrongDictionaryArrayOfNIntField";
+NSString *StrongDictionaryArrayOfNUIntField = @"StrongDictionaryArrayOfNUIntField";
+NSString *StrongDictionaryArrayOfSingleField = @"StrongDictionaryArrayOfSingleField";
+NSString *StrongDictionaryArrayOfDoubleField = @"StrongDictionaryArrayOfDoubleField";
+NSString *StrongDictionaryArrayOfNFloatField = @"StrongDictionaryArrayOfNFloatField";
+NSString *StrongDictionaryArrayOfNSObjectField = @"StrongDictionaryArrayOfNSObjectField";
+NSString *StrongDictionaryArrayOfBooleanField = @"StrongDictionaryArrayOfBooleanField";
+NSString *StrongDictionaryArrayOfNSStringField = @"StrongDictionaryArrayOfNSStringField";
+NSString *StrongDictionaryArrayOfNSDateField = @"StrongDictionaryArrayOfNSDateField";
+NSString *StrongDictionaryArrayOfNSDictionaryField = @"StrongDictionaryArrayOfNSDictionaryField";
+NSString *StrongDictionaryArrayOfStrongDictionaryField = @"StrongDictionaryArrayOfStrongDictionaryField";
+NSString *StrongDictionaryArrayOfStrongEnumField = @"StrongDictionaryArrayOfStrongEnumField";
+NSString *StrongDictionaryArrayOfNormalEnumField = @"StrongDictionaryArrayOfNormalEnumField";
+// other fields
+NSString *StrongDictionaryStringField = @"StrongDictionaryStringField";
+NSString *StrongDictionaryDateTimeField = @"StrongDictionaryDateTimeField";
+NSString *StrongDictionaryGenericNSDictionaryField = @"StrongDictionaryGenericNSDictionaryField";
+NSString *StrongDictionaryArrayOfStringField = @"StrongDictionaryArrayOfStringField";
+NSString *StrongDictionaryNSDataField = @"StrongDictionaryNSDataField";
+NSString *StrongDictionaryNSDataAsMatrix3Field = @"StrongDictionaryNSDataAsMatrix3Field";
+NSString *StrongDictionaryCGRectField = @"StrongDictionaryCGRectField";
+NSString *StrongDictionaryCGSizeField = @"StrongDictionaryCGSizeField";
+NSString *StrongDictionaryCGPointField = @"StrongDictionaryCGPointField";
+NSString *StrongDictionaryCMTimeField = @"StrongDictionaryCMTimeField";
+NSString *StrongDictionaryUIEdgeInsetsField = @"StrongDictionaryUIEdgeInsetsField";
 
 int
 theUltimateAnswer ()
@@ -23,6 +92,12 @@ void x_call_block (x_block_callback block)
 	block ();
 }
 
+void *
+x_call_func_3 (void* (*fptr)(void*, void*, void*), void* p1, void* p2, void* p3)
+{
+	return fptr (p1, p2, p3);
+}
+
 typedef matrix_float2x2 (*func_x_get_matrix_float2x2_msgSend) (id self, SEL sel);
 void
 x_get_matrix_float2x2 (id self, const char *sel,
@@ -30,14 +105,10 @@ x_get_matrix_float2x2 (id self, const char *sel,
 		float* r1c0, float* r1c1)
 {
 	matrix_float2x2 rv;
-#if __i386__
-	IMP msgSend = (IMP) objc_msgSend_stret;
-#elif __x86_64__
+#if __x86_64__
 	IMP msgSend = (IMP) objc_msgSend;
 #elif __arm64__
 	IMP msgSend = (IMP) objc_msgSend;
-#elif __arm__
-	IMP msgSend = (IMP) objc_msgSend_stret;
 #else
 #error unknown architecture
 #endif
@@ -56,14 +127,10 @@ x_get_matrix_float3x3 (id self, const char *sel,
 		float* r2c0, float* r2c1, float* r2c2)
 {
 	matrix_float3x3 rv;
-#if __i386__
-	IMP msgSend = (IMP) objc_msgSend_stret;
-#elif __x86_64__
+#if __x86_64__
 	IMP msgSend = (IMP) objc_msgSend_stret;
 #elif __arm64__
 	IMP msgSend = (IMP) objc_msgSend;
-#elif __arm__
-	IMP msgSend = (IMP) objc_msgSend_stret;
 #else
 #error unknown architecture
 #endif
@@ -90,14 +157,10 @@ x_get_matrix_float4x4 (id self, const char *sel,
 		float* r3c0, float* r3c1, float* r3c2, float* r3c3)
 {
 	matrix_float4x4 rv;
-#if __i386__
-	IMP msgSend = (IMP) objc_msgSend_stret;
-#elif __x86_64__
+#if __x86_64__
 	IMP msgSend = (IMP) objc_msgSend_stret;
 #elif __arm64__
 	IMP msgSend = (IMP) objc_msgSend;
-#elif __arm__
-	IMP msgSend = (IMP) objc_msgSend_stret;
 #else
 #error unknown architecture
 #endif
@@ -131,14 +194,10 @@ x_get_matrix_float4x3 (id self, const char *sel,
 		float* r2c0, float* r2c1, float* r2c2, float* r2c3)
 {
 	matrix_float4x3 rv;
-#if __i386__
-	IMP msgSend = (IMP) objc_msgSend_stret;
-#elif __x86_64__
+#if __x86_64__
 	IMP msgSend = (IMP) objc_msgSend_stret;
 #elif __arm64__
 	IMP msgSend = (IMP) objc_msgSend;
-#elif __arm__
-	IMP msgSend = (IMP) objc_msgSend_stret;
 #else
 #error unknown architecture
 #endif
@@ -158,7 +217,7 @@ x_get_matrix_float4x3 (id self, const char *sel,
 	*r2c2 = rv.columns[2][2];
 	*r2c3 = rv.columns[3][2];
 }
-#if !TARGET_OS_WATCH
+
 void
 x_mdltransformcomponent_get_local_transform (id<MDLTransformComponent> self, NSTimeInterval time,
 		float* r0c0, float* r0c1, float* r0c2, float* r0c3,
@@ -248,7 +307,24 @@ x_mdltransform_get_rotation_matrix (MDLTransform *self, NSTimeInterval time,
 	*r3c2 = rv.columns[2][3];
 	*r3c3 = rv.columns[3][3];
 }
-#endif // !TARGET_OS_WATCH
+
+SCNMatrix4
+x_SCNMatrix4MakeTranslation (pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4MakeTranslation (tx, ty, tz);
+}
+
+SCNMatrix4
+x_SCNMatrix4MakeScale (pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4MakeScale (tx, ty, tz);
+}
+
+SCNMatrix4
+x_SCNMatrix4Translate (SCNMatrix4 m, pfloat tx, pfloat ty, pfloat tz)
+{
+	return SCNMatrix4Translate (m, tx, ty, tz);
+}
 
 @interface UltimateMachine : NSObject {
 
@@ -284,7 +360,7 @@ static UltimateMachine *shared;
 @implementation FakeType2
 {
 }
-- (BOOL) isKindOfClass: (Class) cls;
+- (BOOL) isKindOfClass: (Class) cls
 {
 	if (cls == objc_getClass ("FakeType1"))
 		return YES;
@@ -301,6 +377,38 @@ static UltimateMachine *shared;
 }
 	-(void) V
 	{
+	}
+
+	+(void) staticV
+	{
+	}
+
+	-(NSString *) getEmptyString
+	{
+		return [NSString string];
+	}
+
+	-(NSString *) getShortString
+	{
+		return @"this is a short string";
+	}
+
+	-(NSString *) getLongString
+	{
+		return @"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times"
+				"this is a much much much longer string that repeats a few times";
 	}
 
 	-(float) F
@@ -478,6 +586,23 @@ static UltimateMachine *shared;
 		return self.INSCodingArrayProperty;
 	}
 
+	-(void) methodEncodings:
+			      (inout NSObject **) obj1P
+			obj2: (in NSObject **) obj2P
+			obj3: (out NSObject **) obj3P
+			obj4: (const NSObject **) obj4P
+			obj5: (bycopy NSObject **) obj5P
+			obj6: (byref NSObject **) obj6P
+			obj7: (oneway NSObject **) obj7P
+	{
+		obj1P = NULL;
+		obj2P = NULL;
+		obj3P = NULL;
+		obj4P = NULL;
+		obj5P = NULL;
+		obj6P = NULL;
+		obj7P = NULL;
+	}
 @end
 
 @implementation ProtocolAssigner
@@ -489,7 +614,7 @@ static UltimateMachine *shared;
 
 -(void) completedSetProtocol: (id<ProtocolAssignerProtocol>) value
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // "THIS FUNCTION SHOULD BE OVERRIDDEN";
 }
 @end
 
@@ -556,6 +681,17 @@ static UltimateMachine *shared;
 {
 	// Do nothing
 }
+-(void) methodEncodings:
+	(inout NSObject **) obj1P
+	obj2: (in NSObject **) obj2P
+	obj3: (out NSObject **) obj3P
+	obj4: (const NSObject **) obj4P
+	obj5: (bycopy NSObject **) obj5P
+	obj6: (byref NSObject **) obj6P
+	obj7: (oneway NSObject **) obj7P
+{
+	// Do nothing
+}
 @end
 
 static volatile int freed_blocks = 0;
@@ -574,7 +710,7 @@ static Class _TestClass = NULL;
 
 -(void) classCallback: (void (^)(int32_t magic_number))completionHandler
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // THIS FUNCTION SHOULD BE OVERRIDDEN
 }
 
 -(void) callClassCallback
@@ -649,6 +785,23 @@ static Class _TestClass = NULL;
     [obj release];
 }
 
++(void) callAssertMainThreadBlockReleaseQOS: (outerBlock) completionHandler
+{
+	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
+	__block bool success = false;
+
+	dispatch_sync (dispatch_get_global_queue (QOS_CLASS_DEFAULT, 0ul), ^{
+		completionHandler (^(int magic_number)
+		{
+			assert (magic_number == 42);
+			assert ([NSThread isMainThread]); // This may crash way after the failed test has finished executing.
+			success = obj != NULL; // this captures the 'obj', and it's only freed when the block is freed.
+		});
+    });
+	assert (success);
+    [obj release];
+}
+
 -(void) callAssertMainThreadBlockReleaseCallback
 {
 	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
@@ -666,9 +819,26 @@ static Class _TestClass = NULL;
     [obj release];
 }
 
+-(void) callAssertMainThreadBlockReleaseCallbackQOS
+{
+	MainThreadDeallocator *obj = [[MainThreadDeallocator alloc] init];
+	__block bool success = false;
+
+	dispatch_sync (dispatch_get_global_queue (QOS_CLASS_DEFAULT, 0ul), ^{
+		[self assertMainThreadBlockReleaseCallback: ^(int magic_number)
+		{
+			assert (magic_number == 42);
+			assert ([NSThread isMainThread]); // This may crash way after the failed test has finished executing.
+			success = obj != NULL; // this captures the 'obj', and it's only freed when the block is freed.
+		}];
+    });
+	assert (success);
+    [obj release];
+}
+
 -(void) assertMainThreadBlockReleaseCallback: (innerBlock) completionHandler
 {
-	assert (!"THIS FUNCTION SHOULD BE OVERRIDDEN");
+	assert (false); // THIS FUNCTION SHOULD BE OVERRIDDEN
 }
 
 -(void) testFreedBlocks
@@ -692,12 +862,21 @@ static Class _TestClass = NULL;
 	return called_blocks;
 }
 
-static void block_called ()
+-(bool) nullableCallback: (void (^ __nullable)(int32_t magic_number))completionHandler
 {
-	OSAtomicIncrement32 (&called_blocks);
+	assert (false); // THIS FUNCTION SHOULD BE OVERRIDDEN
+	return false;
 }
 
-+(void) callProtocolWithBlockProperties: (id<ProtocolWithBlockProperties>) obj required: (bool) required instance: (bool) instance;
+static void block_called ()
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	OSAtomicIncrement32 (&called_blocks);
+#pragma clang diagnostic pop
+}
+
++(void) callProtocolWithBlockProperties: (id<ProtocolWithBlockProperties>) obj required: (bool) required instance: (bool) instance
 {
 	if (required) {
 		if (instance) {
@@ -714,7 +893,7 @@ static void block_called ()
 	}
 }
 
-+(void) callProtocolWithBlockReturnValue: (id<ObjCProtocolBlockTest>) obj required: (bool) required instance: (bool) instance;
++(void) callProtocolWithBlockReturnValue: (id<ObjCProtocolBlockTest>) obj required: (bool) required instance: (bool) instance
 {
 	if (required) {
 		if (instance) {
@@ -759,7 +938,10 @@ static void block_called ()
 @implementation FreedNotifier
 -(void) dealloc
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	OSAtomicIncrement32 (&freed_blocks);
+#pragma clang diagnostic pop
 	[super dealloc];
 }
 @end
@@ -915,7 +1097,7 @@ static void block_called ()
 
 -(void) testString: (int) action a:(NSString **) refValue b:(NSString **) outValue
 {
-	NSString *obj = NULL;
+	NSString *obj __attribute__((unused)) = NULL;
 
 	// We should never get null pointers.
 	assert (refValue != NULL);
@@ -946,9 +1128,9 @@ static void block_called ()
 	}
 }
 
--(void) testInt: (int) action a:(int32_t *) refValue b:(int32_t *) outValue
+-(void) testInt: (int) action a:(int32_t *) refValue b:(int32_t *) outValue c:(int32_t *) pointerValue
 {
-	NSString *obj = NULL;
+	NSString *obj __attribute__((unused)) = NULL;
 
 	// We should never get null pointers.
 	assert (refValue != NULL);
@@ -958,15 +1140,18 @@ static void block_called ()
 	case 1: // Set both to 0
 		*refValue = 0;
 		*outValue = 0;
+		*pointerValue = 0;
 		break;
 	case 3: // set both parameteres to the same value
 		obj = @"A constant native string";
 		*refValue = 314159;
 		*outValue = 314159;
+		*pointerValue = 314159;
 		return;
 	case 4: // set both parameteres to different objects
 		*refValue = 3141592;
 		*outValue = 2718282;
+		*pointerValue = 5772156;
 		break;
 	default:
 		abort ();
@@ -1217,4 +1402,390 @@ static void block_called ()
 	}
 }
 @end
+
+@implementation TypeProvidingProtocolConstructors
+-(id) initRequired: (NSString *) p0
+{
+	self = [super init];
+	if (self) {
+		_stringValue = [p0 copy];
+	}
+	return self;
+}
+
+-(id) initOptional: (NSDate *) p0
+{
+	self = [super init];
+	if (self) {
+		_dateValue = [p0 copy];
+	}
+	return self;
+}
+
+@end
+
+@implementation VeryGenericCollection
+- (id _Nullable)getElement:(id)alias
+{
+	return self.element;
+}
+
+- (NSEnumerator<id> *)elementEnumerator
+{
+	return nil;
+}
+
+- (void) add: (id) value
+{
+	self.element = value;
+	self.count = 1;
+}
+
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id __unsafe_unretained _Nullable [_Nonnull])buffer count:(NSUInteger)len
+{
+	if (len > 0)
+		buffer [0] = self.element;
+	return 1;
+}
+
+@end
+
+@interface VeryGenericElementClass1 : NSObject<VeryGenericElementProtocol1>
+@property (retain) NSDate * when;
+@property NSInteger number;
+@end
+@implementation VeryGenericElementClass1
+@end
+
+@interface VeryGenericElementClass2 : NSObject<VeryGenericElementProtocol2>
+@property (retain) NSDate * when;
+@property (retain) NSString * animal;
+@end
+@implementation VeryGenericElementClass2
+@end
+
+@interface VeryGenericConsumerClass : NSObject<VeryGenericConsumerProtocol>
+@property (retain) VeryGenericCollection<NSString *, id<VeryGenericElementProtocol1>> *first;
+@property (retain) VeryGenericCollection<NSString *, id<VeryGenericElementProtocol2>> *second;
+@end
+@implementation VeryGenericConsumerClass
+@end
+
+@implementation VeryGenericFactory
++(id<VeryGenericConsumerProtocol>) getConsumer
+{
+	VeryGenericCollection<NSString *, id<VeryGenericElementProtocol1>> *first = [[VeryGenericCollection alloc] init];
+
+	VeryGenericElementClass1* firstA = [[VeryGenericElementClass1 alloc] init];
+	firstA.when = NSDate.distantPast;
+	firstA.number = 42;
+	[first add: firstA];
+
+	VeryGenericCollection<NSString *, id<VeryGenericElementProtocol2>> *second = [[VeryGenericCollection alloc] init];
+
+	VeryGenericElementClass2* secondA = [[VeryGenericElementClass2 alloc] init];
+	secondA.when = NSDate.distantFuture;
+	secondA.animal = @"Sand cat";
+	[second add: secondA];
+
+	VeryGenericConsumerClass *rv = [[VeryGenericConsumerClass alloc] init];
+	rv.first = first;
+	rv.second = second;
+	return rv;
+}
+@end
+
+@implementation WeakReferencedObject : NSObject
+-(int) doSomething
+{
+	return 666;
+}
+@end
+
+@interface AssociatedObjectLockHolder : NSObject {
+@public
+	dispatch_semaphore_t entered;
+	dispatch_semaphore_t unlock;
+}
+@end
+
+@implementation AssociatedObjectLockHolder
+-(id) retain
+{
+	id result = [super retain];
+	if (entered != NULL) {
+		dispatch_semaphore_signal (entered);
+		dispatch_semaphore_wait (unlock, DISPATCH_TIME_FOREVER);
+	}
+	return result;
+}
+@end
+
+int
+x_get_nsobject_data_with_association_lock (id object, void **data)
+{
+	static char key;
+	*data = NULL;
+	NSObject *lock_object = [[NSObject alloc] init];
+	AssociatedObjectLockHolder *holder = [[AssociatedObjectLockHolder alloc] init];
+	dispatch_semaphore_t entered = dispatch_semaphore_create (0);
+	dispatch_semaphore_t unlock = dispatch_semaphore_create (0);
+	dispatch_semaphore_t completed = dispatch_semaphore_create (0);
+	dispatch_group_t group = dispatch_group_create ();
+	dispatch_queue_t queue = dispatch_get_global_queue (DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+	// The atomic getter retains its value while holding AssociationsManagerLock.
+	objc_setAssociatedObject (lock_object, &key, holder, OBJC_ASSOCIATION_RETAIN);
+	holder->entered = entered;
+	holder->unlock = unlock;
+	dispatch_group_async (group, queue, ^{
+		@autoreleasepool {
+			objc_getAssociatedObject (lock_object, &key);
+		}
+	});
+
+	int result = 1;
+	if (dispatch_semaphore_wait (entered, dispatch_time (DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC)) == 0) {
+		// Do not capture the managed object's native peer as an Objective-C object:
+		// copying the block would retain it while the association lock is held.
+		void *native_object = object;
+		dispatch_group_async (group, queue, ^{
+			*data = ((void *(*)(id, SEL)) objc_msgSend) ((id) native_object, @selector(xamarinGetNSObjectData));
+			dispatch_semaphore_signal (completed);
+		});
+		result = dispatch_semaphore_wait (completed, dispatch_time (DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC)) == 0 ? 0 : 2;
+	}
+
+	dispatch_semaphore_signal (unlock);
+	dispatch_group_wait (group, DISPATCH_TIME_FOREVER);
+	holder->entered = NULL;
+	[lock_object release];
+	[holder release];
+	dispatch_release (group);
+	dispatch_release (completed);
+	dispatch_release (unlock);
+	dispatch_release (entered);
+	return result;
+}
+
+@implementation WeakReferenceHolder : NSObject
+-(id) init
+{
+	self.array = [NSPointerArray weakObjectsPointerArray];
+	return self;
+}
+
+-(void) addObject: (WeakReferencedObject *) obj
+{
+	[self.array addPointer: obj];
+}
+
+-(void) callDoSomething: (int*) nilObjectCount nonNilObjectCount: (int *) nonNilObjectCount gotExpectedResponse: (int *) gotExpectedResponse gotUnexpectedResponse: (int *) gotUnexpectedResponse gotFinalizedResponse: (int *) gotFinalizedResponse
+{
+	for (unsigned int i = 0; i < self.array.count; i++) {
+		WeakReferencedObject *obj = (WeakReferencedObject *) [self.array pointerAtIndex: (NSUInteger) i];
+		if (obj) {
+			*nonNilObjectCount= *nonNilObjectCount + 1;
+			int rv = [obj doSomething];
+			if (rv == 666) {
+				*gotUnexpectedResponse = *gotUnexpectedResponse + 1;
+			} else if (rv == 314) {
+				*gotFinalizedResponse = *gotFinalizedResponse + 1;
+			} else if (rv == 42) {
+				*gotExpectedResponse = *gotExpectedResponse + 1;
+			} else {
+				abort ();
+			}
+		} else {
+			*nilObjectCount = *nilObjectCount + 1;
+		}
+	}
+}
+
+@end
+
+@implementation ClassWithNoDefaultCtor : NSObject {
+}
+@end
+
+@implementation Hitchhiker : NSObject {
+}
+-(void) destroyEarth
+{
+	[self.delegate byeByeDolphins: self];
+	[self.delegate buildIntergalacticHighway: self];
+	[self.delegate hitchhikeWithVogons: self];
+}
+-(void) buildHighway
+{
+	[self.delegate buildIntergalacticHighway: self];
+}
+@end
+
+@implementation InitCallsVirtualMethod
+-(instancetype) init
+{
+	if ((self = [super init]) != NULL) {
+		// Call a method that may be overridden in managed code, while 'init' is still
+		// executing. If a managed subclass overrides it, the overridden managed method
+		// must be invoked on this very instance.
+		[self virtualMethodCalledDuringInit: 0x1234];
+	}
+	return self;
+}
+-(void) virtualMethodCalledDuringInit: (int) value
+{
+	// Default (native) implementation; overridden in managed code by the test.
+}
+@end
+
+static init_self_callback x_init_self_callback = NULL;
+void x_set_init_self_callback (init_self_callback callback)
+{
+	x_init_self_callback = callback;
+}
+
+@implementation InitSurfacesSelfToManaged
+-(instancetype) init
+{
+	if ((self = [super init]) != NULL) {
+		// Synchronously surface 'self' to managed code while 'init' is still executing.
+		if (x_init_self_callback != NULL)
+			x_init_self_callback ((void *) self);
+	}
+	return self;
+}
+@end
+
+// A tiny custom "allocator" used to deterministically reproduce the alloc/init
+// handle-reuse race in issue #25861. When x_forced_next_alloc is set, the next
+// allocation reuses that exact address (instead of calloc'ing a fresh one), so a
+// ReuseSlotClassB can be made to occupy the address a ReuseSlotClassA just vacated.
+static void *x_forced_next_alloc = NULL;
+
+static id x_reuse_alloc (Class cls)
+{
+	void *mem;
+	if (x_forced_next_alloc != NULL) {
+		mem = x_forced_next_alloc;
+		x_forced_next_alloc = NULL;
+	} else {
+		mem = calloc (1, 256);
+	}
+	memset (mem, 0, 256);
+	return objc_constructInstance (cls, mem);
+}
+
+static void x_reuse_dealloc (id self)
+{
+	// Destruct the instance but intentionally do NOT free its memory: the address may
+	// be deterministically reused by another object (that's the whole point of the
+	// issue #25861 reproduction), and leaking a few small buffers in a test is fine.
+	objc_destructInstance (self);
+}
+
+static reuse_alloc_callback x_reuse_alloc_callback = NULL;
+void x_set_reuse_alloc_callback (reuse_alloc_callback callback)
+{
+	x_reuse_alloc_callback = callback;
+}
+
+// The dealloc methods below intentionally don't call [super dealloc]: they manage the
+// object's memory manually (see x_reuse_dealloc) so an address can be reused.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-missing-super-calls"
+@implementation ReuseSlotClassA
++(instancetype) allocWithZone: (NSZone *) zone
+{
+	return x_reuse_alloc (self);
+}
+-(void) dealloc
+{
+	x_reuse_dealloc (self);
+}
+-(instancetype) init
+{
+	void *x = (void *) self;
+	Class cls = object_getClass (self);
+	// Free this instance (its memory is not actually released, see x_reuse_dealloc). At
+	// this point the managed runtime still maps 'x' to the wrapper being constructed.
+	[self release];
+	// Force the next allocation to reuse 'x', then let managed code allocate a
+	// ReuseSlotClassB; it will land exactly at 'x', so the managed runtime now maps 'x'
+	// to that new object instead.
+	x_forced_next_alloc = x;
+	if (x_reuse_alloc_callback != NULL)
+		x_reuse_alloc_callback (x);
+	x_forced_next_alloc = NULL;
+	void *fresh = objc_constructInstance (cls, calloc (1, 256));
+	// Return a distinct, valid ReuseSlotClassA instance at a fresh address (not 'x').
+	// Rebinding this wrapper's handle to that address is what would, with a
+	// non-ownership-aware unregister, remove the ReuseSlotClassB now living at 'x'.
+	return (ReuseSlotClassA *) fresh;
+}
+@end
+
+@implementation ReuseSlotClassB
++(instancetype) allocWithZone: (NSZone *) zone
+{
+	return x_reuse_alloc (self);
+}
+-(void) dealloc
+{
+	x_reuse_dealloc (self);
+}
+@end
+#pragma clang diagnostic pop
+
+// Helper for issue #23679: a directly-bound native class whose 'init' fails by raising an
+// Objective-C exception (as e.g. an invalid AVAssetWriterInput does). Constructing the
+// managed wrapper throws, and a later GC must not crash trying to release a managed
+// reference for the alloc'd instance.
+@implementation InitReturnsNilClass
+-(instancetype) init
+{
+	// Reproduce issue #23679: a native initializer that raises an Objective-C exception
+	// (as e.g. an invalid AVAssetWriterInput does). The managed runtime marshals this to
+	// a managed ObjCException; the alloc'd instance must be cleaned up so a later GC
+	// doesn't crash releasing a managed reference for it.
+	@throw [NSException exceptionWithName: @"InitReturnsNilClassException" reason: @"init failed" userInfo: nil];
+}
+@end
+
+static pthread_key_t thread_exit_object_key;
+static pthread_once_t thread_exit_object_key_once = PTHREAD_ONCE_INIT;
+static int thread_exit_object_key_status;
+static int thread_exit_released_object_count;
+
+static void release_thread_exit_object (void *value)
+{
+	[(NSObject *) value release];
+	__sync_add_and_fetch (&thread_exit_released_object_count, 1);
+}
+
+static void create_thread_exit_object_key (void)
+{
+	thread_exit_object_key_status = pthread_key_create (&thread_exit_object_key, release_thread_exit_object);
+}
+
+@implementation ThreadExitObject
++ (BOOL) releaseOnThreadExit: (NSObject *) object
+{
+	if (pthread_once (&thread_exit_object_key_once, create_thread_exit_object_key) != 0 || thread_exit_object_key_status != 0)
+		return NO;
+	if (pthread_getspecific (thread_exit_object_key) != NULL)
+		return NO;
+	if (pthread_setspecific (thread_exit_object_key, [object retain]) != 0) {
+		[object release];
+		return NO;
+	}
+	return YES;
+}
+
++ (int) releasedObjectCount
+{
+	return __sync_add_and_fetch (&thread_exit_released_object_count, 0);
+}
+@end
+
 #include "libtest.decompile.m"

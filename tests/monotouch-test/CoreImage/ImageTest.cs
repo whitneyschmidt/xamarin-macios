@@ -7,13 +7,8 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
 using System.IO;
 
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 #else
@@ -21,43 +16,23 @@ using UIKit;
 #endif
 using CoreImage;
 using CoreGraphics;
-using ObjCRuntime;
-#else
-using MonoTouch.CoreImage;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.CoreImage {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class ImageTest {
-		
+
 		[Test]
 		public void EmptyImage ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
-			Assert.IsNull (CIImage.EmptyImage.Properties);
+			Assert.That (CIImage.EmptyImage.Properties, Is.Null);
 		}
 
 		[Test]
 		public void InitializationWithCustomMetadata ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
 			string file = Path.Combine (NSBundle.MainBundle.ResourcePath, "basn3p08.png");
 			using (var dp = new CGDataProvider (file)) {
 				using (var img = CGImage.FromPNG (dp, null, false, CGColorRenderingIntent.Default)) {
@@ -69,7 +44,7 @@ namespace MonoTouchFixtures.CoreImage {
 					};
 
 					using (var ci = new CIImage (img, opt)) {
-						Assert.AreEqual ("test profile name", ci.Properties.ProfileName);
+						Assert.That (ci.Properties.ProfileName, Is.EqualTo ("test profile name"));
 					}
 				}
 			}
@@ -84,7 +59,7 @@ namespace MonoTouchFixtures.CoreImage {
 			using (var url = NSUrl.FromFilename (file))
 			using (var ci = CIImage.FromUrl (url))
 			using (var ui = new UIImage (ci, 1.0f, UIImageOrientation.Up)) {
-				Assert.IsNotNull (ui.CIImage, "CIImage");
+				Assert.That (ui.CIImage, Is.Not.Null, "CIImage");
 			}
 		}
 #endif
@@ -92,21 +67,16 @@ namespace MonoTouchFixtures.CoreImage {
 		[Test]
 		public void AreaHistogram ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
 
 			// validate that a null NSDictionary is correct (i.e. uses filter defaults)
 			using (var h = CIImage.EmptyImage.CreateByFiltering ("CIAreaHistogram", null)) {
-				// broken on simulator/64 bits on iOS9 beta 2 - radar 21564256 -> fixed in beta 4
-				var success = true;
-#if __MACOS__
-				if (!TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 11))
-					success = false;
-#endif
+				var success = !TestRuntime.CheckXcodeVersion (26, 0);
 				if (success) {
-					Assert.That (h.Extent.Height, Is.EqualTo ((nfloat)1), "Height");
+					Assert.That (h.Extent.Height, Is.EqualTo ((nfloat) 1), "Height");
 				} else {
-					Assert.IsNull (h, "Image");
+					Assert.That (h, Is.Null, "Image");
 				}
 			}
 		}
@@ -119,11 +89,9 @@ namespace MonoTouchFixtures.CoreImage {
 
 			using (var cgimage = new CIImage (NSBundle.MainBundle.GetUrlForResource ("xamarin1", "png")))
 			using (var cs = cgimage.ColorSpace) {
-				Assert.NotNull (cs, "ColorSpace");
+				Assert.That (cs, Is.Not.Null, "ColorSpace");
 				Assert.That (cs.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
 			}
 		}
 	}
 }
-
-#endif // !__WATCHOS__

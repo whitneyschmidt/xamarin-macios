@@ -22,20 +22,13 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if MONOMAC
-
-using System;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
 
 namespace Foundation {
-	
-	public partial class NSIndexSet : IEnumerable, IEnumerable<nuint> {
 
+	public partial class NSIndexSet : IEnumerable, IEnumerable<nuint> {
 		IEnumerator IEnumerable.GetEnumerator ()
 		{
 			if (this.Count == 0)
@@ -47,6 +40,8 @@ namespace Foundation {
 			}
 		}
 
+		/// <summary>Returns an enumerator that iterates through the set.</summary>
+		/// <returns>An enumerator that can be used to iterate through the set.</returns>
 		public IEnumerator<nuint> GetEnumerator ()
 		{
 			if (this.Count == 0)
@@ -57,8 +52,10 @@ namespace Foundation {
 				i = this.IndexGreaterThan (i);
 			}
 		}
-		
-		public nuint[] ToArray ()
+
+		/// <summary>Get all the indices in this index set as an array.</summary>
+		/// <returns>An array of all the indices in this index set.</returns>
+		public nuint [] ToArray ()
 		{
 			nuint [] indexes = new nuint [Count];
 
@@ -73,58 +70,90 @@ namespace Foundation {
 			return indexes;
 		}
 
-#if XAMCORE_2_0
-		public static NSIndexSet FromArray (nuint[] items)
+		internal T [] ToInt64EnumArray<T> () where T : System.Enum
 		{
-			if (items == null)
-				return new NSIndexSet ();
-			
-			var indexSet = new NSMutableIndexSet();
-			foreach (var index in items) 
-				indexSet.Add (index);	
-			return indexSet;
+			var array = ToArray ();
+			var rv = new T [array.Length];
+			for (var i = 0; i < array.Length; i++)
+				rv [i] = (T) (object) (long) array [i];
+			return rv;
 		}
-#endif
 
-		public static NSIndexSet FromArray (uint[] items)
+		internal HashSet<T> ToInt64EnumHashSet<T> () where T : System.Enum
 		{
-			if (items == null)
+			var array = ToArray ();
+			var rv = new HashSet<T> ();
+			for (var i = 0; i < array.Length; i++)
+				rv.Add ((T) (object) (long) array [i]);
+			return rv;
+		}
+
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance from an array of indices.</summary>
+		/// <param name="items">The indices to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified indices.</returns>
+		public static NSIndexSet FromArray (nuint [] items)
+		{
+			if (items is null)
 				return new NSIndexSet ();
 
-			var indexSet = new NSMutableIndexSet();
+			var indexSet = new NSMutableIndexSet ();
 			foreach (var index in items)
-				indexSet.Add ((nuint)index);
+				indexSet.Add (index);
 			return indexSet;
 		}
 
-		public static NSIndexSet FromArray (int[] items)
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance from an array of indices.</summary>
+		/// <param name="items">The indices to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified indices.</returns>
+		public static NSIndexSet FromArray (uint [] items)
 		{
-			if (items == null)
+			if (items is null)
 				return new NSIndexSet ();
-			
-			var indexSet = new NSMutableIndexSet();
-			foreach (var index in items){
+
+			var indexSet = new NSMutableIndexSet ();
+			foreach (var index in items)
+				indexSet.Add ((nuint) index);
+			return indexSet;
+		}
+
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance from an array of indices.</summary>
+		/// <param name="items">The indices to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified indices.</returns>
+		public static NSIndexSet FromArray (int [] items)
+		{
+			if (items is null)
+				return new NSIndexSet ();
+
+			var indexSet = new NSMutableIndexSet ();
+			foreach (var index in items) {
 				if (index < 0)
 					throw new ArgumentException ("One of the items values is negative");
-				indexSet.Add ((nuint)(uint) index);
+				indexSet.Add ((nuint) (uint) index);
 			}
 			return indexSet;
 		}
 
-#if XAMCORE_2_0
-		public NSIndexSet (uint value) : this ((nuint)value)
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance with the specified index.</summary>
+		/// <param name="value">The index to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified index.</returns>
+		public NSIndexSet (uint value) : this ((nuint) value)
 		{
 		}
 
-		public NSIndexSet (nint value) : this ((nuint)value)
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance with the specified index.</summary>
+		/// <param name="value">The index to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified index.</returns>
+		public NSIndexSet (nint value) : this ((nuint) value)
 		{
 			if (value < 0)
 				throw new ArgumentException ("value must be positive");
 			// init done by the base ctor
 		}
-#endif
 
-		public NSIndexSet (int value) : this ((nuint)(uint)value)
+		/// <summary>Create a new <see cref="NSIndexSet" /> instance with the specified index.</summary>
+		/// <param name="value">The index to add to the new <see cref="NSIndexSet" />.</param>
+		/// <returns>A new <see cref="NSIndexSet" /> with the specified index.</returns>
+		public NSIndexSet (int value) : this ((nuint) (uint) value)
 		{
 			if (value < 0)
 				throw new ArgumentException ("value must be positive");
@@ -132,5 +161,3 @@ namespace Foundation {
 		}
 	}
 }
-
-#endif

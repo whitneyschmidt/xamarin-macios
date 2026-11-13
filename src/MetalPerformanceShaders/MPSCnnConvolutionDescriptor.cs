@@ -1,7 +1,18 @@
-﻿#if XAMCORE_2_0 || !MONOMAC
-using System;
+#nullable enable
+
 namespace MetalPerformanceShaders {
 	public partial class MPSCnnConvolutionDescriptor {
+		/// <param name="mean">To be added.</param>
+		///         <param name="variance">To be added.</param>
+		///         <param name="gamma">To be added.</param>
+		///         <param name="beta">To be added.</param>
+		///         <param name="epsilon">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		public unsafe void SetBatchNormalizationParameters (float [] mean, float [] variance, float [] gamma, float [] beta, float epsilon)
 		{
 			fixed (void* meanHandle = mean)
@@ -13,4 +24,3 @@ namespace MetalPerformanceShaders {
 
 	}
 }
-#endif

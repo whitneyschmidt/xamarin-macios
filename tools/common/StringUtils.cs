@@ -1,23 +1,30 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 
+#nullable enable
+
 namespace Xamarin.Utils {
-	internal class StringUtils {
+	class StringUtils {
 		static StringUtils ()
 		{
 			PlatformID pid = Environment.OSVersion.Platform;
-			if (((int)pid != 128 && pid != PlatformID.Unix && pid != PlatformID.MacOSX))
+			if (((int) pid != 128 && pid != PlatformID.Unix && pid != PlatformID.MacOSX))
 				shellQuoteChar = '"'; // Windows
 			else
 				shellQuoteChar = '\''; // !Windows
 		}
 
-		static char shellQuoteChar;
-		static char[] mustQuoteCharacters = new char [] { ' ', '\'', ',', '$', '\\' };
+		static readonly char shellQuoteChar;
+		static readonly char [] mustQuoteCharacters = new char [] { ' ', '\'', ',', '$', '\\' };
+		static readonly char [] mustQuoteCharactersProcess = { ' ', '\\', '"', '\'' };
 
-		public static string[] Quote (params string[] array)
+		[return: NotNullIfNotNull (nameof (array))]
+		public static string []? Quote (params string [] array)
 		{
-			if (array == null || array.Length == 0)
+			if (array is null || array.Length == 0)
 				return array;
 
 			var rv = new string [array.Length];
@@ -48,9 +55,63 @@ namespace Xamarin.Utils {
 			return s.ToString ();
 		}
 
-		public static string Unquote (string input)
+		public static string []? QuoteForProcess (IList<string> arguments)
 		{
-			if (input == null || input.Length == 0 || input [0] != shellQuoteChar)
+			if (arguments is null)
+				return Array.Empty<string> ();
+			return QuoteForProcess (arguments.ToArray ());
+		}
+
+		[return: NotNullIfNotNull ("array")]
+		public static string []? QuoteForProcess (params string [] array)
+		{
+			if (array is null || array.Length == 0)
+				return array;
+
+			var rv = new string [array.Length];
+			for (var i = 0; i < array.Length; i++)
+				rv [i] = QuoteForProcess (array [i]);
+			return rv;
+		}
+
+		// Quote input according to how System.Diagnostics.Process needs it quoted.
+		public static string QuoteForProcess (string f)
+		{
+			if (String.IsNullOrEmpty (f))
+				return f ?? String.Empty;
+
+			if (f.IndexOfAny (mustQuoteCharactersProcess) == -1)
+				return f;
+
+			var s = new StringBuilder ();
+
+			s.Append ('"');
+			foreach (var c in f) {
+				if (c == '"') {
+					s.Append ('\\');
+				} else if (c == '\\') {
+					s.Append (c);
+				}
+				s.Append (c);
+			}
+			s.Append ('"');
+
+			return s.ToString ();
+		}
+
+		public static string FormatArguments (params string [] arguments)
+		{
+			return FormatArguments ((IList<string>) arguments);
+		}
+
+		public static string FormatArguments (IList<string> arguments)
+		{
+			return string.Join (" ", QuoteForProcess (arguments)!);
+		}
+
+		public static string? Unquote (string input)
+		{
+			if (input is null || input.Length == 0 || input [0] != shellQuoteChar)
 				return input;
 
 			var builder = new StringBuilder ();
@@ -66,6 +127,106 @@ namespace Xamarin.Utils {
 			return builder.ToString ();
 		}
 
+		public static string [] ParseArguments (string quotedArguments)
+		{
+			if (!TryParseArguments (quotedArguments, out var argv, out var ex))
+				throw ex;
+
+			return argv;
+		}
+
+		public static bool TryParseArguments (string quotedArguments, [NotNullWhen (true)] out string []? argv, [NotNullWhen (false)] out Exception? ex)
+		{
+			var builder = new StringBuilder ();
+			var args = new List<string> ();
+			int i = 0, j;
+			char c;
+
+			while (i < quotedArguments.Length) {
+				c = quotedArguments [i];
+				if (c != ' ' && c != '\t') {
+					if (TryGetArgument (builder, quotedArguments, i, out var argument, out j, out ex)) {
+						args.Add (argument);
+						i = j;
+					} else {
+						argv = null;
+						return false;
+					}
+				}
+
+				i++;
+			}
+
+			argv = args.ToArray ();
+			ex = null;
+
+			return true;
+		}
+
+		static bool TryGetArgument (StringBuilder builder, string buf, int startIndex, [NotNullWhen (true)] out string? argument, out int endIndex, [NotNullWhen (false)] out Exception? ex)
+		{
+			bool escaped = false;
+			char qchar, c = '\0';
+			int i = startIndex;
+
+			builder.Clear ();
+			switch (buf [startIndex]) {
+			case '\'': qchar = '\''; i++; break;
+			case '"': qchar = '"'; i++; break;
+			default: qchar = '\0'; break;
+			}
+
+			while (i < buf.Length) {
+				c = buf [i];
+
+				if (c == qchar && !escaped) {
+					// unescaped qchar means we've reached the end of the argument
+					i++;
+					break;
+				}
+
+				if (c == '\\') {
+					escaped = true;
+				} else if (escaped) {
+					builder.Append (c);
+					escaped = false;
+				} else if (qchar == '\0' && (c == ' ' || c == '\t')) {
+					break;
+				} else if (qchar == '\0' && (c == '\'' || c == '"')) {
+					string sofar = builder.ToString ();
+
+					if (TryGetArgument (builder, buf, i, out var embedded, out endIndex, out ex)) {
+						i = endIndex;
+						builder.Clear ();
+						builder.Append (sofar);
+						builder.Append (embedded);
+						continue;
+					}
+
+					argument = null;
+					return false;
+
+				} else {
+					builder.Append (c);
+				}
+
+				i++;
+			}
+
+			if (escaped || (qchar != '\0' && c != qchar)) {
+				ex = new FormatException (escaped ? "Incomplete escape sequence." : "No matching quote found.");
+				endIndex = -1;
+				argument = null;
+				return false;
+			}
+
+			endIndex = i;
+			ex = null;
+
+			argument = builder.ToString ();
+			return true;
+		}
+
 		// Version.Parse requires, minimally, both major and minor parts.
 		// However we want to accept `11` as `11.0`
 		public static Version ParseVersion (string v)
@@ -76,42 +237,174 @@ namespace Xamarin.Utils {
 			return Version.Parse (v);
 		}
 
-		public static string SanitizeObjectiveCName (string name)
+		/// <summary>
+		/// Format a message according to MSBuild diagnostic format.
+		/// </summary>
+		/// <param name="fileName">The file name in the formatted message (null if no file name is present).</param>
+		/// <param name="lineNumber">The line number in the formatted message (null if no line number is present).</param>
+		/// <param name="isError">True if the message is an error, false if it is a warning.</param>
+		/// <param name="prefix">The prefix of the message.</param>
+		/// <param name="code">The code of the message.</param>
+		/// <param name="message">The message text.</param>
+		/// <returns></returns>
+		/// <see href="https://learn.microsoft.com/visualstudio/msbuild/msbuild-diagnostic-format-for-tasks"/>
+		public static string FormatMessage (string? fileName, long? lineNumber, bool isError, string prefix, int code, string message)
 		{
-			StringBuilder sb = null;
+			var sb = new StringBuilder ();
+			if (!string.IsNullOrEmpty (fileName)) {
+				sb.Append (fileName);
+				if (lineNumber is not null && lineNumber.Value > 0)
+					sb.Append ('(').Append (lineNumber.Value).Append (")");
+				sb.Append (": ");
+			}
+			sb.Append (isError ? "error" : "warning").Append (' ');
+			sb.Append (prefix).Append (code.ToString ("0000: "));
+			sb.Append (message);
+			return sb.ToString ();
+		}
 
-			for (int i = 0; i < name.Length; i++) {
-				var ch = name [i];
-				switch (ch) {
-				case '.':
-				case '+':
-				case '/':
-				case '`':
-				case '@':
-				case '<':
-				case '>':
-				case '$':
-				case '-':
-					if (sb == null)
-						sb = new StringBuilder (name, 0, i, name.Length);
-					sb.Append ('_');
-					break;
-				default:
-					if (sb != null)
-						sb.Append (ch);
-					break;
+		/// <summary>
+		/// Parse a formatted message created with <see cref="FormatMessage" />.
+		/// </summary>
+		/// <param name="line">The formatted message line to parse.</param>
+		/// <param name="fileName">The file name in the formatted message (null if no file name is present).</param>
+		/// <param name="lineNumber">The line number in the formatted message (null if no line number is present).</param>
+		/// <param name="isError">True if the message is an error, false if it is a warning, null if neither.</param>
+		/// <param name="prefix">The prefix of the message.</param>
+		/// <param name="code">The code of the message.</param>
+		/// <param name="message">The message text.</param>
+		/// <returns></returns>
+		public static bool TryParseFormattedMessage (string? line, out string? fileName, out int? lineNumber, out bool isError, [NotNullWhen (true)] out string? prefix, out int code, [NotNullWhen (true)] out string? message)
+		{
+			fileName = null;
+			lineNumber = null;
+			isError = false;
+			prefix = null;
+			code = 0;
+			message = null;
+
+			if (IsNullOrEmpty (line))
+				return false;
+
+			var origin = string.Empty;
+
+			if (IndexOfAny (line, out var idxError, out var endError, ": error ", ":  error ")) {
+				isError = true;
+				origin = line.Substring (0, idxError);
+				line = line.Substring (endError);
+				line = RemovePathAtEnd (line);
+			} else if (IndexOfAny (line, out var idxWarning, out var endWarning, ": warning ", ":  warning ")) {
+				isError = false;
+				origin = line.Substring (0, idxWarning);
+				line = line.Substring (endWarning);
+				line = RemovePathAtEnd (line);
+			} else if (line.StartsWith ("error ", StringComparison.Ordinal)) {
+				isError = true;
+				line = line.Substring (6);
+			} else if (line.StartsWith ("warning ", StringComparison.Ordinal)) {
+				isError = false;
+				line = line.Substring (8);
+			} else {
+				// something else
+				return false;
+			}
+
+			if (line.Length < 7)
+				return false; // something else
+
+			var firstNumber = line.IndexOfAny ("0123456789".ToCharArray ());
+			if (firstNumber == -1)
+				return false; // something else)
+			prefix = line.Substring (0, firstNumber);
+			if (!int.TryParse (line.Substring (firstNumber, 4), out var codeValue))
+				return false; // something else
+			code = codeValue;
+			line = line.Substring (firstNumber + 4);
+
+			if (line.StartsWith (": "))
+				line = line.Substring (2);
+
+			message = line;
+
+			if (!string.IsNullOrEmpty (origin)) {
+				var idx = origin.IndexOf ('(');
+				if (idx > 0) {
+					var closing = origin.IndexOf (')');
+					if (!int.TryParse (origin.Substring (idx + 1, closing - idx - 1), out var number))
+						return false;
+					lineNumber = number;
+					fileName = origin.Substring (0, idx);
+				} else {
+					fileName = origin;
 				}
 			}
 
-			if (sb != null)
-				return sb.ToString ();
+			return true;
+		}
 
-			return name;
+		static bool IndexOfAny (string line, out int start, out int end, params string [] values)
+		{
+			foreach (var value in values) {
+				start = line.IndexOf (value, StringComparison.Ordinal);
+				if (start >= 0) {
+					end = start + value.Length;
+					return true;
+				}
+			}
+			start = -1;
+			end = -1;
+			return false;
+		}
+
+		static string RemovePathAtEnd (string line)
+		{
+			if (line.TrimEnd ().EndsWith (']')) {
+				var start = line.LastIndexOf ('[');
+				if (start >= 0) {
+					// we want to get the space before `[` too.
+					if (start > 0 && line [start - 1] == ' ')
+						start--;
+
+					line = line.Substring (0, start);
+					return line;
+				}
+			}
+
+			return line;
+		}
+
+		// This function only exists because netstandard2.0's version doesn't have the [NotNullWhen] attribute,
+		// which makes nullability analysis somewhat annoying. This function can be removed and callsites updated
+		// to call string.IsNullOrEmpty directly once we stop targeting netstandard2.0.
+		public static bool IsNullOrEmpty ([NotNullWhen (false)] string? s)
+		{
+			return string.IsNullOrEmpty (s);
 		}
 	}
 
-	static class StringExtensions
-	{
+	static class StringExtensions {
 		internal static string [] SplitLines (this string s) => s.Split (new [] { Environment.NewLine }, StringSplitOptions.None);
+
+		// Adds an element to an array and returns a new array with the added element.
+		// The original array is not modified.
+		// If the original array is null, a new array is also created, with just the new value.
+		internal static T [] CopyAndAdd<T> (this T [] array, T value)
+		{
+			if (array is null || array.Length == 0)
+				return new T [] { value };
+			var tmpArray = array;
+			Array.Resize (ref array, array.Length + 1);
+			tmpArray [tmpArray.Length - 1] = value;
+			return tmpArray;
+		}
+
+#if !NET
+		public static bool EndsWith (this string s, char value)
+		{
+			if (s.Length == 0)
+				return false;
+			return s [s.Length - 1] == value;
+		}
+#endif
 	}
 }

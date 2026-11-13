@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)-macos</TargetFramework>
+    <!-- We don't link with BrowserEngineKit by default because it requires special entitlements to pass the App Store. Introspection won't ever be submitted to the App Store, so we have no such concerns. -->
+    <LinkWithBrowserEngineKit>true</LinkWithBrowserEngineKit>
+  </PropertyGroup>
+
+  <!-- Imports of the form '../shared.csproj' will be inlined by xharness -->
+  <Import Project="../shared.csproj" />
+
+  <ItemGroup>
+    <!-- this empty item group is here for xharness -->
+  </ItemGroup>
+</Project>

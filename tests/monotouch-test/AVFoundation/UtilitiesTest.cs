@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for AVUtilities.h helpers
 //
 // Authors:
@@ -7,35 +7,13 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using System.Drawing;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
 using AVFoundation;
-#else
-using MonoTouch.AVFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.AVFoundation {
 
@@ -47,14 +25,15 @@ namespace MonoTouchFixtures.AVFoundation {
 		[Test]
 		public void AspectRatio ()
 		{
-			var r = RectangleF.Empty.WithAspectRatio (SizeF.Empty);
-			Assert.True (nfloat.IsNaN (r.Top), "Top");
+			var r = CGRect.Empty.WithAspectRatio (CGSize.Empty);
+			Assert.That (nfloat.IsNaN (r.Top), Is.True, "Top");
 			Assert.That (nfloat.IsNaN (r.Left), "Left");
 			Assert.That (nfloat.IsNaN (r.Width), "Width");
 			Assert.That (nfloat.IsNaN (r.Height), "Height");
 		}
 	}
 
+#if __MACOS__
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class AVStructTest {
@@ -65,12 +44,11 @@ namespace MonoTouchFixtures.AVFoundation {
 			if (!TestRuntime.CheckXcodeVersion (6, 1))
 				Assert.Ignore ("Ignoring Tests: Requires Xcode 6.1+ API");
 
-			Assert.That (Marshal.SizeOf (typeof (AVSampleCursorSyncInfo)), Is.EqualTo (3), "AVSampleCursorSyncInfo Size");
-			Assert.That (Marshal.SizeOf (typeof (AVSampleCursorDependencyInfo)), Is.EqualTo (6), "AVSampleCursorDependencyInfo Size");
-			Assert.That (Marshal.SizeOf (typeof (AVSampleCursorStorageRange)), Is.EqualTo (16), "AVSampleCursorStorageRange Size");
-			Assert.That (Marshal.SizeOf (typeof (AVSampleCursorChunkInfo)), Is.EqualTo (IntPtr.Size == 8 ? 16 : 12), "AVSampleCursorChunkInfo Size");
+			Assert.That (Marshal.SizeOf<AVSampleCursorSyncInfo> (), Is.EqualTo (3), "AVSampleCursorSyncInfo Size");
+			Assert.That (Marshal.SizeOf<AVSampleCursorDependencyInfo> (), Is.EqualTo (6), "AVSampleCursorDependencyInfo Size");
+			Assert.That (Marshal.SizeOf<AVSampleCursorStorageRange> (), Is.EqualTo (16), "AVSampleCursorStorageRange Size");
+			Assert.That (Marshal.SizeOf<AVSampleCursorChunkInfo> (), Is.EqualTo (IntPtr.Size == 8 ? 16 : 12), "AVSampleCursorChunkInfo Size");
 		}
 	}
+#endif // __MACOS__
 }
-	
-#endif // !__WATCHOS__

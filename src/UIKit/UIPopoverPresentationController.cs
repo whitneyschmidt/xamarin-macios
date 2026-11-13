@@ -2,16 +2,17 @@
 
 #if IOS
 
-using System;
 using CoreGraphics;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace UIKit {
 
 	public partial class UIPopoverPresentationController {
 
 		// cute helper to avoid using `Class` in the public API
-		public virtual Type PopoverBackgroundViewType {
+		/// <summary>Gets or sets the type used to display background content for the popover.</summary>
+		public virtual Type? PopoverBackgroundViewType {
 			get {
 				IntPtr p = PopoverBackgroundViewClass;
 				if (p == IntPtr.Zero)
@@ -19,27 +20,10 @@ namespace UIKit {
 				return Class.Lookup (p);
 			}
 			set {
-				PopoverBackgroundViewClass =  (value == null) ? IntPtr.Zero : 
-					Class.GetHandle (value);
+				PopoverBackgroundViewClass = Class.GetHandle (value);
 			}
 		}
 	}
-
-#if !XAMCORE_3_0
-	public partial class UIPopoverPresentationControllerDelegate {
-		[Obsolete ("Use the overload with 'ref' parameters for 'targetRect' and 'inView'.")]
-		public virtual void WillRepositionPopover (UIPopoverPresentationController popoverPresentationController, CGRect targetRect, UIView inView)
-		{
-		}
-	}
-
-	public static partial class UIPopoverPresentationControllerDelegate_Extensions {
-		[Obsolete ("Use the overload with 'ref' parameters for 'targetRect' and 'inView'.")]
-		public static void WillRepositionPopover (IUIPopoverPresentationControllerDelegate This, UIPopoverPresentationController popoverPresentationController, CGRect targetRect, UIView inView)
-		{
-		}
-	}
-#endif
 }
 
 #endif // IOS

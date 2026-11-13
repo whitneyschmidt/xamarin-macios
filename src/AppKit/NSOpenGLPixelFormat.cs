@@ -21,54 +21,63 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__
+
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
 using CoreGraphics;
 using CoreImage;
 using CoreAnimation;
+
+#nullable enable
 
 namespace AppKit {
 	public partial class NSOpenGLPixelFormat {
 		static IntPtr selInitWithAttributes = Selector.GetHandle ("initWithAttributes:");
 
-		public NSOpenGLPixelFormat (NSOpenGLPixelFormatAttribute[] attribs) : base (NSObjectFlag.Empty)
+		/// <summary>Create a new <see cref="NSOpenGLPixelFormat" /> instance with the specified attributes.</summary>
+		/// <param name="attribs">The attributes to initialize the new <see cref="NSOpenGLPixelFormat" /> instance with.</param>
+		public NSOpenGLPixelFormat (NSOpenGLPixelFormatAttribute [] attribs)
+			: base (NSObjectFlag.Empty)
 		{
-			if (attribs == null)
-				throw new ArgumentNullException ("attribs");
+			if (attribs is null)
+				throw new ArgumentNullException (nameof (attribs));
 
 			unsafe {
-				NSOpenGLPixelFormatAttribute [] copy = new NSOpenGLPixelFormatAttribute [attribs.Length+1];
+				NSOpenGLPixelFormatAttribute [] copy = new NSOpenGLPixelFormatAttribute [attribs.Length + 1];
 				Array.Copy (attribs, 0, copy, 0, attribs.Length);
 
-				fixed (NSOpenGLPixelFormatAttribute* pArray = copy){
+				fixed (NSOpenGLPixelFormatAttribute* pArray = copy) {
 					if (IsDirectBinding) {
-						Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, selInitWithAttributes, new IntPtr((void*)pArray ));
+						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, selInitWithAttributes, new IntPtr ((void*) pArray)), "initWithAttributes:");
 					} else {
-						Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_IntPtr (this.SuperHandle, selInitWithAttributes, new IntPtr((void*)pArray));
+						var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_IntPtr (&__objc_super__, selInitWithAttributes, new IntPtr ((void*) pArray)), "initWithAttributes:");
+						GC.KeepAlive (this);
 					}
 				}
-				
+
 			}
 		}
 
-		public NSOpenGLPixelFormat (uint [] attribs) : base (NSObjectFlag.Empty)
+		/// <summary>Create a new <see cref="NSOpenGLPixelFormat" /> instance with the specified attributes.</summary>
+		/// <param name="attribs">The attributes to initialize the new <see cref="NSOpenGLPixelFormat" /> instance with.</param>
+		public NSOpenGLPixelFormat (uint [] attribs)
+			: base (NSObjectFlag.Empty)
 		{
-			if (attribs == null)
-				throw new ArgumentNullException ("attribs");
+			if (attribs is null)
+				throw new ArgumentNullException (nameof (attribs));
 
-			unsafe
-			{
+			unsafe {
 				uint [] copy = new uint [attribs.Length + 1];
 				Array.Copy (attribs, 0, copy, 0, attribs.Length);
 
 				fixed (uint* pArray = copy) {
 					if (IsDirectBinding) {
-						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, selInitWithAttributes, new IntPtr ((void*)pArray)));
+						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, selInitWithAttributes, new IntPtr ((void*) pArray)), "initWithAttributes:");
 					} else {
-						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_IntPtr (this.SuperHandle, selInitWithAttributes, new IntPtr ((void*)pArray)));
+						var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+						InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_IntPtr (&__objc_super__, selInitWithAttributes, new IntPtr ((void*) pArray)), "initWithAttributes:");
+						GC.KeepAlive (this);
 					}
 				}
 
@@ -77,11 +86,11 @@ namespace AppKit {
 
 		static uint [] ConvertToAttributes (object [] args)
 		{
-			
+
 			var list = new List<uint> ();
-			for (int i = 0; i < args.Length; i++){
+			for (int i = 0; i < args.Length; i++) {
 				if (args [i] is NSOpenGLPixelFormatAttribute) {
-					NSOpenGLPixelFormatAttribute v = (NSOpenGLPixelFormatAttribute)args [i];
+					NSOpenGLPixelFormatAttribute v = (NSOpenGLPixelFormatAttribute) args [i];
 					switch (v) {
 					case NSOpenGLPixelFormatAttribute.AllRenderers:
 					case NSOpenGLPixelFormatAttribute.DoubleBuffer:
@@ -135,43 +144,24 @@ namespace AppKit {
 						list.Add ((uint) (int) args [i]);
 						break;
 					}
-				} else if (args [i] is int && (int) args [i] == 0 && i == args.Length - 1) 
+				} else if (args [i] is int && (int) args [i] == 0 && i == args.Length - 1)
 					list.Add (0);
 				else
 					throw new ArgumentException ($"The specified attribute is not of type NSOpenGLPixelFormatAttribute: {args [i]}");
 			}
 
-			if (args.Length == 0 || !(args[args.Length - 1] is int) || ((int)args [args.Length - 1]) != 0)
+			if (args.Length == 0 || !(args [args.Length - 1] is int) || ((int) args [args.Length - 1]) != 0)
 				list.Add (0);
-			
+
 			return list.ToArray ();
 		}
-		
-		public NSOpenGLPixelFormat (params object [] attribs) : this (ConvertToAttributes (attribs))
+
+		/// <summary>Create a new <see cref="NSOpenGLPixelFormat" /> instance with the specified attributes.</summary>
+		/// <param name="attribs">The attributes to initialize the new <see cref="NSOpenGLPixelFormat" /> instance with.</param>
+		public NSOpenGLPixelFormat (params object [] attribs)
+			: this (ConvertToAttributes (attribs))
 		{
-			if (attribs == null)
-				throw new ArgumentNullException ("attribs");
-
-			unsafe {
-				var copy = new NSOpenGLPixelFormatAttribute [attribs.Length + 1 /* null termination */];
-				for (int i = 0; i < attribs.Length; i++) {
-					var input = attribs [i];
-					if (input is NSOpenGLPixelFormatAttribute) {
-						copy [i] = (NSOpenGLPixelFormatAttribute) input;
-					} else {
-						copy [i] = (NSOpenGLPixelFormatAttribute) (int) input;
-					}
-				}
-
-				fixed (NSOpenGLPixelFormatAttribute* pArray = copy){
-					if (IsDirectBinding) {
-						Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (this.Handle, selInitWithAttributes, new IntPtr((void*)pArray ));
-					} else {
-						Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_IntPtr (this.SuperHandle, selInitWithAttributes, new IntPtr((void*)pArray));
-					}
-				}
-				
-			}
 		}
 	}
 }
+#endif // !__MACCATALYST__

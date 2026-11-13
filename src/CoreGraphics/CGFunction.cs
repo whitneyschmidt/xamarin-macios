@@ -25,58 +25,38 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
+using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>A callback function to be used with various <see cref="CoreGraphics" /> functions.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGFunction.h
-	public class CGFunction : INativeObject, IDisposable {
-		IntPtr handle;
-		CGFunctionEvaluate evaluate;
+	public class CGFunction : NativeObject {
+		CGFunctionEvaluate? evaluate;
 
-		static CGFunctionCallbacks cbacks;
+		unsafe static CGFunctionCallbacks cbacks = new CGFunctionCallbacks {
+			version = 0,
+			evaluate = &EvaluateCallback,
+			release = &ReleaseCallback,
+		};
 
-		unsafe static CGFunction ()
-		{
-			cbacks.version = 0;
-			cbacks.evaluate = new CGFunctionEvaluateCallback (EvaluateCallback);
-			cbacks.release = new CGFunctionReleaseCallback (ReleaseCallback);
-		}
-
-		// invoked by marshallers
-		internal CGFunction (IntPtr handle)
-			: this (handle, false)
+		[Preserve (Conditional = true)]
+		internal CGFunction (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
 		}
 
-		[Preserve (Conditional=true)]
-		internal CGFunction (IntPtr handle, bool owns)
-		{
-			this.handle = handle;
-			if (!owns)
-				CGFunctionRetain (handle);
-		}
-		
-		~CGFunction ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-	
-		public CGFunctionEvaluate EvaluateFunction {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CGFunctionEvaluate? EvaluateFunction {
 			get {
 				return evaluate;
 			}
@@ -90,67 +70,76 @@ namespace CoreGraphics {
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGFunctionRef */ IntPtr CGFunctionRetain (/* CGFunctionRef */ IntPtr function);
-		
-		protected virtual void Dispose (bool disposing)
+
+		protected internal override void Retain ()
 		{
-			if (handle != IntPtr.Zero){
-				CGFunctionRelease (handle);
-				handle = IntPtr.Zero;
-			}
+			CGFunctionRetain (GetCheckedHandle ());
+		}
+
+		protected internal override void Release ()
+		{
+			CGFunctionRelease (GetCheckedHandle ());
 		}
 
 		// Apple's documentation says 'float', the header files say 'CGFloat'
-		unsafe delegate void CGFunctionEvaluateCallback (/* void* */ IntPtr info, /* CGFloat* */ nfloat *data, /* CGFloat* */ nfloat *outData); 
+		unsafe delegate void CGFunctionEvaluateCallback (/* void* */ IntPtr info, /* CGFloat* */ nfloat* data, /* CGFloat* */ nfloat* outData);
 		delegate void CGFunctionReleaseCallback (IntPtr info);
-			
+
 		[StructLayout (LayoutKind.Sequential)]
 		struct CGFunctionCallbacks {
 			public /* unsigned int */ uint version;
-			public CGFunctionEvaluateCallback evaluate;
-			public CGFunctionReleaseCallback release;
+			public unsafe delegate* unmanaged<IntPtr, nfloat*, nfloat*, void> evaluate;
+			public unsafe delegate* unmanaged<IntPtr, void> release;
 		}
-		
-		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static IntPtr CGFunctionCreate (/* void* */ IntPtr data, /* size_t */ nint domainDimension, /* CGFloat* */ nfloat [] domain, nint rangeDimension, /* CGFloat* */ nfloat [] range, ref CGFunctionCallbacks callbacks);
-		
-		unsafe public delegate void CGFunctionEvaluate (nfloat *data, nfloat *outData);
 
-		public unsafe CGFunction (nfloat [] domain, nfloat [] range, CGFunctionEvaluate callback)
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		extern static unsafe IntPtr CGFunctionCreate (/* void* */ IntPtr data, /* size_t */ nint domainDimension, /* CGFloat* */ nfloat* domain, nint rangeDimension, /* CGFloat* */ nfloat* range, CGFunctionCallbacks* callbacks);
+
+		/// <param name="data">To be added.</param>
+		///     <param name="outData">To be added.</param>
+		///     <summary>A delegate used to specify the callback function of a <see cref="CoreGraphics.CGFunction" />.</summary>
+		///     <remarks>To be added.</remarks>
+		unsafe public delegate void CGFunctionEvaluate (nfloat* data, nfloat* outData);
+
+
+		public unsafe CGFunction (nfloat []? domain, nfloat []? range, CGFunctionEvaluate callback)
 		{
-			if (domain != null){
+			if (domain is not null) {
 				if ((domain.Length % 2) != 0)
-					throw new ArgumentException ("The domain array must consist of pairs of values", "domain");
+					throw new ArgumentException ("The domain array must consist of pairs of values", nameof (domain));
 			}
-			if (range != null) {
+			if (range is not null) {
 				if ((range.Length % 2) != 0)
-					throw new ArgumentException ("The range array must consist of pairs of values", "range");
+					throw new ArgumentException ("The range array must consist of pairs of values", nameof (range));
 			}
-			if (callback == null)
-				throw new ArgumentNullException ("callback");
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
 
 			this.evaluate = callback;
 
 			var gch = GCHandle.Alloc (this);
-			handle = CGFunctionCreate (GCHandle.ToIntPtr (gch), domain != null ? domain.Length/2 : 0, domain, range != null ? range.Length/2 : 0, range, ref cbacks);
+			unsafe {
+				fixed (nfloat* domainPtr = domain, rangePtr = range) {
+					fixed (CGFunctionCallbacks* cbacksptr = &cbacks) {
+						var handle = CGFunctionCreate (GCHandle.ToIntPtr (gch), domain is not null ? domain.Length / 2 : 0, domainPtr, range is not null ? range.Length / 2 : 0, rangePtr, cbacksptr);
+						InitializeHandle (handle);
+					}
+				}
+			}
 		}
-
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (CGFunctionReleaseCallback))]
-#endif
+		[UnmanagedCallersOnly]
 		static void ReleaseCallback (IntPtr info)
 		{
 			GCHandle.FromIntPtr (info).Free ();
 		}
 
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (CGFunctionEvaluateCallback))]
-#endif
-		unsafe static void EvaluateCallback (IntPtr info, nfloat *input, nfloat *output)
+		[UnmanagedCallersOnly]
+		unsafe static void EvaluateCallback (IntPtr info, nfloat* input, nfloat* output)
 		{
 			GCHandle lgc = GCHandle.FromIntPtr (info);
-			CGFunction container = (CGFunction) lgc.Target;
+			var container = lgc.Target as CGFunction;
 
-			container.evaluate?.Invoke (input, output);
+			container?.evaluate?.Invoke (input, output);
 		}
 	}
 }

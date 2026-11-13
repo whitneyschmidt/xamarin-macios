@@ -1,0 +1,394 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Microsoft.DotNet.XHarness.iOS.Shared;
+using Microsoft.DotNet.XHarness.iOS.Shared.Utilities;
+using Xharness.Jenkins.Reports;
+using Xharness.Jenkins.TestTasks;
+
+namespace Xharness.Jenkins {
+
+	class TestServer {
+
+		static IReadOnlySet<string> AllowedPaths = new HashSet<string> (StringComparer.Ordinal) {
+		"/",
+		"/index.html",
+		"/set-option",
+		"/select",
+		"/deselect",
+		"/stop",
+		"/run",
+		"/build",
+		"/reload-devices",
+		"/reload-simulators",
+		"/quit",
+		"/favicon.ico",
+		"/index.html",
+	};
+
+		static IReadOnlySet<string> AllowedFiles = new HashSet<string> (StringComparer.Ordinal) {
+		"index.html",
+		"xharness.css",
+		"xharness.js",
+	};
+
+
+
+		public Task RunAsync (Jenkins jenkins, HtmlReportWriter htmlReportWriter)
+		{
+			HttpListener server;
+
+			// Try and find an unused port
+			int attemptsLeft = 50;
+			int port = 51234; // Try this port first, to try to not vary between runs just because.
+			var r = new Random ((int) DateTime.Now.Ticks);
+			do {
+				var newPort = port != 0 ? port : r.Next (49152, 65535); // The suggested range for dynamic ports is 49152-65535 (IANA)
+				server = new HttpListener ();
+				server.Prefixes.Clear ();
+				server.Prefixes.Add ("http://localhost:" + newPort + "/");
+				try {
+					server.Start ();
+					port = newPort;
+					break;
+				} catch (Exception ex) {
+					jenkins.MainLog.WriteLine ("Failed to listen on port {0}: {1}", newPort, ex.Message);
+					port = 0;
+				}
+			} while (attemptsLeft-- > 0);
+			jenkins.MainLog.WriteLine ($"Created server on localhost:{port}");
+
+			var tcs = new TaskCompletionSource<bool> ();
+			var thread = new System.Threading.Thread (() => {
+				while (server.IsListening) {
+					var context = server.GetContext ();
+					var request = context.Request;
+					var response = context.Response;
+					var arguments = System.Web.HttpUtility.ParseQueryString (request.Url?.Query ?? "");
+					try {
+						var allTasks = jenkins.Tasks.SelectMany ((v) => {
+							var rv = new List<TestTask> ();
+							var runsim = v as AggregatedRunSimulatorTask;
+							if (runsim is not null)
+								rv.AddRange (runsim.Tasks);
+							rv.Add (v);
+							return rv;
+						});
+
+						IEnumerable<TestTask> find_tasks (StreamWriter writer, string ids)
+						{
+							IEnumerable<TestTask> tasks;
+							switch (request.Url.Query) {
+							case "?all":
+								tasks = jenkins.Tasks;
+								break;
+							case "?selected":
+								tasks = allTasks.Where ((v) => !v.Ignored);
+								break;
+							case "?failed":
+								tasks = allTasks.Where ((v) => v.Failed);
+								break;
+							case "?":
+								writer.WriteLine ("No tasks specified");
+								return Array.Empty<AppleTestTask> ();
+							default:
+								var id_inputs = ids.Substring (1).Split (',');
+								var rv = new List<TestTask> (id_inputs.Length);
+								foreach (var id_input in id_inputs) {
+									if (int.TryParse (id_input, out var id)) {
+										var task = jenkins.Tasks.FirstOrDefault ((t) => t.ID == id);
+										if (task is null)
+											task = jenkins.Tasks.Where ((v) => v is AggregatedRunSimulatorTask).Cast<AggregatedRunSimulatorTask> ().SelectMany ((v) => v.Tasks).FirstOrDefault ((t) => t.ID == id);
+										if (task is null) {
+											writer.WriteLine ($"Could not find test {id}");
+										} else {
+											rv.Add (task);
+										}
+									} else {
+										writer.WriteLine ($"Could not parse {arguments ["id"]}");
+									}
+								}
+								tasks = rv;
+								break;
+							}
+							return tasks;
+						}
+
+						string? serveFile = null;
+						// do not allow requests that are not http or https
+						if (request.Url?.Scheme != Uri.UriSchemeHttp && request.Url?.Scheme != Uri.UriSchemeHttps) {
+							response.StatusCode = 400;
+							response.StatusDescription = "Bad Request";
+							response.OutputStream.Write (System.Text.Encoding.UTF8.GetBytes ("Invalid local path"));
+							return;
+						}
+						var localPath = request.Url.LocalPath;
+						var file = Path.GetFileName (localPath);
+						var directoryName = Path.GetDirectoryName (localPath)!;
+						var jenkinsDirectoryName = $"/{Path.GetFileName (jenkins.LogDirectory)}";
+
+						// for the request to be valid the local path has to be one of the following
+						// 1. local path should be one of the supported ones
+						// 2. Be index.html
+						// 3. Its directory name be the same as the log directory name, no other directory is allowed
+						if (!AllowedPaths.Contains (localPath) && !AllowedFiles.Contains (file) && !directoryName.StartsWith (jenkinsDirectoryName)) {
+							// Validate that we're not requested to serve any file on the file system.
+							// Ref: https://devdiv.visualstudio.com/DevDiv/_workitems/edit/2351243
+							response.StatusCode = 400;
+							response.StatusDescription = "Bad Request";
+							response.OutputStream.Write (System.Text.Encoding.UTF8.GetBytes ("Invalid local path"));
+							return;
+						}
+
+						switch (localPath) {
+						case "/":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Html;
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								htmlReportWriter.Write (jenkins.Tasks, writer);
+							}
+							break;
+						case "/set-option":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain;
+							switch (request.Url.Query) {
+							case "?clean":
+								jenkins.CleanSuccessfulTestRuns = true;
+								break;
+							case "?do-not-clean":
+								jenkins.CleanSuccessfulTestRuns = false;
+								break;
+							case "?uninstall-test-app":
+								jenkins.UninstallTestApp = true;
+								break;
+							case "?do-not-uninstall-test-app":
+								jenkins.UninstallTestApp = false;
+								break;
+							case "?skip-permission-tests":
+								jenkins.Harness.IncludeSystemPermissionTests = false;
+								break;
+							case "?include-permission-tests":
+								jenkins.Harness.IncludeSystemPermissionTests = true;
+								break;
+							case "?clear-permission-tests":
+								jenkins.Harness.IncludeSystemPermissionTests = null;
+								break;
+							default:
+								throw new NotImplementedException (request.Url.Query);
+							}
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								writer.WriteLine ("OK");
+							}
+							break;
+						case "/select":
+						case "/deselect":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain;
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								foreach (var task in allTasks) {
+									bool? is_match = null;
+									if (!(task.Ignored || task.NotStarted))
+										continue;
+									switch (request.Url.Query) {
+									case "?all":
+										is_match = true;
+										break;
+									case "?all-device":
+										is_match = task is RunDeviceTask;
+										break;
+									case "?all-simulator":
+										is_match = task is RunSimulatorTask;
+										break;
+									case "?all-ios":
+										switch (task.Platform) {
+										case TestPlatform.iOS:
+											is_match = true;
+											break;
+										default:
+											if (task.Platform.ToString ().StartsWith ("iOS", StringComparison.Ordinal))
+												throw new NotImplementedException ();
+											break;
+										}
+										break;
+									case "?all-tvos":
+										switch (task.Platform) {
+										case TestPlatform.tvOS:
+											is_match = true;
+											break;
+										default:
+											if (task.Platform.ToString ().StartsWith ("tvOS", StringComparison.Ordinal))
+												throw new NotImplementedException ();
+											break;
+										}
+										break;
+									case "?all-mac":
+										switch (task.Platform) {
+										case TestPlatform.Mac:
+											is_match = true;
+											break;
+										default:
+											if (task.Platform.ToString ().StartsWith ("Mac", StringComparison.Ordinal))
+												throw new NotImplementedException ();
+											break;
+										}
+										break;
+									default:
+										writer.WriteLine ("unknown query: {0}", request.Url.Query);
+										break;
+									}
+									if (localPath == "/select") {
+										if (is_match.HasValue && is_match.Value)
+											task.Ignored = false;
+									} else if (localPath == "/deselect") {
+										if (is_match.HasValue && is_match.Value)
+											task.Ignored = true;
+									}
+								}
+
+								writer.WriteLine ("OK");
+							}
+							break;
+						case "/stop":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain;
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								foreach (var task in find_tasks (writer, request.Url.Query)) {
+									if (!task.Waiting) {
+										writer.WriteLine ($"Test '{task.TestName}' is not in a waiting state.");
+									} else {
+										task.Reset ();
+									}
+								}
+								writer.WriteLine ("OK");
+							}
+							break;
+						case "/run":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain;
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								// We want to randomize the order the tests are added, so that we don't build first the test for one device, 
+								// then for another, since that would not take advantage of running tests on several devices in parallel.
+								foreach (var task in System.Linq.Enumerable.Shuffle (find_tasks (writer, request.Url.Query))) {
+									if (task.InProgress || task.Waiting) {
+										writer.WriteLine ($"Test '{task.TestName}' is already executing.");
+									} else {
+										task.Reset ();
+										task.BuildOnly = false;
+										task.RunAsync ();
+									}
+								}
+								writer.WriteLine ("OK");
+							}
+							break;
+						case "/build":
+							response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain;
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								foreach (var task in find_tasks (writer, request.Url.Query)) {
+									if (task.InProgress || task.Waiting) {
+										writer.WriteLine ($"Test '{task.TestName}' is already executing.");
+									} else if (task is RunTestTask rtt) {
+										rtt.Reset ();
+										rtt.BuildAsync ().ContinueWith ((z) => {
+											if (rtt.ExecutionResult == TestExecutingResult.Built)
+												rtt.ExecutionResult = TestExecutingResult.BuildSucceeded;
+										});
+									} else {
+										writer.WriteLine ($"Test '{task.TestName}' is not a test that can be only built.");
+									}
+								}
+
+								writer.WriteLine ("OK");
+							}
+							break;
+						case "/reload-devices":
+							jenkins.DeviceLoader.LoadDevicesAsync ().DoNotAwait ();
+							break;
+						case "/reload-simulators":
+							jenkins.DeviceLoader.LoadSimulatorsAsync ().DoNotAwait ();
+							break;
+						case "/quit":
+							using (var writer = new StreamWriter (response.OutputStream)) {
+								writer.WriteLine ("<!DOCTYPE html>");
+								writer.WriteLine ("<html>");
+								writer.WriteLine ("<body onload='close ();'>Closing web page...</body>");
+								writer.WriteLine ("</html>");
+							}
+							server.Stop ();
+							break;
+						case "/favicon.ico":
+							serveFile = Path.Combine (HarnessConfiguration.RootDirectory, "xharness", "favicon.ico");
+							goto default;
+						case "/index.html":
+							var redirect_to = request.Url.AbsoluteUri.Replace ("/index.html", "/" + Path.GetFileName (jenkins.LogDirectory) + "/index.html");
+							response.Redirect (redirect_to);
+							break;
+						default:
+							var filename = Path.GetFileName (localPath);
+							if (filename == "index.html" && Path.GetFileName (jenkins.LogDirectory) == Path.GetFileName (Path.GetDirectoryName (localPath))) {
+								// We're asked for the report for the current test run, so re-generate it.
+								jenkins.GenerateReport ();
+							}
+
+							if (serveFile is null) {
+								serveFile = Path.Combine (Path.GetDirectoryName (jenkins.LogDirectory)!, localPath.Substring (1));
+								serveFile = Path.GetFullPath (serveFile);
+								if (!serveFile.StartsWith (Path.GetDirectoryName (Path.GetFullPath (jenkins.LogDirectory)) + Path.DirectorySeparatorChar)) {
+									Console.WriteLine ($"400: {localPath}");
+									response.StatusCode = 400;
+									response.OutputStream.WriteByte ((byte) '?');
+									break;
+								}
+							}
+							var path = serveFile;
+							if (File.Exists (path)) { // CodeQL [SM00414] This is an http server only used during testing, and it also only listens on localhost
+								var buffer = new byte [4096];
+								using (var fs = new FileStream (path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) { // CodeQL [SM00414] This is an http server only used during testing, and it also only listens on localhost
+									int read;
+									response.ContentLength64 = fs.Length;
+									switch (Path.GetExtension (path).ToLowerInvariant ()) {
+									case ".html":
+										response.ContentType = System.Net.Mime.MediaTypeNames.Text.Html;
+										break;
+									case ".css":
+										response.ContentType = "text/css";
+										break;
+									case ".js":
+										response.ContentType = "text/javascript";
+										break;
+									case ".ico":
+										response.ContentType = "image/png";
+										break;
+									default:
+										response.ContentType = System.Net.Mime.MediaTypeNames.Text.Plain + ";charset=UTF-8";
+										break;
+									}
+									while ((read = fs.Read (buffer, 0, buffer.Length)) > 0)
+										response.OutputStream.Write (buffer, 0, read); // CodeQL [SM00430] This is an http server only used during testing, and it also only listens on localhost
+								}
+							} else {
+								Console.WriteLine ($"404: {localPath}");
+								response.StatusCode = 404;
+								response.OutputStream.WriteByte ((byte) '?');
+							}
+							break;
+						}
+					} catch (IOException ioe) {
+						Console.WriteLine (ioe.Message);
+					} catch (Exception e) {
+						Console.WriteLine (e);
+					}
+					response.Close ();
+				}
+				tcs.SetResult (true);
+			}) {
+				IsBackground = true,
+			};
+			thread.Start ();
+
+			var url = $"http://localhost:{port}/" + Path.GetFileName (jenkins.LogDirectory) + "/index.html";
+			Console.WriteLine ($"Launching {url} in the system's default browser.");
+			Process.Start ("open", url);
+
+			return tcs.Task;
+		}
+	}
+}

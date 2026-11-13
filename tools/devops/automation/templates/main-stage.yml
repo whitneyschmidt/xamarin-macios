@@ -1,0 +1,136 @@
+# yamllint disable rule:line-length
+parameters:
+  - name: pool
+    type: string
+
+  - name: runGovernanceTests
+    type: boolean
+    default: true
+
+  - name: enableLegacySigning
+    type: boolean
+    default: true
+
+  - name: forceInsertion
+    type: boolean
+    default: false
+
+  - name: pushNugets
+    type: boolean
+    default: true # default to true until otherwhise
+
+  - name: pushNugetsToMaestro
+    type: boolean
+    default: true
+
+  - name: isPR
+    type: boolean
+
+  - name: repositoryAlias
+    type: string
+    default: self
+
+  - name: commit
+    type: string
+    default: HEAD
+
+  - name: xcodeChannel
+    type: string
+
+  - name: macOSName
+    type: string
+
+  - name: stageDisplayNamePrefix
+    type: string
+    default: ''
+
+  - name: dependsOn
+    type: string
+    default: ''
+
+  - name: dependsOnResult
+    type: string
+    default: ''
+
+  - name: useACES
+    type: boolean
+    default: false
+
+stages:
+
+  - stage: configure_build
+    displayName: '${{ parameters.stageDisplayNamePrefix }}Configure'
+    dependsOn: ${{ parameters.dependsOn }}
+    ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.dependsOnResult, '')) }}:
+      condition: eq(dependencies.${{ parameters.dependsOn }}.result, '${{ parameters.dependsOnResult }}')
+    jobs:
+
+      - job: configure
+        displayName: 'Configure build'
+        pool:
+          name: AzurePipelines-EO
+          os: linux
+          image: 1ESPT-Ubuntu22.04
+
+        variables:
+          isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+          isScheduled: $[eq(variables['Build.Reason'], 'Schedule')]
+          BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+
+        steps:
+          - template: common/configure.yml
+            parameters:
+              repositoryAlias: ${{ parameters.repositoryAlias }}
+              commit: ${{ parameters.commit }}
+              statusContext: 'VSTS: simulator tests'
+              uploadArtifacts: true
+              use1ES: true
+
+  - stage: build_packages
+    displayName: '${{ parameters.stageDisplayNamePrefix }}Build'
+    dependsOn: [configure_build]
+    jobs:
+      - template: ./build/build-stage.yml
+        parameters:
+          xcodeChannel: ${{ parameters.xcodeChannel }}
+          macOSName: ${{ parameters.macOSName }}
+          isPR: ${{ parameters.isPR }}
+          repositoryAlias: ${{ parameters.repositoryAlias }}
+          commit: ${{ parameters.commit }}
+          vsdropsPrefix: ${{ variables.vsdropsPrefix }}
+          keyringPass: $(pass--lab--mac--builder--keychain)
+          gitHubToken: $(Github.Token)
+          xqaCertPass: $(xqa--certificates--password)
+          pool: ${{ parameters.pool }}
+          use1ES: true
+          useACES: ${{ parameters.useACES }}
+
+  # .NET Release Prep and VS Insertion Stages, only execute them when the build comes from an official branch and is not a schedule build from OneLoc
+  # setting the stage at this level makes the graph of the UI look better, else the lines overlap and is not clear.
+  - ? ${{ if
+        and(
+          ne(variables['Build.Reason'], 'Schedule'),
+          or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+            startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'),
+            startsWith(variables['Build.SourceBranch'], 'refs/heads/release-test/'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/net7.0'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/net8.0'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/net9.0'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/net10.0'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/net11.0'),
+            startsWith(variables['Build.SourceBranch'], 'refs/heads/xcode'),
+            eq(parameters.forceInsertion, true)
+          )
+        )
+      }}
+    : - template: ./release/vs-insertion-prep.yml
+        parameters:
+          buildStage: build_packages
+          dependsOn: [build_packages, configure_build]
+          stageDisplayNamePrefix: ${{ parameters.stageDisplayNamePrefix }}
+          isPR: ${{ parameters.isPR }}
+          repositoryAlias: ${{ parameters.repositoryAlias }}
+          commit: ${{ parameters.commit }}
+          pushNugets: ${{ parameters.pushNugets }}
+          pushNugetsToMaestro: ${{ parameters.pushNugetsToMaestro }}

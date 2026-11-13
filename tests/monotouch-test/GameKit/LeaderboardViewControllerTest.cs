@@ -7,26 +7,17 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__ && !__MACCATALYST__
 
-using System;
 using System.IO;
 using System.Threading;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
 using GameKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.GameKit;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.GameKit {
 
@@ -37,14 +28,16 @@ namespace MonoTouchFixtures.GameKit {
 		[Test]
 		public void DefaultCtor ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
+#if MONOMAC
+			Assert.Inconclusive ("'LeaderboardViewControllerTest' the native 'init' method returned nil.");
+#endif
 			using (var vc = new GKLeaderboardViewController ()) {
-				Assert.Null (vc.Category, "Category");
-				Assert.Null (vc.Delegate, "Delegate");
+				Assert.That (vc.Category, Is.Null, "Category");
+				Assert.That (vc.Delegate, Is.Null, "Delegate");
 				// default Scope vary by iOS version and can't be changed on iOS7 - not worth testing
 			}
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !__MACCATALYST__

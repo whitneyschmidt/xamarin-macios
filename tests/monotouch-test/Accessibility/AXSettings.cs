@@ -1,0 +1,49 @@
+//
+// Copyright 2024 Microsoft Corp
+//
+
+using System.Threading.Tasks;
+
+using Accessibility;
+
+namespace MonoTouchFixtures.Accessibility {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class AXSettingsTest {
+		[Test]
+		public void IsAssistiveAccessEnabled ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			Assert.That (AXSettings.IsAssistiveAccessEnabled, Is.EqualTo (true).Or.EqualTo (false), "IsAssistiveAccessEnabled");
+		}
+
+		[Test]
+		public void IsApplicationAccessibilityEnabled ()
+		{
+			TestRuntime.AssertXcodeVersion (27, 0);
+			Assert.That (AXSettings.IsApplicationAccessibilityEnabled, Is.EqualTo (true).Or.EqualTo (false), "IsApplicationAccessibilityEnabled");
+		}
+
+		static bool testedOnce;
+		[Test]
+		public void OpenSettingsFeature ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			if (!testedOnce) {
+				Assert.Ignore ("This test opens the Settings app (stopping executing of monotouch-test), so it's ignored when running automatically. Run again to actually run it (you'll have to switch back to monotouch-test manually).");
+				testedOnce = true;
+			}
+
+			NSError? error = null;
+			var didComplete = new TaskCompletionSource<bool> ();
+			AXSettings.OpenSettingsFeature (AXSettingsFeature.PersonalVoiceAllowAppsToRequestToUse, (e) => {
+				e = error;
+				didComplete.TrySetResult (true);
+			});
+			Assert.That (TestRuntime.RunAsync (TimeSpan.FromSeconds (30), didComplete.Task), Is.True, "Timed out");
+			Assert.That (error, Is.Null);
+		}
+	}
+}

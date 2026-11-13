@@ -1,0 +1,12 @@
+{
+  "author": "Microsoft",
+  "name": "Aplikacja Mac Catalyst",
+  "description": "Projekt służący do tworzenia aplikacji platformy .NET Mac Catalyst",
+  "symbols/bundleId/displayName": "Bundle ID",
+  "symbols/bundleId/description": "Nadpisuje element CFBundleIdentifier w pliku Info.plist",
+  "symbols/minOSVersion/displayName": "Minimum OS version",
+  "symbols/minOSVersion/description": "Nadpisuje element SupportedOSPlatformVersion w pliku projektu",
+  "symbols/Framework/description": "The target framework for the project.",
+  "symbols/Framework/choices/net12.0-maccatalyst/description": "Target net12.0-maccatalyst",
+  "symbols/Framework/choices/net11.0-maccatalyst/description": "Target net11.0-maccatalyst"
+}

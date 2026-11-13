@@ -1,0 +1,71 @@
+//
+// Unit tests for VNUtils
+//
+// Authors:
+//	Rachel Kang <rachelkang@microsoft.com>
+//
+// Copyright (c) Microsoft Corporation.
+//
+
+using System.Collections;
+using System.Numerics;
+
+using CoreGraphics;
+using Vision;
+
+namespace MonoTouchFixtures.Vision {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class VNUtilsTests {
+
+		[SetUp]
+		public void Setup () => TestRuntime.AssertXcodeVersion (13, 0);
+
+		[Test]
+		public void GetImagePointTest ()
+		{
+			var imagePoint = VNUtils.GetImagePoint (new CGPoint (2, 345), 6, 78, new CGRect (90, 12, 34, 56));
+			Assert.That (imagePoint, Is.Not.EqualTo (CGPoint.Empty), "VNImagePointForNormalizedPointUsingRegionOfInterest is not empty");
+		}
+
+		[Test]
+		public void GetNormalizedPointTest ()
+		{
+			var normalizedPoint = VNUtils.GetNormalizedPoint (new CGPoint (2, 345), 6, 78, new CGRect (90, 12, 34, 56));
+			Assert.That (normalizedPoint, Is.Not.EqualTo (CGPoint.Empty), "VNNormalizedPointForImagePointUsingRegionOfInterest is not empty");
+		}
+
+		[Test]
+		public void GetImageRectTest ()
+		{
+			var imageRect = VNUtils.GetImageRect (new CGRect (2, 34, 5, 67), 8, 90, new CGRect (123, 4, 56, 7));
+			Assert.That (imageRect, Is.Not.EqualTo (CGRect.Empty), "VNImageRectForNormalizedRectUsingRegionOfInterest is not empty");
+		}
+
+		[Test]
+		public void GetNormalizedRectTest ()
+		{
+			var normalizedRect = VNUtils.GetImageRect (new CGRect (2, 34, 5, 67), 8, 90, new CGRect (123, 4, 56, 7));
+			Assert.That (normalizedRect, Is.Not.EqualTo (CGRect.Empty), "VNNormalizedRectForImageRectUsingRegionOfInterest is not empty");
+		}
+
+		[Test]
+		public void GetNormalizedFaceBoundingBoxPointTest ()
+		{
+			var normalizedPoint = VNUtils.GetNormalizedFaceBoundingBoxPoint (new Vector2 (9, 8), new CGRect (3, 14, 15, 92), 2, 11);
+			Assert.That (normalizedPoint, Is.Not.EqualTo (CGPoint.Empty), "VNNormalizedFaceBoundingBoxPointForLandmarkPoint is not empty");
+		}
+
+
+		[Test]
+		public void IsIdentityTest ()
+		{
+			Assert.That (VNUtils.IsIdentityRect (new CGRect (0, 0, 1, 1)), Is.True, "Identity");
+			Assert.That (VNUtils.IsIdentityRect (new CGRect (0, 0, 2, 2)), Is.False, "Not Identity A");
+			Assert.That (VNUtils.IsIdentityRect (new CGRect (1, 1, 1, 1)), Is.False, "Not Identity B");
+			Assert.That (VNUtils.IsIdentityRect (new CGRect (1, 1, 0, 0)), Is.False, "Not Identity C");
+		}
+
+	}
+}

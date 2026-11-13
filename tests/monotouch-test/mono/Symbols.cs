@@ -1,17 +1,4 @@
 #if !MONOMAC
-using System;
-using System.Runtime.InteropServices;
-
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures {
 	[TestFixture]
@@ -22,13 +9,14 @@ namespace MonoTouchFixtures {
 		[Test]
 		public void FunctionNames ()
 		{
-			if (Runtime.Arch != Arch.DEVICE)
-				Assert.Ignore ("This is a device-only test.");
-			
+			TestRuntime.AssertDevice ();
+
 			Collect ();
 			bool aot = symbols [1].Contains ("MonoTouchFixtures_Symbols_Collect");
+			bool nativeaot = symbols [1].Contains ("MonoTouchFixtures_Symbols__Collect");
 			bool llvmonly = symbols [1].Contains ("mono_llvmonly_runtime_invoke"); // LLVM inlines the Collect function, so 'Collect' doesn't show up in the stack trace :/
 			bool interp = false;
+			bool coreclr = false;
 
 			if (!aot) {
 				for (int i = 0; i < 5 && !interp; i++) {
@@ -36,10 +24,12 @@ namespace MonoTouchFixtures {
 					 * MONO_NEVER_INLINE, so they should show up in the backtrace
 					 * reliably */
 					interp |= symbols [i].Contains ("ves_pinvoke_method") || symbols [i].Contains ("do_icall");
+
+					coreclr |= symbols [i].Contains ("ExecuteInterpretedMethod");
 				}
 			}
 
-			Assert.IsTrue (aot || interp || llvmonly, $"#1\n\t{string.Join ("\n\t", symbols)}");
+			Assert.That (aot || interp || llvmonly || nativeaot || coreclr, Is.True, $"#1\n\t{string.Join ("\n\t", symbols)}");
 		}
 
 		void Collect ()
@@ -51,17 +41,17 @@ namespace MonoTouchFixtures {
 			this.symbols = new string [size];
 			for (int i = 0; i < size; i++) {
 				this.symbols [i] = Marshal.PtrToStringAuto (Marshal.ReadIntPtr (symbols, i * IntPtr.Size));
-//				Console.WriteLine (" #{0}: {1}", i, this.symbols [i]);
+				//				Console.WriteLine (" #{0}: {1}", i, this.symbols [i]);
 			}
 
 			free (symbols);
 		}
 
 		[DllImport (Constants.libcLibrary)]
-		static extern int backtrace (IntPtr[] array, int size);
+		static extern int backtrace (IntPtr [] array, int size);
 
 		[DllImport (Constants.libcLibrary)]
-		static extern IntPtr backtrace_symbols (IntPtr[] array, int size);
+		static extern IntPtr backtrace_symbols (IntPtr [] array, int size);
 
 		[DllImport (Constants.libcLibrary)]
 		static extern void free (IntPtr ptr);

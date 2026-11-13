@@ -1,4 +1,6 @@
-using System;
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 	public partial class NSPopUpButtonCell {
@@ -8,10 +10,11 @@ namespace AppKit {
 			}
 		}
 
-		public NSMenuItem this [string title]{
+		public NSMenuItem this [string title] {
 			get {
-				return ItemWithTitle (title); 
+				return ItemWithTitle (title);
 			}
 		}
 	}
 }
+#endif // !__MACCATALYST__

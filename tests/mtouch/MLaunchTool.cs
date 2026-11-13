@@ -1,14 +1,12 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Text;
 using Xamarin.Utils;
 using Xamarin.Tests;
 
-namespace Xamarin
-{
-	class MLaunchTool : Tool
-	{
-		public enum MLaunchAction
-		{
+namespace Xamarin {
+	class MLaunchTool : Tool {
+		public enum MLaunchAction {
 			None,
 			Sim,
 			Dev,
@@ -27,13 +25,15 @@ namespace Xamarin
 		public MLaunchAction Action = MLaunchAction.Sim;
 		public Profile Profile = Profile.iOS;
 
-		string GetVerbosity ()
+		void AddVerbosity (IList<string> args)
 		{
-			if (Verbosity == 0)
-				return string.Empty;
-			if (Verbosity > 0)
-				return new string ('-', Verbosity).Replace ("-", "-v ");
-			return new string ('-', -Verbosity).Replace ("-", "-q ");
+			if (Verbosity == 0) {
+				// do nothing
+			} else if (Verbosity > 0) {
+				args.Add ("-" + new string ('v', Verbosity));
+			} else {
+				args.Add ("-" + new string ('q', -Verbosity));
+			}
 		}
 
 		public int Execute ()
@@ -41,17 +41,18 @@ namespace Xamarin
 			return Execute (Configuration.MlaunchPath, BuildArguments ());
 		}
 
-		string BuildArguments ()
+		IList<string> BuildArguments ()
 		{
-			var sb = new StringBuilder ();
+			var sb = new List<string> ();
 
 			switch (Action) {
 			case MLaunchAction.None:
 				break;
 			case MLaunchAction.Sim:
-				if (AppPath == null)
+				if (AppPath is null)
 					throw new Exception ("No AppPath specified.");
-				sb.Append (" --launchsim ").Append (StringUtils.Quote (AppPath));
+				sb.Add ("--launchsim");
+				sb.Add (AppPath);
 				break;
 			default:
 				throw new Exception ("MLaunchAction not specified.");
@@ -60,19 +61,23 @@ namespace Xamarin
 			if (SdkRoot == None) {
 				// do nothing
 			} else if (!string.IsNullOrEmpty (SdkRoot)) {
-				sb.Append (" --sdkroot ").Append (StringUtils.Quote (SdkRoot));
+				sb.Add ("--sdkroot");
+				sb.Add (SdkRoot);
 			} else {
-				sb.Append (" --sdkroot ").Append (StringUtils.Quote (Configuration.xcode_root));
+				sb.Add ("--sdkroot");
+				sb.Add (Configuration.xcode_root);
 			}
 
-			sb.Append (" ").Append (GetVerbosity ());
+			AddVerbosity (sb);
 
 			if (Sdk == None) {
 				// do nothing
 			} else if (!string.IsNullOrEmpty (Sdk)) {
-				sb.Append (" --sdk ").Append (Sdk);
+				sb.Add ("--sdk");
+				sb.Add (Sdk);
 			} else {
-				sb.Append (" --sdk ").Append (MTouch.GetSdkVersion (Profile));
+				sb.Add ("--sdk");
+				sb.Add (Profile.ToString ());
 			}
 
 			string platformName = null;
@@ -81,22 +86,33 @@ namespace Xamarin
 			switch (Profile) {
 			case Profile.iOS:
 				platformName = "iOS";
-				simType = "iPhone-SE";
+				// iPhone SE (1st generation) was removed as a simulator device type in iOS 27, so use a
+				// device type that's available there. Older SDKs keep the previous device type unchanged.
+				simType = SimSdkIsAtLeast27 () ? "iPhone-14" : "iPhone-SE";
 				break;
 			case Profile.tvOS:
 				platformName = "tvOS";
-				simType = "Apple-TV-1080p";
+				// The legacy non-4K "Apple TV" (Apple-TV-1080p) device type was removed in tvOS 27, so use
+				// an Apple TV 4K device type there. Older SDKs keep the previous device type unchanged.
+				simType = SimSdkIsAtLeast27 () ? "Apple-TV-4K-3rd-generation-4K" : "Apple-TV-1080p";
 				break;
 			default:
 				throw new Exception ("Profile not specified.");
 			}
 
 			if (!string.IsNullOrEmpty (platformName) && !string.IsNullOrEmpty (simType)) {
-				var device = string.Format (":v2:runtime=com.apple.CoreSimulator.SimRuntime.{0}-{1},devicetype=com.apple.CoreSimulator.SimDeviceType.{2}", platformName, Configuration.sdk_version.Replace ('.', '-'), simType);
-				sb.Append (" --device:").Append (StringUtils.Quote (device));
+				var device = string.Format (":v2:runtime=com.apple.CoreSimulator.SimRuntime.{0}-{1},devicetype=com.apple.CoreSimulator.SimDeviceType.{2}", platformName, Configuration.ios_sdk_version.Replace ('.', '-'), simType);
+				sb.Add ($"--device:{device}");
 			}
 
-			return sb.ToString ();
+			return sb;
+		}
+
+		// The runtime above uses Configuration.sdk_version, so gate the device type on the same version:
+		// some simulator device types were removed in the Xcode 27 SDKs (iOS/tvOS 27).
+		static bool SimSdkIsAtLeast27 ()
+		{
+			return Version.TryParse (Configuration.sdk_version, out var version) && version.Major >= 27;
 		}
 
 		protected override string ToolPath {

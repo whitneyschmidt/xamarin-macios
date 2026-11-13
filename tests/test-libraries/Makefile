@@ -1,9 +1,31 @@
 TOP=../..
 include $(TOP)/Make.config
 
+SUBDIRS += custom-type-assembly frameworks nugets libraries
+
 # without this many compiler warnings about unused functions and variables
 # in system headers show up.
 export CCACHE_CPP2=1
+
+ifeq ($(V),)
+ZIP=zip --symlinks --quiet
+else
+ZIP=zip --symlinks
+endif
+
+TEST_FRAMEWORKS+=XTest
+TEST_FRAMEWORKS+=XMergeableTest
+TEST_FRAMEWORKS+=XStaticArTest
+TEST_FRAMEWORKS+=XStaticObjectTest
+TEST_FRAMEWORKS+=SwiftTest
+TEST_FRAMEWORKS+=SwiftTest2
+
+DYNAMIC_TEST_FRAMEWORKS+=XTest
+DYNAMIC_TEST_FRAMEWORKS+=XMergeableTest
+STATIC_AR_TEST_FRAMEWORKS+=XStaticArTest
+STATIC_OBJECT_TEST_FRAMEWORKS+=XStaticObjectTest
+DYNAMIC_TEST_FRAMEWORKS+=SwiftTest
+DYNAMIC_TEST_FRAMEWORKS+=SwiftTest2
 
 GENERATED_FILES = \
 	libtest.structs.h \
@@ -15,6 +37,8 @@ GENERATED_FILES = \
 	TrampolineTest.generated.cs \
 
 GENERATED_FILES_PATTERN = \
+	libtest.methods%h \
+	libtest.methods%m \
 	libtest.structs%h \
 	libtest.decompile%m \
 	libtest.properties%h \
@@ -23,155 +47,358 @@ GENERATED_FILES_PATTERN = \
 	RegistrarTest.generated%cs \
 	TrampolineTest.generated%cs \
 
-testgenerator.exe: testgenerator.cs Makefile
-	$(Q) mcs -out:$@ $<
+TESTGENERATOR=bin/Debug/testgenerator.dll
+$(TESTGENERATOR): export RUNTIMEIDENTIFIER=
+$(TESTGENERATOR): export RUNTIMEIDENTIFIERS=
+$(TESTGENERATOR): testgenerator.cs Makefile
+	$(Q) unset MSBUILD_EXE_PATH && $(DOTNET) build testgenerator.csproj $(DOTNET_BUILD_VERBOSITY) /bl:$@.binlog
 
-$(GENERATED_FILES_PATTERN): testgenerator.exe
-	$(Q) mono --debug $<
+$(GENERATED_FILES_PATTERN): $(TESTGENERATOR)
+	$(Q) $(DOTNET) exec $<
 
-libtest-object.m libtest-ar.m:
-	$(Q) ln -fhs libtest.m $@
+define DefineInfixes
+$(1)_INFO_PLIST_INFIX=/Versions/A/Resources
+$(1)_BINARY_INFIX=/Versions/A
+endef
+$(foreach platform,$(DOTNET_DESKTOP_PLATFORMS),$(foreach rid,$(DOTNET_$(call uppercase,$(platform))_RUNTIME_IDENTIFIERS),$(eval $(call DefineInfixes,$(rid)))))
+$(foreach platform,$(DOTNET_DESKTOP_PLATFORMS),$(eval $(call DefineInfixes,$(call lowercase,$(platform)))))
+$(foreach platform,$(DOTNET_DESKTOP_PLATFORMS),$(eval $(call DefineInfixes,$(call uppercase,$(platform)))))
 
-define Template
+# Create the binary for all the dynamic test frameworks
+define TestDynamicFrameworkTemplate
+TEST_FRAMEWORK_$(1)_$(2)_TARGETS += \
+	.libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist \
 
-$(2)_TARGETS = \
-	.libs/$(1)/XTest.framework/XTest \
-	.libs/$(1)/XTest.framework/Info.plist \
-	.libs/$(1)/XStaticObjectTest.framework/XStaticObjectTest \
-	.libs/$(1)/XStaticArTest.framework/XStaticArTest \
-	.libs/$(1)/libtest.dylib \
-	.libs/$(1)/libtest2.a \
-	.libs/$(1)/libtest.a \
-	.libs/$(1)/libtest-object.a \
-	.libs/$(1)/libtest-ar.a \
-	$$(foreach arch,$(3),.libs/$(1)/libtest.$$(arch).a) \
-	$$(foreach arch,$(3),.libs/$(1)/libtest-object.$$(arch).a) \
-	$$(foreach arch,$(3),.libs/$(1)/libtest-ar.$$(arch).a) \
-	.libs/$(1)/XTest.framework \
-
-all-local:: $$($(2)_TARGETS) $(GENERATED_FILES)
-
-clean-$(1):
-	rm -Rf .libs/$(1)
-
-CLEAN_TARGETS += clean-$(1)
-EXTRA_DEPENDENCIES = libtest.h $(GENERATED_FILES) rename.h
-
-.libs/$(1)/libtest-object.%.o: export EXTRA_DEFINES=-DPREFIX=1
-.libs/$(1)/libtest-ar.%.o: export EXTRA_DEFINES=-DPREFIX=2
-
-.libs/$(1)/libtest%.a: .libs/$(1)/libtest%.o libtest-object.m libtest-ar.m
-	$(Q) rm -f $$@
-	$$(call Q_2,AR     [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar cru $$@ $$^
-
-.libs/$(1)/libtest.a: $$(foreach arch,$(3),.libs/$(1)/libtest.$$(arch).a)
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
-
-.libs/$(1)/libtest2.a: $$(foreach arch,$(3),.libs/$(1)/libtest2.$$(arch).a)
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
-
-.libs/$(1)/libtest-object.a: $$(foreach arch,$(3),.libs/$(1)/libtest-object.$$(arch).a)
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
-
-.libs/$(1)/libtest-ar.a: $$(foreach arch,$(3),.libs/$(1)/libtest-ar.$$(arch).a)
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
-
-COMMON_DYLIB_ARGS=-g -dynamiclib -gdwarf-2 -fms-extensions libframework.m -o $$@ -Wall -framework Foundation -lz
-.libs/$(1)/libtest-sim.%.dylib: libframework.m | .libs/$(1)
-	$$(call Q_2,CC,    [$(1)]) $$(SIMULATOR_CC) $$(COMMON_DYLIB_ARGS) -arch $$* $(8) -isysroot $(XCODE_DEVELOPER_ROOT)/Platforms/$(6).platform/Developer/SDKs/$(6)$$($(2)_SDK_VERSION).sdk
-	$$(Q) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/install_name_tool -id @rpath/XTest.framework/XTest $$@
-
-.libs/$(1)/libtest-dev.%.dylib: libframework.m | .libs/$(1)
-	$$(call Q_2,CC,    [$(1)]) $(DEVICE_CC)     $$(COMMON_DYLIB_ARGS) -arch $$* $(9) -isysroot $(XCODE_DEVELOPER_ROOT)/Platforms/$(7).platform/Developer/SDKs/$(7)$$($(2)_SDK_VERSION).sdk
-	$$(Q) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/install_name_tool -id @rpath/XTest.framework/XTest $$@
-
-.libs/$(1)/libtest.dylib: $$(foreach arch,$(4),.libs/$(1)/libtest-sim.$$(arch).dylib) $$(foreach arch,$(5),.libs/$(1)/libtest-dev.$$(arch).dylib)
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
-
-# XTest is a framework where the binary code is a (fat) dynamic library
-.libs/$(1)/XTest.framework/XTest: .libs/$(1)/libtest.dylib | .libs/$(1)/XTest.framework
+.libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)/$(2): .libs/$(1)/lib$(2).dylib | .libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)
 	$$(Q) $(CP) $$^ $$@
+	$$(Q) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/install_name_tool -id @rpath/$(2).framework/$(2) $$@
+	$$(Q) for lib in $$(DYNAMIC_TEST_FRAMEWORKS); do $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/install_name_tool -change .libs/$(1)/lib$$$$lib.dylib @rpath/$$$$lib.framework/$$$$lib $$@; done
 
-.libs/$(1)/XTest.framework/Info.plist: XTest-Info.plist | .libs/$(1)/XTest.framework
+.libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist: plists/$(2)-Info-$(1).plist | .libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)
 	$$(Q) $(CP) $$^ $$@
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestDynamicFrameworkTemplate,$(rid),$(testFramework)))))
 
-# XStaticObjectTest is a framework where the binary code is a (fat) object file
-.libs/$(1)/XStaticObjectTest.framework/XStaticObjectTest: $$(foreach arch,$(3),.libs/$(1)/libtest-object.$$(arch).o) | .libs/$(1)/XStaticObjectTest.framework
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
+# Create the binary for all the static (.a) test frameworks
+define TestStaticArFrameworkTemplate
+.libs/$(1)/$(2).framework/$(2): .libs/$(1)/lib$(2).a | .libs/$(1)/$(2).framework
+	$$(Q) $(CP) $$^ $$@
+endef
+$(foreach testFramework,$(STATIC_AR_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestStaticArFrameworkTemplate,$(rid),$(testFramework)))))
 
-# XStaticArTest is a framework where the binary code is a (fat) ar archive (of object files)
-.libs/$(1)/XStaticArTest.framework/XStaticArTest: $$(foreach arch,$(3),.libs/$(1)/libtest-ar.$$(arch).a) | .libs/$(1)/XStaticArTest.framework
-	$(Q) rm -f $$@
-	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
+# Create the binary for all the static (.o) test frameworks
+define TestStaticObjectFrameworkTemplate
+.libs/$(1)/$(2).framework/$(2): .libs/$(1)/lib$(2).o | .libs/$(1)/$(2).framework
+	$$(Q) $(CP) $$^ $$@
+endef
+$(foreach testFramework,$(STATIC_OBJECT_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestStaticObjectFrameworkTemplate,$(rid),$(testFramework)))))
 
-.libs/$(1)/XTest.framework .libs/$(1)/XStaticObjectTest.framework .libs/$(1)/XStaticArTest.framework:
+# Create all the test frameworks
+define TestDynamicFrameworkTemplate
+TEST_DYNAMIC_FRAMEWORK_$(1)_$(2)_TARGETS += \
+	.libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)/$(2) \
+
+TEST_DYNAMIC_FRAMEWORK_$(1)_TARGETS = \
+	$$(TEST_DYNAMIC_FRAMEWORK_$(1)_$(2)_TARGETS) \
+	.libs/$(1)/$(2).framework \
+	.libs/$(1)/$(2).framework.stamp \
+
+.libs/$(1)/$(2).framework.stamp: $$(TEST_DYNAMIC_FRAMEWORK_$(1)_$(2)_TARGETS)
+	$$(Q) touch $$@
+
+TEST_DYNAMIC_FRAMEWORK_$(1)_DIRECTORIES = \
+	.libs/$(1)/$(2).framework/Versions \
+	.libs/$(1)/$(2).framework \
+
+$$(TEST_DYNAMIC_FRAMEWORK_$(1)_DIRECTORIES):
 	$$(Q) mkdir -p $$@
 
+all-local:: $$(TEST_DYNAMIC_FRAMEWORK_$(1)_TARGETS)
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestDynamicFrameworkTemplate,$(rid),$(testFramework)))))
+
+define TestStaticFrameworkTemplate
+TEST_STATIC_FRAMEWORK_$(1)_$(2)_TARGETS += \
+	.libs/$(1)/$(2).framework/$(2) \
+
+TEST_STATIC_FRAMEWORK_$(1)_TARGETS = \
+	$$(TEST_STATIC_FRAMEWORK_$(1)_$(2)_TARGETS) \
+	.libs/$(1)/$(2).framework \
+	.libs/$(1)/$(2).framework.stamp \
+
+.libs/$(1)/$(2).framework.stamp: $$(TEST_STATIC_FRAMEWORK_$(1)_$(2)_TARGETS)
+	$$(Q) touch $$@
+
+TEST_STATIC_FRAMEWORK_$(1)_DIRECTORIES = \
+	.libs/$(1)/$(2).framework/Versions \
+	.libs/$(1)/$(2).framework \
+
+$$(TEST_STATIC_FRAMEWORK_$(1)_DIRECTORIES):
+	$$(Q) mkdir -p $$@
+
+all-local:: $$(TEST_STATIC_FRAMEWORK_$(1)_TARGETS)
+endef
+$(foreach testFramework,$(STATIC_AR_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestStaticFrameworkTemplate,$(rid),$(testFramework)))))
+$(foreach testFramework,$(STATIC_OBJECT_TEST_FRAMEWORKS),$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call TestStaticFrameworkTemplate,$(rid),$(testFramework)))))
+
+
+# Create the symlinks for the test frameworks for desktop platforms
+define TestFrameworkSymlinksTemplate
+SYMLINK_$(1)_TARGETS += \
+	.libs/$(1)/$(2).framework/$(2) \
+	.libs/$(1)/$(2).framework/Resources \
+	.libs/$(1)/$(2).framework/Versions/Current \
+	.libs/$(1)/$(2).framework/Versions/A/Resources/Info.plist \
+
+.libs/$(1)/$(2).framework$($(1)_BINARY_INFIX) .libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX):
+	$$(Q) mkdir -p $$@
+
+.libs/$(1)/$(2).framework/$(2): | .libs/$(1)/$(2).framework
+	$$(Q) ln -fs Versions/A/$(2) $$@
+
+.libs/$(1)/$(2).framework/Resources: | .libs/$(1)/$(2).framework
+	$$(Q) ln -fs Versions/Current/Resources $$@
+
+.libs/$(1)/$(2).framework/Versions/Current: | .libs/$(1)/$(2).framework/Versions
+	$$(Q) ln -fs A $$@
+
+all-locals:: $$(SYMLINK_$(1)_TARGETS)
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach platform,$(DOTNET_DESKTOP_PLATFORMS),$(foreach rid,$(DOTNET_$(call uppercase,$(platform))_RUNTIME_IDENTIFIERS),$(eval $(call TestFrameworkSymlinksTemplate,$(rid),$(testFramework))))))
+
+# Create a framework for each platform, which would potentially be a fat framework.
+# Here 'platform' is defined as a platform for xcframework - ios device is one platform, where ios simulator is another.
+define PlatformFrameworkTemplate
+.libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)/$(2): $$(foreach rid,$(3),.libs/$$(rid)/$(2).framework$($(1)_BINARY_INFIX)/$(2))
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) lipo -create -output "$$@" $$^
+
+.libs/$(1)/$(2).framework.dSYM: .libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)/$(2)
+	$$(Q) rm -rf $$@
+	$$(call Q_2,DSYM,  [$(1)/$(2)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil "$$<" -o "$$@"
+
+.libs/$(1)/$(2).framework.stamp: .libs/$(1)/$(2).framework.dSYM
+	$$(Q) touch $$@
+
+PLATFORM_FRAMEWORK_TEMPLATE_$(1)_TARGETS += \
+	.libs/$(1)/$(2).framework$($(1)_BINARY_INFIX)/$(2) \
+
+all-local:: $$(PLATFORM_FRAMEWORK_TEMPLATE_$(1)_TARGETS)
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformFrameworkTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+
+# Create a framework for each platform, which would potentially be a fat framework.
+# Here 'platform' is defined as a platform for xcframework - ios device is one platform, where ios simulator is another.
+define PlatformDynamicFrameworkTemplate
+.libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist: $$(foreach rid,$(3),.libs/$$(rid)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist)
+	$$(Q) mkdir -p $$(dir $$@)
+	@# Check if the Info.plists are identical (if there are more than one)
+	$$(Q) test "$$(words $$^)" -eq 1 || diff $$^
+	@# Copy one of them
+	$$(Q) $(CP) $$< $$@
+
+.libs/$(1)/$(2).framework.stamp: .libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist
+
+all-local:: .libs/$(1)/$(2).framework$($(1)_INFO_PLIST_INFIX)/Info.plist
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformDynamicFrameworkTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+
+# Create a framework for each platform, which would potentially be a fat framework.
+# Here 'platform' is defined as a platform for xcframework - ios device is one platform, where ios simulator is another.
+define PlatformStaticFrameworkTemplate
+.libs/$(1)/$(2).framework/$(2): $$(foreach rid,$(3),.libs/$$(rid)/$(2).framework/$(2))
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) lipo -create -output "$$@" $$^
+
+.libs/$(1)/$(2).framework.stamp: .libs/$(1)/$(2).framework/$(2)
+	$$(Q) touch $$@
+
+PLATFORM_STATIC_FRAMEWORK_TEMPLATE_$(1)_TARGETS += \
+	.libs/$(1)/$(2).framework/$(2) \
+
+all-local:: $$(PLATFORM_STATIC_FRAMEWORK_TEMPLATE_$(1)_TARGETS)
+endef
+$(foreach testFramework,$(STATIC_AR_TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformStaticFrameworkTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+$(foreach testFramework,$(STATIC_OBJECT_TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformStaticFrameworkTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+
+# Create a static library for each platform, which would potentially be a fat static library.
+# Here 'platform' is defined as a platform for xcframework - ios device is one platform, where ios simulator is another.
+define PlatformStaticTemplate
+.libs/$(1)/$(2).a: $$(foreach rid,$(3),.libs/$$(rid)/$(2).a)
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) lipo -create -output "$$@" $$^
+
+all-local:: .libs/$(1)/$(2).a
+endef
+$(foreach testFramework,libtest libtest2,$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformStaticTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+
+# Create a dynamic library for each platform, which would potentially be a fat dynamic library.
+# Here 'platform' is defined as a platform for xcframework - ios device is one platform, where ios simulator is another.
+define PlatformDynamicTemplate
+.libs/$(1)/$(2).dylib: $$(foreach rid,$(3),.libs/$$(rid)/$(2).dylib)
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) lipo -create -output "$$@" $$^
+
+all-local:: .libs/$(1)/$(2).dylib
+endef
+$(foreach testFramework,libframework,$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformDynamicTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+$(foreach testFramework,libMergeableFramework,$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call PlatformDynamicTemplate,$(xcframeworkPlatform),$(testFramework),$(XCFRAMEWORK_$(xcframeworkPlatform)_RUNTIME_IDENTIFIERS)))))
+
+# Create the symlinks for the per-platform frameworks (for desktop platforms)
+# Here 'platform' is defined as a platform for xcframework (see above)
+define PlatformFrameworkSymlinksTemplate
+.libs/$(1)/$(2).framework/$(2):
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) ln -fs Versions/A/$(2) $$@
+
+.libs/$(1)/$(2).framework/Resources:
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) ln -fs Versions/A/Resources $$@
+
+.libs/$(1)/$(2).framework/Versions/Current:
+	$$(Q) mkdir -p $$(dir $$@)
+	$$(Q) ln -fs A $$@
+
+PLATFORM_FRAMEWORK_SYMLINKS_TEMPLATE_$(4)_TARGETS += \
+	.libs/$(1)/$(2).framework/$(2) \
+	.libs/$(1)/$(2).framework/Resources \
+	.libs/$(1)/$(2).framework/Versions/Current \
+
+.libs/$(1)/$(2).framework.stamp: | .libs/$(1)/$(2).framework/$(2)
+.libs/$(1)/$(2).framework.stamp: | .libs/$(1)/$(2).framework/Versions/Current
+.libs/$(1)/$(2).framework.stamp: | .libs/$(1)/$(2).framework/Resources
+
+all-local:: $$(PLATFORM_FRAMEWORK_SYMLINKS_TEMPLATE_$(4)_TARGETS)
+endef
+$(foreach testFramework,$(DYNAMIC_TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_DESKTOP_PLATFORMS),$(eval $(call PlatformFrameworkSymlinksTemplate,$(xcframeworkPlatform),$(testFramework)))))
+
+define ZippedFrameworkTemplate
+.libs/$(1)/$(2).framework.zip: .libs/$(1)/$(2).framework.stamp
+	$$(Q_ZIP) cd .libs/$(1) && $(ZIP) -r $(2).framework.zip $(2).framework
+
+all-local:: .libs/$(1)/$(2).framework.zip
+zip:: .libs/$(1)/$(2).framework.zip
+endef
+$(foreach testFramework,$(TEST_FRAMEWORKS),$(foreach xcframeworkPlatform,$(XCFRAMEWORK_PLATFORMS),$(eval $(call ZippedFrameworkTemplate,$(xcframeworkPlatform),$(testFramework)))))
+
+define Template
+$(1)_TARGETS = \
+	.libs/$(1)/libtest2.a \
+	.libs/$(1)/libtest.a \
+
+all-local:: $$($(1)_TARGETS) $(GENERATED_FILES)
+
+EXTRA_DEPENDENCIES = libtest.h $(GENERATED_FILES) rename.h
+
+.libs/$(1)/lib%.a: .libs/$(1)/lib%.o
+	$(Q) rm -f $$@
+	$$(call Q_2,AR     [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar cru $$@ $$<
+
+.libs/$(1)/libframework.dylib: libframework.m
+
+# XTest is a framework where the binary code is a (fat) dynamic library
+.libs/$(1)/libXTest.dylib: .libs/$(1)/libframework.dylib
+	$$(Q) $(CP) $$^ $$@
+	$$(Q) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/install_name_tool -id @rpath/XTest.framework/XTest $$@
+
+# XMergeableTest is a framework where the binary code is a (fat) mergeable dynamic library (built with -make_mergeable)
+.libs/$(1)/libXMergeableTest.dylib: libframework.m
+.libs/$(1)/libXMergeableTest.dylib: EXTRA_FLAGS += -Wl,-make_mergeable
+
+# libMergeableFramework.dylib is a standalone mergeable dynamic library (not in a framework)
+.libs/$(1)/libMergeableFramework.dylib: libframework.m
+.libs/$(1)/libMergeableFramework.dylib: EXTRA_FLAGS += -Wl,-make_mergeable
+
+# XStaticObjectTest is a framework where the binary code is a (fat) object file
+.libs/$(1)/libXStaticObjectTest.o: .libs/$(1)/libtest-object.o
+	$$(Q) rm -f $$@
+	$$(Q) $$(CP) $$^ $$@
+
+# XStaticArTest is a framework where the binary code is a (fat) ar archive (of object files)
+.libs/$(1)/libXStaticArTest.a: .libs/$(1)/libtest-ar.a
+	$$(Q) rm -f $$@
+	$$(Q) $$(CP) $$^ $$@
 endef
 
-# 3: all architectures
-# 4: sim architectures
-# 5: device architectures
-# 6: simulator platform name
-# 7: device platform name
-# 8: simulator min version
-# 9: device min version
-$(eval $(call Template,ios,IOS,armv7 armv7s arm64 x86 x86_64,i386 x86_64,armv7 armv7s arm64,iPhoneSimulator,iPhoneOS,-mios-simulator-version-min=8.0,-miphoneos-version-min=8.0))
-ifdef INCLUDE_TVOS
-$(eval $(call Template,tvos,TVOS,arm64 x86_64,x86_64,arm64,AppleTVSimulator,AppleTVOS,-mtvos-simulator-version-min=9.0,-mtvos-version-min=9.0 -fembed-bitcode))
-endif
-ifdef INCLUDE_WATCH
-$(eval $(call Template,watchos,WATCHOS,armv7k x86 arm64_32,i386,armv7k arm64_32,WatchSimulator,WatchOS,-mwatchos-simulator-version-min=2.0,-mwatchos-version-min=2.0 -fembed-bitcode))
-endif
-ifdef INCLUDE_MAC
-$(eval $(call Template,macos,MACOS,x86_64,x86_64,,MacOSX,MacOSX,-mmacosx-version-min=$(MIN_OSX_VERSION_FOR_MAC),-mmacosx-version-min=$(MIN_OSX_VERSION_FOR_MAC)))
-endif
+$(foreach platform,$(DOTNET_PLATFORMS),$(foreach rid,$(DOTNET_$(call uppercase,$(platform))_RUNTIME_IDENTIFIERS),$(eval $(call Template,$(rid),$(platform)))))
 
-define LibTemplate
+#
+# Swift libraries and frameworks
+#
 
-.libs/$(4)/libtest.$(1).a: $(2) $(3)
-	@rm -f $$@
-	$$(Q_LIPO) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
+EXTRA_libSwiftTest_FLAGS=-enable-library-evolution -emit-objc-header
+EXTRA_libSwiftTest2_FLAGS=-emit-objc-header -lSwiftTest
 
-$(5)_TARGETS += .libs/$(4)/libtest.$(1).a
+# SwiftTest is a framework where the binary code is a (fat) dynamic library
+SWIFT_TESTS+=SwiftTest
+# SwiftTest2 is a framework where the binary code is a (fat) dynamic library, and which depends on SwiftTest.
+SWIFT_TESTS+=SwiftTest2
 
+define SwiftTestsPerPlatform
+.libs/$(1)/$(3).dylib: $$(foreach rid,$(2),.libs/$(1)/$(3).dylib) | .libs/$(1)
+	$$(call Q_2,LIPO   [$(1)]) $(XCODE_DEVELOPER_ROOT)/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo $$^ -create -output $$@
 endef
+$(foreach swiftTest,$(SWIFT_TESTS),$(foreach platform,$(DOTNET_PLATFORMS),$(eval $(call SwiftTestsPerPlatform,$(platform),$(DOTNET_$(call uppercase,$(platform))_RUNTIME_IDENTIFIERS),$(swiftTest)))))
 
-$(eval $(call LibTemplate,armv7+7s,.libs/ios/libtest.armv7.o,.libs/ios/libtest.armv7s.o,ios,IOS))
-$(eval $(call LibTemplate,armv7+x86,.libs/ios/libtest.armv7.o,.libs/ios/libtest.x86.o,ios,IOS))
-$(eval $(call LibTemplate,armv7s+x86,.libs/ios/libtest.armv7s.o,.libs/ios/libtest.x86.o,ios,IOS))
+# Make sure libSwiftTest is built before libSwiftTest2, because libSwiftTest2 depends on libSwiftTest
+define SwiftTest2AddDependency
+.libs/$(1)/libSwiftTest2.dylib: .libs/$(1)/libSwiftTest.dylib
+endef
+$(foreach rid,$(DOTNET_RUNTIME_IDENTIFIERS),$(eval $(call SwiftTest2AddDependency,$(rid))))
 
-$(eval $(call LibTemplate,arm64+x86_64,.libs/tvos/libtest.arm64.o,.libs/tvos/libtest.x86_64.o,tvos,TVOS))
+# create an xcframework of frameworks
+ifneq ($(XCFRAMEWORK_PLATFORMS),)
+define TestFrameworkXCFramework
+$(1)_XCFRAMEWORKS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).framework)
+$(1)_XCTARGETS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).framework.stamp)
+.libs/$(1).xcframework: $$($(1)_XCTARGETS) Makefile
+	$$(Q) rm -rf $$@
+	$$(Q_GEN) args=""; for fw in $$($(1)_XCFRAMEWORKS); do args="$$$$args -framework \"$$$$fw\""; if test -d "$$$$fw.dSYM"; then args="$$$$args -debug-symbols \"$$(CURDIR)/$$$$fw.dSYM\""; fi; done; eval $$(XCODE_DEVELOPER_ROOT)/usr/bin/xcodebuild -quiet -create-xcframework $$$$args -output $$@
+all-local:: .libs/$(1).xcframework
+endef
+$(foreach testFramework,$(TEST_FRAMEWORKS),$(eval $(call TestFrameworkXCFramework,$(testFramework))))
 
-$(eval $(call LibTemplate,armv7k+x86,.libs/watchos/libtest.armv7k.o,.libs/watchos/libtest.x86.o,watchos,WATCHOS))
+define TestFrameworkXCFrameworkPlatformSpecific
+$(1)_$(2)_XCFRAMEWORKS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_$(2)_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).framework)
+$(1)_$(2)_XCTARGETS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_$(2)_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).framework.stamp)
+.libs/$(3)/$(1).xcframework: $$($(1)_$(2)_XCTARGETS) Makefile
+	$$(Q) rm -rf $$@
+	$$(Q_GEN) args=""; for fw in $$($(1)_$(2)_XCFRAMEWORKS); do args="$$$$args -framework \"$$$$fw\""; if test -d "$$$$fw.dSYM"; then args="$$$$args -debug-symbols \"$$(CURDIR)/$$$$fw.dSYM\""; fi; done; eval $$(XCODE_DEVELOPER_ROOT)/usr/bin/xcodebuild -quiet -create-xcframework $$$$args -output $$@
+all-local:: .libs/$(3)/$(1).xcframework
+endef
+$(foreach platform,$(DOTNET_PLATFORMS),$(foreach testFramework,$(TEST_FRAMEWORKS),$(eval $(call TestFrameworkXCFrameworkPlatformSpecific,$(testFramework),$(platform),$(call lowercase,$(platform))))))
 
-# Xamarin.Mac
+# create an xcframework of libraries
+define TestLibraryXCFramework
+$(1)_XCFRAMEWORKS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).a)
+$(1)_XCTARGETS += $$(foreach xcframeworkPlatform,$$(XCFRAMEWORK_PLATFORMS),.libs/$$(xcframeworkPlatform)/$(1).a)
+.libs/$(1).xcframework: $$($(1)_XCTARGETS) Makefile
+	$$(Q) rm -rf $$@
+	$$(Q_GEN) $$(XCODE_DEVELOPER_ROOT)/usr/bin/xcodebuild -quiet -create-xcframework $$(foreach fw,$$($(1)_XCFRAMEWORKS),-library $$(fw)) -output $$@
+all-local:: .libs/$(1).xcframework
+endef
+$(eval $(call TestLibraryXCFramework,libtest))
+$(eval $(call TestLibraryXCFramework,libtest2))
+endif # XCFRAMEWORK_PLATFORMS
 
-MAC_CLANG = DEVELOPER_DIR=$(XCODE_DEVELOPER_ROOT) $(MAC_CC)
-MAC_OBJC_CFLAGS=-ObjC++ -std=c++0x -fno-exceptions
-MAC_CFLAGS = -mmacosx-version-min=$(MIN_OSX_SDK_VERSION) -Wall -DMONOMAC -g
-MAC_LDFLAGS = -mmacosx-version-min=$(MIN_OSX_SDK_VERSION) -framework AppKit
+ifneq ($(XCFRAMEWORK_PLATFORMS),)
+define ZippedXcframework
+.libs/$(1).xcframework.zip: .libs/$(1).xcframework
+	$$(Q_ZIP) cd .libs && $(ZIP) -r "$$(notdir $$@)" "$$(notdir $$<)"
+all-local:: .libs/$(1).xcframework.zip
+endef
+$(foreach testFramework,$(TEST_FRAMEWORKS),$(eval $(call ZippedXcframework,$(testFramework))))
+$(eval $(call ZippedXcframework,libtest))
+$(eval $(call ZippedXcframework,libtest2))
 
-.libs/macos/libtest.%.o: libtest.m $(EXTRA_DEPENDENCIES) | .libs/macos
-	$(call Q_2,OBJC,  [mac]) $(MAC_CLANG) -arch $* -c $(MAC_OBJC_CFLAGS) $(MAC_CFLAGS) -o $@ $<
-
-.libs/macos/libtest-object.%.o: libtest.m $(EXTRA_DEPENDENCIES) | .libs/macos
-	$(call Q_2,OBJC,  [mac]) $(MAC_CLANG) -arch $* -c $(MAC_OBJC_CFLAGS) $(MAC_CFLAGS) -o $@ $< -DPREFIX=1
-
-.libs/macos/libtest-ar.%.o: libtest.m $(EXTRA_DEPENDENCIES) | .libs/macos
-	$(call Q_2,OBJC,  [mac]) $(MAC_CLANG) -arch $* -c $(MAC_OBJC_CFLAGS) $(MAC_CFLAGS) -o $@ $< -DPREFIX=2
-
-.libs/macos/libtest2.%.o: libtest2.m $(EXTRA_DEPENDENCIES) | .libs/macos
-	$(call Q_2,OBJC,  [mac]) $(MAC_CLANG) -arch $* -c $(MAC_OBJC_CFLAGS) $(MAC_CFLAGS) -o $@ $<
-
-.libs/macos:
-	$(Q) mkdir -p $@
-
-clean-local:: $(CLEAN_TARGETS)
+define ZippedXcframeworkPlatformSpecific
+.libs/$(3)/$(1).xcframework.zip: .libs/$(3)/$(1).xcframework
+	$$(Q_ZIP) cd .libs/$(3) && $(ZIP) -r "$$(notdir $$@)" "$$(notdir $$<)"
+all-local:: .libs/$(3)/$(1).xcframework.zip
+endef
+$(foreach platform,$(DOTNET_PLATFORMS),$(foreach testFramework,$(TEST_FRAMEWORKS),$(eval $(call ZippedXcframeworkPlatformSpecific,$(testFramework),$(platform),$(call lowercase,$(platform))))))
+endif # XCFRAMEWORK_PLATFORMS
 
 include $(TOP)/mk/rules.mk
+
+.SECONDARY:

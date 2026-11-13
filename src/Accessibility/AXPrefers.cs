@@ -1,0 +1,51 @@
+#nullable enable
+
+using CoreGraphics;
+
+namespace Accessibility {
+
+	// accessibility.cs already provide the following attributes on the type
+	// [TV (17, 0), iOS (17, 0), MacCatalyst (17, 0)]
+	public static partial class AXPrefers {
+
+		[DllImport (Constants.AccessibilityLibrary)]
+		static extern byte AXPrefersHorizontalTextLayout ();
+
+		public static bool HorizontalTextEnabled ()
+		{
+			return AXPrefersHorizontalTextLayout () != 0;
+		}
+
+		[SupportedOSPlatform ("ios18.0")]
+		[SupportedOSPlatform ("maccatalyst18.0")]
+		[SupportedOSPlatform ("macos15.0")]
+		[SupportedOSPlatform ("tvos18.0")]
+		[DllImport (Constants.AccessibilityLibrary)]
+		static extern byte AXPrefersNonBlinkingTextInsertionIndicator ();
+
+		[SupportedOSPlatform ("ios18.0")]
+		[SupportedOSPlatform ("maccatalyst18.0")]
+		[SupportedOSPlatform ("macos15.0")]
+		[SupportedOSPlatform ("tvos18.0")]
+		public static bool NonBlinkingTextInsertionIndicator ()
+		{
+			return AXPrefersNonBlinkingTextInsertionIndicator () != 0;
+		}
+
+		[SupportedOSPlatform ("ios26.1")]
+		[SupportedOSPlatform ("maccatalyst26.1")]
+		[SupportedOSPlatform ("macos26.1")]
+		[SupportedOSPlatform ("tvos26.1")]
+		[DllImport (Constants.AccessibilityLibrary)]
+		static extern byte AXPrefersActionSliderAlternative ();
+
+		[SupportedOSPlatform ("ios26.1")]
+		[SupportedOSPlatform ("maccatalyst26.1")]
+		[SupportedOSPlatform ("macos26.1")]
+		[SupportedOSPlatform ("tvos26.1")]
+		public static bool ActionSliderAlternative ()
+		{
+			return AXPrefersActionSliderAlternative () != 0;
+		}
+	}
+}

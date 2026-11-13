@@ -1,13 +1,9 @@
-using System;
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace HomeKit {
 
-	[TV (10,0)]
-	[iOS (8,0)]
-	public partial class HMCharacteristicMetadata
-	{
+	public partial class HMCharacteristicMetadata {
+		/// <summary>Gets the units in which the characteristic is expressed.</summary>
 		public HMCharacteristicMetadataUnits Units {
 			get {
 				var u = _Units;
@@ -34,6 +30,7 @@ namespace HomeKit {
 			}
 		}
 
+		/// <summary>Gets the data format of the characteristic.</summary>
 		public HMCharacteristicMetadataFormat Format {
 			get {
 				var f = _Format;

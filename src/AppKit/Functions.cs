@@ -21,20 +21,22 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
 using CoreGraphics;
 using CoreImage;
 using CoreAnimation;
 
+#nullable enable
+
 namespace AppKit {
 
+#if MONOMAC
 	// Class to access C functions
+	/// <summary>Provides access to AppKit framework C functions.</summary>
 	public partial class AppKitFramework {
-    
+
+		/// <summary>Plays the system alert sound.</summary>
 		[DllImport (Constants.AppKitLibrary)]
-		public static extern void NSBeep();
+		public static extern void NSBeep ();
 	}
+#endif
 }

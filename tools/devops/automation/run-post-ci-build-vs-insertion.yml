@@ -1,0 +1,96 @@
+# YAML pipeline for post build operations. 
+# This pipeline will sign the nugets and will prepare them for a release.
+
+trigger: none
+pr: none
+
+parameters:
+
+  - name: stageDisplayNamePrefix
+    type: string
+    default: ''
+
+  - name: repositoryAlias
+    type: string
+    default: self
+
+  - name: commit
+    type: string
+    default: HEAD
+
+  - name: pushNugets
+    type: boolean
+    default: true # default to true until otherwhise
+
+  - name: pushNugetsToMaestro
+    type: boolean
+    default: true
+
+# Tighten the needed network calls to comply with restrictions
+# See https://devdiv.visualstudio.com/DevDiv/_git/Xamarin.yaml-templates/pullrequest/749941
+variables:
+  - name: DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE
+    value: 'true'
+  - name: DOTNET_SDK_VULNERABILITY_CHECK_DISABLE
+    value: 'true'
+
+# we cannot use a template in a pipeline context
+resources:
+  pipelines:
+    - pipeline: macios
+      source: \Xamarin\Mac-iOS\ci pipelines\xamarin-macios-ci
+      trigger:
+        branches:
+          include:
+            - main
+            - release-test/*
+            - release/*
+            - net7.0
+            - net8.0
+            - net9.0
+            - net10.0
+            - net11.0
+            - xcode*
+        stages:
+          - build_packages
+
+extends:
+  template: azure-pipelines/MicroBuild.1ES.Official.yml@CustomPipelineTemplates
+  parameters:
+    pool:  # default pool to be used for validation jobs
+      name: AzurePipelines-EO
+      image: 1ESPT-Windows2022
+      os: windows
+    sdl:
+      baseline:
+        baselineFile: '$(System.DefaultWorkingDirectory)\\$(BUILD_REPOSITORY_TITLE)\\tools\\devops\\governance\\baselines.gdnbaselines'
+      suppression:
+        suppressionFile: '$(System.DefaultWorkingDirectory)\\$(BUILD_REPOSITORY_TITLE)\\tools\\devops\\governance\\suppress.gdnsuppress'
+      sourceAnalysisPool:
+        name: AzurePipelines-EO
+        image: 1ESPT-Windows2022
+        os: windows
+      tsa:
+        configFile: '$(System.DefaultWorkingDirectory)\\$(BUILD_REPOSITORY_TITLE)\\tools\\devops\\governance\\tsa_config.gdntsa'
+      sbom:
+        enabled: false  # we run our on sbom generation
+      credscan:
+        suppressionsFile: '$(System.DefaultWorkingDirectory)\\$(BUILD_REPOSITORY_TITLE)\\tools\\devops\\governance\\CredScanSuppressions.json'
+      policheck:
+        exclusionsFile: '$(System.DefaultWorkingDirectory)\\$(BUILD_REPOSITORY_TITLE)\\tools\\devops\\governance\\PoliCheckExclusions.xml'
+      sourceRepositoriesToScan:
+        runInSingleJob: true  # run both maccore and macios in the same job
+        include:
+          - repository: self
+            path: $(BUILD_REPOSITORY_TITLE)
+        exclude:
+          - repository: yaml-templates
+    stages:
+      - template: templates/release/vs-insertion-prep.yml
+        parameters:
+          stageDisplayNamePrefix: ${{ parameters.stageDisplayNamePrefix }}
+          isPR: false
+          repositoryAlias: ${{ parameters.repositoryAlias }}
+          commit: ${{ parameters.commit }}
+          pushNugets: ${{ parameters.pushNugets }}
+          pushNugetsToMaestro: ${{ parameters.pushNugetsToMaestro }}

@@ -1,149 +1,153 @@
-#if IOS
+#nullable enable
 
-using System;
+#if IOS || MONOMAC
+
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
 using CoreFoundation;
-using Foundation;
 
 namespace Security {
 
 	public static partial class SecSharedCredential {
 
-		[iOS (8,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios26.2")]
+		[ObsoletedOSPlatform ("maccatalyst26.2")]
+		[ObsoletedOSPlatform ("macos26.2")]
 		[DllImport (Constants.SecurityLibrary)]
-		extern static void SecAddSharedWebCredential (IntPtr /* CFStringRef */ fqdn, IntPtr /* CFStringRef */ account, IntPtr /* CFStringRef */ password,
-			IntPtr /* void (^completionHandler)( CFErrorRef error) ) */ completionHandler);
-			
-		[UnmanagedFunctionPointerAttribute (CallingConvention.Cdecl)]
-		internal delegate void DActionArity1V12 (IntPtr block, IntPtr obj);
-		
+		unsafe extern static void SecAddSharedWebCredential (IntPtr /* CFStringRef */ fqdn, IntPtr /* CFStringRef */ account, IntPtr /* CFStringRef */ password,
+			BlockLiteral* /* void (^completionHandler)( CFErrorRef error) ) */ completionHandler);
+
 		// This class bridges native block invocations that call into C#
 		static internal class ActionTrampoline {
-			static internal readonly DActionArity1V12 Handler = Invoke;
-			
-			[MonoPInvokeCallback (typeof (DActionArity1V12))]
-			static unsafe void Invoke (IntPtr block, IntPtr obj) {
-				var descriptor = (BlockLiteral *) block;
-				var del = (global::System.Action<NSError>) (descriptor->Target);
-				if (del != null) {
-					del ( Runtime.GetNSObject<NSError> (obj));
-				}
-			} 
-		} 
-
-		[iOS (8,0)]
-		[BindingImpl (BindingImplOptions.Optimizable)]
-		public static void AddSharedWebCredential (string domainName, string account, string password, Action<NSError> handler)
-		{
-			if (domainName == null)
-				throw new ArgumentNullException ("domainName");
-			if (account == null)
-				throw new ArgumentNullException ("account");
-			// we need to create our own block literal. We can reuse the SDActionArity1V12 which is generated and takes a
-			// NSError because a CFError is a toll-free bridget to CFError
-			unsafe {
-				BlockLiteral *block_ptr_onComplete;
-				BlockLiteral block_onComplete;
-				block_onComplete = new BlockLiteral ();
-				block_ptr_onComplete = &block_onComplete;
-				block_onComplete.SetupBlockUnsafe (ActionTrampoline.Handler, handler);
-
-				using (var nsDomain = new NSString (domainName))
-				using (var nsAccount = new NSString (account)) {
-					if (password == null) {  // we are removing a password
-						SecAddSharedWebCredential (nsDomain.Handle, nsAccount.Handle, IntPtr.Zero, (IntPtr) block_ptr_onComplete);
-					} else {
-						using (var nsPassword = new NSString (password)) {
-							SecAddSharedWebCredential (nsDomain.Handle, nsAccount.Handle, nsPassword.Handle, (IntPtr) block_ptr_onComplete);
-						}
-					}
-					block_ptr_onComplete->CleanupBlock ();
+			[UnmanagedCallersOnly]
+			internal static unsafe void Invoke (IntPtr block, IntPtr obj)
+			{
+				var del = BlockLiteral.GetTarget<Action<NSError?>> (block);
+				if (del is not null) {
+					del (Runtime.GetNSObject<NSError> (obj));
 				}
 			}
 		}
 
-		[iOS (8,0)]
-		[DllImport (Constants.SecurityLibrary)]
-		extern static void SecRequestSharedWebCredential ( IntPtr /* CFStringRef */ fqdn, IntPtr /* CFStringRef */ account,
-			IntPtr /* void (^completionHandler)( CFArrayRef credentials, CFErrorRef error) */ completionHandler);
+		/// <param name="domainName">To be added.</param>
+		///         <param name="account">To be added.</param>
+		///         <param name="password">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[BindingImpl (BindingImplOptions.Optimizable)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("ios26.2")]
+		[ObsoletedOSPlatform ("maccatalyst26.2")]
+		[ObsoletedOSPlatform ("macos26.2")]
+		public static void AddSharedWebCredential (string domainName, string account, string password, Action<NSError> handler)
+		{
+			if (domainName is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (domainName));
+			if (account is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (account));
+			// we need to create our own block literal. We can reuse the SDActionArity1V12 which is generated and takes a
+			// NSError because a CFError is a toll-free bridget to CFError
+			unsafe {
+				using var nsDomain = new NSString (domainName);
+				using var nsAccount = new NSString (account);
+				using var nsPassword = (NSString?) password;
 
-		[UnmanagedFunctionPointerAttribute (CallingConvention.Cdecl)]
-		internal delegate void ArrayErrorAction (IntPtr block, IntPtr array, IntPtr err);
+				delegate* unmanaged<IntPtr, IntPtr, void> trampoline = &ActionTrampoline.Invoke;
+				using var block = new BlockLiteral (trampoline, handler, typeof (ActionTrampoline), nameof (ActionTrampoline.Invoke));
+				SecAddSharedWebCredential (nsDomain.Handle, nsAccount.Handle, nsPassword.GetHandle (), &block);
+				GC.KeepAlive (nsDomain);
+				GC.KeepAlive (nsAccount);
+				GC.KeepAlive (nsPassword);
+			}
+		}
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("ios14.0")]
+		[UnsupportedOSPlatform ("tvos")]
+		[DllImport (Constants.SecurityLibrary)]
+		unsafe extern static void SecRequestSharedWebCredential (IntPtr /* CFStringRef */ fqdn, IntPtr /* CFStringRef */ account,
+			BlockLiteral* /* void (^completionHandler)( CFArrayRef credentials, CFErrorRef error) */ completionHandler);
 
 		//
 		// This class bridges native block invocations that call into C# because we cannot use the decorator, we have to create
 		// it for our use here.
 		//
 		static internal class ArrayErrorActionTrampoline {
-			static internal readonly ArrayErrorAction Handler = Invoke;
-
-			[MonoPInvokeCallback (typeof (ArrayErrorAction))]
-			static unsafe void Invoke (IntPtr block, IntPtr array, IntPtr err) {
-				var descriptor = (BlockLiteral *) block;
-				var del = (global::System.Action<NSArray, NSError>) (descriptor->Target);
-				if (del != null)
-					del ( Runtime.GetNSObject<NSArray> (array), Runtime.GetNSObject<NSError> (err));
-			}
-		}
-
-#if !XAMCORE_4_0
-		[Obsolete ("Use the overload accepting a 'SecSharedCredentialInfo' argument.")]
-		public static void RequestSharedWebCredential (string domainName, string account, Action<string[], NSError> handler)
-		{
-			throw new InvalidOperationException ("Use correct delegate type");
-		}
-#endif
-
-		[iOS (8,0)]
-		[BindingImpl (BindingImplOptions.Optimizable)]
-		public static void RequestSharedWebCredential (string domainName, string account, Action<SecSharedCredentialInfo[], NSError> handler)
-		{
-			Action<NSArray, NSError> onComplete = (NSArray a, NSError e) => {
-				var creds = new SecSharedCredentialInfo [a.Count];
-				int i = 0;
-				foreach (var dict in NSArray.FromArrayNative<NSDictionary> (a)) {
-					creds [i++] = new SecSharedCredentialInfo (dict);
+			[UnmanagedCallersOnly]
+			internal static unsafe void Invoke (IntPtr block, IntPtr array, IntPtr err)
+			{
+				var del = BlockLiteral.GetTarget<Action<SecSharedCredentialInfo []?, NSError?>> (block);
+				if (del is not null) {
+					var arr = NSArray.DictionaryArrayFromHandleDropNullElements<SecSharedCredentialInfo> (array, (dict) => new SecSharedCredentialInfo (dict));
+					del (arr, Runtime.GetNSObject<NSError> (err));
 				}
-				handler (creds, e);
-			};
-			// we need to create our own block literal.
-			unsafe {
-				BlockLiteral *block_ptr_onComplete;
-				BlockLiteral block_onComplete;
-				block_onComplete = new BlockLiteral ();
-				block_ptr_onComplete = &block_onComplete;
-				block_onComplete.SetupBlockUnsafe (ArrayErrorActionTrampoline.Handler, onComplete);
-
-				NSString nsDomain = null;
-				if (domainName != null)
-					nsDomain = new NSString (domainName);	
-
-				NSString nsAccount = null;
-				if (account != null) 
-					nsAccount = new NSString (account);
-				
-				SecRequestSharedWebCredential ((nsDomain == null)? IntPtr.Zero : nsDomain.Handle, (nsAccount == null)? IntPtr.Zero : nsAccount.Handle,
-					(IntPtr) block_ptr_onComplete); 
-				block_ptr_onComplete->CleanupBlock ();
-				if (nsDomain != null)
-					nsDomain.Dispose ();
-				if (nsAccount != null)
-					nsAccount.Dispose ();
 			}
 		}
 
-		[iOS (8,0)]
+		/// <summary>Asynchronously requests shared web credentials from the iCloud Keychain for the specified domain and account.</summary>
+		/// <param name="domainName">
+		///   The fully qualified domain name of the website to request credentials for,
+		///   or <see langword="null" /> to search all domains in the app's Associated Domains entitlement.
+		/// </param>
+		/// <param name="account">
+		///   The account name to request credentials for,
+		///   or <see langword="null" /> to request credentials for all accounts on the matching domain.
+		/// </param>
+		/// <param name="handler">
+		///   A callback invoked when the request completes, receiving an array of
+		///   <see cref="SecSharedCredentialInfo" /> with the matching credentials and an <see cref="NSError" /> if the request failed.
+		/// </param>
+		/// <remarks>
+		///   <para>
+		///     This method requires that the app has an Associated Domains entitlement configured
+		///     for the requested domain. The request may prompt the user for permission.
+		///   </para>
+		/// </remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'ASAuthorizationPasswordRequest' instead.")]
+		[ObsoletedOSPlatform ("macos", "Use 'ASAuthorizationPasswordRequest' instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use 'ASAuthorizationPasswordRequest' instead.")]
+		[UnsupportedOSPlatform ("tvos")]
+		[BindingImpl (BindingImplOptions.Optimizable)]
+		public static void RequestSharedWebCredential (string? domainName, string? account, Action<SecSharedCredentialInfo []?, NSError?> handler)
+		{
+			// we need to create our own block literal.
+			using var nsDomain = (NSString?) domainName;
+			using var nsAccount = (NSString?) account;
+
+			unsafe {
+				delegate* unmanaged<IntPtr, IntPtr, IntPtr, void> trampoline = &ArrayErrorActionTrampoline.Invoke;
+				using var block = new BlockLiteral (trampoline, handler, typeof (ArrayErrorActionTrampoline), nameof (ArrayErrorActionTrampoline.Invoke));
+				SecRequestSharedWebCredential (nsDomain.GetHandle (), nsAccount.GetHandle (), &block);
+				GC.KeepAlive (nsDomain);
+				GC.KeepAlive (nsAccount);
+			}
+		}
+
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr /* CFStringRef */ SecCreateSharedWebCredentialPassword ();
 
-		[iOS (8,0)]
-		public static string CreateSharedWebCredentialPassword ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static string? CreateSharedWebCredentialPassword ()
 		{
 			var handle = SecCreateSharedWebCredentialPassword ();
-			var str = NSString.FromHandle (handle);
+			var str = CFString.FromHandle (handle);
 			NSObject.DangerousRelease (handle);
 			return str;
 		}

@@ -1,0 +1,8090 @@
+//
+// This is the binding generator for the MonoTouch API, it uses the
+// contract in API.cs to generate the binding.
+//
+// Authors:
+//   Geoff Norton
+//   Miguel de Icaza
+//   Marek Safar (marek.safar@gmail.com)
+//
+// Copyright 2009-2010, Novell, Inc.
+// Copyright 2011-2015 Xamarin, Inc.
+//
+//
+// This generator produces various */*.g.cs files based on the
+// interface-based type description on this file, see the 
+// embedded `MonoTouch.UIKit' namespace here for an example
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+// 
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// TODO:
+//   * Add support for wrapping "ref" and "out" NSObjects (WrappedTypes)
+//     Typically this is necessary for things like NSError.
+//
+
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.ComponentModel;
+using System.Reflection;
+using System.Xml;
+
+using ObjCBindings;
+using Xamarin.Utils;
+
+#nullable enable
+
+public partial class Generator : IMemberGatherer {
+	internal bool IsPublicMode;
+	internal const string NativeHandleType = "NativeHandle";
+	BindingTouch BindingTouch;
+	Frameworks Frameworks { get { return BindingTouch.Frameworks!; } }
+	public TypeManager TypeManager { get { return BindingTouch.TypeManager; } }
+	public AttributeManager AttributeManager { get { return BindingTouch.AttributeManager; } }
+	NamespaceCache NamespaceCache { get { return BindingTouch.NamespaceCache; } }
+	public TypeCache TypeCache { get { return BindingTouch.TypeCache; } }
+	public DocumentationManager DocumentationManager { get { return BindingTouch.DocumentationManager; } }
+
+	Nomenclator? nomenclator;
+	Nomenclator Nomenclator {
+		get {
+			nomenclator ??= new (AttributeManager);
+			return nomenclator;
+		}
+	}
+	public GeneratedTypes GeneratedTypes;
+	List<Exception> exceptions = new List<Exception> ();
+
+	Dictionary<Type, IEnumerable<string>> selectors = new Dictionary<Type, IEnumerable<string>> ();
+	Dictionary<Type, bool> need_abstract = new Dictionary<Type, bool> ();
+	Dictionary<string, int> selector_use = new Dictionary<string, int> ();
+	Dictionary<string, string> selector_names = new Dictionary<string, string> ();
+	Dictionary<string, string> send_methods = new Dictionary<string, string> ();
+	readonly MarshalTypeList marshalTypes = new ();
+	Dictionary<Type, TrampolineInfo> trampolines = new Dictionary<Type, TrampolineInfo> ();
+	Dictionary<Type, Type> notification_event_arg_types = new Dictionary<Type, Type> ();
+	Dictionary<string, string?> libraries = new (); // <LibraryName, libraryPath>
+
+	List<Tuple<string, ParameterInfo []>> async_result_types = new List<Tuple<string, ParameterInfo []>> ();
+	HashSet<string> async_result_types_emitted = new HashSet<string> ();
+
+	//
+	// This contains delegates that are referenced in the source and need to be generated.
+	//
+	Dictionary<string, MethodInfo> delegate_types = new Dictionary<string, MethodInfo> ();
+
+	public PlatformName CurrentPlatform { get { return BindingTouch.CurrentPlatform; } }
+
+	Api api;
+	bool debug;
+	bool external;
+	StreamWriter? sw, m;
+	int indent;
+
+	//
+	// Properties and definitions to support binding third-party Objective-C libraries
+	//
+	string? is_direct_binding_value; // An expression that calculates the IsDirectBinding value. Might not be a constant expression. This will be added to every constructor for a type.
+	bool? is_direct_binding; // If a constant value for IsDirectBinding is known, it's stored here. Will be null if no constant value is known.
+
+	public bool BindThirdPartyLibrary { get { return BindingTouch.BindThirdPartyLibrary; } }
+	public bool InlineSelectors;
+	public string BaseDir { get { return basedir; } set { basedir = value; } }
+	string basedir;
+	HashSet<string> generated_files = new HashSet<string> ();
+
+	//
+	// We inject thread checks to MonoTouch.UIKit types, unless there is a [ThreadSafe] attribuet on the type.
+	// Set on every call to Generate
+	//
+	bool type_needs_thread_checks;
+
+	//
+	// Used by the public binding generator to populate the
+	// class with types that do not exist
+	//
+	public void RegisterMethodName (string method_name)
+	{
+		send_methods [method_name] = method_name;
+	}
+
+	//
+	// Helpers
+	//
+	string MakeSig (MethodInfo mi, bool stret, bool aligned = false) { return MakeSig ("objc_msgSend", stret, mi, aligned); }
+	string MakeSuperSig (MethodInfo mi, bool stret, bool aligned = false) { return MakeSig ("objc_msgSendSuper", stret, mi, aligned); }
+
+	public IEnumerable<string> GeneratedFiles {
+		get {
+			return generated_files;
+		}
+	}
+
+	public bool IsNSObject (Type type)
+	{
+		if (type == TypeCache.NSObject)
+			return true;
+
+		if (type.IsSubclassOf (TypeCache.NSObject))
+			return true;
+
+		if (BindThirdPartyLibrary) {
+			var bta = ReflectionExtensions.GetBaseTypeAttribute (type, this);
+			if (bta?.BaseType is not null)
+				return IsNSObject (bta.BaseType);
+
+			return false;
+		}
+
+		// If any of the interfaces this type implements is an NSObject,
+		// then this type is also an NSObject
+		var ifaces = type.GetInterfaces ();
+		foreach (var iface in ifaces)
+			if (IsNSObject (iface))
+				return true;
+
+		if (type.IsInterface) {
+			var bta = ReflectionExtensions.GetBaseTypeAttribute (type, this);
+			if (bta?.BaseType is not null)
+				return IsNSObject (bta.BaseType);
+
+			return false;
+		}
+
+		return false;
+	}
+
+	public string PrimitiveType (Type t, bool formatted = false)
+	{
+		if (t.IsEnum) {
+			var enumType = t;
+
+			t = t.GetEnumUnderlyingType ();
+
+			if (IsNativeEnum (enumType, out var _, out var nativeType))
+				return nativeType;
+		}
+
+		return TypeManager.PrimitiveType (t, formatted);
+	}
+
+	//
+	// Returns the type that we use to marshal the given type as a string
+	// for example "UIView" -> "IntPtr"
+	string ParameterGetMarshalType (MarshalInfo mai, bool formatted = false)
+	{
+		// formatted: used as an actual type name
+		// !formatted: used in the method name
+		if (mai.IsAligned)
+			return "IntPtr";
+
+		if (mai.Type.IsEnum)
+			return PrimitiveType (mai.Type, formatted);
+
+		if (TypeManager.IsWrappedType (mai.Type)) {
+			if (!mai.Type.IsByRef)
+				return NativeHandleType;
+			if (formatted)
+				return NativeHandleType + "*";
+			return "ref " + NativeHandleType;
+		}
+
+		if (mai.Type.Namespace == "System") {
+			if (mai.Type.Name == "nint")
+				return "IntPtr";
+			if (mai.Type.Name == "nuint")
+				return "UIntPtr";
+		}
+
+		if (TypeManager.IsNativeType (mai.Type))
+			return PrimitiveType (mai.Type, formatted);
+
+		if (mai.Type == TypeCache.System_String) {
+			if (mai.PlainString)
+				return "string";
+
+			// We will do NSString
+			return NativeHandleType;
+		}
+
+		if (marshalTypes.TryGetMarshalType (mai.Type, out var mt))
+			return mt.Encoding;
+
+		if (mai.Type.IsValueType)
+			return PrimitiveType (mai.Type, formatted);
+
+		// Arrays are returned as NSArrays
+		if (mai.Type.IsArray)
+			return NativeHandleType;
+
+		//
+		// Pass "out ValueType" directly
+		//
+		if (mai.Type.IsByRef && mai.Type.GetElementType ()?.IsValueType == true) {
+			var elementType = mai.Type.GetElementType ()!;
+
+			if (formatted) {
+				if (elementType == TypeCache.System_Boolean)
+					return "byte*";
+				else if (elementType == TypeCache.System_Char)
+					return "ushort*";
+				return TypeManager.FormatType (null, elementType) + "*";
+			}
+
+			return (mai.IsOut ? "out " : "ref ") + elementType.Name;
+		}
+
+		// Pass "ValueType*" directly
+		if (mai.Type.IsPointer) {
+			var elementType = mai.Type.GetElementType ()!;
+			if (elementType.IsValueType)
+				return (formatted ? TypeManager.FormatType (null, elementType) : elementType.Name) + "*";
+		}
+
+		if (mai.Type.IsSubclassOf (TypeCache.System_Delegate)) {
+			return NativeHandleType;
+		}
+
+		if (TypeManager.IsDictionaryContainerType (mai.Type)) {
+			return NativeHandleType;
+		}
+
+		//
+		// Edit the table in the "void Go ()" routine
+		//
+
+		if (mai.Type.IsByRef && mai.Type.GetElementType ()?.IsValueType == false) {
+			if (formatted)
+				return NativeHandleType + "*";
+			return "ref " + NativeHandleType;
+		}
+
+		if (mai.Type.IsGenericParameter)
+			return NativeHandleType;
+
+		throw new BindingException (1017, true, mai.Type);
+	}
+
+	bool IsProtocolInterface (Type type, bool checkPrefix = true)
+	{
+		return IsProtocolInterface (type, checkPrefix, out var _);
+	}
+
+	bool IsProtocolInterface (Type type, bool checkPrefix, [NotNullWhen (true)] out Type? protocol)
+	{
+		protocol = null;
+		// for subclassing the type (from the binding files) is not yet prefixed by an `I`
+		if (checkPrefix && type.Name [0] != 'I')
+			return false;
+
+		protocol = type;
+		if (AttributeManager.HasAttribute<ProtocolAttribute> (type))
+			return true;
+
+		protocol = type.Assembly.GetType (type.Namespace + "." + type.Name.Substring (1), false);
+		if (protocol is null)
+			return false;
+
+		return AttributeManager.HasAttribute<ProtocolAttribute> (protocol);
+	}
+
+	public ExperimentalAttribute? GetExperimentalAttribute (ICustomAttributeProvider? cu)
+	{
+		return AttributeManager.GetCustomAttribute<ExperimentalAttribute> (cu);
+	}
+
+	public BindAsAttribute? GetBindAsAttribute (ICustomAttributeProvider? cu)
+	{
+		if (cu is null)
+			return null;
+
+		var rv = AttributeManager.GetCustomAttribute<BindAsAttribute> (cu);
+		if (rv is not null)
+			return rv;
+
+		var minfo = cu as MethodInfo;
+		rv = AttributeManager.GetCustomAttribute<BindAsAttribute> (minfo?.ReturnParameter);
+		if (rv is not null)
+			return rv;
+
+		return null;
+	}
+
+	public BindAsAttribute GetOneBindAsAttribute (ICustomAttributeProvider cu)
+	{
+		var rv = GetBindAsAttribute (cu);
+		if (rv is null)
+			throw new BindingException (1051, true, cu.ToString ()); // TODO: proper error
+		return rv;
+	}
+
+	public bool HasBindAsAttribute ([NotNullWhen (true)] ICustomAttributeProvider? cu)
+	{
+		return GetBindAsAttribute (cu) is not null;
+	}
+
+	static bool IsSetter (MethodInfo mi) => mi.IsSpecialName && mi.Name.StartsWith ("set_", StringComparison.Ordinal);
+	static BindingException GetBindAsException (string box, string retType, string containerType, string container, params ICustomAttributeProvider? [] providers)
+	{
+		Type? declaringType = null;
+		string? memberName = null;
+		foreach (var provider in providers) {
+			if (provider is MemberInfo member) {
+				declaringType = member.DeclaringType;
+				memberName = member.Name;
+			} else if (provider is ParameterInfo parameter) {
+				declaringType = parameter.Member.DeclaringType;
+				memberName = parameter.Member.Name;
+				break;
+			}
+		}
+
+		if (declaringType is not null && memberName is not null)
+			memberName = declaringType.FullName + "." + memberName;
+
+		return new BindingException (1049, true, box, retType, containerType, container, memberName);
+	}
+	bool IsMemberInsideProtocol (Type? type) => IsProtocol (type) || IsModel (type);
+
+	bool IsSmartEnum (Type type)
+	{
+		if (!type.IsEnum)
+			return false;
+		// First check if the smart enum candidate still holds the FieldAtttribute data
+		if (type.GetFields ().Any (f => AttributeManager.GetCustomAttribute<FieldAttribute> (f) is not null))
+			return true;
+		// If the above fails it's possible that it comes from another dll (like X.I.dll) so we look for the [Enum]Extensions class existence
+		return type.Assembly.GetType (type.FullName + "Extensions") is not null;
+	}
+
+	string GetToBindAsWrapper (MethodInfo mi, MemberInformation? minfo = null, ParameterInfo? pi = null)
+	{
+		BindAsAttribute attrib;
+		Type originalType;
+		string? temp = null;
+		var declaringType = minfo?.mi?.DeclaringType ?? pi?.Member?.DeclaringType;
+
+		if (pi is null && IsMemberInsideProtocol (declaringType))
+			throw new BindingException (1050, true, declaringType?.Name);
+
+		if (pi is null) {
+			if (minfo is null)
+				throw new ArgumentException ("Either minfo or pi must be non-null", nameof (minfo)); // FIXME: better error
+			attrib = GetOneBindAsAttribute (minfo.mi);
+			var property = minfo.mi as PropertyInfo;
+			var method = minfo.mi as MethodInfo;
+			originalType = attrib.OriginalType ?? (method?.ReturnType ?? property?.PropertyType)!;
+		} else {
+			attrib = GetOneBindAsAttribute (pi);
+			originalType = attrib.OriginalType ?? pi.ParameterType;
+		}
+
+		if (originalType.IsByRef)
+			throw new BindingException (1080, true, originalType.Name.Replace ("&", string.Empty));
+
+		var retType = TypeManager.GetUnderlyingNullableType (attrib.Type) ?? attrib.Type;
+		var isNullable = attrib.IsNullable (this);
+		var isValueType = retType.IsValueType;
+		var isEnum = retType.IsEnum;
+		var parameterName = pi is not null ? pi.Name.GetSafeParamName () : "value";
+		var denullify = isNullable ? ".Value" : string.Empty;
+		var nullCheck = isNullable ? $"{parameterName} is null ? null : " : string.Empty;
+
+		if (isNullable || !isValueType)
+			temp = string.Format ("{0} is null ? null : ", parameterName);
+
+		if (originalType == TypeCache.NSNumber) {
+			var enumCast = isEnum ? $"(int)" : string.Empty;
+			temp = string.Format ("{3}new NSNumber ({2}{1}{0});", denullify, parameterName, enumCast, nullCheck);
+		} else if (originalType == TypeCache.NSValue) {
+			var typeStr = string.Empty;
+			if (TypeCache.NSValueCreateMap.TryGetValue (retType, out typeStr)) {
+				temp = string.Format ("{3}NSValue.From{0} ({2}{1});", typeStr, denullify, parameterName, nullCheck);
+			} else {
+				throw GetBindAsException ("box", retType.Name, originalType.Name, "container", minfo?.mi, pi);
+			}
+		} else if (originalType == TypeCache.NSString && IsSmartEnum (retType)) {
+			temp = isNullable ? $"{parameterName} is null ? null : " : string.Empty;
+			temp += $"{TypeManager.FormatType (retType.DeclaringType, retType)}Extensions.GetConstant ({parameterName}{denullify});";
+		} else if (originalType.IsArray && originalType.GetArrayRank () == 1) {
+			if (!retType.IsArray) {
+				throw new BindingException (1072, true,
+					parameterName, mi.DeclaringType!.FullName, mi.Name);
+			}
+			var arrType = originalType.GetElementType ();
+			var arrRetType = TypeManager.GetUnderlyingNullableType (retType.GetElementType ()) ?? retType.GetElementType ()!;
+			var valueConverter = string.Empty;
+
+			if (arrType == TypeCache.NSString && !isNullable) {
+				valueConverter = isNullable ? "o is null ? null : " : string.Empty;
+				valueConverter += $"{TypeManager.FormatType (retType.DeclaringType, arrRetType)}Extensions.GetConstant ({(isNullable ? "o.Value" : "o")}), {parameterName});";
+			} else if (arrType == TypeCache.NSNumber && !isNullable) {
+				var cast = arrRetType.IsEnum ? "(int)" : string.Empty;
+				valueConverter = $"new NSNumber ({cast}o{denullify}), {parameterName});";
+			} else if (arrType == TypeCache.NSValue && !isNullable) {
+				var typeStr = string.Empty;
+				if (TypeCache.NSValueCreateMap.TryGetValue (arrRetType, out typeStr)) {
+					valueConverter = $"NSValue.From{typeStr} (o{denullify}), {parameterName});";
+				} else {
+					throw GetBindAsException ("box", arrRetType.Name, originalType.Name, "array", minfo?.mi, pi);
+				}
+			} else
+				throw new BindingException (1048, true, isNullable ? arrRetType.Name + "?[]" : retType.Name);
+			temp = $"NSArray.FromNSObjects (o => {valueConverter}";
+		} else
+			throw new BindingException (1048, true, retType.Name);
+
+		return temp;
+	}
+
+	string GetFromBindAsWrapper (MemberInformation minfo, out string suffix)
+	{
+		var declaringType = minfo.mi.DeclaringType!;
+		if (IsMemberInsideProtocol (declaringType))
+			throw new BindingException (1050, true, declaringType.Name);
+
+		suffix = string.Empty;
+
+		var attrib = GetOneBindAsAttribute (minfo.mi);
+		var nullableRetType = TypeManager.GetUnderlyingNullableType (attrib.Type);
+		var isNullable = nullableRetType is not null;
+		var retType = isNullable ? nullableRetType! : attrib.Type;
+		var isValueType = retType.IsValueType;
+		var append = string.Empty;
+		var property = minfo.mi as PropertyInfo;
+		var method = minfo.mi as MethodInfo;
+		var originalReturnType = attrib.OriginalType ?? method?.ReturnType ?? property?.PropertyType;
+
+		if (originalReturnType == TypeCache.NSNumber) {
+			if (!TypeManager.NSNumberReturnMap.TryGetValue (retType, out append)) {
+				if (retType.IsEnum) {
+					var enumType = retType.GetEnumUnderlyingType ();
+					if (!TypeManager.NSNumberReturnMap.TryGetValue (enumType, out append))
+						throw GetBindAsException ("unbox", retType.Name, originalReturnType.Name, "container", minfo.mi);
+				} else
+					throw GetBindAsException ("unbox", retType.Name, originalReturnType.Name, "container", minfo.mi);
+			}
+			if (isNullable)
+				append = $"?{append}";
+		} else if (originalReturnType == TypeCache.NSValue) {
+			if (TypeManager.NSValueReturnMap.TryGetValue (retType, out append)) {
+				if (isNullable)
+					append = $"?{append}";
+			} else {
+				throw GetBindAsException ("unbox", retType.Name, originalReturnType.Name, "container", minfo.mi);
+			}
+		} else if (originalReturnType == TypeCache.NSString && IsSmartEnum (retType)) {
+			if (isNullable) {
+				append = $"{TypeManager.FormatType (retType.DeclaringType, retType)}Extensions.GetNullableValue (";
+			} else {
+				append = $"{TypeManager.FormatType (retType.DeclaringType, retType)}Extensions.GetValue (";
+			}
+			suffix = ")";
+		} else if (originalReturnType?.IsArray == true && originalReturnType.GetArrayRank () == 1) {
+			var arrType = originalReturnType.GetElementType ();
+			var nullableElementType = TypeManager.GetUnderlyingNullableType (retType.GetElementType ());
+			var arrIsNullable = nullableElementType is not null;
+			var arrRetType = arrIsNullable ? nullableElementType! : retType.GetElementType ()!;
+			var valueFetcher = string.Empty;
+			if (arrType == TypeCache.NSString && !arrIsNullable)
+				append = $"{TypeManager.FormatType (arrRetType.DeclaringType, arrRetType)}Extensions.GetValue ";
+			else if (arrType == TypeCache.NSNumber && !arrIsNullable) {
+				if (arrRetType.IsEnum) {
+					// get the underlying type of the enum and use a callback with the appropiate one
+					var enumType = arrRetType.GetEnumUnderlyingType ();
+					if (TypeManager.NSNumberToValueMap.TryGetValue (enumType, out valueFetcher)) {
+						append = $"ptr => ({TypeManager.FormatType (arrRetType.DeclaringType, arrRetType)}) NSNumber.{valueFetcher} (ptr)";
+					} else {
+						throw GetBindAsException ("unbox", retType.Name, arrType.Name, "array", minfo.mi);
+					}
+				} else if (TypeManager.NSNumberToValueMap.TryGetValue (arrRetType, out valueFetcher)) {
+					append = $"NSNumber.{valueFetcher}";
+				} else
+					throw GetBindAsException ("unbox", retType.Name, arrType.Name, "array", minfo.mi);
+			} else if (arrType == TypeCache.NSValue && !arrIsNullable) {
+				if (TypeManager.NSValueBindAsMap.TryGetValue (arrRetType, out valueFetcher)) {
+					append = string.Format ("NSValue.{0}", valueFetcher);
+				} else {
+					throw GetBindAsException ("unbox", retType.Name, arrType.Name, "array", minfo.mi);
+				}
+			} else
+				throw new BindingException (1048, true, arrIsNullable ? arrRetType.Name + "?[]" : retType.Name);
+		} else
+			throw new BindingException (1048, true, retType.Name);
+		return append;
+	}
+
+	public bool HasForcedAttribute (ICustomAttributeProvider cu, out bool owns)
+	{
+		var att = AttributeManager.GetCustomAttribute<ForcedTypeAttribute> (cu);
+
+		if (att is null) {
+			var mi = cu as MethodInfo;
+			if (mi is not null)
+				att = AttributeManager.GetCustomAttribute<ForcedTypeAttribute> (mi.ReturnParameter);
+		}
+
+		if (att is null) {
+			owns = false;
+			return false;
+		}
+
+		owns = att.Owns;
+		return true;
+	}
+
+	//
+	// MakeTrampoline: processes a delegate type and registers a TrampolineInfo with all the information
+	// necessary to create trampolines that allow Objective-C blocks to call C# code, and C# code to call
+	// Objective-C blocks.
+	//
+	// @t: A delegate type
+	// 
+	// This probably should use MarshalInfo to find the correct way of turning
+	// the native types into managed types instead of hardcoding the limited
+	// values we know about here
+	//
+	public TrampolineInfo MakeTrampoline (Type t)
+	{
+		if (trampolines.ContainsKey (t)) {
+			return trampolines [t];
+		}
+
+		var mi = t.GetMethod ("Invoke")!;
+		var pars = new List<TrampolineParameterInfo> ();
+		var convert = new StringBuilder ();
+		var invoke = new StringBuilder ();
+		var clear = new StringBuilder ();
+		var postConvert = new StringBuilder ();
+		string returntype;
+		var returnformat = "return {0};";
+
+		if (mi.ReturnType.IsArray && TypeManager.IsWrappedType (mi.ReturnType.GetElementType ())) {
+			returntype = NativeHandleType;
+			returnformat = "return Runtime.RetainAndAutoreleaseNSObject (NSArray.FromNSObjects({0}));";
+		} else if (TypeCache.INativeObject.IsAssignableFrom (mi.ReturnType)) {
+			returntype = Generator.NativeHandleType;
+			returnformat = "return Runtime.RetainAndAutoreleaseNativeObject ({0});";
+		} else if (TypeManager.IsWrappedType (mi.ReturnType)) {
+			returntype = Generator.NativeHandleType;
+			returnformat = "return Runtime.RetainAndAutoreleaseNSObject ({0});";
+		} else if (mi.ReturnType == TypeCache.System_String) {
+			returntype = Generator.NativeHandleType;
+			returnformat = "return NSString.CreateNative ({0}, true);";
+		} else if (GetNativeEnumToNativeExpression (mi.ReturnType, out var preExpression, out var postExpression, out var nativeType)) {
+			returntype = nativeType;
+			returnformat = "return " + preExpression + "{0}" + postExpression + ";";
+		} else if (mi.ReturnType == TypeCache.System_Boolean) {
+			returntype = "byte";
+			returnformat = "return {0} ? (byte) 1 : (byte) 0;";
+		} else {
+			returntype = TypeManager.FormatType (mi.DeclaringType, mi.ReturnType);
+		}
+
+		pars.Add (new TrampolineParameterInfo ("IntPtr", "block"));
+		var parameters = mi.GetParameters ();
+		foreach (var pi in parameters) {
+			var isForced = HasForcedAttribute (pi, out var isForcedOwns);
+
+			if (pi != parameters [0])
+				invoke.Append (", ");
+
+			var safe_name = pi.Name.GetSafeParamName ();
+
+			if (TypeManager.IsWrappedType (pi.ParameterType)) {
+				pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+				if (IsProtocolInterface (pi.ParameterType)) {
+					invoke.AppendFormat (" Runtime.GetINativeObject<{1}> ({0}, false)!", safe_name, pi.ParameterType);
+				} else if (isForced) {
+					invoke.AppendFormat (" Runtime.GetINativeObject<{1}> ({0}, true, {2})!", safe_name, TypeManager.RenderType (pi.ParameterType), isForcedOwns ? "true" : "false");
+				} else if (IsNSObject (pi.ParameterType)) {
+					invoke.AppendFormat (" Runtime.GetNSObject<{1}> ({0})!", safe_name, TypeManager.RenderType (pi.ParameterType));
+				} else {
+					invoke.AppendFormat (" Runtime.GetINativeObject<{1}> ({0}, false)!", safe_name, TypeManager.RenderType (pi.ParameterType));
+				}
+				continue;
+			}
+
+			if (Frameworks.HaveCoreMedia) {
+				// special case (false) so it needs to be before the _real_ INativeObject check
+				if (pi.ParameterType == TypeCache.CMSampleBuffer) {
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					if (BindThirdPartyLibrary)
+						invoke.AppendFormat ("{0} == IntPtr.Zero ? null! : Runtime.GetINativeObject<CMSampleBuffer> ({0}, false)!", safe_name);
+					else
+						invoke.AppendFormat ("{0} == IntPtr.Zero ? null! : new CMSampleBuffer ({0}, false)", safe_name);
+					continue;
+				}
+			}
+
+			if (Frameworks.HaveAudioToolbox) {
+				if (pi.ParameterType == TypeCache.AudioBuffers) {
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					invoke.AppendFormat ("new global::AudioToolbox.AudioBuffers ({0})", safe_name);
+					continue;
+				}
+			}
+
+			if (TypeCache.INativeObject.IsAssignableFrom (pi.ParameterType)) {
+				pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+				if (BindThirdPartyLibrary)
+					invoke.AppendFormat ("Runtime.GetINativeObject<{0}> ({1}, false)!", pi.ParameterType, safe_name);
+				else
+					invoke.AppendFormat ("{1} == IntPtr.Zero ? null! : new {0} ({1}, false)", pi.ParameterType, safe_name);
+				continue;
+			}
+
+			if (pi.ParameterType.IsByRef) {
+				var nt = pi.ParameterType.GetElementType ()!;
+				if (pi.IsOut) {
+					if (nt == TypeCache.System_Boolean) {
+						clear.AppendFormat ("*{0} = 0;", safe_name);
+					} else {
+						clear.AppendFormat ("*{0} = {1};", safe_name, nt.IsValueType ? "default (" + TypeManager.FormatType (null, nt) + ")" : "null");
+					}
+				}
+				var outOrRef = pi.IsOut ? "out" : "ref";
+				if (nt.IsValueType) {
+					string fnt;
+					string invoke_name;
+					var nullable = TypeManager.GetUnderlyingNullableType (nt);
+					if (nullable is not null) {
+						fnt = TypeManager.FormatType (null, nullable);
+						invoke_name = $"__xamarin_nullified__{pi.Position}";
+						convert.AppendLine ($"{nullable.Name}? {invoke_name} = null;");
+						convert.AppendLine ("if (value is not null)");
+						convert.AppendLine ($"\t{invoke_name} =  *value;");
+						postConvert.AppendLine ($"if (value is not null && {invoke_name}.HasValue)");
+						postConvert.AppendLine ($"\t*value = {invoke_name}.Value;");
+					} else if (nt == TypeCache.System_Boolean) {
+						fnt = "byte";
+						invoke_name = $"__xamarin_bool__{pi.Position}";
+						convert.AppendLine ($"bool {invoke_name} = *{safe_name} != 0;");
+						postConvert.AppendLine ($"*{safe_name} = {invoke_name} ? (byte) 1 : (byte) 0;");
+					} else {
+						fnt = TypeManager.FormatType (null, nt);
+						invoke_name = $"global::System.Runtime.CompilerServices.Unsafe.AsRef<{fnt}> ({safe_name})";
+					}
+					pars.Add (new TrampolineParameterInfo (fnt + "*", safe_name));
+					invoke.AppendFormat ("{0} {1}", outOrRef, invoke_name);
+					continue;
+				} else {
+					var refname = $"__xamarin_pref{pi.Position}";
+					convert.Append ($"var {refname} = Runtime.GetINativeObject<{TypeManager.RenderType (nt)}> ({safe_name} is not null ? *{safe_name} : NativeHandle.Zero, false)!;");
+					pars.Add (new TrampolineParameterInfo ($"{NativeHandleType}*", safe_name));
+					postConvert.AppendLine ($"if ({safe_name} is not null)");
+					postConvert.Append ($"\t*{safe_name} = Runtime.RetainAndAutoreleaseNativeObject ({refname});");
+					invoke.Append (outOrRef);
+					invoke.Append (" ");
+					invoke.Append (refname);
+					continue;
+				}
+			} else if (GetNativeEnumToManagedExpression (pi.ParameterType, out var preExpression, out var postExpression, out var nativeType)) {
+				pars.Add (new TrampolineParameterInfo (nativeType, safe_name));
+				invoke.Append (preExpression).Append (safe_name).Append (postExpression);
+				continue;
+			} else if (pi.ParameterType == TypeCache.System_Boolean) {
+				pars.Add (new TrampolineParameterInfo ("byte", safe_name));
+				invoke.AppendFormat ("{0} != 0", safe_name);
+				continue;
+			} else if (pi.ParameterType.IsValueType) {
+				pars.Add (new TrampolineParameterInfo (TypeManager.FormatType (null, pi.ParameterType), safe_name));
+				invoke.AppendFormat ("{0}", safe_name);
+				continue;
+			}
+
+			if (pi.ParameterType == TypeCache.System_String_Array) {
+				pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+				invoke.AppendFormat ("CFArray.StringArrayFromHandle ({0})!", safe_name);
+				continue;
+			}
+			if (pi.ParameterType == TypeCache.System_String) {
+				pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+				invoke.AppendFormat ("CFString.FromHandle ({0})!", safe_name);
+				continue;
+			}
+
+			if (pi.ParameterType.IsArray) {
+				var et = pi.ParameterType.GetElementType ()!;
+				if (TypeManager.IsWrappedType (et)) {
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					invoke.AppendFormat ("CFArray.ArrayFromHandle<{0}> ({1})!", TypeManager.FormatType (null, et), safe_name);
+					continue;
+				}
+				if (TypeCache.INativeObject.IsAssignableFrom (et)) {
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					invoke.AppendFormat ("NSArray.ArrayFromHandle<{0}> ({1})!", TypeManager.FormatType (t, et), safe_name);
+					continue;
+				}
+			}
+
+			if (pi.ParameterType.IsPointer && pi.ParameterType.GetElementType ()!.IsValueType) {
+				// Technically we should only allow blittable types here, but the C# compiler shows an error later on if any non-blittable types
+				// are used, because this ends up in the signature of a UnmanagedCallersOnly method.
+				pars.Add (new TrampolineParameterInfo (TypeManager.FormatType (null, pi.ParameterType), safe_name));
+				invoke.Append (safe_name);
+				continue;
+			}
+
+			if (pi.ParameterType.IsSubclassOf (TypeCache.System_Delegate)) {
+				EnsureDelegateCreation (pi.ParameterType);
+				if (AttributeManager.HasAttribute<BlockCallbackAttribute> (pi)) {
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					invoke.AppendFormat ("NID{0}.Create ({1})!", Nomenclator.GetTrampolineName (pi.ParameterType), safe_name);
+					// The trampoline will eventually be generated in the final loop
+				} else {
+					if (!AttributeManager.HasAttribute<CCallbackAttribute> (pi)) {
+						if (t.FullName?.StartsWith ("System.Action`", StringComparison.Ordinal) == true || t.FullName?.StartsWith ("System.Func`", StringComparison.Ordinal) == true) {
+							ErrorHelper.Warning (BindingTouch, 1116, safe_name, t.FullName);
+						} else {
+							ErrorHelper.Warning (BindingTouch, 1115, safe_name, t.FullName);
+						}
+					}
+					pars.Add (new TrampolineParameterInfo (NativeHandleType, safe_name));
+					var renderedDelegateType = TypeManager.RenderType (pi.ParameterType);
+					invoke.AppendFormat ("({0}) Marshal.GetDelegateForFunctionPointer ({1}, typeof ({0}))", renderedDelegateType, safe_name);
+				}
+				continue;
+			}
+
+			exceptions.Add (ErrorHelper.CreateError (1001, pi.ParameterType.FullName));
+		}
+
+		var rt = mi.ReturnType;
+		var rts = IsNativeEnum (rt) ? "var" : TypeManager.RenderType (rt);
+		var trampoline_name = Nomenclator.GetTrampolineName (t);
+		var functionPointerSignature = string.Join (", ", pars.Select (v => v.Type)) + ", " + returntype;
+		var ti = new TrampolineInfo (userDelegate: TypeManager.FormatType (null, t),
+						 delegateName: "D" + trampoline_name,
+						 pars: string.Join (", ", pars.Select (v => v.Type + " " + v.ParameterName)),
+									 convert: convert.ToString (),
+						 invoke: invoke.ToString (),
+						 returnType: returntype,
+									 delegateReturnType: rts,
+						 returnFormat: returnformat,
+						 clear: clear.ToString (),
+									 postConvert: postConvert.ToString (),
+						 type: t,
+						 functionPointerSignature: functionPointerSignature);
+
+
+		ti.UserDelegateTypeAttribute = TypeManager.FormatType (null, t);
+		trampolines [t] = ti;
+
+		return ti;
+	}
+
+	//
+	// Returns the actual way in which the type t must be marshalled
+	// for example "UIView foo" is generated as  "foo.Handle"
+	//
+	public string? MarshalParameter (MethodInfo mi, ParameterInfo pi, bool null_allowed_override, PropertyInfo? propInfo, bool castEnum, StringBuilder convs, StringBuilder by_ref_init, StringBuilder post_return)
+	{
+		if (pi.ParameterType.IsByRef && pi.ParameterType.GetElementType ()?.IsValueType == false)
+			return "&" + pi.Name + "Value";
+
+		if (HasBindAsAttribute (pi))
+			return string.Format ("nsb_{0}.GetHandle ()", pi.Name);
+		if (propInfo is not null && HasBindAsAttribute (propInfo))
+			return string.Format ("nsb_{0}.GetHandle ()", propInfo.Name);
+
+		var safe_name = pi.Name.GetSafeParamName ();
+
+		if (TypeManager.IsWrappedType (pi.ParameterType))
+			return safe_name + "__handle__";
+
+		if (GetNativeEnumToNativeExpression (pi.ParameterType, out var preExpression, out var postExpression, out var nativeType))
+			return preExpression + safe_name + postExpression;
+
+		if (castEnum && pi.ParameterType.IsEnum)
+			return "(" + PrimitiveType (pi.ParameterType) + ")" + safe_name;
+
+		if (castEnum && pi.ParameterType.Namespace == "System") {
+			if (pi.ParameterType.Name == "nint")
+				return "(IntPtr) " + safe_name;
+			else if (pi.ParameterType.Name == "nuint")
+				return "(UIntPtr) " + safe_name;
+		}
+
+		if (TypeManager.IsNativeType (pi.ParameterType))
+			return safe_name;
+
+		if (pi.ParameterType == TypeCache.System_String) {
+			var mai = new MarshalInfo (this, mi, pi);
+			if (mai.PlainString)
+				return safe_name;
+			else {
+				return "ns" + pi.Name;
+			}
+		}
+
+		if (pi.ParameterType.IsValueType) {
+			if (pi.ParameterType == TypeCache.System_Boolean)
+				return safe_name + " ? (byte) 1 : (byte) 0";
+			return safe_name;
+		}
+
+		if (marshalTypes.TryGetMarshalType (pi.ParameterType, out var mt)) {
+			if (null_allowed_override || AttributeManager.IsNullable (pi))
+				return safe_name + "__handle__";
+			return String.Format (mt.ParameterMarshal, safe_name);
+		}
+
+		if (pi.ParameterType.IsArray) {
+			//Type etype = pi.ParameterType.GetElementType ();
+
+			if (null_allowed_override || AttributeManager.IsNullable (pi))
+				return String.Format ("nsa_{0}.GetHandle ()", pi.Name);
+			return "nsa_" + pi.Name + ".Handle";
+		}
+
+		//
+		// Handle (out ValueType foo)
+		//
+		if (pi.ParameterType.IsByRef) {
+			var et = pi.ParameterType.GetElementType ()!;
+			var nullable = TypeManager.GetUnderlyingNullableType (et);
+			if (nullable is not null) {
+				return $"converted_{safe_name}";
+			} else if (et.IsValueType) {
+				if (pi.IsOut)
+					convs.AppendLine ($"{safe_name} = default;");
+
+				var blittableType = TypeManager.FormatType (mi.DeclaringType, et);
+				by_ref_init.AppendLine ($"fixed ({blittableType}* {safe_name}__pointer = &{safe_name}) {{");
+				post_return.AppendLine ("}");
+
+				if (et == TypeCache.System_Boolean)
+					return "(byte*) " + safe_name + "__pointer";
+				return safe_name + "__pointer";
+			}
+			return (pi.IsOut ? "out " : "ref ") + safe_name;
+		}
+
+		// Handle 'ValueType* foo'
+		if (pi.ParameterType.IsPointer) {
+			var et = pi.ParameterType.GetElementType ()!;
+			if (et.IsValueType)
+				return safe_name;
+		}
+
+		if (pi.ParameterType.IsSubclassOf (TypeCache.System_Delegate)) {
+			return String.Format ("(IntPtr) block_ptr_{0}", pi.Name);
+		}
+
+		if (TypeManager.IsDictionaryContainerType (pi.ParameterType)) {
+			if (null_allowed_override || AttributeManager.IsNullable (pi))
+				return String.Format ("{0} is null ? NativeHandle.Zero : {0}.Dictionary.Handle", safe_name);
+			return safe_name + ".Dictionary.Handle";
+		}
+
+		if (pi.ParameterType.IsGenericParameter) {
+			if (null_allowed_override || AttributeManager.IsNullable (pi))
+				return string.Format ("{0}.GetHandle ()", safe_name);
+			return safe_name + ".Handle";
+		}
+
+		if (TypeCache.INativeObject.IsAssignableFrom (pi.ParameterType))
+			return $"{safe_name}.GetHandle ()";
+
+		// This means you need to add a new MarshalType in the method "Go"
+		throw new BindingException (1002, true, pi.ParameterType.FullName, mi.DeclaringType?.FullName, mi.Name.GetSafeParamName ());
+	}
+
+	public bool ParameterNeedsNullCheck (ParameterInfo pi, MethodInfo mi, PropertyInfo? propInfo = null)
+	{
+		if (pi.ParameterType.IsByRef)
+			return false;
+
+		if (AttributeManager.IsNullable (pi))
+			return false;
+
+		if (IsSetter (mi)) {
+			if (AttributeManager.IsNullable (mi)) {
+				return false;
+			}
+			if ((propInfo is not null) && AttributeManager.IsNullable (propInfo)) {
+				return false;
+			}
+		}
+
+		var bindAsAtt = GetBindAsAttribute (pi) ?? GetBindAsAttribute (propInfo);
+		if (bindAsAtt is not null)
+			return bindAsAtt.IsNullable (this) || !bindAsAtt.IsValueType (this);
+
+		if (TypeManager.IsWrappedType (pi.ParameterType))
+			return true;
+
+		return !pi.ParameterType.IsValueType;
+	}
+
+	public BindAttribute? GetBindAttribute (MethodInfo? mi)
+	{
+		return AttributeManager.GetCustomAttribute<BindAttribute> (mi);
+	}
+
+	public bool ShouldMarshalNativeExceptions (MethodInfo mi)
+	{
+		// [MarshalNativeExceptions] should work on a property and inside the get / set
+		// If we have it directly on our method, good enough
+		if (AttributeManager.HasAttribute<MarshalNativeExceptionsAttribute> (mi))
+			return true;
+
+		// Else look up to see if we are part of a property and look for the attribute there
+		var owningProperty = mi.DeclaringType?.GetProperties ()
+			.FirstOrDefault (prop => prop.GetSetMethod () == mi ||
+					prop.GetGetMethod () == mi);
+		if (owningProperty is not null && AttributeManager.HasAttribute<MarshalNativeExceptionsAttribute> (owningProperty))
+			return true;
+
+		return false;
+	}
+
+	public bool IsTarget (ParameterInfo pi)
+	{
+		var is_target = AttributeManager.HasAttribute<TargetAttribute> (pi);
+		if (is_target) {
+			throw new BindingException (1031, true,
+				pi.Member.DeclaringType?.FullName, pi.Member.Name.GetSafeParamName ());
+		}
+		return is_target;
+	}
+
+	//
+	// Makes the method name for a objcSend call
+	//
+	string MakeSig (string send, bool stret, MethodInfo mi, bool aligned)
+	{
+		var sb = new StringBuilder ();
+		var shouldMarshalNativeExceptions = ShouldMarshalNativeExceptions (mi);
+		var marshalDirective = AttributeManager.GetCustomAttribute<MarshalDirectiveAttribute> (mi);
+
+		if (!string.IsNullOrEmpty (marshalDirective?.NativePrefix))
+			sb.Append (marshalDirective.NativePrefix);
+		else if (shouldMarshalNativeExceptions)
+			sb.Append ("xamarin_");
+
+		try {
+			sb.Append (ParameterGetMarshalType (new MarshalInfo (this, mi) { IsAligned = aligned }));
+		} catch (BindingException ex) {
+			throw new BindingException (1078, ex.Error, ex, ex.Message, $"{mi.DeclaringType}.{mi.Name}");
+		}
+
+		sb.Append ("_");
+		sb.Append (send);
+		if (stret)
+			sb.Append ("_stret");
+
+		foreach (var pi in mi.GetParameters ()) {
+			if (IsTarget (pi))
+				continue;
+			sb.Append ("_");
+			try {
+				sb.Append (ParameterGetMarshalType (new MarshalInfo (this, mi, pi)).Replace (' ', '_').Replace ('*', '_'));
+			} catch (BindingException ex) {
+				throw new BindingException (1079, ex.Error, ex, ex.Message, pi.Name.GetSafeParamName (), mi.DeclaringType, mi.Name);
+			}
+		}
+
+		if (shouldMarshalNativeExceptions)
+			sb.Append ("_exception");
+
+		if (!string.IsNullOrEmpty (marshalDirective?.NativeSuffix))
+			sb.Append (marshalDirective.NativeSuffix);
+
+		return sb.ToString ();
+	}
+
+	void RegisterMethod (bool need_stret, MethodInfo mi, string method_name, bool aligned)
+	{
+		if (send_methods.ContainsKey (method_name))
+			return;
+		send_methods [method_name] = method_name;
+
+		var b = new StringBuilder ();
+		int n = 0;
+
+		foreach (var pi in mi.GetParameters ()) {
+			if (IsTarget (pi))
+				continue;
+
+			b.Append (", ");
+
+			try {
+				var parameterType = ParameterGetMarshalType (new MarshalInfo (this, mi, pi), true);
+				if (parameterType == "bool") {
+					b.Append ("byte");
+				} else if (parameterType == "out bool" || parameterType == "ref bool") {
+					b.Append ("byte* ");
+				} else if (parameterType == "char") {
+					b.Append ("ushort");
+				} else if (parameterType == "out char" || parameterType == "ref char") {
+					b.Append ("ushort*");
+				} else {
+					b.Append (parameterType);
+				}
+			} catch (BindingException ex) {
+				throw new BindingException (1079, ex.Error, ex, ex.Message, pi.Name.GetSafeParamName (), mi.DeclaringType, mi.Name);
+			}
+			b.Append (" ");
+			b.Append ("arg" + (++n));
+		}
+
+		if (ShouldMarshalNativeExceptions (mi))
+			b.Append (", IntPtr* exception_gchandle");
+
+		string entry_point;
+		if (method_name.IndexOf ("objc_msgSendSuper", StringComparison.Ordinal) != -1) {
+			entry_point = need_stret ? "objc_msgSendSuper_stret" : "objc_msgSendSuper";
+		} else
+			entry_point = need_stret ? "objc_msgSend_stret" : "objc_msgSend";
+
+		var marshalDirective = AttributeManager.GetCustomAttribute<MarshalDirectiveAttribute> (mi);
+		if (marshalDirective is not null && marshalDirective.Library is not null) {
+			print (m, "\t\t[DllImport (\"{0}\", EntryPoint=\"{1}\")]", marshalDirective.Library, method_name);
+		} else if (method_name.StartsWith ("xamarin_", StringComparison.Ordinal)) {
+			print (m, "\t\t[DllImport (\"__Internal\", EntryPoint=\"{0}\")]", method_name);
+		} else {
+			print (m, "\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"{0}\")]", entry_point);
+		}
+
+		var returnType = (need_stret && aligned) ? "void" : ParameterGetMarshalType (new MarshalInfo (this, mi), true);
+		if (returnType == "bool")
+			returnType = "byte";
+		else if (returnType == "char")
+			returnType = "ushort";
+
+		var receiverType = method_name.IndexOf ("objc_msgSendSuper", StringComparison.Ordinal) != -1 ? "ObjCSuper*" : "IntPtr";
+		print (m, "\t\tpublic unsafe extern static {0} {1} ({3}{4} receiver, IntPtr selector{2});",
+			   returnType, method_name, b.ToString (),
+			   (need_stret && aligned) ? "IntPtr* retval, " : "",
+			   receiverType);
+	}
+
+	bool IsNativeEnum (Type type)
+	{
+		return type.IsEnum && AttributeManager.HasAttribute<NativeAttribute> (type);
+	}
+
+	// Returns two strings that are used to convert from a native (nint/nuint) value to a managed ([Native]) enum value
+	// nativeType: nint/nuint
+	bool GetNativeEnumToManagedExpression (Type enumType, [NotNullWhen (true)] out string? preExpression, [NotNullWhen (true)] out string? postExpression, [NotNullWhen (true)] out string? nativeType, [NotNullWhen (true)] StringBuilder? postproc = null)
+	{
+		preExpression = null;
+		postExpression = null;
+		nativeType = null;
+
+		if (!enumType.IsEnum)
+			return false;
+
+		var attrib = AttributeManager.GetCustomAttribute<NativeAttribute> (enumType);
+		if (attrib is null)
+			return false;
+
+		var renderedEnumType = TypeManager.RenderType (enumType);
+		var underlyingEnumType = enumType.GetEnumUnderlyingType ();
+		var underlyingTypeName = TypeManager.RenderType (underlyingEnumType);
+		string intermediateType;
+		object maxValue;
+		Func<FieldInfo, bool> isMaxDefinedFunc;
+		Func<FieldInfo, bool>? isMinDefinedFunc = null;
+		if (TypeCache.System_Int64 == underlyingEnumType) {
+			nativeType = "IntPtr";
+			intermediateType = "nint";
+			maxValue = long.MaxValue;
+			isMaxDefinedFunc = (v) => (long?) v.GetRawConstantValue () == long.MaxValue;
+			isMinDefinedFunc = (v) => (long?) v.GetRawConstantValue () == long.MinValue;
+		} else if (TypeCache.System_UInt64 == underlyingEnumType) {
+			nativeType = "UIntPtr";
+			intermediateType = "nuint";
+			maxValue = ulong.MaxValue;
+			isMaxDefinedFunc = (v) => (ulong?) v.GetRawConstantValue () == ulong.MaxValue;
+		} else {
+			throw new BindingException (1029, enumType);
+		}
+
+		if (!string.IsNullOrEmpty (attrib.ConvertToManaged)) {
+			preExpression = attrib.ConvertToManaged + " ((" + intermediateType + ") ";
+			postExpression = ")";
+		} else {
+			preExpression = "(" + renderedEnumType + ") (" + TypeManager.RenderType (underlyingEnumType) + ") ";
+			postExpression = string.Empty;
+		}
+
+		return true;
+	}
+
+	// Returns two strings that are used to convert from a managed enum value to a native nint/nuint.
+	// nativeType: nint/nuint
+	bool GetNativeEnumToNativeExpression (Type enumType, [NotNullWhen (true)] out string? preExpression, [NotNullWhen (true)] out string? postExpression, [NotNullWhen (true)] out string? nativeType)
+	{
+		preExpression = null;
+		postExpression = null;
+		nativeType = null;
+
+		if (!enumType.IsEnum)
+			return false;
+
+		var attrib = AttributeManager.GetCustomAttribute<NativeAttribute> (enumType);
+		if (attrib is null)
+			return false;
+
+		var underlyingEnumType = enumType.GetEnumUnderlyingType ();
+		if (TypeCache.System_Int64 == underlyingEnumType) {
+			nativeType = "IntPtr";
+		} else if (TypeCache.System_UInt64 == underlyingEnumType) {
+			nativeType = "UIntPtr";
+		} else {
+			throw new BindingException (1029, enumType);
+		}
+
+		if (!string.IsNullOrEmpty (attrib.ConvertToNative)) {
+			preExpression = "(" + nativeType + ") " + attrib.ConvertToNative + " (";
+			postExpression = ")";
+		} else {
+			preExpression = "(" + nativeType + ") (" + TypeManager.RenderType (underlyingEnumType) + ") ";
+			postExpression = string.Empty;
+		}
+
+		return true;
+	}
+
+	bool IsNativeEnum (Type enumType, [NotNullWhen (true)] out Type? underlyingType, [NotNullWhen (true)] out string? nativeType)
+	{
+		underlyingType = null;
+		nativeType = null;
+
+		if (!enumType.IsEnum)
+			return false;
+
+		var attrib = AttributeManager.GetCustomAttribute<NativeAttribute> (enumType);
+		if (attrib is null)
+			return false;
+
+		underlyingType = enumType.GetEnumUnderlyingType ();
+		if (underlyingType == TypeCache.System_Int64) {
+			nativeType = "IntPtr";
+		} else if (underlyingType == TypeCache.System_UInt64) {
+			nativeType = "UIntPtr";
+		} else {
+			throw new BindingException (1026, true, enumType.FullName, "NativeAttribute");
+		}
+
+		return true;
+	}
+
+	void DeclareInvoker (MethodInfo mi)
+	{
+		if (AttributeManager.HasAttribute<WrapAttribute> (mi))
+			return;
+
+		// arm64 never requires stret, so we'll always need the non-stret variants
+		RegisterMethod (false, mi, MakeSig (mi, false), false);
+		RegisterMethod (false, mi, MakeSuperSig (mi, false), false);
+
+		if (CheckNeedStret (mi)) {
+			RegisterMethod (true, mi, MakeSig (mi, true), false);
+			RegisterMethod (true, mi, MakeSuperSig (mi, true), false);
+
+			if (AttributeManager.HasAttribute<AlignAttribute> (mi)) {
+				RegisterMethod (true, mi, MakeSig (mi, true, true), true);
+				RegisterMethod (true, mi, MakeSuperSig (mi, true, true), true);
+			}
+		}
+	}
+	static char [] invalid_selector_chars = new char [] { '*', '^', '(', ')' };
+
+	public ExportAttribute? GetExportAttribute (MemberInfo mo)
+	{
+		return GetExportAttribute (mo, out var _);
+	}
+
+	//
+	// Either we have an [Export] attribute, or we have a [Wrap] one
+	//
+	public ExportAttribute? GetExportAttribute (MemberInfo mo, out string? wrap)
+	{
+		wrap = null;
+		object [] attrs = AttributeManager.GetCustomAttributes<ExportAttribute> (mo);
+		if (attrs.Length == 0) {
+			attrs = AttributeManager.GetCustomAttributes<WrapAttribute> (mo);
+			if (attrs.Length != 0) {
+				wrap = ((WrapAttribute) attrs [0]).MethodName;
+				return null;
+			}
+			var pi = mo as PropertyInfo;
+			if (pi is not null && pi.CanRead) {
+				var getter = pi.GetGetMethod (true);
+				attrs = AttributeManager.GetCustomAttributes<ExportAttribute> (getter);
+			}
+			if (attrs.Length == 0)
+				return null;
+		}
+
+		var export = (ExportAttribute) attrs [0];
+
+		if (string.IsNullOrEmpty (export.Selector))
+			throw new BindingException (1024, true, mo.DeclaringType!.FullName, mo.Name);
+
+		if (export.Selector.IndexOfAny (invalid_selector_chars) != -1)
+			throw new BindingException (1129, true, export.Selector, FormatProvider (mo));
+
+		return export;
+	}
+
+	public ExportAttribute GetOneExportAttribute (MemberInfo mo)
+	{
+		var rv = GetExportAttribute (mo, out var _);
+		if (rv is null)
+			throw new BindingException (1025, true, mo.DeclaringType!.FullName, mo.Name); // FIXME: better error
+		return rv;
+	}
+
+	readonly Dictionary<PropertyInfo, ExportAttribute?> getterExportCache = new ();
+	readonly Dictionary<PropertyInfo, ExportAttribute?> setterExportCache = new ();
+
+	public ExportAttribute? GetSetterExportAttribute (PropertyInfo pinfo)
+	{
+		if (setterExportCache.TryGetValue (pinfo, out var cached))
+			return cached;
+		var ea = AttributeManager.GetCustomAttribute<ExportAttribute> (pinfo.GetSetMethod ());
+		if (ea is not null && ea.Selector is not null) {
+			setterExportCache [pinfo] = ea;
+			return ea;
+		}
+		var result = AttributeManager.GetCustomAttribute<ExportAttribute> (pinfo)?.ToSetter (pinfo);
+		setterExportCache [pinfo] = result;
+		return result;
+	}
+
+	public ExportAttribute GetOneSetterExportAttribute (PropertyInfo pinfo)
+	{
+		var rv = GetSetterExportAttribute (pinfo);
+		if (rv is null)
+			throw new BindingException (1025, true, pinfo.DeclaringType!.FullName, pinfo.Name); // FIXME: better error
+		return rv;
+	}
+
+	public ExportAttribute? GetGetterExportAttribute (PropertyInfo pinfo)
+	{
+		if (getterExportCache.TryGetValue (pinfo, out var cached))
+			return cached;
+		var ea = AttributeManager.GetCustomAttribute<ExportAttribute> (pinfo.GetGetMethod ());
+		if (ea is not null && ea.Selector is not null) {
+			getterExportCache [pinfo] = ea;
+			return ea;
+		}
+		var result = AttributeManager.GetCustomAttribute<ExportAttribute> (pinfo)?.ToGetter (pinfo);
+		getterExportCache [pinfo] = result;
+		return result;
+	}
+
+	public ExportAttribute GetOneGetterExportAttribute (PropertyInfo pinfo)
+	{
+		var rv = GetGetterExportAttribute (pinfo);
+		if (rv is null)
+			throw new BindingException (1025, true, pinfo.DeclaringType!.FullName, pinfo.Name); // FIXME: better error
+		return rv;
+	}
+
+	public Generator (BindingTouch binding_touch, Api api, bool is_public_mode, bool external, bool debug)
+	{
+		BindingTouch = binding_touch;
+		IsPublicMode = is_public_mode;
+		this.external = external;
+		this.debug = debug;
+		this.api = api;
+		basedir = ".";
+		GeneratedTypes = new GeneratedTypes (this);
+	}
+
+	public void Go ()
+	{
+		marshalTypes.Load (TypeCache, Frameworks);
+
+		m = GetOutputStream ("ObjCRuntime", "Messaging");
+		Header (m);
+		print (m, "namespace {0} {{", NamespaceCache.ObjCRuntime);
+		print (m, "\tstatic partial class Messaging {");
+
+		if (BindThirdPartyLibrary) {
+			print (m, "\t\tinternal const string LIBOBJC_DYLIB = \"/usr/lib/libobjc.dylib\";\n");
+			print (m, "\t\tstatic internal System.Reflection.Assembly this_assembly = typeof (Messaging).Assembly;\n");
+			// IntPtr_objc_msgSend[Super]: for init
+			print (m, "\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+			print (m, "\t\tpublic extern static IntPtr IntPtr_objc_msgSend (IntPtr receiever, IntPtr selector);");
+			send_methods ["IntPtr_objc_msgSend"] = "IntPtr_objc_msgSend";
+			print (m, "\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSendSuper\")]");
+			print (m, "\t\tpublic unsafe extern static IntPtr IntPtr_objc_msgSendSuper (ObjCSuper* receiever, IntPtr selector);");
+			send_methods ["IntPtr_objc_msgSendSuper"] = "IntPtr_objc_msgSendSuper";
+			// IntPtr_objc_msgSendSuper_IntPtr: for initWithCoder:
+			print (m, "\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSend\")]");
+			print (m, "\t\tpublic extern static IntPtr IntPtr_objc_msgSend_IntPtr (IntPtr receiever, IntPtr selector, IntPtr arg1);");
+			send_methods ["IntPtr_objc_msgSend_IntPtr"] = "IntPtr_objc_msgSend_IntPtr";
+			print (m, "\t\t[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSendSuper\")]");
+			print (m, "\t\tpublic unsafe extern static IntPtr IntPtr_objc_msgSendSuper_IntPtr (ObjCSuper* receiever, IntPtr selector, IntPtr arg1);");
+			send_methods ["IntPtr_objc_msgSendSuper_IntPtr"] = "IntPtr_objc_msgSendSuper_IntPtr";
+		}
+
+		TypeManager.SetTypesThatMustAlwaysBeGloballyNamed (api.Types);
+
+		foreach (Type t in api.Types) {
+			if (t.IsUnavailable (this))
+				continue;
+
+			// We call lookup to build the hierarchy graph
+			GeneratedTypes.Lookup (t);
+
+			var tselectors = new List<string> ();
+
+			foreach (var pi in GetTypeContractProperties (t)) {
+				if (pi.IsUnavailable (this))
+					continue;
+
+				if (AttributeManager.HasAttribute<IsThreadStaticAttribute> (pi) && !AttributeManager.HasAttribute<StaticAttribute> (pi))
+					throw new BindingException (1008, true);
+
+				var export = GetExportAttribute (pi, out var wrapname);
+				if (export is null) {
+					if (wrapname is not null)
+						continue;
+
+					// Let properties with the [Field] attribute through as well.
+					if (AttributeManager.HasAttribute<FieldAttribute> (pi))
+						continue;
+
+
+					if (AttributeManager.HasAttribute<CoreImageFilterPropertyAttribute> (pi))
+						continue;
+
+					// Ensure there's a [Wrap] on either (or both) the getter and setter - since we already know there's no [Export]
+					var getMethod = pi.GetGetMethod ();
+					var hasWrapGet = getMethod is not null && AttributeManager.HasAttribute<WrapAttribute> (getMethod);
+					var setMethod = pi.GetSetMethod ();
+					var hasWrapSet = setMethod is not null && AttributeManager.HasAttribute<WrapAttribute> (setMethod);
+					if (hasWrapGet || hasWrapSet)
+						continue;
+
+					throw new BindingException (1018, true, t.FullName, pi.Name);
+				}
+
+				var is_abstract = false;
+
+				if (pi.TryCanRead (out var getter)) {
+					var ba = GetBindAttribute (getter);
+
+					if (!is_abstract)
+						tselectors.Add (ba is not null ? ba.Selector! : export.Selector!);
+					DeclareInvoker (getter);
+				}
+
+				if (pi.TryCanWrite (out var setter)) {
+					var ba = GetBindAttribute (setter);
+					var notImpl = AttributeManager.HasAttribute<NotImplementedAttribute> (setter);
+
+					if (!is_abstract && !notImpl)
+						tselectors.Add (ba is not null ? ba.Selector! : GetOneSetterExportAttribute (pi).Selector!);
+					DeclareInvoker (setter);
+				}
+			}
+
+			foreach (var mi in GetTypeContractMethods (t)) {
+				// Skip properties
+				if (mi.IsSpecialName)
+					continue;
+
+				if (mi.IsUnavailable (this))
+					continue;
+
+				bool seenAbstract = false;
+				bool seenDefaultValue = false;
+				bool seenNoDefaultValue = false;
+
+				foreach (var attr in AttributeManager.GetCustomAttributes<System.Attribute> (mi)) {
+					string? selector = null;
+					var ea = attr as ExportAttribute;
+					var ba = attr as BindAttribute;
+					if (ea is not null) {
+						selector = ea.Selector;
+					} else if (ba is not null) {
+						selector = ba.Selector;
+					} else if (attr is StaticAttribute) {
+						continue;
+					} else if (attr is InternalAttribute || attr is ProtectedAttribute) {
+						continue;
+					} else if (attr is NeedsAuditAttribute) {
+						continue;
+					} else if (attr is FactoryAttribute) {
+						continue;
+					} else if (attr is FactoryMethodAttribute) {
+						continue;
+					} else if (attr is AbstractAttribute) {
+						if (mi.DeclaringType == t)
+							need_abstract [t] = true;
+						seenAbstract = true;
+						continue;
+					} else if (attr is DefaultValueAttribute || attr is DefaultValueFromArgumentAttribute) {
+						seenDefaultValue = true;
+						continue;
+					} else if (attr is NoDefaultValueAttribute) {
+						seenNoDefaultValue = true;
+						continue;
+					} else if (attr is SealedAttribute || attr is EventArgsAttribute || attr is DelegateNameAttribute || attr is EventNameAttribute || attr is IgnoredInDelegateAttribute || attr is ObsoleteAttribute || attr is NewAttribute || attr is PostGetAttribute || attr is NullAllowedAttribute || attr is CheckDisposedAttribute || attr is SnippetAttribute || attr is AppearanceAttribute || attr is ThreadSafeAttribute || attr is AutoreleaseAttribute || attr is EditorBrowsableAttribute || attr is AdviceAttribute || attr is OverrideAttribute || attr is DelegateApiNameAttribute || attr is ForcedTypeAttribute)
+						continue;
+					else if (attr is MarshalNativeExceptionsAttribute)
+						continue;
+					else if (attr is WrapAttribute)
+						continue;
+					else if (attr is AsyncAttribute)
+						continue;
+					else if (attr is DesignatedInitializerAttribute)
+						continue;
+					else if (attr is DesignatedDefaultCtorAttribute)
+						continue;
+					else if (attr is AvailabilityBaseAttribute)
+						continue;
+					else if (attr is SupportedSimulatorAttribute || attr is UnsupportedSimulatorAttribute)
+						continue;
+					else if (attr is RequiresSuperAttribute)
+						continue;
+					else if (attr is NoMethodAttribute)
+						continue;
+					else if (attr is ExperimentalAttribute)
+						continue;
+					else if (attr is OptionalMemberAttribute || attr is RequiredMemberAttribute)
+						continue;
+					else {
+						switch (attr.GetType ().Name) {
+						case "PreserveAttribute":
+						case "CompilerGeneratedAttribute":
+						case "ManualAttribute":
+						case "MarshalDirectiveAttribute":
+						case "BindingImplAttribute":
+						case "XpcInterfaceAttribute":
+						case "NativeIntegerAttribute":
+						case "OverloadResolutionPriorityAttribute":
+							continue;
+						default:
+							throw new BindingException (1007, true, attr.GetType (), mi.DeclaringType, mi.Name);
+						}
+					}
+
+					if (selector is null)
+						throw new BindingException (1009, true, mi.DeclaringType, mi.Name);
+
+					tselectors.Add (selector);
+					if (selector_use.ContainsKey (selector)) {
+						selector_use [selector]++;
+					} else
+						selector_use [selector] = 1;
+				}
+
+				if (seenNoDefaultValue && seenAbstract)
+					throw new BindingException (1019, true, mi.DeclaringType, mi.Name);
+				else if (seenNoDefaultValue && seenDefaultValue)
+					throw new BindingException (1019, true, mi.DeclaringType, mi.Name);
+
+				DeclareInvoker (mi);
+			}
+
+			foreach (var pi in t.GatherProperties (BindingFlags.Instance | BindingFlags.Public, this)) {
+				if (pi.IsUnavailable (this))
+					continue;
+
+				if (AttributeManager.HasAttribute<AbstractAttribute> (pi) && pi.DeclaringType == t)
+					need_abstract [t] = true;
+			}
+
+			selectors [t] = tselectors.Distinct ();
+		}
+
+		foreach (Type t in api.Types) {
+			if (t.IsUnavailable (this))
+				continue;
+
+			Generate (t);
+		}
+
+		print (m, "\t}\n}");
+		m.Close ();
+
+		// Generate strong argument types
+		GenerateStrongDictionaryTypes ();
+
+		// Generate the event arg mappings
+		if (notification_event_arg_types.Count > 0)
+			GenerateEventArgsFile ();
+
+		if (delegate_types.Count > 0)
+			GenerateIndirectDelegateFile ();
+
+		if (trampolines.Count > 0)
+			GenerateTrampolines ();
+
+		if (libraries.Count > 0)
+			GenerateLibraryHandles ();
+
+		ThrowIfExceptions ();
+	}
+
+	void ThrowIfExceptions ()
+	{
+		if (exceptions.Count == 0)
+			return;
+
+		if (exceptions.All (v => v is BindingException pe && !pe.Error)) {
+			foreach (var e in exceptions)
+				ErrorHelper.Show (BindingTouch, e);
+			return;
+		}
+
+		throw new AggregateException (exceptions);
+	}
+
+	static string GenerateNSValue (string propertyToCall)
+	{
+		return "using (var nsv = Runtime.GetNSObject<NSValue> (value)!)\n\treturn nsv." + propertyToCall + ";";
+	}
+
+	static string GenerateNSNumber (string cast, string propertyToCall)
+	{
+		return "using (var nsn = Runtime.GetNSObject<NSNumber> (value)!)\n\treturn " + cast + "nsn." + propertyToCall + ";";
+	}
+
+	void GenerateIndirectDelegateFile ()
+	{
+		sw = GetOutputStream (null, "SupportDelegates");
+		Header (sw);
+		RenderDelegates (delegate_types);
+		sw.Close ();
+	}
+
+	void GenerateTrampolines ()
+	{
+		sw = GetOutputStream ("ObjCRuntime", "Trampolines");
+
+		Header (sw);
+		print ("namespace ObjCRuntime {"); indent++;
+		print ("");
+		print_generated_code ();
+		print ("static partial class Trampolines {"); indent++;
+
+		while (trampolines.Count > 0) {
+			var queue = trampolines.Values.ToArray ();
+			trampolines.Clear ();
+
+			GenerateTrampolinesForQueue (queue);
+		}
+		indent--; print ("}");
+		indent--; print ("}");
+		sw.Close ();
+	}
+
+	Dictionary<Type, bool> generated_trampolines = new Dictionary<Type, bool> ();
+
+	void GenerateTrampolinesForQueue (TrampolineInfo [] queue)
+	{
+		Array.Sort (queue, (a, b) => string.CompareOrdinal (a.Type.FullName, b.Type.FullName));
+		foreach (var ti in queue) {
+			if (generated_trampolines.ContainsKey (ti.Type))
+				continue;
+			generated_trampolines [ti.Type] = true;
+
+			var mi = ti.Type.GetMethod ("Invoke")!;
+			var parameters = mi.GetParameters ();
+
+			print ("");
+			PrintExperimentalAttribute (ti.Type);
+			print ("[UnmanagedFunctionPointerAttribute (CallingConvention.Cdecl)]");
+			print ("[UserDelegateType (typeof ({0}))]", ti.UserDelegate);
+			print ("unsafe internal delegate {0} {1} ({2});", ti.ReturnType, ti.DelegateName, ti.Parameters);
+			print ("");
+			print ("//\n// This class bridges native block invocations that call into C#\n//");
+			PrintExperimentalAttribute (ti.Type);
+			print ("static internal class {0} {{", ti.StaticName); indent++;
+			print ("[UnmanagedCallersOnly]");
+			print ("[UserDelegateType (typeof ({0}))]", ti.UserDelegate);
+			print ("internal static unsafe {0} Invoke ({1}) {{", ti.ReturnType, ti.Parameters);
+			indent++;
+			print ("var del = BlockLiteral.GetTarget<{0}> (block);", ti.UserDelegate);
+			bool is_void = ti.ReturnType == "void";
+			// FIXME: right now we only support 'null' when the delegate does not return a value
+			// otherwise we will need to know the default value to be returned (likely uncommon)
+			if (is_void) {
+				print ("if (del is not null) {");
+				indent++;
+				if (ti.Convert.Length > 0)
+					print (ti.Convert);
+				print ("del ({0});", ti.Invoke);
+				if (ti.PostConvert.Length > 0)
+					print (ti.PostConvert);
+				indent--;
+				if (ti.Clear.Length > 0) {
+					print ("} else {");
+					indent++;
+					print (ti.Clear);
+					indent--;
+				}
+				print ("}");
+			} else {
+				print ("if (del is null)");
+				indent++;
+				print ("return default;");
+				indent--;
+				if (ti.Convert.Length > 0)
+					print (ti.Convert);
+				print ("var retval = del ({1});", ti.DelegateReturnType, ti.Invoke);
+				if (ti.PostConvert.Length > 0)
+					print (ti.PostConvert);
+				print (ti.ReturnFormat, "retval");
+			}
+			indent--;
+			print ("}");
+			print ("");
+			print ("internal static unsafe BlockLiteral CreateNullableBlock ({0}? callback)", ti.UserDelegate);
+			print ("{");
+			indent++;
+			print ("if (callback is null)");
+			indent++;
+			print ("return default (BlockLiteral);");
+			indent--;
+			print ("return CreateBlock (callback);");
+			indent--;
+			print ("}");
+			print ("");
+			print ("[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]");
+			print ("internal static unsafe BlockLiteral CreateBlock ({0} callback)", ti.UserDelegate);
+			print ("{");
+			indent++;
+			print ("delegate* unmanaged<{0}> trampoline = &Invoke;", ti.FunctionPointerSignature);
+			print ("return new BlockLiteral (trampoline, callback, typeof ({0}), nameof (Invoke));", ti.StaticName);
+			indent--;
+			print ("}");
+			indent--;
+			print ("}} /* class {0} */", ti.StaticName);
+
+			//
+			// Now generate the class that allows us to invoke a Objective-C block from C#
+			//
+			print ("");
+			PrintExperimentalAttribute (ti.Type);
+			print ($"internal sealed class {ti.NativeInvokerName} : TrampolineBlockBase {{");
+			indent++;
+			print ("{0} invoker;", ti.DelegateName);
+			print ("");
+			print_generated_code ();
+			print ("public unsafe {0} (BlockLiteral *block) : base (block)", ti.NativeInvokerName);
+			print ("{"); indent++;
+			print ("invoker = block->GetDelegateForBlock<{0}> ();", ti.DelegateName);
+			indent--; print ("}");
+			print ("");
+			print ("[DynamicDependency (nameof (Create))]");
+			print ($"static {ti.NativeInvokerName} ()");
+			print ("{");
+			print ("\tGC.KeepAlive (null);"); // need to do _something_ (doesn't seem to matter what), otherwise the static cctor (and the DynamicDependency attributes) are trimmed away.
+			print ("}");
+			print ("");
+			print_generated_code ();
+			print ("public unsafe static {0}? Create (IntPtr block)\n{{", ti.UserDelegate); indent++;
+			print ("if (block == IntPtr.Zero)"); indent++;
+			print ("return null;"); indent--;
+			print ($"var del = ({ti.UserDelegate}?) GetExistingManagedDelegate (block);");
+			print ($"return del ?? new {ti.NativeInvokerName} ((BlockLiteral *) block).Invoke;");
+			indent--; print ("}");
+			print ("");
+			var string_pars = new StringBuilder ();
+			MakeSignatureFromParameterInfo (false, string_pars, mi, declaringType: null, parameters: parameters);
+			print_generated_code ();
+			print ("unsafe {0} Invoke ({1})", TypeManager.FormatType (null, mi.ReturnType), string_pars.ToString ());
+			print ("{"); indent++;
+			string? cast_a = "", cast_b = "";
+			bool use_temp_return;
+
+			GenerateArgumentChecks (mi, true, null, out bool needsGCKeepAlives);
+
+			StringBuilder args, convs, disposes, by_ref_processing, by_ref_init;
+			GenerateTypeLowering (mi,
+						  null_allowed_override: true,
+						  castEnum: false,
+						  args: out args,
+						  convs: out convs,
+						  disposes: out disposes,
+						  post_return: out var post_return,
+						  by_ref_processing: out by_ref_processing,
+						  by_ref_init: out by_ref_init);
+
+			if (by_ref_init.Length > 0)
+				print (by_ref_init.ToString ());
+
+			use_temp_return = mi.ReturnType != TypeCache.System_Void;
+			if (use_temp_return)
+				GetReturnsWrappers (mi, null, null, out cast_a, out cast_b);
+
+			if (convs.Length > 0)
+				print (convs.ToString ());
+			print ("{0}{1}invoker (BlockPointer{2}){3};",
+				   use_temp_return ? "var ret = " : "",
+				   cast_a,
+				   args.ToString (),
+				   cast_b);
+			if (needsGCKeepAlives)
+				GenerateArgumentGCKeepAlives (mi, null);
+			if (disposes.Length > 0)
+				print (disposes.ToString ());
+			if (by_ref_processing.Length > 0)
+				print (sw, by_ref_processing.ToString ());
+			if (use_temp_return) {
+				if (mi.ReturnType == TypeCache.System_Boolean) {
+					print ("return ret != 0;");
+				} else {
+					print ("return ret!;");
+				}
+			}
+			if (post_return?.Length > 0)
+				print (sw, post_return.ToString ());
+			indent--; print ("}");
+			indent--;
+			print ("}} /* class {0} */", ti.NativeInvokerName);
+		}
+	}
+
+	// We need to check against the user using just UIKit (and friends) in the FieldAttribute
+	// so we need to reflect the libraries contained in our Constants class and do the mapping
+	// we will return the system library path if found
+	bool IsNotSystemLibrary (string library_name)
+	{
+		return TryGetLibraryPath (library_name);
+	}
+
+	bool TryGetLibraryPath (string library_name)
+	{
+		var libSuffixedName = $"{library_name}Library";
+		var constType = TypeCache.Constants;
+		var field = constType.GetFields (BindingFlags.Public | BindingFlags.Static).FirstOrDefault (f => f.Name == libSuffixedName);
+		var library_path = field?.GetRawConstantValue ();
+		return library_path is null;
+	}
+
+	void GenerateLibraryHandles ()
+	{
+		sw = GetOutputStream ("ObjCRuntime", "Libraries");
+
+		Header (sw);
+		print ("namespace ObjCRuntime {"); indent++;
+		print_generated_code ();
+		print ("static partial class Libraries {"); indent++;
+		foreach (var library_info in libraries.OrderBy (v => v.Key, StringComparer.Ordinal)) {
+			var library_name = library_info.Key;
+			var library_path = library_info.Value;
+			print ("static public class {0} {{", library_name.Replace (".", string.Empty)); indent++;
+			if (BindThirdPartyLibrary && library_name == "__Internal") {
+				print ("static public readonly IntPtr Handle = Dlfcn.dlopen (null, 0);");
+			} else if (BindThirdPartyLibrary && library_path is not null && IsNotSystemLibrary (library_name)) {
+				print ($"static public readonly IntPtr Handle = Dlfcn.dlopen (\"{library_path}\", 0);");
+			} else if (BindThirdPartyLibrary) {
+				print ("static public readonly IntPtr Handle = Dlfcn.dlopen (Constants.{0}Library, 0);", library_name);
+			} else {
+				// Skip the path check that our managed `dlopen` method does
+				// This is not required since the path is checked by `IsNotSystemLibrary`
+				print ("static public readonly IntPtr Handle = Dlfcn._dlopen (Constants.{0}Library, 0);", library_name);
+			}
+			indent--; print ("}");
+		}
+		indent--; print ("}");
+		indent--; print ("}");
+		sw.Close ();
+	}
+
+	bool TryGetNSNumberStrongDictionaryMethods (Type type, [NotNullWhen (true)] out string? getter, [NotNullWhen (true)] out string? setter)
+	{
+		setter = "SetNumberValue";
+		getter = null;
+
+		if (type == TypeCache.System_SByte ||
+				type == TypeCache.System_Byte ||
+				type == TypeCache.System_Int16 ||
+				type == TypeCache.System_UInt16 ||
+				type == TypeCache.System_Int32 ||
+				type == TypeCache.System_UInt32 ||
+				type == TypeCache.System_Double
+				) {
+			getter = "Get" + type.Name + "Value";
+		} else if (type == TypeCache.System_nint) {
+			getter = "GetNIntValue";
+		} else if (type == TypeCache.System_nuint) {
+			getter = "GetNUIntValue";
+		} else if (type == TypeCache.System_Int64) {
+			getter = "GetLongValue";
+		} else if (type == TypeCache.System_UInt64) {
+			getter = "GetULongValue";
+		} else if (type == TypeCache.System_Float) {
+			getter = "GetFloatValue";
+		} else if (type == TypeCache.System_nfloat) {
+			getter = "GetNFloatValue";
+		} else if (type == TypeCache.System_Boolean) {
+			getter = "GetBoolValue";
+			setter = "SetBooleanValue";
+		} else {
+			return false;
+		}
+
+		return true;
+	}
+
+	bool TryGetNSNumberField (Type wrappedNumberType, [NotNullWhen (true)] out string? fieldName)
+	{
+		fieldName = null;
+
+		if (wrappedNumberType == TypeCache.System_Float) {
+			fieldName = "FloatValue";
+		} else if (wrappedNumberType == TypeCache.System_Double) {
+			fieldName = "DoubleValue";
+		} else if (wrappedNumberType == TypeCache.System_nfloat) {
+			fieldName = "NFloatValue";
+		} else if (wrappedNumberType == TypeCache.System_Int32) {
+			fieldName = "Int32Value";
+		} else if (wrappedNumberType == TypeCache.System_UInt32) {
+			fieldName = "UInt32Value";
+		} else if (wrappedNumberType == TypeCache.System_Int64) {
+			fieldName = "Int64Value";
+		} else if (wrappedNumberType == TypeCache.System_UInt64) {
+			fieldName = "UInt64Value";
+		} else if (wrappedNumberType == TypeCache.System_Int16) {
+			fieldName = "Int16Value";
+		} else if (wrappedNumberType == TypeCache.System_UInt16) {
+			fieldName = "UInt16Value";
+		} else if (wrappedNumberType == TypeCache.System_SByte) {
+			fieldName = "SByteValue";
+		} else if (wrappedNumberType == TypeCache.System_Byte) {
+			fieldName = "ByteValue";
+		} else if (wrappedNumberType == TypeCache.System_Boolean) {
+			fieldName = "BoolValue";
+		} else if (wrappedNumberType == TypeCache.System_nint) {
+			fieldName = "NIntValue";
+		} else if (wrappedNumberType == TypeCache.System_nuint) {
+			fieldName = "NUIntValue";
+		} else {
+			return false;
+		}
+
+		return true;
+	}
+
+	void ValidateStrongEnumBackingTypeInStrongDictionaryType (PropertyInfo property, Type enumBackingType)
+	{
+		if (enumBackingType == TypeCache.NSString)
+			return;
+		if (enumBackingType == TypeCache.NSNumber)
+			return;
+		if (enumBackingType == TypeCache.System_Int32)
+			return;
+
+		exceptions.Add (ErrorHelper.CreateError (1121 /* The strong enum '{0}' is not a valid strong dictionary field for the property '{1}.{2}', because its backing type is '{3}'. Only enums with backing type 'NSString', 'NSNumber' or 'System.Int32' are supported in strong dictionaries. */, property.PropertyType.Name, property.DeclaringType?.FullName, property.Name, enumBackingType.FullName));
+	}
+
+	//
+	// Processes the various StrongDictionaryAttribute interfaces
+	//
+	void GenerateStrongDictionaryTypes ()
+	{
+		foreach (var dictType in api.StrongDictionaries) {
+			if (dictType.IsUnavailable (this))
+				continue;
+			var sa = AttributeManager.GetCustomAttribute<StrongDictionaryAttribute> (dictType)!;
+			var keyContainerType = sa.TypeWithKeys;
+			var suffix = sa.Suffix;
+
+			using (var sw = GetOutputStreamForType (dictType)) {
+				string typeName = dictType.Name;
+				this.sw = sw;
+				Header (sw);
+
+				print ("namespace {0} {{", dictType.Namespace);
+				indent++;
+				WriteDocumentation (dictType);
+				PrintPlatformAttributes (dictType);
+				PrintExperimentalAttribute (dictType);
+				print ("public partial class {0} : DictionaryContainer {{", typeName);
+				indent++;
+				sw.WriteLine ("#if !COREBUILD");
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Creates a new <see cref=\"{typeName}\" /> with default (empty) values.</summary>");
+				}
+				print ("public {0} () : base (new NSMutableDictionary ()) {{}}\n", typeName);
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Creates a new <see cref=\"{typeName}\" /> from the values that are specified in <paramref name=\"dictionary\" />.</summary>");
+					print ($"/// <param name=\"dictionary\">The dictionary to use to populate the properties of this type.</param>");
+				}
+				print ("public {0} (NSDictionary? dictionary) : base (dictionary) {{}}\n", typeName);
+
+				foreach (var pi in dictType.GatherProperties (this)) {
+					if (pi.IsUnavailable (this))
+						continue;
+
+					string keyname;
+					var attrs = AttributeManager.GetCustomAttributes<ExportAttribute> (pi);
+					if (attrs.Length == 0)
+						keyname = keyContainerType + "." + pi.Name + suffix + "!";
+					else {
+						keyname = attrs [0].Selector!;
+						if (keyname.IndexOf ('.') == -1)
+							keyname = keyContainerType + "." + keyname + "!";
+					}
+
+					WriteDocumentation (pi);
+					PrintPlatformAttributes (pi);
+					string modifier = pi.IsInternal (this) ? "internal" : "public";
+
+					print ("{0} {1}? {2} {{",
+						modifier,
+						TypeManager.FormatType (dictType, pi.PropertyType),
+						pi.Name);
+
+					string getter, setter;
+					Type fetchType = pi.PropertyType;
+					string castToUnderlying = "";
+					string castToEnum = "";
+					bool isNativeEnum = false;
+					Type? enumBackingType = null;
+
+					if (pi.PropertyType.IsEnum) {
+						if (IsEnumBackedByNativeType (pi.PropertyType, out enumBackingType)) {
+							ValidateStrongEnumBackingTypeInStrongDictionaryType (pi, enumBackingType);
+							fetchType = enumBackingType;
+						} else {
+							fetchType = pi.PropertyType.GetEnumUnderlyingType ();
+							castToUnderlying = "(" + fetchType + "?)";
+							castToEnum = "(" + TypeManager.FormatType (dictType, pi.PropertyType) + "?)";
+							isNativeEnum = IsNativeEnum (pi.PropertyType);
+						}
+					}
+					if (pi.PropertyType.IsValueType) {
+						if (enumBackingType is not null) {
+							if (TryGetNSNumberStrongDictionaryMethods (enumBackingType, out var getNSNumber, out var setNSNumber)) {
+								getter = "(" + TypeManager.FormatType (null, pi.PropertyType) + "?) " + getNSNumber + " ({0})";
+								setter = setNSNumber + " ({0}, (" + TypeManager.FormatType (null, enumBackingType) + "?) value)";
+							} else if (enumBackingType == TypeCache.NSString || enumBackingType == TypeCache.NSNumber) {
+								getter = "TryGetNativeValue ({0}, out var handle) ? " + TypeManager.FormatType (null, pi.PropertyType) + "Extensions.GetNullableValue (handle) : null";
+								setter = "SetNativeValue ({0}, value.HasValue ? value.Value.GetConstant () : null)";
+							} else {
+								exceptions.Add (ErrorHelper.CreateError (99, $"Unexpected enum backing type: {enumBackingType}"));
+								continue;
+							}
+						} else if (isNativeEnum && fetchType == TypeCache.System_Int64) {
+							getter = "{1} (long?) GetNIntValue ({0})";
+							setter = "SetNumberValue ({0}, {1}value)";
+						} else if (isNativeEnum && fetchType == TypeCache.System_UInt64) {
+							getter = "{1} (ulong?) GetNUIntValue ({0})";
+							setter = "SetNumberValue ({0}, {1}value)";
+						} else if (TryGetNSNumberStrongDictionaryMethods (fetchType, out var getNSNumber, out var setNSNumber)) {
+							getter = "{1} " + getNSNumber + " ({0})";
+							setter = setNSNumber + " ({0}, {1}value)";
+						} else if (fetchType == TypeCache.System_DateTime) {
+							getter = "GetDateTimeValue ({0})";
+							setter = "SetNativeValue ({0}, (NSDate?) value)";
+						} else if (fetchType == TypeCache.CoreGraphics_CGRect) {
+							getter = "{1} GetCGRectValue ({0})";
+							setter = "SetCGRectValue ({0}, {1}value)";
+						} else if (fetchType == TypeCache.CoreGraphics_CGSize) {
+							getter = "{1} GetCGSizeValue ({0})";
+							setter = "SetCGSizeValue ({0}, {1}value)";
+						} else if (fetchType == TypeCache.CoreGraphics_CGPoint) {
+							getter = "{1} GetCGPointValue ({0})";
+							setter = "SetCGPointValue ({0}, {1}value)";
+						} else if (Frameworks.HaveCoreMedia && fetchType == TypeCache.CMTime) {
+							getter = "{1} GetCMTimeValue ({0})";
+							setter = "SetCMTimeValue ({0}, {1}value)";
+						} else if (fetchType == TypeCache.UIEdgeInsets) {
+							getter = "{1} GetUIEdgeInsets ({0})";
+							setter = "SetUIEdgeInsets ({0}, {1}value)";
+						} else if (pi.PropertyType.Name == "NMatrix3") {
+							getter = "{1} GetNSDataAsValueType<" + TypeManager.FormatType (null, pi.PropertyType) + "> ({0})";
+							setter = "SetValueTypeAsNSData ({0}, {1}value)";
+						} else {
+							exceptions.Add (new BindingException (1033, true, pi.PropertyType, dictType, pi.Name));
+							continue;
+						}
+					} else {
+						if (pi.PropertyType.TryIsArray (out var elementType)) {
+							if (TypeManager.IsDictionaryContainerType (elementType)) {
+								var dictElementType = TypeManager.FormatType (dictType, elementType);
+								getter = $"GetArrayOfDictionariesValue<{dictElementType}> ({{0}})";
+								setter = "SetArrayOfDictionariesValue ({0}, value)";
+							} else if (TypeCache.INativeObject.IsAssignableFrom (elementType)) {
+								var dictElementType = TypeManager.FormatType (dictType, elementType);
+								getter = "GetArray<" + dictElementType + "> ({0}, (ptr) => Runtime.GetINativeObject<" + dictElementType + "> (ptr, false)!)";
+								setter = "SetArrayValue ({0}, value)";
+							} else if (TypeManager.IsWrappedType (elementType)) {
+								getter = "GetArray<" + TypeManager.FormatType (dictType, elementType) + "> ({0})";
+								setter = "SetArrayValue ({0}, value)";
+							} else if (IsEnumBackedByNativeType (elementType, out enumBackingType)) {
+								ValidateStrongEnumBackingTypeInStrongDictionaryType (pi, enumBackingType);
+
+								var enumTypeStr = TypeManager.FormatType (null, elementType);
+								if (TryGetNSNumberField (enumBackingType, out var fieldName)) {
+									getter = "{1} GetArray<" + enumTypeStr + "> ({0}, (ptr) => (" + enumTypeStr + "?) Runtime.GetNSObjectChecked<NSNumber> (ptr)?." + fieldName + " ?? default (" + enumTypeStr + "))";
+									setter = "SetArrayValue<" + enumTypeStr + "> ({0}, value, (element) => Runtime.RetainAndAutoreleaseNSObject (new NSNumber ((" + TypeManager.FormatType (null, enumBackingType) + ") element)))";
+								} else if (enumBackingType == TypeCache.NSString || enumBackingType == TypeCache.NSNumber) {
+									getter = "{1} GetArray<" + enumTypeStr + "> ({0}, (ptr) => ptr == NativeHandle.Zero ? default (" + enumTypeStr + ") : " + enumTypeStr + "Extensions.GetValue (ptr))";
+									setter = "SetArrayValue<" + enumTypeStr + "> ({0}, value, (element) => Runtime.RetainAndAutoreleaseNSObject (element.GetConstant ()))";
+								} else {
+									exceptions.Add (ErrorHelper.CreateError (99, $"Unexpected enum backing type: {enumBackingType}"));
+									continue;
+								}
+							} else if (elementType.IsEnum) {
+								var underlyingEnumType = elementType.GetEnumUnderlyingType ();
+								if (!TryGetNSNumberField (underlyingEnumType, out var fieldName))
+									exceptions.Add (ErrorHelper.CreateError (1122 /* Unable to find the corresponding NSNumber property for the type {0} in {1}.{2} */, underlyingEnumType.FullName, pi.DeclaringType?.FullName, pi.Name));
+
+								// Handle arrays of enums as arrays of NSNumbers
+								var enumTypeStr = TypeManager.FormatType (null, elementType);
+								getter = "GetArray<" + enumTypeStr + "> ({0}, (ptr) => (" + enumTypeStr + "?) Runtime.GetNSObjectChecked<NSNumber> (ptr)?." + fieldName + " ?? default (" + enumTypeStr + "))";
+								setter = "SetArrayValue<" + enumTypeStr + "> ({0}, value, (element) => Runtime.RetainAndAutoreleaseNSObject (new NSNumber ((" + TypeManager.FormatType (null, underlyingEnumType) + ") element)))";
+							} else if (elementType == TypeCache.System_String) {
+								getter = "GetArray<string> ({0}, (ptr) => CFString.FromHandle (ptr)!)";
+								setter = "SetArrayValue ({0}, value)";
+							} else if (TryGetNSNumberField (elementType, out var fieldName)) {
+								var renderedElementType = TypeManager.RenderType (elementType);
+								getter = "GetArray<" + renderedElementType + "> ({0}, (ptr) => (" + renderedElementType + "?) Runtime.GetNSObjectChecked<NSNumber> (ptr)?." + fieldName + " ?? default (" + renderedElementType + "))";
+								setter = "SetArrayValue<" + renderedElementType + "> ({0}, value)";
+							} else {
+								exceptions.Add (new BindingException (1033, true, pi.PropertyType, dictType, pi.Name));
+								continue;
+							}
+						} else if (pi.PropertyType == TypeCache.NSString) {
+							getter = "GetNSStringValue ({0})";
+							setter = "SetStringValue ({0}, value)";
+						} else if (pi.PropertyType == TypeCache.System_String) {
+							getter = "GetStringValue ({0})";
+							setter = "SetStringValue ({0}, value)";
+						} else if (pi.PropertyType.Name.StartsWith ("NSDictionary", StringComparison.Ordinal)) {
+							if (pi.PropertyType.IsGenericType) {
+								var genericParameters = pi.PropertyType.GetGenericArguments ();
+								// we want to keep {0} for later yet add the params for the template.
+								getter = $"GetNSDictionary <{TypeManager.FormatType (dictType, genericParameters [0])}, {TypeManager.FormatType (dictType, genericParameters [1])}> " + "({0})";
+							} else {
+								getter = "GetNSDictionary ({0})";
+							}
+							setter = "SetNativeValue ({0}, value)";
+						} else if (TypeManager.IsDictionaryContainerType (pi.PropertyType) || AttributeManager.HasAttribute<StrongDictionaryAttribute> (pi)) {
+							var strType = pi.PropertyType.Name;
+							getter = $"GetStrongDictionary<{strType}>({{0}}, (dict) => new {strType} (dict))";
+							setter = "SetNativeValue ({0}, value?.Dictionary)";
+						} else if (TypeCache.INativeObject.IsAssignableFrom (pi.PropertyType)) {
+							getter = $"GetNativeValue<{pi.PropertyType}> ({{0}})";
+							setter = "SetNativeValue ({0}, value)";
+						} else if (TypeManager.IsWrappedType (pi.PropertyType)) {
+							getter = "Dictionary [{0}] as " + pi.PropertyType;
+							setter = "SetNativeValue ({0}, value)";
+						} else {
+							exceptions.Add (new BindingException (1033, true, pi.PropertyType, dictType, pi.Name));
+							continue;
+						}
+					}
+
+					var og = getter;
+					try {
+						getter = String.Format (getter, keyname, castToEnum);
+					} catch {
+						BindingTouch.Log ($"OOPS: g={og} k={keyname} c={castToEnum}");
+						throw;
+					}
+					setter = String.Format (setter, keyname, castToUnderlying);
+					if (pi.TryCanRead (out var getMethod)) {
+						indent++;
+						print ("get {"); indent++;
+						Inject<PreSnippetAttribute> (getMethod);
+						print ("return {0};", getter);
+						indent--; print ("}");
+						indent--;
+					}
+					if (pi.TryCanWrite (out var setMethod)) {
+						if (setter is null)
+							throw new BindingException (1032, true, pi.PropertyType, dictType, pi.Name);
+						indent++;
+						print ("set {"); indent++;
+						Inject<PreSnippetAttribute> (setMethod);
+						print ("{0};", setter);
+						indent--; print ("}");
+						indent--;
+					}
+					print ("}\n");
+
+				}
+				sw.WriteLine ("#endif");
+				indent--;
+				print ("}");
+				indent--;
+				print ("}");
+			}
+		}
+	}
+
+	void GenerateEventArgsFile ()
+	{
+		sw = GetOutputStream ("ObjCRuntime", "EventArgs");
+
+		Header (sw);
+		foreach (Type eventType in notification_event_arg_types.Keys) {
+			// Do not generate events for stuff with no arguments
+			if (eventType is null)
+				continue;
+
+			if (eventType.Namespace is not null) {
+				print ("namespace {0} {{", eventType.Namespace);
+				indent++;
+			}
+
+			if (BindingTouch.SupportsXmlDocumentation) {
+				print ($"/// <summary>Provides data for an event based on a posted <see cref=\"NSNotification\" /> object.</summary>");
+			}
+			print ("public partial class {0} : NSNotificationEventArgs {{", eventType.Name); indent++;
+
+			if (BindingTouch.SupportsXmlDocumentation) {
+				print ($"/// <summary>Initializes a new instance of the <see cref=\"{eventType.Name}\" /> class.</summary>");
+				print ($"/// <param name=\"notification\">The underlying <see cref=\"NSNotification\" /> object from the posted notification.</param>");
+			}
+			print ("public {0} (NSNotification notification) : base (notification) \n{{\n}}\n", eventType.Name);
+			int i = 0;
+			foreach (var prop in eventType.GetProperties (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) {
+				if (prop.IsUnavailable (this))
+					continue;
+				var attrs = AttributeManager.GetCustomAttributes<ExportAttribute> (prop);
+				if (attrs.Length == 0)
+					throw new BindingException (1010, true, eventType, prop.Name);
+
+				var is_internal = prop.IsInternal (this);
+				var export = attrs [0];
+				var use_export_as_string_constant = export.ArgumentSemantic != ArgumentSemantic.None;
+				var null_allowed = AttributeManager.IsNullable (prop);
+				var nullable_type = prop.PropertyType.IsValueType && null_allowed;
+				var propertyType = prop.PropertyType;
+				var propNamespace = prop.DeclaringType?.Namespace;
+				var probe_presence = AttributeManager.HasAttribute<ProbePresenceAttribute> (prop);
+
+				string kn = "k" + (i++);
+				if (use_export_as_string_constant) {
+					if (BindingTouch.SupportsXmlDocumentation) {
+						if (!WriteDocumentation (prop))
+							print ($"/// <summary>The value of the <c>{export.Selector}</c> key from the underlying <see cref=\"NSNotification\" />'s user info dictionary.</summary>");
+					}
+					print ("{0} {1}{2} {3} {{\n\tget {{\n",
+						   is_internal ? "internal" : "public",
+						   propertyType,
+						   nullable_type ? "?" : "",
+						   prop.Name);
+					indent += 2;
+					print ("{0} value;", NativeHandleType);
+					print ("using (var str = new NSString (\"{0}\")){{", export.Selector);
+					kn = "str.Handle";
+					indent++;
+				} else {
+					var lib = propNamespace?.Substring (propNamespace.IndexOf ('.') + 1) ?? "";
+					print ("[Field (\"{0}\", \"{1}\")]", export.Selector, lib);
+					print ("static IntPtr {0};", kn);
+					print ("");
+					if (BindingTouch.SupportsXmlDocumentation) {
+						if (!WriteDocumentation (prop))
+							print ($"/// <summary>The value of the <c>{export.Selector}</c> key from the underlying <see cref=\"NSNotification\" />'s user info dictionary.</summary>");
+					}
+					// linker will remove the attributes (but it's useful for testing)
+					print_generated_code ();
+					print ("{0} {1}{2} {3} {{",
+						   is_internal ? "internal" : "public",
+						   propertyType,
+						   nullable_type ? "?" : "",
+						   prop.Name);
+					indent++;
+					print ("get {");
+					indent++;
+					print ("{0} value;", NativeHandleType);
+					print ("if ({0} == IntPtr.Zero)", kn);
+					indent++;
+					var libname = BindThirdPartyLibrary ? "__Internal" : lib;
+					print ("{0} = ObjCRuntime.Dlfcn.GetIntPtr (Libraries.{1}.Handle, \"{2}\");", kn, libname, export.Selector);
+					indent--;
+				}
+				// [NullAllowed] on `UserInfo` requires a check for every case
+				print ("var userinfo = Notification.UserInfo;");
+				print ("if (userinfo is null)");
+				indent++;
+				if (probe_presence)
+					print ("return false;");
+				else if (null_allowed)
+					print ("return null!;");
+				else
+					print ("value = IntPtr.Zero;");
+				indent--;
+				print ("else");
+				indent++;
+				print ("value = userinfo.LowlevelObjectForKey ({0});", kn);
+				indent--;
+				if (use_export_as_string_constant) {
+					indent--;
+					print ("}");
+				} else
+					print ("");
+
+				if (probe_presence)
+					print ("return value != IntPtr.Zero;");
+				else {
+					var et = propertyType.GetElementType ();
+					bool is_property_array_wrapped_type = propertyType.TryIsArray (out var elementType) && TypeManager.IsWrappedType (et);
+					bool is_property_wrapped_type = TypeManager.IsWrappedType (propertyType);
+					bool is_system_string = (propertyType == TypeCache.System_String);
+					bool skip_null_check = is_property_wrapped_type || is_property_array_wrapped_type || is_system_string;
+
+					if (null_allowed && !skip_null_check)
+						print ("if (value == IntPtr.Zero)\n\treturn null;");
+					else if (propertyType.TryIsArray (out elementType))
+						print ("if (value == IntPtr.Zero)\n\treturn Array.Empty<{0}> ();", TypeManager.RenderType (elementType));
+					else if (!skip_null_check)
+						print ("if (value == IntPtr.Zero)\n\treturn default({0});", TypeManager.RenderType (propertyType));
+
+					var fullname = propertyType.FullName;
+
+					if (is_property_array_wrapped_type) {
+						print ("return CFArray.ArrayFromHandle<{0}> (value)!;", TypeManager.RenderType (et!));
+					} else if (is_property_wrapped_type) {
+						print ("return Runtime.GetNSObject<{0}> (value)!;", TypeManager.RenderType (propertyType));
+					} else if (propertyType == TypeCache.System_Double)
+						print (GenerateNSNumber ("", "DoubleValue"));
+					else if (propertyType == TypeCache.System_Float)
+						print (GenerateNSNumber ("", "FloatValue"));
+					else if (fullname == "CoreGraphics.CGPoint")
+						print (GenerateNSValue ("CGPointValue"));
+					else if (fullname == "CoreGraphics.CGSize")
+						print (GenerateNSValue ("CGSizeValue"));
+					else if (fullname == "CoreGraphics.CGRect")
+						print (GenerateNSValue ("CGRectValue"));
+					else if (is_system_string)
+						print ("return CFString.FromHandle (value)!;");
+					else if (propertyType == TypeCache.NSString)
+						print ("return new NSString (value);");
+					else if (propertyType == TypeCache.System_String_Array) {
+						print ("return CFArray.StringArrayFromHandle (value)!;");
+					} else {
+						Type underlying = propertyType.IsEnum ? propertyType.GetEnumUnderlyingType () : propertyType;
+						string cast = propertyType.IsEnum ? "(" + propertyType.FullName + ") " : "";
+
+						if (underlying == TypeCache.System_Int32)
+							print (GenerateNSNumber (cast, "Int32Value"));
+						else if (underlying == TypeCache.System_UInt32)
+							print (GenerateNSNumber (cast, "UInt32Value"));
+						else if (underlying == TypeCache.System_Int64)
+							print (GenerateNSNumber (cast, "Int64Value"));
+						else if (underlying == TypeCache.System_UInt64)
+							print (GenerateNSNumber (cast, "UInt64Value"));
+						else if (underlying == TypeCache.System_Int16)
+							print (GenerateNSNumber (cast, "Int16Value"));
+						else if (underlying == TypeCache.System_UInt16)
+							print (GenerateNSNumber (cast, "UInt16Value"));
+						else if (underlying == TypeCache.System_SByte)
+							print (GenerateNSNumber (cast, "SByteValue"));
+						else if (underlying == TypeCache.System_Byte)
+							print (GenerateNSNumber (cast, "ByteValue"));
+						else if (underlying == TypeCache.System_Boolean)
+							print (GenerateNSNumber (cast, "BoolValue"));
+						else if (underlying == TypeCache.System_nint)
+							print (GenerateNSNumber (cast, "NIntValue"));
+						else if (underlying == TypeCache.System_nuint)
+							print (GenerateNSNumber (cast, "NUIntValue"));
+						else
+							throw new BindingException (1011, true, propertyType, underlying);
+					}
+				}
+				indent -= 2;
+				print ("\t}\n}\n");
+			}
+
+			indent--; print ("}");
+
+			if (eventType.Namespace is not null) {
+				indent--;
+				print ("}");
+			}
+		}
+		sw.Close ();
+	}
+
+	// this attribute allows the linker to be more clever in removing unused code in bindings - without risking breaking user code
+	// only generate those for monotouch now since we can ensure they will be linked away before reaching the devices
+	public void GeneratedCode (StreamWriter? sw, int tabs, bool optimizable = true, bool factoryMethod = false)
+	{
+		for (int i = 0; i < tabs; i++)
+			sw!.Write ('\t');
+		sw!.Write ("[BindingImpl (BindingImplOptions.GeneratedCode");
+		if (optimizable)
+			sw.Write (" | BindingImplOptions.Optimizable");
+		if (factoryMethod)
+			sw.Write (" | BindingImplOptions.FactoryMethod");
+		sw.WriteLine (")]");
+	}
+
+	static void WriteIsDirectBindingCondition (StreamWriter? sw, ref int tabs, bool? is_direct_binding, string? is_direct_binding_value, Func<string?> trueCode, Func<string?> falseCode)
+	{
+		if (is_direct_binding_value is not null)
+			sw!.Write ('\t', tabs).WriteLine ("IsDirectBinding = {0};", is_direct_binding_value);
+
+		// If we don't know the IsDirectBinding value, we need the condition
+		if (!is_direct_binding.HasValue) {
+			sw!.Write ('\t', tabs).WriteLine ("if (IsDirectBinding) {");
+			tabs++;
+		}
+
+		// We need the true part if we don't know, or if we know it's true
+		if (is_direct_binding != false) {
+			var code = trueCode ();
+			if (!string.IsNullOrEmpty (code))
+				WriteIsDirectBindingCode (sw!, code, tabs);
+		}
+
+		if (!is_direct_binding.HasValue)
+			sw!.Write ('\t', tabs - 1).WriteLine ("} else {");
+
+		// We need the false part if we don't know, or if we know it's false
+		if (is_direct_binding != true) {
+			var code = falseCode ();
+			if (!string.IsNullOrEmpty (code))
+				WriteIsDirectBindingCode (sw!, code, tabs);
+		}
+
+		if (!is_direct_binding.HasValue) {
+			tabs--;
+			sw!.Write ('\t', tabs).WriteLine ("}");
+		}
+	}
+
+	static void WriteIsDirectBindingCode (StreamWriter sw, string code, int tabs)
+	{
+		var lines = code.Split ('\n');
+		foreach (var line in lines) {
+			if (!string.IsNullOrEmpty (line))
+				sw.Write ('\t', tabs).WriteLine (line);
+		}
+	}
+
+	public void print_generated_code (bool optimizable = true, bool factoryMethod = false)
+	{
+		GeneratedCode (sw, indent, optimizable, factoryMethod);
+	}
+
+	public void print (string format)
+	{
+		print (sw, format);
+	}
+
+	public void print (string format, params object? [] args)
+	{
+		print (sw, format, args);
+	}
+
+	static char [] newlineCharacters = new char [] { '\n' };
+
+	public void print (StreamWriter? w, string format)
+	{
+		if (indent < 0)
+			throw new InvalidOperationException ("Indent is a negative value.");
+
+		var lines = format.Split (newlineCharacters);
+
+		for (int i = 0; i < lines.Length; i++) {
+			if (lines [i].Length == 0)
+				continue;
+			w!.Write ('\t', indent);
+			w!.WriteLine (lines [i]);
+		}
+	}
+
+	public void print (StreamWriter? w, string format, params object? [] args)
+	{
+		print (w, string.Format (format, args));
+	}
+
+	public void print (StreamWriter? w, IEnumerable e)
+	{
+		foreach (var a in e)
+			w!.WriteLine (a);
+	}
+
+	bool Duplicated (AvailabilityBaseAttribute candidate, AvailabilityBaseAttribute [] attributes)
+	{
+		foreach (var a in attributes) {
+			if (candidate.AvailabilityKind != a.AvailabilityKind)
+				continue;
+			if (candidate.Platform != a.Platform)
+				continue;
+			if (candidate.Version != a.Version)
+				continue;
+			// the actual message (when present) is not really important
+			return true;
+		}
+		return false;
+	}
+
+	// do not generate introduced/supported attributes for versions earlier than the minimum supported
+	// more important since dotnet and legacy have different minimums (so this can't be done in binding files)
+	bool FilterMinimumVersion (AvailabilityBaseAttribute aa)
+	{
+		// dotnet can never filter minimum versions, as they are semantically important in some cases
+		// See for details: https://github.com/dotnet/macios/issues/10170
+		return true;
+	}
+
+	HashSet<string> GetFrameworkListForPlatform (PlatformName platform)
+	{
+		HashSet<string>? frameworkList = null;
+		switch (platform) {
+		case PlatformName.iOS:
+			frameworkList = Frameworks.iosframeworks;
+			break;
+		case PlatformName.TvOS:
+			frameworkList = Frameworks.tvosframeworks;
+			break;
+		case PlatformName.MacOSX:
+			frameworkList = Frameworks.macosframeworks;
+			break;
+		case PlatformName.MacCatalyst:
+			frameworkList = Frameworks.maccatalystframeworks;
+			break;
+		default:
+			frameworkList = new HashSet<string> ();
+			break;
+		}
+		return new HashSet<string> (frameworkList.Select (x => x.ToLower (CultureInfo.InvariantCulture)));
+	}
+
+	static string? FindNamespace (MemberInfo item)
+	{
+		switch (item) {
+		case TypeInfo type:
+			return type.Namespace;
+		case PropertyInfo prop:
+			return prop.DeclaringType?.Namespace;
+		case MethodInfo meth:
+			return meth.DeclaringType?.Namespace;
+		default:
+			throw new NotImplementedException ($"FindNamespace on {item} of type {item.GetType ()}");
+		}
+	}
+
+	bool IsInSupportedFramework (MemberInfo klass, PlatformName platform)
+	{
+		var ns = FindNamespace (klass);
+		if (string.IsNullOrEmpty (ns))
+			return false;
+		var list = GetFrameworkListForPlatform (platform);
+		return list.Contains (ns.ToLower (CultureInfo.InvariantCulture));
+	}
+
+	void AddUnlistedAvailability (MemberInfo containingClass, List<AvailabilityBaseAttribute> availability)
+	{
+		// If there are no unavailable attributes for a platform on a type
+		// add a supported introduced (without version) since it was "unlisted"
+		foreach (var platform in BindingTouch.AllPlatformNames) {
+			if (!PlatformMarkedUnavailable (platform, availability) && IsInSupportedFramework (containingClass, platform)) {
+				availability.Add (AttributeFactory.CreateNoVersionSupportedAttribute (platform));
+			}
+		}
+	}
+
+	static bool PlatformMarkedUnavailable (PlatformName platform, List<AvailabilityBaseAttribute> memberAvailability)
+	{
+		return memberAvailability.Any (v => (v.Platform == platform && v is UnavailableAttribute));
+	}
+
+	// Especially for TV and Catalyst some entire namespaces are removed via framework_sources.
+	// As a final step, if we are on a namespace that flatly doesn't exist, drop it. Then if we don't have a not supported, add it
+	void StripIntroducedOnNamespaceNotIncluded (List<AvailabilityBaseAttribute> memberAvailability, MemberInfo context)
+	{
+		if (context is TypeInfo containingClass) {
+			var droppedPlatforms = new HashSet<PlatformName> ();
+
+			// Walk all members and look for introduced that are nonsense for our containing class's platform
+			foreach (var introduced in memberAvailability.Where (a => a.AvailabilityKind == AvailabilityKind.Introduced || a.AvailabilityKind == AvailabilityKind.Deprecated).ToList ()) {
+				// Hack - WebKit namespace has two distinct implementations with different types
+				// It can not be hacked in IsInSupportedFramework as AddUnlistedAvailability 
+				// will add iOS implied to the mac version and so on. So hard code it here...
+				if (FindNamespace (containingClass) == "WebKit" && introduced.Platform != PlatformName.TvOS) {
+					continue;
+				}
+				if (!IsInSupportedFramework (containingClass, introduced.Platform)) {
+					memberAvailability.Remove (introduced);
+					droppedPlatforms.Add (introduced.Platform);
+				}
+			}
+
+			// For each attribute we dropped, if we don't have an existing non-introduced, create one
+			foreach (var platform in droppedPlatforms) {
+				if (!memberAvailability.Any (a => platform == a.Platform && a.AvailabilityKind != AvailabilityKind.Introduced)) {
+					memberAvailability.Add (AttributeFactory.CreateUnsupportedAttribute (platform));
+				}
+			}
+		}
+	}
+
+	// This assumes the compiler implements property methods as get_ or set_ prefixes
+	public static PropertyInfo? GetProperyFromGetSetMethod (MethodInfo method)
+	{
+		string name = method.Name;
+		if (name.StartsWith ("get_", StringComparison.Ordinal) || name.StartsWith ("set_", StringComparison.Ordinal)) {
+			return method.DeclaringType!.GetProperty (name.Substring (4));
+		}
+		return null;
+	}
+
+	static MemberInfo FindContainingContext (MemberInfo? mi)
+	{
+		if (mi is null) {
+			throw new InvalidOperationException ("FindContainingContext could not find parent class?");
+		}
+		if (mi is MethodInfo method) {
+			var containingProperty = GetProperyFromGetSetMethod (method);
+			if (containingProperty is not null) {
+				return containingProperty;
+			}
+		}
+		if (mi is TypeInfo) {
+			return mi;
+		}
+		return FindContainingContext (mi.DeclaringType);
+	}
+
+	// We need to collect all of the availability attributes walking up the chain of context.
+	// Example: A get_Foo inside of a property Foo which is inside of a class Klass.
+	//          The Foo property and the Klass both could have unique or duplicate attributes
+	// We collect them all, starting with the inner most first in the list.
+	// Later on CopyValidAttributes will handle only copying the first valid one down
+	readonly Dictionary<MemberInfo, List<AvailabilityBaseAttribute>> parentAttributeCache = new ();
+	List<AvailabilityBaseAttribute> GetAllParentAttributes (MemberInfo context)
+	{
+		if (parentAttributeCache.TryGetValue (context, out var cached))
+			return cached;
+
+		var parentAvailability = new List<AvailabilityBaseAttribute> ();
+		var current = context;
+		while (true) {
+			parentAvailability.AddRange (AttributeManager.GetCustomAttributes<AvailabilityBaseAttribute> (current));
+			var parentContext = FindContainingContext (current);
+			if (current == parentContext) {
+				break;
+			}
+			current = parentContext;
+		}
+		parentAttributeCache [context] = parentAvailability;
+		return parentAvailability;
+	}
+
+	public bool PrintPlatformAttributes (MemberInfo? mi, Type? inlinedType = null, PlatformName? excludedPlatform = null)
+	{
+		bool printed = false;
+		if (mi is null)
+			return printed;
+
+		AvailabilityBaseAttribute []? type_ca = null;
+
+		foreach (var availability in GetPlatformAttributesToPrint (mi, null, inlinedType)) {
+			if (availability.Platform == excludedPlatform)
+				continue;
+			var t = inlinedType ?? (mi as TypeInfo) ?? mi.DeclaringType;
+			if (type_ca is null) {
+				if (t is not null)
+					type_ca = AttributeManager.GetCustomAttributes<AvailabilityBaseAttribute> (t);
+				else
+					type_ca = Array.Empty<AvailabilityBaseAttribute> ();
+			}
+			switch (availability.AvailabilityKind) {
+			case AvailabilityKind.Unavailable:
+				// an unavailable member can override type-level attribute
+				print (availability.ToString ());
+				printed = true;
+				break;
+			default:
+				if (FilterMinimumVersion (availability))
+					print (availability.ToString ());
+				printed = true;
+				break;
+			}
+		}
+		return printed;
+	}
+
+	static bool IsUnavailable (IEnumerable<AvailabilityBaseAttribute> customAttributes, PlatformName platform)
+	{
+		if (customAttributes is null)
+			return false;
+		foreach (var ca in customAttributes) {
+			if ((platform == ca.Platform) && (ca.AvailabilityKind == AvailabilityKind.Unavailable))
+				return true;
+		}
+		return false;
+	}
+
+	static bool HasAvailability (IEnumerable<AvailabilityBaseAttribute> customAttributes, PlatformName platform)
+	{
+		if (customAttributes is null)
+			return false;
+		foreach (var ca in customAttributes) {
+			if (platform == ca.Platform)
+				return true;
+		}
+		return false;
+	}
+
+	public void PrintPlatformAttributesNoDuplicates (MemberInfo? generatedType, MemberInfo? inlinedMethod)
+	{
+		if ((generatedType is null) || (inlinedMethod is null))
+			return;
+
+		var inlined_ca = new List<AvailabilityBaseAttribute> ();
+		inlined_ca.AddRange (GetPlatformAttributesToPrint (inlinedMethod, generatedType.DeclaringType, generatedType));
+		if (inlinedMethod.DeclaringType is not null) {
+			// if not conflictual add the custom attributes from the type
+			foreach (var availability in GetPlatformAttributesToPrint (inlinedMethod.DeclaringType, null, generatedType)) {
+				// already decorated, skip
+				if (HasAvailability (inlined_ca, availability.Platform))
+					continue;
+				// not available, skip
+				if (IsUnavailable (inlined_ca, availability.Platform))
+					continue;
+				// this type-level custom attribute has meaning and not covered by the method
+				inlined_ca.Add (availability);
+			}
+		}
+
+		var generated_type_ca = new HashSet<string> ();
+
+		// the type, in which we are inlining the current method, might already have the same availability attribute
+		// which we would duplicate if generated
+		foreach (var availability in inlined_ca) {
+			if (!FilterMinimumVersion (availability))
+				continue;
+			var s = availability.ToString ();
+			if (!generated_type_ca.Contains (s))
+				print (s);
+		}
+	}
+
+	public string SelectorField (string s, bool ignore_inline_directive = false, bool force_gethandle = false)
+	{
+		if (InlineSelectors && !ignore_inline_directive)
+			force_gethandle = true;
+
+		if (force_gethandle)
+			return "Selector.GetHandle (\"" + s + "\")";
+
+		if (selector_names.TryGetValue (s, out var name))
+			return name;
+
+		var sb = new StringBuilder ();
+		bool up = true;
+		sb.Append ("sel");
+
+		foreach (char c in s) {
+			if (up && c != ':') {
+				sb.Append (Char.ToUpper (c));
+				up = false;
+			} else if (c == ':') {
+				// Selectors can differ only by colons.
+				// Example 'mountDeveloperDiskImageWithError:' and 'mountDeveloperDiskImage:WithError:' (from Xamarin.Hosting)
+				// This also showed up in a bug report: http://bugzilla.xamarin.com/show_bug.cgi?id=2626
+				// So make sure we create a different name for those in C# as well, otherwise the generated code won't build.
+				up = true;
+				sb.Append ('_');
+			} else
+				sb.Append (c);
+		}
+		if (!InlineSelectors)
+			sb.Append ("XHandle");
+		name = sb.ToString ();
+		selector_names [s] = name;
+		return name;
+	}
+
+	// This will return the needed ObjC name for class_ptr lookup
+	public string FormatCategoryClassName (BaseTypeAttribute bta)
+	{
+		object [] attribs;
+
+		// If we are binding a third party library we need to check for the RegisterAttribute
+		// its Name property will contain the propper name we are looking for
+		if (BindThirdPartyLibrary) {
+			attribs = AttributeManager.GetCustomAttributes<RegisterAttribute> (bta.BaseType);
+			if (attribs.Length > 0) {
+				var register = (RegisterAttribute) attribs [0];
+				return register.Name!;
+			} else {
+				// this will do for categories of third party classes defined in ApiDefinition.cs
+				attribs = AttributeManager.GetCustomAttributes<BaseTypeAttribute> (bta.BaseType);
+				if (attribs.Length > 0) {
+					var baseT = (BaseTypeAttribute) attribs [0];
+					if (baseT.Name is not null)
+						return baseT.Name;
+				}
+			}
+		} else {
+			// If we are binding a category inside Xamarin.iOS the selector name will come in
+			// the Name property of the BaseTypeAttribute of the base type if changed from the ObjC name
+			attribs = AttributeManager.GetCustomAttributes<BaseTypeAttribute> (bta.BaseType);
+			if (attribs.Length > 0) {
+				var baseT = (BaseTypeAttribute) attribs [0];
+				if (baseT.Name is not null)
+					return baseT.Name;
+			}
+		}
+
+		var objcClassName = TypeManager.FormatType (null, bta.BaseType);
+
+		if (objcClassName.Contains ("global::"))
+			objcClassName = objcClassName.Substring (objcClassName.LastIndexOf ('.') + 1);
+
+		return objcClassName;
+	}
+
+
+
+	//
+	// Makes the public signature for an exposed method
+	//
+	public string MakeSignature (MemberInformation minfo)
+	{
+		return MakeSignature (minfo, false, minfo.Method!.GetParameters ());
+	}
+
+	//
+	// Makes the public signature for an exposed method, taking into account if PreserveAttribute is needed
+	//
+	public string MakeSignature (MemberInformation minfo, bool alreadyPreserved)
+	{
+		return MakeSignature (minfo, false, minfo.Method!.GetParameters (), "", alreadyPreserved);
+	}
+
+	public string GetAsyncName (MethodInfo mi)
+	{
+		var attr = AttributeManager.GetOneCustomAttribute<AsyncAttribute> (mi);
+		if (attr.MethodName is not null)
+			return attr.MethodName;
+		return mi.Name + "Async";
+	}
+
+	public bool IsModel (Type? type)
+	{
+		return AttributeManager.HasAttribute<ModelAttribute> (type) && !AttributeManager.HasAttribute<SyntheticAttribute> (type);
+	}
+
+	public bool IsProtocol (Type? type)
+	{
+		return AttributeManager.HasAttribute<ProtocolAttribute> (type);
+	}
+
+	public string GetMethodName (MemberInformation minfo, bool is_async)
+	{
+		var mi = minfo.Method!;
+		string name;
+		if (minfo.render_as_factory_method) {
+			name = minfo.factory_method_name!;
+		} else if (minfo.is_factory_method && !minfo.is_ctor) {
+			// The backing instance helper for a named factory method is hidden behind an
+			// underscore-prefixed internal method; the public API is the static factory method.
+			name = "_" + minfo.factory_method_name;
+		} else if (minfo.is_ctor) {
+			if (minfo.is_protocol_member) {
+				var bindAttribute = GetBindAttribute (mi);
+				name = bindAttribute?.Selector ?? "CreateInstance";
+			} else {
+				name = Nomenclator.GetGeneratedTypeName (mi.DeclaringType!);
+			}
+		} else if (is_async) {
+			name = GetAsyncName (mi);
+		} else {
+			name = mi.Name;
+		}
+		return name;
+	}
+
+	public string MakeSignature (MemberInformation minfo, bool is_async, ParameterInfo [] parameters, string extra = "", bool alreadyPreserved = false)
+	{
+		var mi = minfo.Method!;
+		var category_class = minfo.category_extension_type;
+		var sb = new StringBuilder ();
+		string name = GetMethodName (minfo, is_async);
+
+		// Some codepaths already write preservation info
+		PrintAttributes (minfo.mi, preserve: !alreadyPreserved, advice: true, bindAs: true, requiresSuper: true, dynamicDependency: true);
+
+		if (minfo.is_ctor && minfo.is_protocol_member) {
+			sb.Append ("T? ");
+		} else if (minfo.render_as_factory_method) {
+			sb.Append (Nomenclator.GetGeneratedTypeName (mi.DeclaringType!));
+			if (minfo.is_factory_method_nullable)
+				sb.Append ('?');
+			sb.Append (' ');
+		} else if (!minfo.is_ctor && !is_async) {
+			var prefix = "";
+			if (!BindThirdPartyLibrary) {
+				if (minfo.Method?.ReturnType?.TryIsArray (out var et) == true) {
+					if (IsModel (et))
+						ErrorHelper.Warning (BindingTouch, 1109, minfo.Method.DeclaringType, minfo.Method.Name, et, et.Namespace, et.Name);
+				}
+				if (IsModel (minfo.Method?.ReturnType))
+					ErrorHelper.Warning (BindingTouch, 1107, minfo.Method?.DeclaringType, minfo.Method?.Name, minfo.Method?.ReturnType, minfo.Method?.ReturnType?.Namespace, minfo.Method?.ReturnType?.Name);
+			}
+
+			if (minfo.is_bindAs) {
+				if (IsMemberInsideProtocol (minfo.mi.DeclaringType))
+					throw new BindingException (1050, true, minfo.mi.DeclaringType?.Name);
+
+				var bindAsAttrib = GetOneBindAsAttribute (minfo.mi);
+				sb.Append (prefix + TypeManager.FormatType (bindAsAttrib.Type.DeclaringType, bindAsAttrib.Type));
+				if (!bindAsAttrib.Type.IsValueType && AttributeManager.IsNullable (mi.ReturnParameter))
+					sb.Append ('?');
+			} else {
+				sb.Append (prefix);
+				sb.Append (TypeManager.FormatType (minfo.type, mi.ReturnType));
+				if (!mi!.ReturnType.IsValueType && AttributeManager.IsNullable (mi.ReturnParameter))
+					sb.Append ('?');
+			}
+
+			sb.Append (" ");
+		}
+		if ((minfo.is_extension_method || minfo.is_protocol_member || minfo.is_protocol_implementation_method) && minfo.Method!.IsSpecialName) {
+			if (name.StartsWith ("get_", StringComparison.Ordinal))
+				name = "Get" + name.Substring (4);
+			else if (name.StartsWith ("set_", StringComparison.Ordinal))
+				name = "Set" + name.Substring (4);
+		}
+		if (minfo.is_protocol_implementation_method)
+			sb.Append ('_');
+		sb.Append (name);
+
+		if (minfo.is_protocol_member) {
+			if (minfo.is_ctor || minfo.is_static) {
+				sb.Append ("<T>");
+			}
+		}
+
+		sb.Append (" (");
+
+		bool comma = false;
+		if (minfo.is_extension_method) {
+			sb.Append ("this ");
+			sb.Append ("I" + mi.DeclaringType?.Name);
+			sb.Append (" This");
+			comma = true;
+		} else if (minfo.is_protocol_implementation_method && !minfo.is_static) {
+			sb.Append ("I" + mi.DeclaringType!.Name);
+			sb.Append (" This");
+			comma = true;
+		} else if (category_class is not null) {
+			sb.Append ("this ");
+			//			Console.WriteLine ("Gto {0} and {1}", mi.DeclaringType, category_class);
+			sb.Append (TypeManager.FormatType (mi.DeclaringType, category_class));
+			sb.Append (" This");
+			comma = true;
+		}
+		MakeSignatureFromParameterInfo (comma, sb, mi, minfo.type, parameters);
+		sb.Append (extra);
+		sb.Append (")");
+
+		if (minfo.is_protocol_member) {
+			if (minfo.is_static || minfo.is_ctor) {
+				sb.Append (" where T: NSObject, ");
+				sb.Append ("I").Append (mi.DeclaringType!.Name);
+			}
+		}
+
+		return sb.ToString ();
+	}
+
+	void EnsureDelegateCreation (Type type)
+	{
+		if (!type.IsSubclassOf (TypeCache.System_Delegate))
+			return;
+
+		if (type.Namespace == "System" && type.Name.StartsWith ("Action", StringComparison.Ordinal))
+			return;
+
+		if (!delegate_types.ContainsKey (type.FullName!))
+			delegate_types [type.FullName!] = type.GetMethod ("Invoke")!;
+	}
+
+	//
+	// Renders the parameters in @parameters in a format suitable for a method declaration.
+	// The result is place into the provided string builder 
+	// 
+	public void MakeSignatureFromParameterInfo (bool comma, StringBuilder sb, MemberInfo mi, Type? declaringType, ParameterInfo [] parameters)
+	{
+		int parCount = parameters.Length;
+		for (int pari = 0; pari < parCount; pari++) {
+			var pi = parameters [pari];
+
+			if (comma)
+				sb.Append (", ");
+			comma = true;
+
+			// Format nicely the type, as succinctly as possible
+			Type parType = pi.ParameterType;
+			if (parType.IsSubclassOf (TypeCache.System_Delegate)) {
+				if (!AttributeManager.HasAttribute<WrapAttribute> (mi)) {
+					var ti = MakeTrampoline (parType);
+					sb.AppendFormat ("[BlockProxy (typeof (ObjCRuntime.Trampolines.{0}))]", ti.NativeInvokerName);
+				} else {
+					EnsureDelegateCreation (parType);
+				}
+			}
+
+			if (AttributeManager.HasAttribute<TransientAttribute> (pi))
+				sb.Append ("[Transient] ");
+
+			if (parType.IsByRef) {
+				string reftype = pi.IsOut ? "out " : "ref ";
+				sb.Append (reftype);
+				parType = parType.GetElementType ()!;
+			}
+			// note: check for .NET `params` on the bindings, which generates a `ParamArrayAttribute` or the old (not really required) custom `ParamsAttribute`
+			if (pari == parCount - 1 && parType.IsArray && (AttributeManager.HasAttribute<ParamsAttribute> (pi) || AttributeManager.HasAttribute<ParamArrayAttribute> (pi))) {
+				sb.Append ("params ");
+			}
+
+			var bindAsAtt = GetBindAsAttribute (pi);
+			if (bindAsAtt is not null) {
+				PrintBindAsAttribute (pi, sb);
+				var bt = bindAsAtt.Type;
+				sb.Append (TypeManager.FormatType (bt.DeclaringType, bt));
+				if (!bt.IsValueType && AttributeManager.IsNullable (pi))
+					sb.Append ('?');
+			} else {
+				// Only apply nullability bytes for void-returning delegate types (Action<> variants).
+				// Func<> types have a covariant TResult which creates a type mismatch with the
+				// trampoline's CreateNullableBlock signature.
+				byte []? nullabilityBytes = null;
+				if (parType.IsSubclassOf (TypeCache.System_Delegate)) {
+					var invokeMethod = parType.GetMethod ("Invoke");
+					if (invokeMethod is not null && invokeMethod.ReturnType == TypeCache.System_Void) {
+						nullabilityBytes = AttributeManager.GetNullabilityBytes (pi);
+					}
+				}
+				sb.Append (TypeManager.FormatType (declaringType, parType, nullabilityBytes));
+				// some `IntPtr` are decorated with `[NullAttribute]`
+				if (!parType.IsValueType) {
+					if (AttributeManager.IsNullable (pi)) {
+						sb.Append ('?');
+					} else if (pi.Position == 0 && mi is MethodInfo minfo) {
+						// only need to check for setter, since we wouldn't get here for a getter.
+						var propertyInfo = GetProperty (minfo, getter: false, setter: true);
+						if (AttributeManager.IsNullable (propertyInfo)) {
+							sb.Append ('?');
+						}
+					}
+				}
+			}
+
+			sb.Append (" ");
+			sb.Append (pi.Name.GetSafeParamName ());
+		}
+	}
+
+	void Header (StreamWriter w)
+	{
+		print (w, "//\n// Auto-generated from generator.cs, do not edit\n//");
+		print (w, "// We keep references to objects, so warning 414 is expected\n");
+		print (w, "#pragma warning disable 414\n");
+		print (w, NamespaceCache.ImplicitNamespaces.OrderByDescending (n => n.StartsWith ("System", StringComparison.Ordinal)).ThenBy (n => n.Length).Select (n => "using " + n + ";"));
+		print (w, "");
+		print (w, "#nullable enable");
+		print (w, "");
+	}
+
+	//
+	// Given a method info that has a return value, produce the text necessary on
+	// both sides of a call to wrap the result into user-facing MonoTouch types.
+	//
+	// @mi: the method info, should not have a returntype of void
+	// @cast_a: left side to generate
+	// @cast_b: right side to generate
+	//
+	void GetReturnsWrappers (MethodInfo mi, MemberInformation? minfo, Type? declaringType, out string? cast_a, out string? cast_b, StringBuilder? postproc = null)
+	{
+		cast_a = cast_b = "";
+		if (mi.ReturnType == TypeCache.System_Void) {
+			throw new ArgumentException ("the provided Method has a void return type, it should never call this method");
+		}
+
+		var mai = new MarshalInfo (this, mi);
+		var owns = (minfo?.is_return_release == true) || (minfo?.is_forced_owns == true) ? "true" : "false";
+		if (GetNativeEnumToManagedExpression (mi.ReturnType, out cast_a, out cast_b, out var _, postproc)) {
+			// we're done here
+		} else if (mi.ReturnType.IsEnum) {
+			cast_a = "(" + TypeManager.FormatType (minfo?.type ?? mi.DeclaringType, mi.ReturnType) + ") ";
+			cast_b = "";
+		} else if (marshalTypes.TryGetMarshalType (mai.Type, out var mt)) {
+			cast_a = mt.CreateFromRet;
+			cast_b = mt.ClosingCreate?.Replace ("%OWNS%", owns) ?? string.Empty;
+		} else if (TypeManager.IsWrappedType (mi.ReturnType)) {
+			// protocol support means we can return interfaces and, as far as .NET knows, they might not be NSObject
+			if (IsProtocolInterface (mi.ReturnType)) {
+				cast_a = " Runtime.GetINativeObject<" + TypeManager.FormatType (minfo?.type ?? mi.DeclaringType, mi.ReturnType) + "> (";
+				cast_b = $", {owns})!";
+			} else if (minfo is not null && minfo.is_forced) {
+				cast_a = " Runtime.GetINativeObject<" + TypeManager.FormatType (minfo.type, mi.ReturnType) + "> (";
+				cast_b = $", true, {owns})!";
+			} else if (minfo is not null && minfo.is_bindAs) {
+				var bindAs = GetOneBindAsAttribute (minfo.mi);
+				var nullableBindAsType = TypeManager.GetUnderlyingNullableType (bindAs.Type);
+				var isNullable = nullableBindAsType is not null;
+				var bindAsType = TypeManager.GetUnderlyingNullableType (bindAs.Type) ?? bindAs.Type;
+				var formattedBindAsType = TypeManager.FormatType (minfo.type, bindAs.Type);
+				string suffix;
+				var wrapper = GetFromBindAsWrapper (minfo, out suffix);
+				var formattedReturnType = TypeManager.FormatType (minfo.type, mi.ReturnType);
+				if (mi.ReturnType == TypeCache.NSString) {
+					cast_a = $"{wrapper}";
+					cast_b = $"{suffix}";
+				} else {
+					var enumCast = (bindAsType.IsEnum && !minfo.type.IsArray) ? $"({formattedBindAsType}) " : string.Empty;
+					cast_a = $"{enumCast}Runtime.GetNSObject<{formattedReturnType}> (";
+					if (isNullable)
+						cast_b = $", {owns}){wrapper}";
+					else
+						cast_b = $", {owns})!{wrapper}";
+				}
+			} else {
+				cast_a = " Runtime.GetNSObject<" + TypeManager.FormatType (minfo?.type ?? declaringType, mi.ReturnType) + "> (";
+				cast_b = $", {owns})!";
+			}
+		} else if (mi.ReturnType.IsGenericParameter) {
+			cast_a = " Runtime.GetINativeObject<" + mi.ReturnType.Name + "> (";
+			cast_b = $", {owns})!";
+		} else if (mai.Type == TypeCache.System_String && !mai.PlainString) {
+			cast_a = "CFString.FromHandle (";
+			cast_b = $", {owns})!";
+		} else if (mi.ReturnType.IsSubclassOf (TypeCache.System_Delegate)) {
+			cast_a = "";
+			cast_b = "";
+		} else if (mai.Type.IsArray) {
+			var etype = mai.Type.GetElementType ()!;
+			if (minfo is not null && minfo.is_bindAs) {
+				var bindAttrType = GetOneBindAsAttribute (minfo.mi).Type;
+				if (!bindAttrType.TryIsArray (out var bindAsT)) {
+					throw new BindingException (1071, true, minfo.mi.DeclaringType?.FullName, minfo.mi.Name);
+				}
+				var suffix = string.Empty;
+				cast_a = $"NSArray.ArrayFromHandleFunc <{TypeManager.FormatType (bindAsT.DeclaringType, bindAsT)}> (";
+				cast_b = $", {GetFromBindAsWrapper (minfo, out suffix)}, {owns})!" + suffix;
+			} else if (etype == TypeCache.System_String) {
+				cast_a = "CFArray.StringArrayFromHandle (";
+				cast_b = $", {owns})!";
+			} else if (etype == TypeCache.Selector) {
+				exceptions.Add (ErrorHelper.CreateError (1066, mai.Type.FullName, mi.DeclaringType?.FullName, mi.Name));
+			} else {
+				if (NamespaceCache.NamespacesThatConflictWithTypes.Contains (etype.Namespace!))
+					cast_a = "CFArray.ArrayFromHandle<global::" + etype + ">(";
+				else
+					cast_a = "CFArray.ArrayFromHandle<" + TypeManager.FormatType (mi.DeclaringType, etype) + ">(";
+				cast_b = $", {owns})!";
+			}
+		} else if (mi.ReturnType.Namespace == "System" && mi.ReturnType.Name == "nint") {
+			cast_a = "(nint) ";
+		} else if (mi.ReturnType.Namespace == "System" && mi.ReturnType.Name == "nuint") {
+			cast_a = "(nuint) ";
+		}
+	}
+
+	void GenerateInvoke (bool stret, bool supercall, MethodInfo mi, MemberInformation minfo, string? selector, string args, Type? category_type, bool aligned)
+	{
+		var isInstanceMethod = category_type is null && !minfo.is_extension_method &&
+								  !minfo.is_protocol_implementation_method;
+		string? target_name = isInstanceMethod ? "this" : "This";
+		string handle = supercall ? "" : ".Handle";
+		string receiver;
+
+		// For super calls on instance methods, emit a stack-allocated ObjCSuper and pass its address.
+		if (supercall && !minfo.is_static) {
+			print ("unsafe {");
+			indent++;
+			print ("var __objc_super__ = new global::ObjCRuntime.ObjCSuper ({0});", target_name);
+			receiver = "&__objc_super__";
+		} else {
+			receiver = "";
+		}
+
+		// If we have supercall == false, we can be a Bind method that has a [Target]
+		if (supercall == false && !minfo.is_static) {
+			foreach (var pi in mi.GetParameters ()) {
+				if (IsTarget (pi)) {
+					if (pi.ParameterType == TypeCache.System_String) {
+						var mai = new MarshalInfo (this, mi, pi);
+
+						if (mai.PlainString)
+							ErrorHelper.Warning (BindingTouch, 1101);
+
+						target_name = "ns" + pi.Name;
+						handle = "";
+					} else
+						target_name = pi.Name.GetSafeParamName ();
+					break;
+				}
+			}
+		}
+
+		string sig = supercall ? MakeSuperSig (mi, stret, aligned) : MakeSig (mi, stret, aligned);
+
+		sig = "global::" + NamespaceCache.Messaging + "." + sig;
+
+		string selector_field;
+		if (minfo.is_interface_impl || minfo.is_extension_method) {
+			var tmp = InlineSelectors;
+			InlineSelectors = true;
+			selector_field = SelectorField (selector!, force_gethandle: minfo.is_protocol_member || minfo.is_protocol_implementation_method);
+			InlineSelectors = tmp;
+		} else {
+			selector_field = SelectorField (selector!, force_gethandle: minfo.is_protocol_member || minfo.is_protocol_implementation_method);
+		}
+
+		if (ShouldMarshalNativeExceptions (mi))
+			args += ", &exception_gchandle";
+
+		if (stret && aligned) {
+			var ret_val = "(IntPtr*) aligned_ret";
+			if (minfo.is_static)
+				print ("{0} ({5}, class_ptr, {3}{4});", sig, "/*unusued*/", "/*unusued*/", selector_field, args, ret_val);
+			else {
+				var rcv = receiver.Length > 0 ? receiver : target_name + handle;
+				print ("{0} ({3}, {1}, {2}{4});", sig, rcv, selector_field, ret_val, args);
+			}
+
+			print ("aligned_assigned = true;");
+		} else if (minfo.is_protocol_member && mi.Name == "Constructor") {
+			const string handleName = "__handle__";
+			print ($"IntPtr {handleName};");
+			print ($"{handleName} = global::{NamespaceCache.Messaging}.IntPtr_objc_msgSend (Class.GetHandle (typeof (T)), Selector.GetHandle (\"alloc\"));");
+			print ($"{handleName} = {sig} ({handleName}, {selector_field}{args});");
+			print ($"ret = global::ObjCRuntime.Runtime.GetINativeObject<T> ({handleName}, true);");
+		} else {
+			bool returns = mi.ReturnType != TypeCache.System_Void && mi.Name != "Constructor";
+			string? cast_a = "", cast_b = "";
+			var postproc = new StringBuilder ();
+
+			if (returns)
+				GetReturnsWrappers (mi, minfo, mi.DeclaringType, out cast_a, out cast_b, postproc);
+			else if (mi.Name == "Constructor") {
+				cast_a = "InitializeHandle (";
+				cast_b = ", \"" + selector + "\"" + (minfo.is_factory_method && minfo.is_factory_method_nullable ? ", false" : "") + ")";
+			}
+
+			if (minfo.is_static)
+				print ("{0}{1}{2} (class_ptr, {5}{6}){7};",
+					   returns ? "ret = " : "",
+					   cast_a, sig, target_name,
+					   "/*unusued3*/", //supercall ? "Super" : "",
+					   selector_field, args, cast_b);
+			else {
+				var rcv = receiver.Length > 0 ? receiver : target_name + handle;
+				print ("{0}{1}{2} ({3}, {4}{5}){6};",
+					   returns ? "ret = " : "",
+					   cast_a, sig, rcv,
+					   selector_field, args, cast_b);
+			}
+
+			if (postproc.Length > 0)
+				print (postproc.ToString ());
+		}
+
+		if (!isInstanceMethod) {
+			// if this is a extension of any kind, ensure that we keep alive the this parameter
+			// so that it is not collected before the msg send call has completed.
+			print ("GC.KeepAlive (This);");
+		} else if (supercall) {
+			print ("GC.KeepAlive ({0});", target_name);
+			indent--;
+			print ("}"); // close unsafe block
+		}
+	}
+
+	void GenerateNewStyleInvoke (bool supercall, MethodInfo mi, MemberInformation minfo, string? selector, string args, bool assign_to_temp, Type? category_type)
+	{
+		var returnType = mi.ReturnType;
+		bool x64_stret = Stret.X86_64NeedStret (returnType, this);
+		bool aligned = AttributeManager.HasAttribute<AlignAttribute> (mi);
+
+		if (x64_stret) {
+			// First check for arm64
+			print ("if (global::ObjCRuntime.Runtime.IsARM64CallingConvention) {");
+			indent++;
+			GenerateInvoke (false, supercall, mi, minfo, selector, args, category_type, false);
+			indent--;
+			// If we're not arm64, then we're x86_64
+			print ("} else {");
+			indent++;
+			GenerateInvoke (x64_stret, supercall, mi, minfo, selector, args, category_type, aligned && x64_stret);
+			indent--;
+			print ("}");
+		} else {
+			GenerateInvoke (false, supercall, mi, minfo, selector, args, category_type, false);
+		}
+	}
+
+	static char [] newlineTab = new char [] { '\n', '\t' };
+
+	void Inject<T> (MethodInfo method) where T : SnippetAttribute
+	{
+		var snippets = AttributeManager.GetCustomAttributes<T> (method);
+		if (snippets.Length == 0)
+			return;
+		foreach (SnippetAttribute snippet in snippets)
+			Inject (snippet);
+	}
+
+	void Inject (SnippetAttribute snippet)
+	{
+		if (snippet.Code is null)
+			return;
+		var lines = snippet.Code.Split (newlineTab);
+		foreach (var l in lines) {
+			if (l.Length == 0)
+				continue;
+			print (l);
+		}
+	}
+
+	bool IsOptimizable (MemberInfo method)
+	{
+		var optimizable = true;
+		var snippets = AttributeManager.GetCustomAttributes<SnippetAttribute> (method);
+		if (snippets.Length > 0) {
+			foreach (SnippetAttribute snippet in snippets)
+				optimizable &= snippet.Optimizable;
+		}
+		return optimizable;
+	}
+
+	//
+	// generates the code to marshal a string from C# to Objective-C:
+	//
+	// @probe_null: determines whether null is allowed, and
+	// whether we need to generate code to handle this
+	//
+	// @property: the name of the property
+	//
+	public string GenerateMarshalString (bool probe_null)
+	{
+		return "var ns{0} = CFString.CreateNative ({1});\n";
+	}
+
+	public string GenerateDisposeString (bool probe_null)
+	{
+		return "CFString.ReleaseNative (ns{0});\n";
+	}
+
+	AvailabilityBaseAttribute? GetIntroduced (Type? type, string methodName)
+	{
+		if (type is null)
+			return null;
+
+		var prop = type.GetProperties ()
+			.Where (pi => pi.Name == methodName)
+			.FirstOrDefault ();
+
+		if (prop is not null)
+			return prop.GetAvailability (AvailabilityKind.Introduced, this);
+
+		return GetIntroduced (ReflectionExtensions.GetBaseType (type, this), methodName);
+	}
+
+	AvailabilityBaseAttribute? GetIntroduced (MethodInfo mi, PropertyInfo pi)
+	{
+		return mi.GetAvailability (AvailabilityKind.Introduced, this) ?? pi.GetAvailability (AvailabilityKind.Introduced, this);
+	}
+
+	//
+	// Generates the code necessary to lower the MonoTouch-APIs to something suitable
+	// to be passed to Objective-C.
+	//
+	// This turns things like strings into NSStrings, NSObjects into the Handle object,
+	// INativeObjects into calling the handle and so on.
+	//
+	// The result is delivered as a StringBuilder that is used to prepare the marshaling
+	// and then one that must be executed after the method has been invoked to cleaup the
+	// results
+	//
+	// @mi: input parameter, contains the method info with the C# signature to generate lowering for
+	// @null_allowed_override: this is suitable for applying [NullAllowed] at the property level,
+	// and is a convenient override to pass down to this method.   
+	//
+	// The following are written into, these are expected to be fresh StringBuilders:
+	// @args: arguments that should be passed to native
+	// @convs: conversions to perform before the invocation
+	// @disposes: dispose operations to perform after the invocation
+	// @by_ref_processing
+	void GenerateTypeLowering (MethodInfo mi, bool null_allowed_override, out StringBuilder args, out StringBuilder convs, out StringBuilder disposes, out StringBuilder by_ref_processing, out StringBuilder by_ref_init, out StringBuilder post_return, PropertyInfo? propInfo = null, bool castEnum = true)
+	{
+		args = new StringBuilder ();
+		convs = new StringBuilder ();
+		disposes = new StringBuilder ();
+		by_ref_processing = new StringBuilder ();
+		by_ref_init = new StringBuilder ();
+		post_return = new StringBuilder ();
+
+		foreach (var pi in mi.GetParameters ()) {
+			var safe_name = pi.Name.GetSafeParamName ();
+			var mai = new MarshalInfo (this, mi, pi);
+
+			if (!IsTarget (pi)) {
+				// Construct invocation
+				args.Append (", ");
+				args.Append (MarshalParameter (mi, pi, null_allowed_override, propInfo, castEnum, convs, by_ref_init, post_return));
+
+				if (pi.ParameterType.IsByRef) {
+					var et = pi.ParameterType.GetElementType ();
+					var nullable = TypeManager.GetUnderlyingNullableType (et);
+					if (nullable is not null) {
+						var nt = TypeManager.FormatType (mi.DeclaringType, nullable);
+						convs.Append ($"{nt}* converted_{safe_name} = null;\n");
+						convs.Append ($"{nt} converted_{safe_name}_v = default ({nt});\n");
+						convs.Append ($"if ({safe_name}.HasValue) {{\n");
+						convs.Append ($"\tconverted_{safe_name}_v = {safe_name}.Value;\n");
+						convs.Append ($"\tconverted_{safe_name} = &converted_{safe_name}_v;\n");
+						convs.Append ("}\n");
+						by_ref_processing.AppendLine ($"if ({safe_name}.HasValue)");
+						by_ref_processing.AppendLine ($"\t{safe_name} = *converted_{safe_name};");
+					}
+				}
+			}
+
+			// Construct conversions
+			if (mai.Type == TypeCache.System_String && !mai.PlainString) {
+				bool probe_null = null_allowed_override || AttributeManager.IsNullable (pi);
+
+				convs.AppendFormat (GenerateMarshalString (probe_null), pi.Name, pi.Name.GetSafeParamName ());
+				disposes.AppendFormat (GenerateDisposeString (probe_null), pi.Name);
+			} else if (mai.Type.TryIsArray (out var etype)) {
+				if (HasBindAsAttribute (pi)) {
+					convs.AppendFormat ("using var nsb_{0} = {1}\n", pi.Name, GetToBindAsWrapper (mi, null, pi));
+				} else if (HasBindAsAttribute (propInfo)) {
+					disposes.AppendFormat ("\nnsb_{0}?.Dispose ();", propInfo.Name);
+				} else if (etype == TypeCache.System_String) {
+					if (null_allowed_override || AttributeManager.IsNullable (pi)) {
+						convs.AppendFormat ("using var nsa_{0} = NSArray.FromNullableStrings ({1});\n", pi.Name, pi.Name.GetSafeParamName ());
+					} else {
+						convs.AppendFormat ("using var nsa_{0} = NSArray.FromStrings ({1});\n", pi.Name, pi.Name.GetSafeParamName ());
+					}
+				} else if (etype == TypeCache.Selector) {
+					exceptions.Add (ErrorHelper.CreateError (1065, mai.Type.FullName, string.IsNullOrEmpty (pi.Name) ? $"#{pi.Position}" : pi.Name, mi.DeclaringType?.FullName, mi.Name));
+				} else {
+					if (null_allowed_override || AttributeManager.IsNullable (pi)) {
+						convs.AppendFormat ("using var nsa_{0} = {1} is null ? null : NSArray.FromNSObjects ({1});\n", pi.Name, pi.Name.GetSafeParamName ());
+					} else {
+						convs.AppendFormat ("using var nsa_{0} = NSArray.FromNSObjects ({1});\n", pi.Name, pi.Name.GetSafeParamName ());
+					}
+				}
+			} else if (mai.Type.IsSubclassOf (TypeCache.System_Delegate)) {
+				string trampoline_name = MakeTrampoline (pi.ParameterType).StaticName;
+				bool null_allowed = AttributeManager.IsNullable (pi);
+				if (!null_allowed) {
+					var property = GetProperty (mi);
+					if (property is not null)
+						null_allowed = AttributeManager.IsNullable (property);
+				}
+				var createBlockMethod = null_allowed ? "CreateNullableBlock" : "CreateBlock";
+				convs.AppendFormat ("using var block_{0} = Trampolines.{1}.{3} ({2});\n", pi.Name, trampoline_name, safe_name, createBlockMethod);
+				if (null_allowed) {
+					convs.AppendFormat ("BlockLiteral *block_ptr_{0} = null;\n", pi.Name);
+					convs.AppendFormat ("if ({0} is not null)\n", safe_name);
+					convs.AppendFormat ("\tblock_ptr_{0} = &block_{0};\n", pi.Name);
+				} else {
+					convs.AppendFormat ("BlockLiteral *block_ptr_{0} = &block_{0};\n", pi.Name);
+				}
+			} else if (pi.ParameterType.IsGenericParameter) {
+				//				convs.AppendFormat ("{0}.Handle", pi.Name.GetSafeParamName ());
+			} else if (HasBindAsAttribute (pi)) {
+				convs.AppendFormat ("using var nsb_{0} = {1}\n", pi.Name, GetToBindAsWrapper (mi, null, pi));
+			} else if (mai.Type.TryIsPointer (out var pointerElementType) && pointerElementType.IsValueType) {
+				// nothing to do
+			} else {
+				if (mai.Type.IsClass && !mai.Type.IsByRef &&
+					(mai.Type != TypeCache.Selector && mai.Type != TypeCache.Class && mai.Type != TypeCache.System_String && !TypeCache.INativeObject.IsAssignableFrom (mai.Type)))
+					throw new BindingException (1020, true, mai.Type, mi.DeclaringType, mi.Name, mai.Type.IsByRef);
+			}
+
+			// Handle ByRef
+			if (mai.Type.TryIsByRef (out var elementType) && elementType.IsValueType == false) {
+				// For out/ref parameters we support:
+				// * string and string[]
+				// * NSObject (and subclasses), and array of NSObject (and subclasses)
+				// * INativeObject subclasses (but not INativeObject itself), and array of INativeObject subclasses (but not arrays of INativeObject itself)
+				// 	* Except that we do not support arrays of Selector
+				// Modifications to an array (i.e. changing an element) are not marshalled back.
+				// If the array is modified, then a new array instance must be created and assigned to the ref/out parameter for us to marshal back any modifications.
+				var isString = elementType == TypeCache.System_String;
+				var isINativeObject = elementType == TypeCache.INativeObject;
+				var isINativeObjectSubclass = !isINativeObject && TypeCache.INativeObject.IsAssignableFrom (elementType);
+				var isNSObject = IsNSObject (elementType);
+				var isForcedType = HasForcedAttribute (pi, out var isForcedOwns);
+				var isArray = elementType.TryIsArray (out var elementElementType);
+				var isArrayOfString = isArray && elementElementType == TypeCache.System_String;
+				var isArrayOfNSObject = isArray && IsNSObject (elementElementType!);
+				var isArrayOfINativeObject = isArray && elementElementType == TypeCache.INativeObject;
+				var isArrayOfINativeObjectSubclass = isArray && TypeCache.INativeObject.IsAssignableFrom (elementElementType);
+				var isArrayOfSelector = isArray && elementElementType == TypeCache.Selector;
+
+				if (!isString && !isArrayOfNSObject && !isNSObject && !isArrayOfString && !isINativeObjectSubclass && !isArrayOfINativeObjectSubclass || isINativeObject || isArrayOfSelector || isArrayOfINativeObject) {
+					exceptions.Add (ErrorHelper.CreateError (1064, elementType.FullName, string.IsNullOrEmpty (pi.Name) ? $"#{pi.Position}" : pi.Name, mi.DeclaringType?.FullName, mi.Name));
+					continue;
+				}
+
+				if (pi.IsOut) {
+					by_ref_init.AppendFormat ("{1} {0}Value = IntPtr.Zero;\n", pi.Name.GetSafeParamName (), NativeHandleType);
+				} else {
+					by_ref_init.AppendFormat ("var {0}Value = ", pi.Name.GetSafeParamName ());
+					if (isString) {
+						by_ref_init.AppendFormat ("NSString.CreateNative ({0}, true);\n", pi.Name.GetSafeParamName ());
+						by_ref_init.AppendFormat ("var {0}OriginalValue = {0}Value;\n", pi.Name.GetSafeParamName ());
+					} else if (isArrayOfNSObject || isArrayOfINativeObjectSubclass) {
+						by_ref_init.Insert (0, string.Format ("NSArray {0}ArrayValue = NSArray.FromNSObjects ({0});\n", pi.Name.GetSafeParamName ()));
+						by_ref_init.AppendFormat ("{0}ArrayValue is null ? NativeHandle.Zero : {0}ArrayValue.Handle;\n", pi.Name.GetSafeParamName ());
+					} else if (isArrayOfString) {
+						by_ref_init.Insert (0, string.Format ("var {0}ArrayValue = NSArray.FromNullableStrings ({0});\n", pi.Name.GetSafeParamName ()));
+						by_ref_init.AppendFormat ("{0}ArrayValue is null ? NativeHandle.Zero : {0}ArrayValue.Handle;\n", pi.Name.GetSafeParamName ());
+					} else if (isNSObject || isINativeObjectSubclass) {
+						by_ref_init.AppendFormat ("Runtime.RetainAndAutoreleaseNativeObject ({0});\n", pi.Name.GetSafeParamName ());
+					} else {
+						throw ErrorHelper.CreateError (88, mai.Type, mi);
+					}
+				}
+
+				if (isString) {
+					if (!pi.IsOut)
+						by_ref_processing.AppendFormat ("if ({0}Value != {0}OriginalValue)\n\t", pi.Name.GetSafeParamName ());
+					by_ref_processing.AppendFormat ("{0} = CFString.FromHandle ({0}Value)!;\n", pi.Name.GetSafeParamName ());
+				} else if (isArray) {
+					if (!pi.IsOut)
+						by_ref_processing.AppendFormat ("if ({0}Value != ({0}ArrayValue is null ? NativeHandle.Zero : {0}ArrayValue.Handle))\n\t", pi.Name.GetSafeParamName ());
+
+					if (isArrayOfNSObject || isArrayOfINativeObjectSubclass) {
+						by_ref_processing.AppendFormat ("{0} = CFArray.ArrayFromHandle<{1}> ({0}Value)!;\n", pi.Name.GetSafeParamName (), TypeManager.RenderType (elementElementType!));
+					} else if (isArrayOfString) {
+						by_ref_processing.AppendFormat ("{0} = CFArray.StringArrayFromHandle ({0}Value)!;\n", pi.Name.GetSafeParamName ());
+					} else {
+						throw ErrorHelper.CreateError (88, mai.Type, mi);
+					}
+
+					if (!pi.IsOut)
+						by_ref_processing.AppendFormat ("{0}ArrayValue?.Dispose ();\n", pi.Name.GetSafeParamName ());
+				} else if (isNSObject && !isForcedType) {
+					by_ref_processing.AppendFormat ("{0} = Runtime.GetNSObject<{1}> ({0}Value)!;\n", pi.Name.GetSafeParamName (), TypeManager.RenderType (elementType));
+				} else if (isINativeObjectSubclass) {
+					if (!pi.IsOut)
+						by_ref_processing.AppendFormat ("if ({0}Value != ({0} is null ? NativeHandle.Zero : {0}.Handle))\n\t", pi.Name.GetSafeParamName ());
+					by_ref_processing.AppendFormat ("{0} = Runtime.GetINativeObject<{1}> ({0}Value, {2}, {3})!;\n", pi.Name.GetSafeParamName (), TypeManager.RenderType (elementType), isForcedType ? "true" : "false", (isForcedType && isForcedOwns) ? "true" : "false");
+				} else {
+					throw ErrorHelper.CreateError (88, mai.Type, mi);
+				}
+			}
+		}
+	}
+
+	void GenerateArgumentChecks (MethodInfo mi, bool null_allowed_override, PropertyInfo? propInfo, out bool needsGCKeepAlives)
+	{
+		needsGCKeepAlives = false;
+
+		if (AttributeManager.IsNullable (mi))
+			exceptions.Add (ErrorHelper.CreateWarning (1118, mi));
+
+		foreach (var pi in mi.GetParameters ()) {
+			var safe_name = pi.Name.GetSafeParamName ();
+			if (!BindThirdPartyLibrary) {
+				if (!mi.IsSpecialName && IsModel (pi.ParameterType)) {
+					// don't warn on obsoleted API, there's likely a new version that fix this
+					// any no good reason for using the obsolete API anyway
+					if (!AttributeManager.HasAttribute<ObsoleteAttribute> (mi) && !AttributeManager.HasAttribute<ObsoleteAttribute> (mi.DeclaringType))
+						ErrorHelper.Warning (BindingTouch, 1106, mi.DeclaringType, mi.Name, pi.Name, pi.ParameterType, pi.ParameterType.Namespace, pi.ParameterType.Name);
+				}
+			}
+
+			var needs_null_check = ParameterNeedsNullCheck (pi, mi, propInfo);
+			var cap = propInfo?.SetMethod == mi ? (ICustomAttributeProvider) propInfo : (ICustomAttributeProvider) pi;
+			var bind_as = GetBindAsAttribute (cap);
+			var pit = pi.GetBindingType (mi, bind_as);
+			if (TypeManager.IsWrappedType (pit) || TypeCache.INativeObject.IsAssignableFrom (pit)) {
+				if (needs_null_check && !null_allowed_override) {
+					print ($"var {safe_name}__handle__ = {safe_name}!.GetNonNullHandle (nameof ({safe_name}));");
+				} else {
+					print ($"var {safe_name}__handle__ = {safe_name}.GetHandle ();");
+				}
+				needsGCKeepAlives = true;
+			} else if (needs_null_check) {
+				print ("if ({0} is null)", safe_name);
+				print ("\tObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof ({0}));", safe_name);
+			}
+		}
+	}
+
+	void GenerateArgumentGCKeepAlives (MethodInfo mi, PropertyInfo? propInfo = null)
+	{
+		foreach (var pi in mi.GetParameters ()) {
+			var cap = propInfo?.SetMethod == mi ? (ICustomAttributeProvider) propInfo : (ICustomAttributeProvider) pi;
+			var bind_as = GetBindAsAttribute (cap);
+			var pit = pi.GetBindingType (mi, bind_as);
+			if (TypeManager.IsWrappedType (pit) || TypeCache.INativeObject.IsAssignableFrom (pit)) {
+				print ($"GC.KeepAlive ({pi.Name.GetSafeParamName ()});");
+			}
+		}
+	}
+
+	// undecorated code is assumed to be iOS 2.0
+	static AvailabilityBaseAttribute iOSIntroducedDefault = new IntroducedAttribute (PlatformName.iOS, 2, 0);
+
+	string? CurrentMethod;
+
+	void GenerateThreadCheck (StreamWriter? sw = null)
+	{
+		string s;
+		switch (CurrentPlatform) {
+		case PlatformName.iOS:
+		case PlatformName.WatchOS:
+		case PlatformName.TvOS:
+		case PlatformName.MacCatalyst:
+			s = $"global::UIKit.UIApplication.EnsureUIThread ();";
+			break;
+		case PlatformName.MacOSX:
+			s = $"global::AppKit.NSApplication.EnsureUIThread ();";
+			break;
+		default:
+			throw new BindingException (1047, CurrentPlatform);
+		}
+		if (sw is null)
+			print (s);
+		else
+			sw.WriteLine (s);
+	}
+
+	// Stret.NeedStret is shared between generator and X.I dll so in order to wrap the exception
+	// into a BindingException we need to set the try/catch here so we can provide a better message. Bugzilla ref 51212.
+	bool CheckNeedStret (MethodInfo mi)
+	{
+		try {
+			return Stret.NeedStret (mi.ReturnType, this);
+		} catch (TypeLoadException ex) {
+			throw new BindingException (0001, true, mi.ReturnType.Name, ex.Message);
+		}
+	}
+
+	//
+	// The NullAllowed can be applied on a property, to avoid the ugly syntax, we allow it on the property
+	// So we need to pass this as `null_allowed_override',   This should only be used by setters.
+	//
+	public void GenerateMethodBody (MemberInformation minfo, MethodInfo mi, string? sel, bool null_allowed_override, string? var_name, BodyOption body_options, PropertyInfo? propInfo = null)
+	{
+		var type = minfo.type;
+		var category_type = minfo.category_extension_type;
+		var is_appearance = minfo.is_appearance;
+		TrampolineInfo? trampoline_info = null;
+
+		CurrentMethod = String.Format ("{0}.{1}", type.Name, mi.Name);
+
+		// Warn about [Static] used in a member of [Category]
+		var hasStaticAtt = AttributeManager.HasAttribute<StaticAttribute> (mi);
+		if (category_type is not null && hasStaticAtt && !minfo.ignore_category_static_warnings) {
+			var baseTypeAtt = AttributeManager.GetCustomAttribute<BaseTypeAttribute> (minfo.type);
+			ErrorHelper.Warning (BindingTouch, 1117, mi.Name, type.FullName, baseTypeAtt?.BaseType.FullName);
+		}
+
+		indent++;
+		// if the namespace/type needs it and if the member is NOT marked as safe (don't check)
+		// if the namespace/type does NOT need it and if the member is marked as NOT safe (do check)
+		if (type_needs_thread_checks ? (minfo.threadCheck != ThreadCheck.Off) : (minfo.threadCheck == ThreadCheck.On))
+			GenerateThreadCheck ();
+
+		Inject<PrologueSnippetAttribute> (mi);
+
+		GenerateArgumentChecks (mi, false, propInfo, out bool needsGCKeepAlives);
+
+		GenerateTypeLowering (mi, null_allowed_override, out var args, out var convs, out var disposes, out var by_ref_processing, out var by_ref_init, out var post_return, propInfo);
+
+		if (minfo.is_protocol_member && minfo.is_static) {
+			print ("var class_ptr = Class.GetHandle (typeof (T));");
+		}
+
+		var argsArray = args.ToString ();
+
+		if (by_ref_init.Length > 0)
+			print (by_ref_init.ToString ());
+
+		if (propInfo is not null && IsSetter (mi) && HasBindAsAttribute (propInfo)) {
+			convs.AppendFormat ("using var nsb_{0} = {1}\n", propInfo.Name, GetToBindAsWrapper (mi, minfo, null));
+		}
+
+		if (convs.Length > 0)
+			print (sw, convs.ToString ());
+
+		Inject<PreSnippetAttribute> (mi);
+		var align = AttributeManager.GetCustomAttribute<AlignAttribute> (mi);
+
+		PostGetAttribute []? postget = null;
+		// [PostGet] are not needed (and might not be available) when generating methods inside Appearance types
+		// However we want them even if ImplementsAppearance is true (i.e. the original type needs them)
+		if (!is_appearance) {
+			postget = AttributeManager.GetCustomAttributes<PostGetAttribute> (mi);
+			if (postget.Length == 0 && propInfo is not null)
+				postget = AttributeManager.GetCustomAttributes<PostGetAttribute> (propInfo);
+
+			if (postget is not null && postget.Length == 0)
+				postget = null;
+		}
+
+		var shouldMarshalNativeExceptions = ShouldMarshalNativeExceptions (mi);
+		if (shouldMarshalNativeExceptions)
+			print ("IntPtr exception_gchandle = IntPtr.Zero;");
+
+		bool use_temp_return =
+			minfo.is_return_release ||
+			(mi.Name != "Constructor" && shouldMarshalNativeExceptions && mi.ReturnType != TypeCache.System_Void) ||
+			(mi.Name != "Constructor" && (CheckNeedStret (mi) || disposes.Length > 0 || needsGCKeepAlives || postget is not null) && mi.ReturnType != TypeCache.System_Void) ||
+			(AttributeManager.HasAttribute<FactoryAttribute> (mi)) ||
+			((body_options & BodyOption.NeedsTempReturn) == BodyOption.NeedsTempReturn) ||
+			(mi.ReturnType.IsSubclassOf (TypeCache.System_Delegate)) ||
+			(AttributeManager.HasAttribute<ProxyAttribute> (mi.ReturnParameter)) ||
+			(IsNativeEnum (mi.ReturnType)) ||
+			(mi.ReturnType == TypeCache.System_Boolean) ||
+			(mi.ReturnType == TypeCache.System_Char) ||
+			(minfo.is_protocol_member && (disposes.Length > 0 || needsGCKeepAlives) && mi.Name == "Constructor") ||
+			((mi.Name != "Constructor" || minfo.is_protocol_member) && by_ref_processing.Length > 0 && mi.ReturnType != TypeCache.System_Void);
+
+		if (use_temp_return) {
+			// for properties we (most often) put the attribute on the property itself, not the getter/setter methods
+			if (mi.ReturnType.IsSubclassOf (TypeCache.System_Delegate)) {
+				print ("{0} ret;", NativeHandleType);
+				trampoline_info = MakeTrampoline (mi.ReturnType);
+			} else if (align is not null) {
+				print ("{0} ret = default({0});", TypeManager.FormatType (mi.DeclaringType, mi.ReturnType));
+				print ("IntPtr ret_alloced = Marshal.AllocHGlobal (Marshal.SizeOf<{0}> () + {1});", TypeManager.FormatType (mi.DeclaringType, mi.ReturnType), align.Align);
+				print ("IntPtr aligned_ret = new IntPtr (((nint) (ret_alloced + {0}) >> {1}) << {1});", align.Align - 1, align.Bits);
+				print ("bool aligned_assigned = false;");
+			} else if (minfo.is_bindAs) {
+				var bindAsAttrib = GetOneBindAsAttribute (minfo.mi);
+				// tricky, e.g. when an nullable `NSNumber[]` is bound as a `float[]`, since FormatType and bindAsAttrib have not clue about the original nullability 
+				print ("{0} ret;", TypeManager.FormatType (bindAsAttrib.Type.DeclaringType, bindAsAttrib.Type));
+			} else if (mi.ReturnType == TypeCache.System_Boolean) {
+				print ("byte ret;");
+			} else if (mi.ReturnType == TypeCache.System_Char) {
+				print ("ushort ret;");
+			} else if (minfo.is_ctor && minfo.is_protocol_member) {
+				print ($"T? ret;");
+			} else {
+				var isClassType = mi.ReturnType.IsClass || mi.ReturnType.IsInterface;
+				var nullableReturn = isClassType ? "?" : string.Empty;
+				print ("{0}{1} ret;", TypeManager.FormatType (minfo.type, mi.ReturnType), nullableReturn);
+			}
+		} else if (mi.ReturnType != TypeCache.System_Void && mi.Name != "Constructor") {
+			if (minfo.is_bindAs) {
+				var bindAsAttrib = GetOneBindAsAttribute (minfo.mi);
+				// tricky, e.g. when an nullable `NSNumber[]` is bound as a `float[]`, since FormatType and bindAsAttrib have not clue about the original nullability 
+				print ("{0} ret;", TypeManager.FormatType (bindAsAttrib.Type.DeclaringType, bindAsAttrib.Type));
+			} else {
+				print ("{0} ret;", TypeManager.FormatType (minfo.type, mi.ReturnType));
+			}
+		} else if (minfo.is_ctor && minfo.is_protocol_member) {
+			// special case because constructors in protocol members will be converted to factory methods
+			print ($"T? ret;");
+		}
+
+		bool needs_temp = use_temp_return || disposes.Length > 0;
+		if (minfo.is_virtual_method || mi.Name == "Constructor") {
+			//print ("if (this.GetType () == TypeManager.{0}) {{", type.Name);
+			if (external || minfo.is_interface_impl || minfo.is_extension_method || minfo.is_protocol_member) {
+				GenerateNewStyleInvoke (false, mi, minfo, sel, argsArray, needs_temp, category_type);
+			} else {
+				var may_throw = shouldMarshalNativeExceptions;
+				var null_handle = may_throw && mi.Name == "Constructor";
+				if (null_handle) {
+					print ("try {");
+					indent++;
+				}
+
+				WriteIsDirectBindingCondition (sw, ref indent, is_direct_binding,
+								   mi.Name == "Constructor" ? is_direct_binding_value : null, // We only need to print the is_direct_binding value in constructors
+											   () => { GenerateNewStyleInvoke (false, mi, minfo, sel, argsArray, needs_temp, category_type); return null; },
+											   () => { GenerateNewStyleInvoke (true, mi, minfo, sel, argsArray, needs_temp, category_type); return null; }
+								  );
+
+				if (null_handle) {
+					indent--;
+					print ("} catch {");
+					indent++;
+					print ("Handle = IntPtr.Zero;");
+					print ("throw;");
+					indent--;
+					print ("}");
+				}
+			}
+		} else {
+			GenerateNewStyleInvoke (false, mi, minfo, sel, argsArray, needs_temp, category_type);
+		}
+
+		if (shouldMarshalNativeExceptions)
+			print ("Runtime.ThrowException (exception_gchandle);");
+
+		Inject<PostSnippetAttribute> (mi);
+
+		if (needsGCKeepAlives)
+			GenerateArgumentGCKeepAlives (mi, propInfo);
+		if (disposes.Length > 0)
+			print (sw, disposes.ToString ());
+		if ((body_options & BodyOption.StoreRet) == BodyOption.StoreRet) {
+			// nothing to do
+		} else if ((body_options & BodyOption.CondStoreRet) == BodyOption.CondStoreRet) {
+			// nothing to do
+		} else if ((body_options & BodyOption.MarkRetDirty) == BodyOption.MarkRetDirty) {
+			print ("MarkDirty ();");
+			print ("{0} = ret;", var_name);
+		}
+
+		if ((postget is not null) && (postget.Length > 0)) {
+			print ("#pragma warning disable 168");
+			for (int i = 0; i < postget.Length; i++) {
+				if (IsDisableForNewRefCount (postget [i], type))
+					continue;
+
+
+				bool version_check = false;
+				if (CurrentPlatform != PlatformName.MacOSX) {
+					// bug #7742: if this code, e.g. existing in iOS 2.0, 
+					// tries to call a property available since iOS 5.0, 
+					// then it will fail when executing in iOS 4.3
+					var postget_avail = GetIntroduced (type, postget [i].MethodName);
+					if (postget_avail is not null) {
+						var caller_avail = GetIntroduced (mi, propInfo!) ?? iOSIntroducedDefault;
+						if (caller_avail.Version < postget_avail.Version) {
+							version_check = true;
+							print ("var postget{0} = {4}.UIDevice.CurrentDevice.CheckSystemVersion ({1},{2}) ? {3} : null;",
+								i,
+								postget_avail.Version!.Major,
+								postget_avail.Version.Minor,
+								postget [i].MethodName,
+								"UIKit");
+						}
+					}
+				}
+				if (!version_check)
+					print ("var postget{0} = {1};", i, postget [i].MethodName);
+			}
+			print ("#pragma warning restore 168");
+		}
+
+		if (AttributeManager.HasAttribute<FactoryAttribute> (mi))
+			print ("ret.Release (); // Release implicit ref taken by GetNSObject");
+		if (by_ref_processing.Length > 0)
+			print (sw, by_ref_processing.ToString ());
+		if (use_temp_return) {
+			if (AttributeManager.HasAttribute<ProxyAttribute> (mi.ReturnParameter))
+				print ("ret.IsDirectBinding = true;");
+
+			if (mi.ReturnType.IsSubclassOf (TypeCache.System_Delegate)) {
+				print ("return global::ObjCRuntime.Trampolines.{0}.Create (ret)!;", trampoline_info?.NativeInvokerName);
+			} else if (align is not null) {
+				print ("if (aligned_assigned)");
+				indent++;
+				print ("unsafe {{ ret = *({0} *) aligned_ret; }}", TypeManager.FormatType (mi.DeclaringType, mi.ReturnType));
+				indent--;
+				print ("Marshal.FreeHGlobal (ret_alloced);");
+				print ("return ret;");
+			} else if (mi.ReturnType == TypeCache.System_Boolean) {
+				print ("return ret != 0;");
+			} else if (mi.ReturnType == TypeCache.System_Char) {
+				print ("return (char) ret;");
+			} else if (minfo.is_ctor && minfo.is_protocol_member) {
+				print ("return ret;");
+			} else {
+				// we can't be 100% confident that the ObjC API annotations are correct so we always null check inside generated code
+				print ("return ret!;");
+			}
+		} else if (minfo.is_ctor && minfo.is_protocol_member) {
+			// special case since ctrs in protocol members become create methods
+			print ("return ret;");
+		} else if (mi.ReturnType != TypeCache.System_Void && mi.Name != "Constructor") {
+			// general case if we do return and we are not a constructor.
+			print ("return ret;");
+		}
+		if (minfo.is_ctor)
+			WriteMarkDirtyIfDerived (sw, mi.DeclaringType!);
+		if (post_return?.Length > 0)
+			print (post_return.ToString ());
+		indent--;
+	}
+
+
+	PropertyInfo? GetProperty (PostGetAttribute @this, Type type)
+	{
+		if (type is null || type == TypeCache.System_Object)
+			return null;
+
+		var props = type.GetProperties ();
+		foreach (var pi in props) {
+			if (pi.Name != @this.MethodName)
+				continue;
+			return pi;
+		}
+		return GetProperty (@this, ReflectionExtensions.GetBaseType (type, this));
+	}
+
+	bool IsDisableForNewRefCount (PostGetAttribute @this, Type type)
+	{
+		var p = GetProperty (@this, type);
+		var ea = AttributeManager.GetCustomAttributes<ExportAttribute> (p);
+		var sem = ea [0].ArgumentSemantic;
+		return (sem != ArgumentSemantic.Assign && sem != ArgumentSemantic.Weak); // also cover UnsafeUnretained
+	}
+
+	public IEnumerable<MethodInfo> GetTypeContractMethods (Type source)
+	{
+		if (source.IsEnum)
+			yield break;
+		foreach (var method in source.GatherMethods (BindingFlags.Public | BindingFlags.Instance, this))
+			yield return method;
+		foreach (var parent in source.GetInterfaces ()) {
+			// skip interfaces that aren't available on the current platform
+			if (parent.IsUnavailable (this))
+				continue;
+			// skip case where the interface implemented comes from an already built assembly (e.g. monotouch.dll)
+			// e.g. Dispose won't have an [Export] since it's present to satisfy System.IDisposable
+			if (parent.FullName != "System.IDisposable") {
+				foreach (var method in parent.GatherMethods (BindingFlags.Public | BindingFlags.Instance, this)) {
+					// Skip methods the interface implements (with a default implementation) unless they have an Export attributes
+					if (!method.IsAbstract) {
+						var exportAttribute = GetExportAttribute (method);
+						if (exportAttribute is null)
+							continue;
+					}
+					yield return method;
+				}
+			}
+		}
+	}
+
+	public IEnumerable<PropertyInfo> GetTypeContractProperties (Type source)
+	{
+		foreach (var prop in source.GatherProperties (this))
+			yield return prop;
+		foreach (var parent in source.GetInterfaces ()) {
+			// skip interfaces that aren't available on the current platform
+			if (parent.IsUnavailable (this))
+				continue;
+			// skip case where the interface implemented comes from an already built assembly (e.g. monotouch.dll)
+			// e.g. the Handle property won't have an [Export] since it's present to satisfyINativeObject
+			if (parent.Name != "INativeObject") {
+				foreach (var prop in parent.GatherProperties (this))
+					yield return prop;
+			}
+		}
+	}
+
+	//
+	// This is used to determine if the memberType is in the declaring type or in any of the
+	// inherited versions of the type.   We use this now, since we support inlining protocols
+	//
+	public bool MemberBelongsToType (Type memberType, Type hostType)
+	{
+		if (memberType == hostType)
+			return true;
+		// we also need to inline the base type, e.g. UITableViewDelegate must bring UIScrollViewDelegate
+		if (MemberBelongToInterface (memberType, hostType)) {
+			return true;
+		}
+		return false;
+	}
+
+	bool MemberBelongToInterface (Type memberType, Type intf)
+	{
+		if (memberType == intf)
+			return true;
+		foreach (var p in intf.GetInterfaces ()) {
+			if (memberType == p)
+				return true;
+			if (MemberBelongToInterface (memberType, ReflectionExtensions.GetBaseType (p, this)))
+				return true;
+		}
+		return false;
+	}
+
+	Dictionary<string, object> generatedEvents = new Dictionary<string, object> ();
+	Dictionary<string, object?> generatedDelegates = new ();
+
+	bool DoesTypeNeedBackingField (Type type)
+	{
+		return TypeManager.IsWrappedType (type) || (type.IsArray && TypeManager.IsWrappedType (type.GetElementType ()));
+	}
+
+	bool DoesPropertyNeedBackingField (PropertyInfo pi)
+	{
+		return DoesTypeNeedBackingField (pi.PropertyType) && !AttributeManager.HasAttribute<TransientAttribute> (pi);
+	}
+
+	bool DoesPropertyNeedDirtyCheck (PropertyInfo pi, ExportAttribute? ea)
+	{
+		switch (ea?.ArgumentSemantic) {
+		case ArgumentSemantic.Copy:
+		case ArgumentSemantic.Retain: // same as Strong
+		case ArgumentSemantic.None:
+			return DoesPropertyNeedBackingField (pi);
+		default: // Assign (same as UnsafeUnretained) or Weak
+			return false;
+		}
+	}
+
+	void PrintObsoleteAttributes (ICustomAttributeProvider? provider)
+	{
+		var obsoleteAttributes = AttributeManager.GetCustomAttributes<ObsoleteAttribute> (provider);
+
+		foreach (var oa in obsoleteAttributes) {
+			print ("[Obsolete (\"{0}\", {1})]", oa.Message, oa.IsError ? "true" : "false");
+		}
+
+		var printEditorBrowsableAttribute = TryGetPrintEditorBrowsableAttribute (provider, out var editorBrowsableAttribute);
+		if (!printEditorBrowsableAttribute && obsoleteAttributes.Any ()) {
+			printEditorBrowsableAttribute = true;
+			editorBrowsableAttribute = "[EditorBrowsable (EditorBrowsableState.Never)]";
+		}
+		if (printEditorBrowsableAttribute)
+			print ("[EditorBrowsable (EditorBrowsableState.Never)]");
+	}
+
+	void PrintOverloadResolutionPriorityAttribute (ICustomAttributeProvider? provider)
+	{
+		var attributes = AttributeManager.GetCustomAttributes<System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute> (provider);
+		foreach (var attr in attributes) {
+			print ("[OverloadResolutionPriority ({0})]", attr.Priority);
+		}
+	}
+
+	bool TryGetPrintEditorBrowsableAttribute (ICustomAttributeProvider? provider, out string attribute)
+	{
+		attribute = string.Empty;
+		foreach (var ea in AttributeManager.GetCustomAttributes<EditorBrowsableAttribute> (provider)) {
+			switch (ea.State) {
+			case EditorBrowsableState.Always:
+				attribute = "[EditorBrowsable (EditorBrowsableState.Always)]";
+				break;
+			case EditorBrowsableState.Never:
+				attribute = "[EditorBrowsable (EditorBrowsableState.Never)]";
+				break;
+			case EditorBrowsableState.Advanced:
+				attribute = "[EditorBrowsable (EditorBrowsableState.Advanced)]";
+				break;
+			default:
+				attribute = $"[EditorBrowsable (EditorBrowsableState.{ea.State})]";
+				break;
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	void PrintPropertyAttributes (PropertyInfo pi, Type type, bool skipTypeInjection = false)
+	{
+		var minfo = new MemberInformation (this, this, pi, type);
+		PrintPropertyAttributes (pi, minfo, skipTypeInjection);
+	}
+
+	void PrintPropertyAttributes (PropertyInfo pi, MemberInformation minfo, bool skipTypeInjection = false, bool is_appearance = false)
+	{
+		Type type = minfo.type;
+		var excludedPlatform = is_appearance ? PlatformName.MacOSX : (PlatformName?) null;
+		PrintObsoleteAttributes (pi);
+
+		foreach (var ba in AttributeManager.GetCustomAttributes<DebuggerBrowsableAttribute> (pi))
+			print ("[DebuggerBrowsable (DebuggerBrowsableState.{0})]", ba.State);
+
+		foreach (var da in AttributeManager.GetCustomAttributes<DebuggerDisplayAttribute> (pi)) {
+			var narg = da.Name is not null ? string.Format (", Name = \"{0}\"", da.Name) : string.Empty;
+			var targ = da.Type is not null ? string.Format (", Type = \"{0}\"", da.Type) : string.Empty;
+			print ("[DebuggerDisplay (\"{0}\"{1}{2})]", da.Value, narg, targ);
+		}
+		foreach (var oa in AttributeManager.GetCustomAttributes<OptionalImplementationAttribute> (pi)) {
+			print ("[DebuggerBrowsable (DebuggerBrowsableState.Never)]");
+		}
+
+		// if we inline properties (e.g. from a protocol)
+		// we must look if the type has an [Availability] attribute
+		if (type != pi.DeclaringType) {
+			// print, if not duplicated from the type (being inlined into), the property availability
+			if (!PrintPlatformAttributes (pi, type, excludedPlatform) && !skipTypeInjection) {
+				// print, if not duplicated from the type (being inlined into), the property declaring type (protocol) availability
+				PrintPlatformAttributes (pi.DeclaringType, type, excludedPlatform);
+			}
+		} else {
+			PrintPlatformAttributes (pi, excludedPlatform: excludedPlatform);
+		}
+		if (is_appearance)
+			print (AttributeFactory.CreateUnsupportedAttribute (PlatformName.MacOSX).ToString ());
+
+		foreach (var sa in AttributeManager.GetCustomAttributes<ThreadSafeAttribute> (pi))
+			print (sa.Safe ? "[ThreadSafe]" : "[ThreadSafe (false)]");
+
+		PrintProtocolMemberAttributes (minfo);
+	}
+
+	void PrintProtocolMemberAttributes (MemberInformation minfo)
+	{
+		if (!minfo.is_protocol_member || minfo.is_protocol_implementation_method)
+			return;
+
+		if (minfo.is_protocol_member_required!.Value) {
+			print ("[global::Foundation.RequiredMember]");
+		} else {
+			print ("[global::Foundation.OptionalMember]");
+		}
+	}
+
+	void GenerateProperty (Type type, PropertyInfo pi, List<string>? instance_fields_to_clear_on_dispose, bool is_model, bool is_interface_impl = false, bool is_protocol_member = false, bool? is_protocol_member_required = null, bool is_protocol_implementation_method = false, bool is_appearance = false)
+	{
+		var export = GetExportAttribute (pi, out var wrap);
+		var minfo = new MemberInformation (this, this, pi, type, is_interface_impl);
+		minfo.is_protocol_member = is_protocol_member;
+		minfo.is_protocol_member_required = is_protocol_member_required;
+		minfo.is_protocol_implementation_method = is_protocol_implementation_method;
+		var mod = minfo.GetVisibility ();
+		Type? inlinedType = pi.DeclaringType == type ? null : type;
+		GetAccessorInfo (pi, out var getter, out var setter, out var generate_getter, out var generate_setter);
+
+		var nullable = !pi.PropertyType.IsValueType && AttributeManager.IsNullable (pi);
+
+		// So we don't hide the get or set of a parent property with the same name, we need to see if we have a parent declaring the same property
+		var parentBaseType = TypeManager.GetParentTypeWithSameNamedProperty (ReflectionExtensions.GetBaseTypeAttribute (type, this), pi.Name);
+
+		// If so, we're not static, and we can't both read and write, but they can
+		if (!minfo.is_static && !(pi.CanRead && pi.CanWrite) && (parentBaseType is not null && parentBaseType.CanRead && parentBaseType.CanWrite)) {
+			// Make sure the selector matches, sanity check that we aren't hiding something of a different type
+			// We skip this for wrap'ed properties, as those get complicated to resolve the correct export
+			if (wrap is null &&
+				((pi.CanRead && (GetOneGetterExportAttribute (pi).Selector != GetOneGetterExportAttribute (parentBaseType).Selector)) ||
+					pi.CanWrite && (GetOneSetterExportAttribute (pi).Selector != GetOneSetterExportAttribute (parentBaseType).Selector))) {
+				throw new BindingException (1035, true, pi.Name, type, parentBaseType.DeclaringType);
+			}
+			// Then let's not write out our copy, since we'll reduce visibility
+			return;
+		}
+
+		if (!BindThirdPartyLibrary) {
+			var elType = pi.PropertyType.IsArray ? pi.PropertyType.GetElementType () : pi.PropertyType;
+
+			if (IsModel (elType)) {
+				ErrorHelper.Warning (BindingTouch, 1110, pi.DeclaringType, pi.Name, pi.PropertyType, pi.PropertyType.Namespace, pi.PropertyType.Name);
+			}
+		}
+
+		if (wrap is not null) {
+			if (!WriteDocumentation (pi) && is_appearance)
+				WriteAppearanceMemberDocumentation (type, pi.Name);
+			print_generated_code ();
+			PrintPropertyAttributes (pi, minfo, is_appearance: is_appearance);
+			PrintAttributes (pi, preserve: true, advice: true);
+			var wrapNullabilityBytes = AttributeManager.GetNullabilityBytes (pi);
+			print ("{0} {1}{2}{3} {4} {{",
+				   mod,
+				   minfo.GetModifiers (),
+				   TypeManager.FormatType (pi.DeclaringType, pi.PropertyType, wrapNullabilityBytes),
+				   nullable ? "?" : String.Empty,
+					pi.Name.GetSafeParamName ());
+			indent++;
+			if (generate_getter) {
+				PrintAttributes (pi.GetGetMethod ()!, platform: true, preserve: true, advice: true, dynamicDependency: true);
+				print ("get {");
+				indent++;
+
+				if (TypeManager.IsDictionaryContainerType (pi.PropertyType)) {
+					print ("var src = {0} is not null ? new NSMutableDictionary ({0}) : null;", wrap);
+					print ("return src is null ? null! : new {0}(src);", TypeManager.FormatType (pi.DeclaringType, pi.PropertyType, wrapNullabilityBytes));
+				} else {
+					if (TypeManager.IsArrayOfWrappedType (pi.PropertyType))
+						print ("return NSArray.FromArray<{0}>({1} as NSArray){2};", TypeManager.FormatType (pi.DeclaringType, pi.PropertyType.GetElementType ()), wrap, nullable ? "" : "!");
+					else if (pi.PropertyType.IsValueType)
+						print ("return ({0}) ({1});", TypeManager.FormatType (pi.DeclaringType, pi.PropertyType, wrapNullabilityBytes), wrap);
+					else if (!IsModel (pi.PropertyType) && IsProtocolInterface (pi.PropertyType, false)) {
+						print ("var wrapped = {0};", wrap);
+						print ("var ret = wrapped as {0} ?? Runtime.GetINativeObject<{0}> (wrapped.GetHandle (), false);", TypeManager.FormatType (pi.DeclaringType, pi.PropertyType, wrapNullabilityBytes));
+						print ("GC.KeepAlive (wrapped);");
+						print ("return ret{0};", nullable ? "" : "!");
+					} else
+						print ("return ({0} as {1})!;", wrap, TypeManager.FormatType (pi.DeclaringType, pi.PropertyType, wrapNullabilityBytes));
+				}
+				indent--;
+				print ("}");
+			}
+			if (generate_setter) {
+				PrintAttributes (pi.GetSetMethod ()!, platform: true, preserve: true, advice: true, dynamicDependency: true);
+				print ("set {");
+				indent++;
+
+				var is_protocol_wrapper = IsProtocolInterface (pi.PropertyType, false);
+
+				if (is_protocol_wrapper) {
+					print ("var rvalue = value as NSObject;");
+					print ("if (!(value is null) && rvalue is null)");
+					print ("\trvalue = Runtime.GetNSObject (value.GetHandle ());");
+				}
+
+				if (TypeManager.IsDictionaryContainerType (pi.PropertyType))
+					print ("{0} = value.GetDictionary ()!;", wrap);
+				else {
+					if (TypeManager.IsArrayOfWrappedType (pi.PropertyType))
+						print ("{0} = NSArray.FromNSObjects (value);", wrap);
+					else
+						print ("{0} = {1}value;", wrap, is_protocol_wrapper ? "r" : "");
+				}
+				if (is_protocol_wrapper)
+					print ("GC.KeepAlive (value);");
+				indent--;
+				print ("}");
+			}
+
+			indent--;
+			print ("}\n");
+			return;
+		}
+
+		string? var_name = null;
+
+		// [Model] has properties that only throws, so there's no point in adding unused backing fields
+		if (!is_model && DoesPropertyNeedBackingField (pi) && !is_interface_impl && !minfo.is_static && !minfo.is_protocol_member && !DoesPropertyNeedDirtyCheck (pi, export)) {
+			var_name = string.Format ("__mt_{0}_var{1}", pi.Name, minfo.is_static ? "_static" : "");
+
+			print_generated_code ();
+
+			if (minfo.is_thread_static)
+				print ("[ThreadStatic]");
+			print ("{1}object? {0};", var_name, minfo.is_static ? "static " : "");
+
+			if (!minfo.is_static && !is_interface_impl) {
+				instance_fields_to_clear_on_dispose?.Add (var_name);
+			}
+		}
+
+		if (!WriteDocumentation (pi) && is_appearance)
+			WriteAppearanceMemberDocumentation (type, pi.Name);
+		print_generated_code (optimizable: IsOptimizable (pi));
+		PrintPropertyAttributes (pi, minfo, is_appearance: is_appearance);
+
+		PrintAttributes (pi, preserve: true, advice: true, bindAs: true);
+
+		string propertyTypeName;
+		if (minfo.is_bindAs) {
+			var bindAsAttrib = GetOneBindAsAttribute (minfo.mi);
+			propertyTypeName = TypeManager.FormatType (bindAsAttrib.Type.DeclaringType, bindAsAttrib.Type);
+			// it remains nullable only if the BindAs type can be null (i.e. a reference type)
+			nullable = !bindAsAttrib.Type.IsValueType && AttributeManager.IsNullable (pi);
+		} else {
+			// Only apply nullability bytes for void-returning delegate types (Action<> variants).
+			// Func<> types have a covariant TResult which creates a type mismatch with the
+			// trampoline's CreateNullableBlock signature.
+			byte []? nullabilityBytes = null;
+			if (pi.PropertyType.IsSubclassOf (TypeCache.System_Delegate)) {
+				var invokeMethod = pi.PropertyType.GetMethod ("Invoke");
+				if (invokeMethod is not null && invokeMethod.ReturnType == TypeCache.System_Void) {
+					nullabilityBytes = AttributeManager.GetNullabilityBytes (pi);
+				}
+			}
+			propertyTypeName = TypeManager.FormatType (minfo.type, pi.PropertyType, nullabilityBytes);
+		}
+
+		print ("{0} {1}{2}{3} {4} {{",
+			   mod,
+			   minfo.GetModifiers (),
+			   propertyTypeName,
+				nullable ? "?" : "",
+				pi.Name.GetSafeParamName ());
+		indent++;
+
+		if (minfo.has_inner_wrap_attribute) {
+			// If property getter or setter has its own WrapAttribute we let the user do whatever their heart desires
+			if (generate_getter) {
+				PrintAttributes (pi, platform: true);
+				PrintAttributes (pi.GetGetMethod (), platform: true, preserve: true, advice: true, dynamicDependency: true);
+				print ("get {");
+				indent++;
+
+				print ($"return {minfo.wpmi?.WrapGetter};");
+
+				indent--;
+				print ("}");
+			}
+			if (generate_setter) {
+				var not_implemented_attr = AttributeManager.GetCustomAttribute<NotImplementedAttribute> (setter);
+
+				PrintAttributes (pi, platform: true);
+				PrintAttributes (setter, platform: true, preserve: true, advice: true, notImplemented: true);
+				print ("set {");
+				indent++;
+
+				if (not_implemented_attr is not null)
+					print ("throw new NotImplementedException ({0});", not_implemented_attr.Message is null ? "" : $@"""{not_implemented_attr.Message}""");
+				else
+					print ($"{minfo.wpmi?.WrapSetter};");
+
+				indent--;
+				print ("}");
+			}
+			indent--;
+			print ("}\n");
+			return;
+		}
+
+		if (generate_getter) {
+			var ba = GetBindAttribute (getter);
+			var sel = ba is not null ? ba.Selector! : export?.Selector!;
+
+			// print availability separately since we could be inlining
+			if (!minfo.is_sealed || !minfo.is_wrapper) {
+				PrintDelegateProxy (pi.GetGetMethod ()!);
+				PrintExport (minfo, sel, export!.ArgumentSemantic);
+			}
+
+			PrintAttributes (pi.GetGetMethod (), platform: true, preserve: true, advice: true, notImplemented: true, inlinedType: inlinedType, dynamicDependency: true);
+			if (minfo.is_protocol_member && !minfo.is_static) {
+				print ("get {");
+				print ($"\treturn _Get{pi.Name.GetSafeParamName ()} (this);");
+				print ("}");
+			} else {
+				print ("get {");
+				if (debug)
+					print ("Console.WriteLine (\"In {0}\");", pi.GetGetMethod ());
+				if (is_model)
+					print ("\tthrow new ModelNotImplementedException ();");
+				else if (minfo.is_abstract && !minfo.is_protocol_member && !minfo.is_protocol_implementation_method)
+					print ("throw new You_Should_Not_Call_base_In_This_Method ();");
+				else {
+					if (minfo.is_autorelease) {
+						indent++;
+						print ("using (var autorelease_pool = new NSAutoreleasePool ()) {");
+					}
+					if (is_interface_impl || minfo.is_protocol_member || !DoesPropertyNeedBackingField (pi)) {
+						GenerateMethodBody (minfo, getter!, sel, false, null, BodyOption.None, pi);
+					} else if (minfo.is_static) {
+						GenerateMethodBody (minfo, getter!, sel, false, var_name, BodyOption.StoreRet, pi);
+					} else {
+						if (DoesPropertyNeedDirtyCheck (pi, export))
+							GenerateMethodBody (minfo, getter!, sel, false, var_name, BodyOption.CondStoreRet, pi);
+						else
+							GenerateMethodBody (minfo, getter!, sel, false, var_name, BodyOption.MarkRetDirty, pi);
+					}
+					if (minfo.is_autorelease) {
+						print ("}");
+						indent--;
+					}
+				}
+				print ("}\n");
+			}
+		}
+		if (generate_setter) {
+			var ba = GetBindAttribute (setter);
+			bool null_allowed = AttributeManager.IsNullable (setter);
+			if (null_allowed)
+				exceptions.Add (ErrorHelper.CreateWarning (1118, setter));
+			null_allowed |= AttributeManager.IsNullable (pi);
+			var not_implemented_attr = AttributeManager.GetCustomAttribute<NotImplementedAttribute> (setter);
+			string? sel;
+
+			if (ba is null) {
+				sel = GetSetterExportAttribute (pi)?.Selector;
+			} else {
+				sel = ba.Selector;
+			}
+
+			PrintBlockProxy (pi.PropertyType);
+
+			if (not_implemented_attr is null && (!minfo.is_sealed || !minfo.is_wrapper))
+				PrintExport (minfo, sel, export!.ArgumentSemantic);
+
+			PrintAttributes (pi.GetSetMethod (), platform: true, preserve: true, advice: true, notImplemented: true, inlinedType: inlinedType, dynamicDependency: true);
+			if (minfo.is_protocol_member && !minfo.is_static) {
+				print ("set {");
+				print ($"\t_Set{pi.Name.GetSafeParamName ()} (this, value);");
+				print ("}");
+			} else {
+				print ("set {");
+				if (debug)
+					print ("Console.WriteLine (\"In {0}\");", pi.GetSetMethod ());
+
+				// If we're doing a setter for a weak property that is protocolized event back
+				// we need to put in a check to verify you aren't stomping the "internal underscore"
+				// generated delegate. We check CheckForEventAndDelegateMismatches global to disable the checks
+				if (!BindThirdPartyLibrary && pi.Name.StartsWith ("Weak", StringComparison.Ordinal)) {
+					string delName = pi.Name.Substring (4);
+					if (SafeIsProtocolEventBacked (delName, type))
+						print ("\t{0}.EnsureDelegateAssignIsNotOverwritingInternalDelegate ({1}, value, {2});", CurrentPlatform.GetApplicationClassName (), string.IsNullOrEmpty (var_name) ? "null" : var_name, GetDelegateTypePropertyName (delName));
+				}
+
+				if (not_implemented_attr is not null) {
+					print ("\tthrow new NotImplementedException ({0});", not_implemented_attr.Message is null ? "" : "\"" + not_implemented_attr.Message + "\"");
+				} else if (is_model)
+					print ("\tthrow new ModelNotImplementedException ();");
+				else if (minfo.is_abstract && !minfo.is_protocol_member && !minfo.is_protocol_implementation_method)
+					print ("throw new You_Should_Not_Call_base_In_This_Method ();");
+				else {
+					GenerateMethodBody (minfo, setter!, sel, null_allowed, null, BodyOption.None, pi);
+					if (!minfo.is_static && !is_interface_impl && !minfo.is_protocol_member && DoesPropertyNeedBackingField (pi)) {
+						if (!DoesPropertyNeedDirtyCheck (pi, export)) {
+							print ("\tMarkDirty ();");
+							print ("\t{0} = value;", var_name);
+						}
+					}
+				}
+				print ("}");
+			}
+		}
+		indent--;
+		print ("}}\n", pi.Name.GetSafeParamName ());
+	}
+
+	string GetReturnType (AsyncMethodInfo minfo)
+	{
+		if (minfo.IsVoidAsync)
+			return "Task";
+		var ttype = GetAsyncTaskType (minfo);
+		if (minfo.HasNSError && (ttype == "bool"))
+			ttype = minfo.IsNSErrorNullable ? "Tuple<bool,NSError?>" : "Tuple<bool,NSError>";
+		return "Task<" + ttype + ">";
+	}
+
+	HashSet<string?>? reported1077;
+	string GetAsyncTaskType (AsyncMethodInfo minfo)
+	{
+		if (minfo.IsSingleArgAsync) {
+			var paramType = minfo.AsyncCompletionParams [0].ParameterType;
+			var paramBytes = minfo.CompletionParamNullabilityBytes? [0];
+			if (paramBytes is not null && !paramType.IsValueType) {
+				// Format with nullability for inner generic args
+				var formatted = TypeManager.FormatType (minfo.type, paramType, paramBytes);
+				// Check byte 0 of the slice for the param's own nullability
+				if (paramBytes [0] == 2)
+					formatted += "?";
+				return formatted;
+			}
+			return TypeManager.FormatType (minfo.type, paramType);
+		}
+
+		var attr = AttributeManager.GetOneCustomAttribute<AsyncAttribute> (minfo.mi);
+		if (attr.ResultTypeName is not null)
+			return attr.ResultTypeName;
+		if (attr.ResultType is not null)
+			return TypeManager.FormatType (minfo.type, attr.ResultType);
+
+		var method = minfo.mi.ToString ();
+		if (reported1077 is null)
+			reported1077 = new HashSet<string?> ();
+
+		if (!reported1077.Contains (method)) {
+			reported1077.Add (method);
+			exceptions.Add (ErrorHelper.CreateError (1077, method));
+		}
+
+		return "placeholder";
+	}
+
+	string GetInvokeParamList (ParameterInfo [] parameters, bool suffix = true, bool force = false)
+	{
+		var sb = new StringBuilder ();
+		bool comma = false;
+		foreach (var pi in parameters) {
+			if (comma) {
+				sb.Append (", ");
+			}
+			comma = true;
+			sb.Append (pi.Name.GetSafeParamName ());
+			if (suffix)
+				sb.Append ('_');
+			if (force)
+				sb.Append ('!');
+		}
+		return sb.ToString ();
+	}
+
+	void PrintAsyncHeader (AsyncMethodInfo minfo, AsyncMethodKind asyncKind)
+	{
+		print_generated_code ();
+		string extra = "";
+
+		if (asyncKind == AsyncMethodKind.WithResultOutParameter) {
+			if (minfo.Method!.GetParameters ().Count () > 1)
+				extra = ", ";
+			extra += "out " + TypeManager.FormatType (minfo.MethodInfo.DeclaringType, minfo.MethodInfo.ReturnType) + " " + minfo.GetUniqueParamName ("result");
+		}
+
+		// async wrapper don't have to be abstract (it's counter productive)
+		var modifier = minfo.GetModifiers ().Replace ("abstract ", String.Empty);
+
+		print ("{0} {1}{2} {3}",
+			   minfo.GetVisibility (),
+			   modifier,
+			   GetReturnType (minfo),
+			   MakeSignature (minfo, true, minfo.AsyncInitialParams, extra),
+			   minfo.is_abstract ? ";" : "");
+	}
+
+	void GenerateAsyncMethod (MemberInformation original_minfo, AsyncMethodKind asyncKind)
+	{
+		var mi = original_minfo.Method!;
+		var minfo = new AsyncMethodInfo (this, this, original_minfo.type, mi, original_minfo.category_extension_type, original_minfo.is_extension_method);
+		minfo.is_protocol_member = original_minfo.is_protocol_member;
+		var is_void = mi.ReturnType == TypeCache.System_Void;
+
+		// Print a error if any of the method parameters or handler parameters is ref/out, it should not be asyncified.
+		foreach (var param in minfo.AsyncInitialParams) {
+			if (param.ParameterType.IsByRef) {
+				throw new BindingException (1062, true, original_minfo.type.Name, mi.Name);
+			}
+		}
+
+		foreach (var param in minfo.AsyncCompletionParams) {
+			if (param.ParameterType.IsByRef) {
+				throw new BindingException (1062, true, original_minfo.type.Name, mi.Name);
+			}
+		}
+
+		var asyncAttribute = AttributeManager.GetOneCustomAttribute<AsyncAttribute> (mi);
+		var xmlDocs = asyncKind == AsyncMethodKind.Plain ? asyncAttribute.XmlDocs : asyncAttribute.XmlDocsWithOutParameter;
+		if (!string.IsNullOrEmpty (xmlDocs)) {
+			var doc = new XmlDocument { PreserveWhitespace = true };
+			doc.LoadXml ($"<member>{xmlDocs}</member>");
+			var resultParameter = asyncKind == AsyncMethodKind.WithResultOutParameter ? minfo.GetUniqueParamName ("result") : null;
+			var node = CompleteMethodDocumentation (doc.DocumentElement!, minfo, minfo.AsyncInitialParams, resultParameter);
+			var docLines = node.InnerXml.Split ('\n');
+			foreach (var line in docLines)
+				print ($"/// {line}");
+		}
+
+		PrintMethodAttributes (minfo);
+
+		PrintAsyncHeader (minfo, asyncKind);
+
+		print ("{");
+		indent++;
+
+		var ttype = "bool";
+		var tuple = false;
+		if (!minfo.IsVoidAsync) {
+			ttype = GetAsyncTaskType (minfo);
+			tuple = (minfo.HasNSError && (ttype == "bool"));
+			if (tuple)
+				ttype = minfo.IsNSErrorNullable ? "Tuple<bool,NSError?>" : "Tuple<bool,NSError>";
+		}
+		print ("var tcs = new TaskCompletionSource<{0}> ();", ttype);
+		bool ignoreResult = !is_void &&
+			asyncKind == AsyncMethodKind.Plain &&
+			asyncAttribute.PostNonResultSnippet is null;
+		print ("{6}{5}{4}{0}{7}({1}{2}({3}) => {{",
+			mi.Name,
+			GetInvokeParamList (minfo.AsyncInitialParams, false),
+			minfo.AsyncInitialParams.Length > 0 ? ", " : "",
+			GetInvokeParamList (minfo.AsyncCompletionParams),
+			minfo.is_extension_method || minfo.is_category_extension ? "This." : string.Empty,
+			is_void || ignoreResult ? string.Empty : minfo.GetUniqueParamName ("result") + " = ",
+			is_void || ignoreResult ? string.Empty : (asyncKind == AsyncMethodKind.WithResultOutParameter ? string.Empty : "var "),
+			minfo.is_protocol_member && minfo.is_static ? "<T>" : string.Empty
+		);
+
+		indent++;
+
+		int nesting_level = 1;
+		if (minfo.HasNSError && !tuple) {
+			var var_name = minfo.AsyncCompletionParams.Last ().Name.GetSafeParamName (); ;
+			print ("if ({0}_ is not null)", var_name);
+			print ("\ttcs.SetException (new NSErrorException({0}_));", var_name);
+			print ("else");
+			++nesting_level; ++indent;
+		}
+
+		if (minfo.IsVoidAsync)
+			print ("tcs.SetResult (true);");
+		else if (tuple) {
+			var cond_name = minfo.AsyncCompletionParams [0].Name;
+			var var_name = minfo.AsyncCompletionParams.Last ().Name;
+			print ("tcs.SetResult (new {2} ({0}_, {1}_));", cond_name, var_name, ttype);
+		} else if (minfo.IsSingleArgAsync)
+			print ("tcs.SetResult ({0}_!);", minfo.AsyncCompletionParams [0].Name);
+		else
+			print ("tcs.SetResult (new {0} ({1}));",
+				GetAsyncTaskType (minfo),
+				GetInvokeParamList (minfo.HasNSError ? minfo.AsyncCompletionParams.DropLast () : minfo.AsyncCompletionParams, true, true));
+		indent -= nesting_level;
+		if (is_void || ignoreResult)
+			print ("});");
+		else
+			print ("})!;");
+		var attr = AttributeManager.GetOneCustomAttribute<AsyncAttribute> (mi);
+		if (asyncKind == AsyncMethodKind.Plain && !string.IsNullOrEmpty (attr.PostNonResultSnippet))
+			print (attr.PostNonResultSnippet);
+		print ("return tcs.Task;");
+		indent--;
+		print ("}\n");
+
+
+		if (attr.ResultTypeName is not null) {
+			if (minfo.HasNSError)
+				async_result_types.Add (new Tuple<string, ParameterInfo []> (attr.ResultTypeName, minfo.AsyncCompletionParams.DropLast ()));
+			else
+				async_result_types.Add (new Tuple<string, ParameterInfo []> (attr.ResultTypeName, minfo.AsyncCompletionParams));
+		}
+	}
+
+	void PrintMethodAttributes (MemberInformation minfo)
+	{
+		var mi = minfo.Method;
+
+		foreach (var sa in AttributeManager.GetCustomAttributes<ThreadSafeAttribute> (mi))
+			print (sa.Safe ? "[ThreadSafe]" : "[ThreadSafe (false)]");
+
+		PrintObsoleteAttributes (mi);
+		PrintOverloadResolutionPriorityAttribute (mi);
+
+		if (minfo.is_return_release)
+			print ("[return: ReleaseAttribute ()]");
+
+		// when we inline methods (e.g. from a protocol) 
+		if (minfo.type != minfo.Method?.DeclaringType) {
+			// we must look if the type has an [Availability] attribute
+			// but we must not duplicate existing attributes for a platform, see https://github.com/dotnet/macios/issues/7194
+			PrintPlatformAttributesNoDuplicates (minfo.type, minfo.Method);
+		} else {
+			PrintPlatformAttributes (minfo.Method);
+		}
+
+		// in theory we could check for `minfo.is_ctor` but some manual bindings are using methods for `init*`
+		if (AttributeManager.HasAttribute<DesignatedInitializerAttribute> (mi))
+			print ("[DesignatedInitializer]");
+	}
+
+
+	void GenerateMethod (Type type, MethodInfo mi, bool is_model = false, Type? category_extension_type = null, bool is_appearance = false, bool is_interface_impl = false, bool is_extension_method = false, string? selector = null, bool isBaseWrapperProtocolMethod = false, bool is_protocol_member = false, bool? is_protocol_member_required = null, bool is_protocol_implementation_method = false)
+	{
+		var minfo = new MemberInformation (this, this, mi, type, category_extension_type, is_interface_impl, is_extension_method, is_appearance, is_model, selector, isBaseWrapperProtocolMethod);
+		minfo.is_protocol_member = is_protocol_member;
+		minfo.is_protocol_member_required = is_protocol_member_required;
+		minfo.is_protocol_implementation_method = is_protocol_implementation_method;
+		GenerateMethod (minfo);
+	}
+
+	void PrintDelegateProxy (MemberInformation minfo)
+	{
+		PrintDelegateProxy (minfo.Method!);
+	}
+
+	void PrintDelegateProxy (MethodInfo mi)
+	{
+		if (mi.ReturnType.IsSubclassOf (TypeCache.System_Delegate)) {
+			var ti = MakeTrampoline (mi.ReturnType);
+			print ("[return: DelegateProxy (typeof (ObjCRuntime.Trampolines.{0}))]", ti.StaticName);
+		}
+	}
+
+	void PrintBlockProxy (Type type)
+	{
+		if (type.IsSubclassOf (TypeCache.System_Delegate)) {
+			var ti = MakeTrampoline (type);
+			print ("[param: BlockProxy (typeof (ObjCRuntime.Trampolines.{0}))]", ti.NativeInvokerName);
+		}
+	}
+
+	void PrintExport (MemberInformation minfo)
+	{
+		if (minfo.is_ctor && minfo.is_protocol_member)
+			return;
+
+		if (minfo.is_protocol_implementation_method)
+			return;
+
+		if (minfo.is_export)
+			print ("[Export (\"{0}\"{1})]", minfo.selector, minfo.is_variadic ? ", IsVariadic = true" : string.Empty);
+	}
+
+	void PrintExport (MemberInformation minfo, ExportAttribute ea)
+	{
+		PrintExport (minfo, ea.Selector, ea.ArgumentSemantic);
+	}
+
+	void PrintExport (MemberInformation minfo, string? sel, ArgumentSemantic semantic)
+	{
+		bool output_semantics = semantic != ArgumentSemantic.None;
+		// it does not make sense on every properties, depending on the their types
+		if (output_semantics && (minfo.mi is PropertyInfo)) {
+			var t = minfo.Property!.PropertyType;
+			output_semantics = !t.IsPrimitive || t == TypeCache.System_IntPtr;
+		}
+
+		if (output_semantics)
+			print ("[Export (\"{0}\", ArgumentSemantic.{1})]", sel, semantic);
+		else
+			print ("[Export (\"{0}\")]", sel);
+	}
+
+	void GenerateMethod (MemberInformation minfo)
+	{
+		var mi = minfo.Method!;
+
+		// skip if we provide a manual implementation that would conflict with the generated code
+		if (AttributeManager.HasAttribute<ManualAttribute> (mi))
+			return;
+
+		foreach (var pi in mi.GetParameters ())
+			if (AttributeManager.HasAttribute<RetainAttribute> (pi)) {
+				print ("#pragma warning disable 168");
+				print ("{0}? __mt_{1}_{2};", pi.ParameterType, mi.Name, pi.Name);
+				print ("#pragma warning restore 168");
+			}
+
+		int argCount = 0;
+		if (minfo.is_export && !minfo.is_variadic) {
+			foreach (char c in minfo.selector!) {
+				if (c == ':')
+					argCount++;
+			}
+			if (mi.GetParameters ().Length != argCount) {
+				exceptions.Add (ErrorHelper.CreateWarning (1105,
+					minfo.selector, argCount, mi, mi.GetParameters ().Length));
+			}
+		}
+
+		bool wroteDocs;
+		if (minfo.is_extension_method) {
+			wroteDocs = WriteDocumentation ((MemberInfo?) GetProperty (mi) ?? mi, node => CompleteMethodDocumentation (node, minfo, mi.GetParameters ()));
+		} else if (minfo.is_factory_method) {
+			// The xml documentation is written for the generated factory method instead
+			// of the (internal) backing constructor. See GenerateFactoryMethod.
+			wroteDocs = false;
+		} else {
+			wroteDocs = WriteDocumentation (mi, node => CompleteMethodDocumentation (node, minfo, mi.GetParameters ()));
+		}
+
+		if (!wroteDocs && minfo.is_appearance)
+			WriteAppearanceMemberDocumentation (minfo.type, mi.Name);
+
+		PrintProtocolMemberAttributes (minfo);
+		PrintDelegateProxy (minfo);
+
+		if (AttributeManager.HasAttribute<NoMethodAttribute> (minfo.mi)) {
+			// Call for side effect
+			MakeSignature (minfo);
+			return;
+		}
+
+		// The '_Create...' helper backing a named factory method is a private, non-virtual
+		// method that's only called from the generated static factory method, so it doesn't
+		// need to be exported to the Objective-C runtime.
+		if (!(minfo.is_factory_method && !minfo.is_ctor))
+			PrintExport (minfo);
+
+		if (!minfo.is_interface_impl) {
+			PrintMethodAttributes (minfo);
+		} else if (minfo.is_return_release) {
+			print ("[return: ReleaseAttribute ()]");
+		}
+
+		var mod = minfo.GetVisibility ();
+
+		var is_abstract = false;
+		bool do_not_call_base;
+		if (minfo.is_ctor && minfo.is_protocol_member) {
+			do_not_call_base = false;
+		} else if (minfo.is_static && minfo.is_protocol_member) {
+			do_not_call_base = false;
+		} else if (minfo.is_protocol_implementation_method) {
+			do_not_call_base = false;
+		} else if (minfo.is_abstract || minfo.is_model) {
+			do_not_call_base = true;
+		} else {
+			do_not_call_base = false;
+		}
+
+		// The member backing a factory method is hidden; the public API is the generated
+		// static factory method instead. A backing constructor is kept internal so the
+		// factory method can reach it, while a named init helper ('_Create...') is private.
+		if (minfo.is_factory_method)
+			mod = minfo.is_ctor ? "internal" : "";
+
+		print_generated_code (optimizable: IsOptimizable (minfo.mi));
+		print ("{0} {1}{2}{3}",
+			   mod,
+			   minfo.GetModifiers (),
+			   MakeSignature (minfo),
+			   is_abstract ? ";" : "");
+
+
+		if (!is_abstract) {
+			if (minfo.is_ctor && !minfo.is_protocol_member) {
+				indent++;
+				print (": {0}", minfo.wrap_method is null ? "base (NSObjectFlag.Empty)" : minfo.wrap_method);
+				indent--;
+			}
+
+			print ("{");
+
+			if (debug)
+				print ("\tConsole.WriteLine (\"In {0}\");", mi);
+
+			if (do_not_call_base)
+				print ("\tthrow new You_Should_Not_Call_base_In_This_Method ();");
+			else if (minfo.call_protocol_implementation_method) {
+				indent++;
+				var ret = mi.ReturnType == TypeCache.System_Void ? null : "return ";
+				var parameters = mi.GetParameters ();
+				var selfCall = minfo.is_static ? string.Empty : (parameters.Length == 0 ? "this" : "this, ");
+				var genericArguments = minfo.is_static ? "<T>" : string.Empty;
+				print ($"{ret}_{GetMethodName (minfo, false)}{genericArguments} ({selfCall}{RenderArgs (parameters)});");
+				indent--;
+			} else if (minfo.wrap_method is not null) {
+				if (!minfo.is_ctor) {
+					indent++;
+
+					var ret = mi.ReturnType == TypeCache.System_Void ? null : "return ";
+					print ("{0}{1}{2};", ret, minfo.is_extension_method ? "This." : "", minfo.wrap_method);
+					indent--;
+				}
+			} else {
+				if (minfo.is_autorelease) {
+					indent++;
+					print ("using (var autorelease_pool = new NSAutoreleasePool ()) {");
+				}
+				PropertyInfo? pinfo = null;
+				bool null_allowed = false;
+				if (mi.IsSpecialName) {
+					// could be a property setter where [NullAllowed] is _allowed_
+					// we do not need the information if it's a getter (it won't change generated code)
+					pinfo = GetProperty (mi, getter: false, setter: true);
+					if (pinfo is not null)
+						null_allowed = AttributeManager.IsNullable (pinfo);
+				}
+				GenerateMethodBody (minfo, mi, minfo.selector, null_allowed, null, BodyOption.None, pinfo);
+				if (minfo.is_autorelease) {
+					print ("}");
+					indent--;
+				}
+			}
+			print ("}\n");
+		}
+
+		if (minfo.is_factory_method)
+			GenerateFactoryMethod (minfo);
+
+		if (minfo.generate_is_async_overload) {
+			// We do not want Async methods inside internal wrapper classes, they are useless
+			// internal sealed class FooWrapper : BaseWrapper, IMyFooDelegate
+			// Also we do not want Async members inside [Model] classes
+			if (minfo.is_basewrapper_protocol_method || minfo.is_model)
+				return;
+
+			minfo.generate_is_async_overload = false;
+			GenerateAsyncMethod (minfo, AsyncMethodKind.Plain);
+
+			// Generate the overload with the out parameter
+			if (mi.ReturnType != TypeCache.System_Void) {
+				GenerateAsyncMethod (minfo, AsyncMethodKind.WithResultOutParameter);
+			}
+		}
+	}
+
+	// Generates a public static factory method for a constructor or a named init method
+	// annotated with [FactoryMethod]. When the initializer's return value is nullable (i.e. the
+	// native initializer is failable), the factory method returns null if the initializer
+	// returned nil; otherwise it just returns the newly created instance.
+	//
+	// For a constructor, the factory method calls the (internal) backing constructor. For a named
+	// init method (not a 'Constructor'), the factory method allocates the instance and calls the
+	// (internal) backing helper method, which does the actual 'init' message send.
+	void GenerateFactoryMethod (MemberInformation minfo)
+	{
+		var mi = minfo.Method!;
+		var typeName = Nomenclator.GetGeneratedTypeName (mi.DeclaringType!);
+
+		// [FactoryMethod] only makes sense on an Objective-C 'init' selector.
+		var selector = minfo.selector ?? string.Empty;
+		if (!IsInitSelector (selector))
+			throw new BindingException (1126, true, mi.DeclaringType, mi.Name, selector);
+
+		// For a named factory method (not a constructor) the factory method name is the
+		// binding method's own name, so specifying an explicit name is confusing/redundant.
+		if (!minfo.is_ctor && AttributeManager.GetCustomAttribute<FactoryMethodAttribute> (mi)?.MethodName is not null)
+			throw new BindingException (1127, true, mi.DeclaringType, mi.Name);
+
+		// A failable initializer typically has an 'out NSError' parameter. If the binding
+		// author added one but didn't mark the return value as nullable, the factory method
+		// won't be able to return null on failure, which is almost certainly a mistake.
+		if (!minfo.is_factory_method_nullable && HasOutNSErrorParameter (mi))
+			ErrorHelper.Warning (BindingTouch, 1125, mi.DeclaringType, mi.Name);
+
+		minfo.render_as_factory_method = true;
+
+		WriteDocumentation (mi, node => CompleteMethodDocumentation (node, minfo, mi.GetParameters ()));
+		PrintMethodAttributes (minfo);
+
+		print_generated_code (optimizable: IsOptimizable (mi), factoryMethod: true);
+		print ("{0} {1}{2}",
+			   minfo.GetVisibility (),
+			   minfo.GetModifiers (),
+			   MakeSignature (minfo));
+		print ("{");
+		indent++;
+		if (minfo.is_ctor) {
+			if (minfo.is_factory_method_nullable) {
+				print ("var rv = new {0} ({1});", typeName, RenderArgs (mi.GetParameters ()));
+				print ("if (rv.Handle == global::ObjCRuntime.NativeHandle.Zero) {");
+				indent++;
+				print ("rv.Dispose ();");
+				print ("return null;");
+				indent--;
+				print ("}");
+				print ("return rv;");
+			} else {
+				print ("return new {0} ({1});", typeName, RenderArgs (mi.GetParameters ()));
+			}
+		} else {
+			// The backing helper (named "_<factory>") performs the 'init' message send on the
+			// freshly allocated instance and returns the resulting handle.
+			print ("var rv = new {0} (NSObjectFlag.Empty);", typeName);
+			if (minfo.is_factory_method_nullable)
+				print ("rv.InitializeHandle (rv._{0} ({1}), \"{2}\", false);", minfo.factory_method_name, RenderArgs (mi.GetParameters ()), selector);
+			else
+				print ("rv.InitializeHandle (rv._{0} ({1}), \"{2}\");", minfo.factory_method_name, RenderArgs (mi.GetParameters ()), selector);
+			if (minfo.is_factory_method_nullable) {
+				print ("if (rv.Handle == global::ObjCRuntime.NativeHandle.Zero) {");
+				indent++;
+				print ("rv.Dispose ();");
+				print ("return null;");
+				indent--;
+				print ("}");
+			}
+			print ("return rv;");
+		}
+		indent--;
+		print ("}\n");
+
+		minfo.render_as_factory_method = false;
+	}
+
+	// A [FactoryMethod] can only be applied to an Objective-C 'init' selector: either "init"
+	// itself, or a selector that starts with "init" followed by an uppercase letter.
+	static bool IsInitSelector (string selector)
+	{
+		if (selector == "init")
+			return true;
+		return selector.Length > 4 && selector.StartsWith ("init", StringComparison.Ordinal) && char.IsUpper (selector [4]);
+	}
+
+
+
+	// Returns true if the method has an 'out'/'ref' NSError parameter.
+	static bool HasOutNSErrorParameter (MethodInfo mi)
+	{
+		foreach (var pi in mi.GetParameters ()) {
+			if (!pi.ParameterType.IsByRef)
+				continue;
+			if (pi.ParameterType.GetElementType ()?.Name == "NSError")
+				return true;
+		}
+		return false;
+	}
+
+	static PropertyInfo? GetProperty (MethodInfo method, bool getter = true, bool setter = true)
+	{
+		var props = method.DeclaringType!.GetProperties ();
+		if (method.GetParameters ().Length == 0)
+			return !getter ? null : props.FirstOrDefault (prop => prop.GetGetMethod () == method);
+		else
+			return !setter ? null : props.FirstOrDefault (prop => prop.GetSetMethod () == method);
+	}
+
+	void RenderDelegates (Dictionary<string, MethodInfo> delegateTypes)
+	{
+		// Group the delegates by namespace
+		var groupedTypes = from fullname in delegateTypes.Keys
+						   where fullname != "System.Action"
+						   let p = fullname.LastIndexOf ('.')
+						   let ns = p == -1 ? String.Empty : fullname.Substring (0, p)
+						   group fullname by ns into g
+						   select new { Namespace = g.Key, Fullname = g };
+
+		foreach (var group in groupedTypes.OrderBy (v => v.Namespace, StringComparer.Ordinal)) {
+			if (group.Namespace is not null) {
+				print ("namespace {0} {{", group.Namespace);
+				indent++;
+			}
+			print ("#nullable enable");
+
+			foreach (var deltype in group.Fullname.OrderBy (v => v, StringComparer.Ordinal)) {
+				int p = deltype.LastIndexOf ('.');
+				var shortName = deltype.Substring (p + 1);
+				var mi = delegateTypes [deltype];
+
+				if (shortName.StartsWith ("Func<", StringComparison.Ordinal))
+					continue;
+
+				// we might get "delegates" from DelegateName attributes, and in that case the declaring type doesn't have xml docs for the delegate (the declaring type is the container type for the member with the DelegateName attribute, and its documentation has nothing to do with the delegate type)
+				var wroteDelegateDocs = false;
+				if (mi.DeclaringType!.IsSubclassOf (TypeCache.System_Delegate))
+					wroteDelegateDocs = WriteDocumentation (mi.DeclaringType);
+				if (!wroteDelegateDocs && BindingTouch.SupportsXmlDocumentation && shortName.EndsWith ("EventArgs", StringComparison.Ordinal))
+					print ("/// <summary>A delegate that represents the callback for the corresponding Objective-C delegate/protocol method.</summary>");
+
+				var del = mi.DeclaringType;
+
+				PrintExperimentalAttribute (mi.DeclaringType);
+				if (AttributeManager.HasAttribute (mi.DeclaringType, "MonoNativeFunctionWrapper"))
+					print ("[MonoNativeFunctionWrapper]\n");
+
+				var accessibility = mi.DeclaringType.IsInternal (this) ? "internal" : "public";
+				var isUnsafe = mi.GetParameters ().Any ((v => v.ParameterType.IsPointer)) || mi.ReturnType.IsPointer;
+				print ("{3}{4} delegate {0} {1} ({2});",
+					   TypeManager.RenderType (mi.ReturnType, mi.ReturnTypeCustomAttributes),
+					   shortName,
+					   RenderParameterDecl (mi.GetParameters ()),
+					   accessibility,
+					   isUnsafe ? " unsafe" : string.Empty);
+			}
+
+			if (group.Namespace is not null) {
+				indent--;
+				print ("}\n");
+			}
+		}
+	}
+
+	IEnumerable<MethodInfo> SelectProtocolMethods (Type type, bool? @static = null, bool? required = null, bool selectConstructors = false)
+	{
+		var list = type.GetMethods (BindingFlags.Public | BindingFlags.Instance);
+
+		foreach (var m in list) {
+			if (m.IsSpecialName)
+				continue;
+
+			if ((m.Name == "Constructor") != selectConstructors)
+				continue;
+
+			var attrs = AttributeManager.GetCustomAttributes<Attribute> (m);
+			AvailabilityBaseAttribute? availabilityAttribute = null;
+			bool hasExportAttribute = false;
+			bool hasStaticAttribute = false;
+
+			foreach (var a in attrs) {
+				if (a is AvailabilityBaseAttribute) {
+					availabilityAttribute = a as AvailabilityBaseAttribute;
+				} else if (a is ExportAttribute)
+					hasExportAttribute = true;
+				else if (a is StaticAttribute)
+					hasStaticAttribute = true;
+			}
+			if (availabilityAttribute is not null && m.IsUnavailable (this))
+				continue;
+
+			if (!hasExportAttribute)
+				continue;
+
+			if (@static.HasValue && @static.Value != hasStaticAttribute)
+				continue;
+
+			if (required.HasValue && required.Value != IsRequired (m, attrs))
+				continue;
+
+			yield return m;
+		}
+	}
+
+	IEnumerable<PropertyInfo> SelectProtocolProperties (Type type, bool? @static = null, bool? required = null)
+	{
+		var list = type.GetProperties (BindingFlags.Public | BindingFlags.Instance);
+
+		foreach (var p in list) {
+			var attrs = AttributeManager.GetCustomAttributes<Attribute> (p);
+			AvailabilityBaseAttribute? availabilityAttribute = null;
+			bool hasExportAttribute = false;
+			bool hasStaticAttribute = false;
+
+			foreach (var a in attrs) {
+				if (a is AvailabilityBaseAttribute) {
+					availabilityAttribute = a as AvailabilityBaseAttribute;
+				} else if (a is ExportAttribute)
+					hasExportAttribute = true;
+				else if (a is StaticAttribute)
+					hasStaticAttribute = true;
+			}
+			if (availabilityAttribute is not null && p.IsUnavailable (this))
+				continue;
+
+			if (!hasExportAttribute) {
+				var getter = p.GetGetMethod ();
+				if (p.CanRead && !AttributeManager.HasAttribute<ExportAttribute> (getter)) {
+					if (!AttributeManager.HasAttribute<NotImplementedAttribute> (getter))
+						continue;
+				}
+				var setter = p.GetSetMethod ();
+				if (p.CanWrite && !AttributeManager.HasAttribute<ExportAttribute> (setter)) {
+					if (!AttributeManager.HasAttribute<NotImplementedAttribute> (setter))
+						continue;
+				}
+			}
+
+			if (@static.HasValue && @static.Value != hasStaticAttribute)
+				continue;
+
+			if (required.HasValue && required.Value != IsRequired (p, attrs))
+				continue;
+
+			yield return p;
+		}
+	}
+
+	// If a type comes from the assembly with the api definition we're processing.
+	bool IsApiType (Type? type)
+	{
+		if (type is null)
+			return false;
+		return type.Assembly == api.Types [0].Assembly;
+	}
+
+	bool IsRequired (MemberInfo provider, Attribute []? attributes = null)
+	{
+		return IsRequired (provider, out var _, attributes);
+	}
+
+	bool IsRequired (MemberInfo provider, out bool generateExtensionMethod, Attribute []? attributes = null)
+	{
+		generateExtensionMethod = false;
+
+		var type = provider.DeclaringType;
+		if (IsApiType (type)) {
+			var abstractAttribute = AttributeManager.GetCustomAttribute<AbstractAttribute> (provider, attributes);
+			if (abstractAttribute is null)
+				return false;
+			generateExtensionMethod = abstractAttribute.GenerateExtensionMethod;
+			return true;
+		}
+		if (type?.IsInterface == true)
+			return true;
+
+		return false;
+	}
+
+	void GenerateProtocolTypes (Type type, string class_visibility, string TypeName, string protocol_name, ProtocolAttribute protocolAttribute)
+	{
+		var protocol = AttributeManager.GetOneCustomAttribute<ProtocolAttribute> (type);
+		var backwardsCompatibleCodeGeneration = protocol.BackwardsCompatibleCodeGeneration;
+		var allProtocolMethods = new List<MethodInfo> ();
+		var allProtocolProperties = new List<PropertyInfo> ();
+		var allProtocolConstructors = new List<MethodInfo> ();
+		var ifaces = (IEnumerable<Type>) type.GetInterfaces ().Concat (new Type [] { ReflectionExtensions.GetBaseType (type, this) }).OrderBy (v => v.FullName, StringComparer.Ordinal);
+
+		if (AttributeManager.HasAttribute<BaseTypeAttribute> (type) && !AttributeManager.HasAttribute<ModelAttribute> (type))
+			exceptions.Add (ErrorHelper.CreateWarning (1123 /* "The type {0} has a [Protocol] and a [BaseType] attribute, but no [Model] attribute. This is likely incorrect; either remove the [BaseType] attribute, or add a [Model] attribute." */, type.FullName));
+
+		if (type.Namespace is not null) {
+			print ("namespace {0} {{", type.Namespace);
+			indent++;
+		}
+
+		ifaces = ifaces.Where ((v) => IsProtocolInterface (v, false));
+
+		allProtocolMethods.AddRange (SelectProtocolMethods (type));
+		allProtocolProperties.AddRange (SelectProtocolProperties (type));
+		allProtocolConstructors.AddRange (SelectProtocolMethods (type, selectConstructors: true));
+
+		var requiredMethods = allProtocolMethods.Where ((v) => IsRequired (v));
+		var optionalMethods = allProtocolMethods.Where ((v) => !IsRequired (v));
+		var requiredInstanceMethods = allProtocolMethods.Where ((v) => IsRequired (v) && !AttributeManager.HasAttribute<StaticAttribute> (v)).ToList ();
+		var optionalInstanceMethods = allProtocolMethods.Where ((v) => !IsRequired (v) && !AttributeManager.HasAttribute<StaticAttribute> (v));
+		var staticMethods = allProtocolMethods.Where ((v) => AttributeManager.HasAttribute<StaticAttribute> (v)).ToList ();
+		var instanceMethods = allProtocolMethods.Where ((v) => !AttributeManager.HasAttribute<StaticAttribute> (v)).ToList ();
+		var requiredInstanceProperties = allProtocolProperties.Where ((v) => IsRequired (v) && !AttributeManager.HasAttribute<StaticAttribute> (v)).ToList ();
+		var optionalInstanceProperties = allProtocolProperties.Where ((v) => !IsRequired (v) && !AttributeManager.HasAttribute<StaticAttribute> (v));
+		var requiredInstanceAsyncMethods = requiredInstanceMethods.Where (m => AttributeManager.HasAttribute<AsyncAttribute> (m)).ToList ();
+		var instanceProperties = allProtocolProperties.Where (v => !AttributeManager.HasAttribute<StaticAttribute> (v));
+		var staticProperties = allProtocolProperties.Where (v => AttributeManager.HasAttribute<StaticAttribute> (v));
+		var extensionMethods = optionalInstanceMethods.Concat (requiredInstanceMethods.Where (v => IsRequired (v, out var generateExtensionMethod) && generateExtensionMethod));
+		var extensionProperties = optionalInstanceProperties.Concat (requiredInstanceProperties.Where (v => IsRequired (v, out var generateExtensionMethod) && generateExtensionMethod));
+
+		if (!WriteDocumentation (type)) {
+			print ($"/// <summary>This interface represents the Objective-C protocol <c>{protocol_name}</c>.</summary>");
+			print ($"/// <remarks>");
+			print ($"///   <para>A class that implements this interface (and subclasses <see cref=\"NSObject\" />) will be exported to Objective-C as implementing the Objective-C protocol this interface represents.</para>");
+			print ($"///   <para>A class may also implement members from this interface to implement members from the protocol.</para>");
+			print ($"/// </remarks>");
+		}
+
+		PrintAttributes (type, platform: true, preserve: true, advice: true);
+		print ("[Protocol (Name = \"{1}\", WrapperType = typeof ({0}Wrapper){2}{3}{4})]",
+			   TypeName,
+			   protocol_name,
+			   protocolAttribute.IsInformal ? ", IsInformal = true" : string.Empty,
+			   protocolAttribute.FormalSince is not null ? $", FormalSince = \"{protocolAttribute.FormalSince}\"" : string.Empty,
+			   backwardsCompatibleCodeGeneration ? string.Empty : ", BackwardsCompatibleCodeGeneration = false"
+			   );
+
+		var sb = new StringBuilder ();
+
+		foreach (var mi in allProtocolMethods) {
+			var attrib = GetOneExportAttribute (mi);
+			sb.Clear ();
+			sb.Append ("[ProtocolMember (");
+			sb.Append ("IsRequired = ").Append (IsRequired (mi) ? "true" : "false");
+			sb.Append (", IsProperty = false");
+			sb.Append (", IsStatic = ").Append (AttributeManager.HasAttribute<StaticAttribute> (mi) ? "true" : "false");
+			sb.Append (", Name = \"").Append (mi.Name).Append ("\"");
+			sb.Append (", Selector = \"").Append (attrib.Selector).Append ("\"");
+			if (mi.ReturnType != TypeCache.System_Void) {
+				var retType = mi.ReturnType;
+				sb.Append (", ReturnType = typeof (").Append (TypeManager.RenderType (retType)).Append (")");
+				if (retType.IsSubclassOf (TypeCache.System_Delegate)) {
+					var ti = MakeTrampoline (retType);
+					sb.Append ($", ReturnTypeDelegateProxy = typeof (ObjCRuntime.Trampolines.{ti.StaticName})");
+				}
+			}
+			var parameters = mi.GetParameters ();
+			if (parameters is not null && parameters.Length > 0) {
+				sb.Append (", ParameterType = new Type [] { ");
+				for (int i = 0; i < parameters.Length; i++) {
+					if (i > 0)
+						sb.Append (", ");
+					sb.Append ("typeof (");
+					var pt = parameters [i].ParameterType;
+					if (pt.TryIsByRef (out var elementType))
+						pt = elementType;
+					sb.Append (TypeManager.RenderType (pt));
+					sb.Append (")");
+				}
+				sb.Append (" }");
+				sb.Append (", ParameterByRef = new bool [] { ");
+				for (int i = 0; i < parameters.Length; i++) {
+					if (i > 0)
+						sb.Append (", ");
+					sb.Append (parameters [i].ParameterType.IsByRef ? "true" : "false");
+				}
+				sb.Append (" }");
+
+				var blockProxies = new string [parameters.Length];
+				var anyblockProxy = false;
+				for (int i = 0; i < parameters.Length; i++) {
+					var parType = parameters [i].ParameterType;
+					if (parType.IsSubclassOf (TypeCache.System_Delegate)) {
+						var ti = MakeTrampoline (parType);
+						blockProxies [i] = $"typeof (ObjCRuntime.Trampolines.{ti.NativeInvokerName})";
+						anyblockProxy = true;
+					}
+				}
+				if (anyblockProxy) {
+					sb.Append (", ParameterBlockProxy = new Type? [] { ");
+					for (int i = 0; i < blockProxies.Length; i++) {
+						if (i > 0)
+							sb.Append (", ");
+						sb.Append (blockProxies [i] is null ? "null" : blockProxies [i]);
+					}
+					sb.Append (" }");
+				}
+
+				if (attrib.IsVariadic)
+					sb.Append (", IsVariadic = true");
+			}
+			sb.Append (")]");
+			print (sb.ToString ());
+		}
+		foreach (var pi in allProtocolProperties) {
+			var attrib = GetOneExportAttribute (pi);
+			sb.Clear ();
+			sb.Append ("[ProtocolMember (");
+			sb.Append ("IsRequired = ").Append (IsRequired (pi) ? "true" : "false");
+			sb.Append (", IsProperty = true");
+			sb.Append (", IsStatic = ").Append (AttributeManager.HasAttribute<StaticAttribute> (pi) ? "true" : "false");
+			sb.Append (", Name = \"").Append (pi.Name).Append ("\"");
+			sb.Append (", Selector = \"").Append (attrib.Selector).Append ("\"");
+			sb.Append (", PropertyType = typeof (").Append (TypeManager.RenderType (pi.PropertyType)).Append (")");
+			if (pi.CanRead && !AttributeManager.HasAttribute<NotImplementedAttribute> (pi.GetGetMethod ())) {
+				var ea = GetGetterExportAttribute (pi);
+				var ba = GetBindAttribute (pi.GetGetMethod ());
+				sb.Append (", GetterSelector = \"").Append (ba is not null ? ba.Selector : ea?.Selector).Append ("\"");
+			}
+			if (pi.CanWrite && !AttributeManager.HasAttribute<NotImplementedAttribute> (pi.GetSetMethod ())) {
+				var ea = GetSetterExportAttribute (pi);
+				var ba = GetBindAttribute (pi.GetSetMethod ());
+				sb.Append (", SetterSelector = \"").Append (ba is not null ? ba.Selector : ea?.Selector).Append ("\"");
+			}
+			sb.Append (", ArgumentSemantic = ArgumentSemantic.").Append (attrib.ArgumentSemantic);
+			// Check for block/delegate proxies
+			var propType = pi.PropertyType;
+			if (propType.IsSubclassOf (TypeCache.System_Delegate)) {
+				var ti = MakeTrampoline (propType);
+				if (pi.SetMethod is not null)
+					sb.Append ($", ParameterBlockProxy = new Type [] {{ typeof (ObjCRuntime.Trampolines.{ti.NativeInvokerName}) }}");
+				if (pi.GetMethod is not null)
+					sb.Append ($", ReturnTypeDelegateProxy = typeof (ObjCRuntime.Trampolines.{ti.StaticName})");
+			}
+			sb.Append (")]");
+			print (sb.ToString ());
+		}
+
+		PrintXpcInterfaceAttribute (type);
+		print ("{0} partial interface I{1} : INativeObject, IDisposable{2}", class_visibility, TypeName, ifaces.Count () > 0 ? ", " : string.Empty);
+		indent++;
+		sb.Clear ();
+		foreach (var iface in ifaces) {
+			string iname = iface.Name;
+			// if the [Protocol] interface is defined in the binding itself it won't start with an 'I'
+			// but if it's a reference to something inside an already built assembly, 
+			// e.g. monotouch.dll, then the 'I' will be present
+			if (sb.Length > 0)
+				sb.Append (", ");
+			sb.Append (iface.Namespace).Append ('.');
+			if (IsApiAssembly (iface.Assembly))
+				sb.Append ('I');
+			else if (iface.IsClass)
+				sb.Append ('I');
+			sb.AppendLine (iname);
+		}
+		if (sb.Length > 0)
+			print (sb.ToString ());
+		indent--;
+
+		print ("{");
+		indent++;
+
+		foreach (var ctor in allProtocolConstructors) {
+			var minfo = new MemberInformation (this, this, ctor, type, null);
+			minfo.is_protocol_member = true;
+			minfo.is_protocol_member_required = IsRequired (ctor);
+			GenerateMethod (minfo);
+			print ("");
+		}
+
+		foreach (var mi in allProtocolMethods) {
+			var minfo = new MemberInformation (this, this, mi, type, null);
+			var useSeparateImplementationMethod = !minfo.is_static;
+			minfo.is_protocol_member = true;
+			minfo.is_protocol_member_required = IsRequired (mi);
+			minfo.call_protocol_implementation_method = useSeparateImplementationMethod;
+			GenerateMethod (minfo);
+			print ("");
+
+			if (useSeparateImplementationMethod) {
+				minfo.call_protocol_implementation_method = false;
+				minfo.is_protocol_implementation_method = true;
+				minfo.generate_is_async_overload = false;
+				GenerateMethod (minfo);
+				print ("");
+			}
+		}
+
+		var dynamicDependencies = new List<string> ();
+		if (instanceMethods.Any () || instanceProperties.Any ()) {
+			// Tell the trimmer to not remove any instance method/property if the interface itself isn't trimmed away.
+			// These members are required for the registrar to determine if a particular implementing method
+			// implements a member from a protocol or not (and thus expose it to Objective-C).
+			// Note: the non-empty static cctor is somewhat ugly, a better way might be to emit a
+			// linker description file (which supports conditional preservation better).
+			// Ref: https://github.com/dotnet/runtime/issues/37352#issuecomment-644385807
+			var docIds = instanceMethods
+				.Select (mi => DocumentationManager.GetDocId (mi, includeDeclaringType: false, alwaysIncludeParenthesis: true, parameterTypeProvider: p => AttributeManager.GetCustomAttribute<BindAsAttribute> (p)?.Type ?? p.ParameterType))
+				.Concat (instanceProperties.Select (v => v.Name))
+				.Select (v => $"\"{v}\"");
+			dynamicDependencies.AddRange (docIds);
+		}
+		// Tell the trimmer to not remove the wrapper type if the interface itself isn't trimmed away
+		dynamicDependencies.Add ($"DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors, typeof ({TypeName}Wrapper)");
+		if (dynamicDependencies.Count > 0) {
+			foreach (var dd in dynamicDependencies.OrderBy (v => v))
+				print ($"[DynamicDependencyAttribute ({dd})]");
+			print ("[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]");
+			print ($"static I{TypeName} ()");
+			print ("{");
+			print ("\tGC.KeepAlive (null);"); // need to do _something_ (doesn't seem to matter what), otherwise the static cctor (and the DynamicDependency attributes) are trimmed away.
+			print ("}");
+		}
+
+		var instance_fields_to_clear_on_dispose = new List<string> ();
+		foreach (var pi in instanceProperties) {
+			GenerateProperty (type, pi, instance_fields_to_clear_on_dispose, false, is_protocol_member: true, is_protocol_member_required: IsRequired (pi));
+
+			GetAccessorInfo (pi, out var getter, out var setter, out var generate_getter, out var generate_setter);
+			var attrib = GetExportAttribute (pi);
+			if (generate_getter) {
+				PrintAttributes (pi, preserve: true, advice: true);
+				var ba = GetBindAttribute (getter);
+				var selector = ba?.Selector ?? attrib!.ToGetter (pi).Selector;
+				GenerateMethod (type, getter!, selector: selector, is_protocol_implementation_method: true);
+			}
+			if (generate_setter) {
+				PrintAttributes (pi, preserve: true, advice: true);
+				var ba = GetBindAttribute (setter);
+				var selector = ba?.Selector ?? attrib!.ToSetter (pi).Selector;
+				GenerateMethod (type, setter!, selector: selector, is_protocol_implementation_method: true);
+			}
+		}
+
+		// C# does not support type constraint on properties, so create Get* and Set* accessors instead.
+		foreach (var pi in staticProperties) {
+			GetAccessorInfo (pi, out var getter, out var setter, out var generate_getter, out var generate_setter);
+			var attrib = GetExportAttribute (pi);
+			if (generate_getter) {
+				PrintAttributes (pi, preserve: true, advice: true);
+				var ba = GetBindAttribute (getter);
+				GenerateMethod (type, getter!, false, null, false, false, false, ba?.Selector ?? attrib!.ToGetter (pi).Selector, is_protocol_member: true, is_protocol_member_required: IsRequired (pi));
+			}
+			if (generate_setter) {
+				PrintAttributes (pi, preserve: true, advice: true);
+				var ba = GetBindAttribute (setter);
+				GenerateMethod (type, setter!, false, null, false, false, false, ba?.Selector ?? attrib!.ToSetter (pi).Selector, is_protocol_member: true, is_protocol_member_required: IsRequired (pi));
+			}
+		}
+
+		indent--;
+		print ("}");
+		print ("");
+
+		// avoid (for unified) all the metadata for empty static classes, we can introduce them later when required
+		bool include_extensions = false;
+		if (backwardsCompatibleCodeGeneration)
+			include_extensions = extensionMethods.Any () || extensionProperties.Any () || requiredInstanceAsyncMethods.Any ();
+		if (include_extensions) {
+			if (BindingTouch.SupportsXmlDocumentation) {
+				print ($"/// <summary>Extension methods to the <see cref=\"I{TypeName}\" /> interface to support all the methods from the {protocol_name} protocol.</summary>");
+				print ($"/// <remarks>");
+				print ($"///   <para>The extension methods for <see cref=\"I{TypeName}\" /> interface allow developers to treat instances of the interface as having all the optional methods of the original {protocol_name} protocol. Since the interface only contains the required members, these extension methods allow developers to call the optional members of the protocol.</para>");
+				print ($"/// </remarks>");
+			}
+			PrintAttributes (type, preserve: true, advice: true);
+			print ("{1} unsafe static partial class {0}_Extensions {{", TypeName, class_visibility);
+			indent++;
+			foreach (var mi in extensionMethods)
+				GenerateMethod (type, mi, false, null, false, false, true);
+
+			// Generate Extension Methods of required [Async] decorated methods (we already do optional) 
+			foreach (var ami in requiredInstanceAsyncMethods) {
+				var minfo = new MemberInformation (this, this, ami, type, null, isExtensionMethod: true);
+				GenerateAsyncMethod (minfo, AsyncMethodKind.Plain);
+
+				// Generate the overload with the out parameter
+				if (minfo.Method!.ReturnType != TypeCache.System_Void)
+					GenerateAsyncMethod (minfo, AsyncMethodKind.WithResultOutParameter);
+			}
+
+			// C# does not support extension properties, so create Get* and Set* accessors instead.
+			foreach (var pi in extensionProperties) {
+				GetAccessorInfo (pi, out var getter, out var setter, out var generate_getter, out var generate_setter);
+				var attrib = GetExportAttribute (pi);
+				if (generate_getter) {
+					PrintAttributes (pi, preserve: true, advice: true);
+					var ba = GetBindAttribute (getter);
+					GenerateMethod (type, getter!, false, null, false, false, true, ba?.Selector ?? attrib!.ToGetter (pi).Selector);
+				}
+				if (generate_setter) {
+					PrintAttributes (pi, preserve: true, advice: true);
+					var ba = GetBindAttribute (setter);
+					GenerateMethod (type, setter!, false, null, false, false, true, ba?.Selector ?? attrib!.ToSetter (pi).Selector);
+				}
+			}
+			indent--;
+			print ("}");
+			print ("");
+		}
+
+		// Add API from base interfaces we also need to implement.
+		foreach (var iface in ifaces) {
+			requiredInstanceMethods.AddRange (SelectProtocolMethods (iface, @static: false, required: true));
+			requiredInstanceProperties.AddRange (SelectProtocolProperties (iface, @static: false, required: true));
+		}
+
+		PrintPreserveAttribute (type);
+		PrintExperimentalAttribute (type);
+		print ("internal unsafe sealed class {0}Wrapper : BaseWrapper, I{0} {{", TypeName);
+		indent++;
+		// ctor (IntPtr, bool)
+		PrintExperimentalAttribute (type);
+		print ("public {0}Wrapper ({1} handle, bool owns)", TypeName, NativeHandleType);
+		print ("\t: base (handle, owns)");
+		print ("{");
+		print ("}");
+		print ("");
+
+		print ($"[DynamicDependencyAttribute (DynamicallyAccessedMemberTypes.PublicConstructors, typeof ({TypeName}Wrapper))]");
+		print ($"static {TypeName}Wrapper ()");
+		print ("{");
+		print ("\tGC.KeepAlive (null);"); // need to do _something_ (doesn't seem to matter what), otherwise the static cctor (and the DynamicDependency attribute) is trimmed away.
+		print ("}");
+		print ("");
+
+		// Methods
+		// First find duplicates and select the best one. We use the selector to determine what's a duplicate.
+		var methodData = requiredInstanceMethods.Select ((v) => {
+			return new MethodData {
+				Method = v,
+				ExportAttribute = GetOneExportAttribute (v),
+			};
+		}).ToArray ();
+		var methodsGroupedBySelector = methodData.GroupBy ((v) => v.ExportAttribute.Selector);
+		var duplicateMethodsGroupedBySelector = methodsGroupedBySelector.Where ((v) => v.Count () > 1);
+		if (duplicateMethodsGroupedBySelector.Any ()) {
+			// Yes, there are multiple methods with the same selector. Now we must compute the signature for all of them.
+			var computeSignature = new Func<MethodInfo, string> ((MethodInfo minfo) => {
+				var sig = new StringBuilder ();
+				sig.Append ('(');
+				foreach (var param in minfo.GetParameters ())
+					sig.Append (param.ParameterType.FullName).Append (' ');
+				sig.Append (')');
+				return sig.ToString ();
+			});
+			foreach (var gr in duplicateMethodsGroupedBySelector)
+				foreach (var m in gr)
+					m.Signature = computeSignature (m.Method);
+
+			// Verify that all the duplicate methods have the same signature.
+			// If not, show an error, and if they all have the same signature, remove all but one from the list of methods to generate.
+			foreach (var gr in duplicateMethodsGroupedBySelector) {
+				var distinctMethodsBySignature = gr.GroupBy ((v) => v.Signature).Select ((v) => v.First ()).ToArray ();
+				if (distinctMethodsBySignature.Length > 1) {
+					var areAllNonAbstract = gr.All (v => !v.Method.IsAbstract);
+					// If none of the method are abstract, we can just skip them all
+					if (areAllNonAbstract) {
+						var warning = ErrorHelper.CreateWarning (1120
+							/* The type '{0}' is trying to inline the methods binding the selector '{1}' from the protocols '{2}' and '{3}', using methods with different signatures ('{4}' vs '{5}'). These methods will be ignored. */,
+							type.FullName, gr.Key, distinctMethodsBySignature [0].Method.DeclaringType?.FullName, distinctMethodsBySignature [1].Method.DeclaringType?.FullName,
+							distinctMethodsBySignature [0].Method.ToString (), distinctMethodsBySignature [1].Method.ToString ());
+						exceptions.Add (warning);
+						continue;
+					}
+					exceptions.Add (ErrorHelper.CreateError (1069, type.FullName, gr.Key, distinctMethodsBySignature [0].Method.DeclaringType?.FullName, distinctMethodsBySignature [1].Method.DeclaringType?.FullName,
+						distinctMethodsBySignature [0].Method.ToString (), distinctMethodsBySignature [1].Method.ToString ()));
+					continue;
+				}
+
+				// Remove all but the first method from the list required instance methods
+				var exclude = gr.Skip (1).Select ((v) => v.Method).ToArray ();
+				requiredInstanceMethods.RemoveAll ((v) => exclude.Contains (v));
+			}
+
+		}
+		// Go generate code for the methods
+		foreach (var mi in requiredInstanceMethods) {
+			GenerateMethod (type, mi, false, null, false, true, isBaseWrapperProtocolMethod: true);
+		}
+
+		// Properties
+		// First find duplicates and select the best one. Here we use the property name to find duplicates.
+		var propertyDuplicates = requiredInstanceProperties.GroupBy ((v) => v.Name).Where ((v) => v.Count () > 1).ToArray ();
+		if (propertyDuplicates.Any ()) {
+			foreach (var gr in propertyDuplicates) {
+				// Check that all the selectors in the group are identical
+				var properties = gr.ToArray ();
+				var exportAttributes = new ExportAttribute [properties.Length];
+				PropertyInfo? readwrite = null;
+				PropertyInfo? @readonly = null;
+				PropertyInfo? @writeonly = null;
+				for (var i = 0; i < properties.Length; i++) {
+					// Check that all the duplicates use the same selector, and if not show a warning.
+					exportAttributes [i] = GetOneExportAttribute (properties [i]);
+					if (i > 0 && exportAttributes [i].Selector != exportAttributes [0].Selector) {
+						ErrorHelper.Warning (BindingTouch, 1068, type.FullName, gr.Key, properties [0].DeclaringType?.FullName, properties [i].DeclaringType?.FullName,
+							properties [0].DeclaringType?.Name, properties [0].Name, exportAttributes [0].Selector, properties [i].DeclaringType?.Name, properties [i].Name, exportAttributes [i].Selector);
+					}
+					if (properties [i].CanRead && properties [i].CanWrite) {
+						readwrite = properties [i];
+					} else if (!properties [i].CanRead) {
+						writeonly = properties [i];
+					} else if (!properties [i].CanWrite) {
+						@readonly = properties [i];
+					}
+				}
+
+				// Check that all the duplicates have the same property type
+				var propertyTypes = properties.GroupBy ((v) => v.PropertyType.FullName).Select ((v) => v.First ()).ToArray ();
+				if (propertyTypes.Length > 1) {
+					exceptions.Add (ErrorHelper.CreateError (1070, type.FullName, gr.Key, propertyTypes [0].DeclaringType?.FullName, propertyTypes [1].DeclaringType?.FullName,
+						FormatPropertyInfo (propertyTypes [0]), TypeManager.FormatType (type, propertyTypes [0].PropertyType), FormatPropertyInfo (propertyTypes [1]), TypeManager.FormatType (type, propertyTypes [0].PropertyType)));
+				}
+
+				// Select the best match of the properties: prefer a read/write property if it exists, otherwise a readonly or writeonly property.
+				PropertyInfo bestMatch;
+				if (readwrite is not null) {
+					bestMatch = readwrite;
+				} else if (@readonly is not null && writeonly is not null) {
+					exceptions.Add (ErrorHelper.CreateError (1067, type.FullName, gr.Key, @readonly.DeclaringType?.FullName, writeonly.DeclaringType?.FullName,
+						FormatPropertyInfo (@readonly), FormatPropertyInfo (writeonly)));
+					continue;
+				} else if (@readonly is not null) {
+					bestMatch = @readonly;
+				} else if (writeonly is not null) {
+					bestMatch = writeonly;
+				} else {
+					exceptions.Add (ErrorHelper.CreateError (89, properties [0]));
+					continue;
+				}
+				// Finally remove the properties we don't want to generate.
+				var exclude = properties.Where ((v) => v != bestMatch);
+				requiredInstanceProperties.RemoveAll ((v) => exclude.Contains (v));
+			}
+		}
+		foreach (var pi in requiredInstanceProperties) {
+			GenerateProperty (type, pi, null, false, true);
+		}
+		indent--;
+		print ("}");
+
+		if (type.Namespace is not null) {
+			indent--;
+			print ("}");
+		}
+	}
+
+	void GetAccessorInfo (PropertyInfo pi, out MethodInfo? getter, out MethodInfo? setter, out bool generate_getter, out bool generate_setter)
+	{
+		getter = null;
+		setter = null;
+		generate_getter = false;
+		generate_setter = false;
+		if (pi.CanRead) {
+			getter = pi.GetGetMethod ();
+			generate_getter = !getter.IsUnavailable (this);
+		}
+		if (pi.CanWrite) {
+			setter = pi.GetSetMethod ();
+			generate_setter = !setter.IsUnavailable (this);
+		}
+	}
+
+	class MethodData {
+		public required MethodInfo Method;
+		public required ExportAttribute ExportAttribute;
+		public string? Signature;
+	}
+
+	bool ConformToNSCoding (Type type)
+	{
+		foreach (var intf in type.GetInterfaces ()) {
+			if (intf.Name == "NSCoding" || intf.Name == "INSCoding")
+				return true;
+		}
+		// [BaseType (x)] might implement NSCoding... and this means we need the .ctor(NSCoder)
+		var attrs = AttributeManager.GetCustomAttributes<BaseTypeAttribute> (type);
+		if (attrs is null || attrs.Length == 0)
+			return false;
+		return ConformToNSCoding (attrs [0].BaseType);
+	}
+
+	StreamWriter GetOutputStream (string? @namespace, string name)
+	{
+		var dir = basedir;
+
+		if (!string.IsNullOrEmpty (@namespace))
+			dir = Path.Combine (dir, @namespace);
+
+		var filename = Path.Combine (dir, name + ".g.cs");
+		var counter = 2;
+		while (generated_files.Contains (filename)) {
+			filename = Path.Combine (dir, name + counter.ToString () + ".g.cs");
+			counter++;
+		}
+		generated_files.Add (filename);
+		if (!Directory.Exists (dir))
+			Directory.CreateDirectory (dir);
+
+		return new StreamWriter (filename);
+	}
+
+
+	StreamWriter GetOutputStreamForType (Type type)
+	{
+		if (type.Namespace is null)
+			ErrorHelper.Warning (BindingTouch, 1103, type.FullName);
+
+		var tn = Nomenclator.GetGeneratedTypeName (type);
+		if (type.IsGenericType)
+			tn = tn + "_" + type.GetGenericArguments ().Length.ToString ();
+		return GetOutputStream (type.Namespace, tn);
+	}
+
+	void WriteMarkDirtyIfDerived (StreamWriter? sw, Type type)
+	{
+		if (type.Name == "CALayer" && "CoreAnimation" == type.Namespace) {
+			sw!.WriteLine ("\t\t\tMarkDirtyIfDerived ();");
+		}
+	}
+
+	public void PrintXpcInterfaceAttribute (ICustomAttributeProvider mi)
+	{
+		if (!AttributeManager.HasAttribute<XpcInterfaceAttribute> (mi))
+			return;
+
+		print ("[XpcInterface]");
+	}
+
+	// Function to check if PreserveAttribute is present and
+	// generate/print the same attribute as in bindings
+	public void PrintPreserveAttribute (ICustomAttributeProvider? mi)
+	{
+		var p = AttributeManager.GetCustomAttribute<PreserveAttribute> (mi);
+		if (p is null)
+			return;
+
+		if (!BindThirdPartyLibrary)
+			exceptions.Add (ErrorHelper.CreateError (1124 /* Found a [Preserve] attribute on {0}: [Preserve] is deprecated; use [DynamicDependency] instead. */, FormatProvider (mi)));
+
+		if (p.AllMembers)
+			print ("[Preserve (AllMembers = true)]");
+		else if (p.Conditional)
+			print ("[Preserve (Conditional = true)]");
+		else
+			print ("[Preserve]");
+	}
+
+	// Function to check if PrintAdviceAttribute is present and
+	// generate/print the same attribute as in bindings
+	public void PrintAdviceAttribute (ICustomAttributeProvider? mi)
+	{
+		var p = AttributeManager.GetCustomAttribute<AdviceAttribute> (mi);
+		if (p is null)
+			return;
+
+		print ($"[Advice ({p.Message.Quote ()})]");
+	}
+
+	public void PrintRequiresSuperAttribute (ICustomAttributeProvider? mi)
+	{
+		var p = AttributeManager.GetCustomAttribute<RequiresSuperAttribute> (mi);
+		if (p is null)
+			return;
+
+		print ("[RequiresSuper]");
+	}
+
+	public void PrintNotImplementedAttribute (ICustomAttributeProvider? mi)
+	{
+		var p = AttributeManager.GetCustomAttribute<NotImplementedAttribute> (mi);
+		if (p is null)
+			return;
+
+		print ($"[NotImplemented ({p.Message.Quote ()})]");
+	}
+
+	public void PrintBindAsAttribute (ICustomAttributeProvider? mi, StringBuilder? sb = null)
+	{
+		var p = GetBindAsAttribute (mi);
+		if (p is null)
+			return;
+
+		var property = mi as PropertyInfo;
+		var method = mi as MethodInfo;
+		var param = mi as ParameterInfo;
+		var originalType = p.OriginalType ?? method?.ReturnType ?? property?.PropertyType;
+		originalType = originalType ?? param?.ParameterType;
+
+		var declaringType = (mi as MemberInfo)?.DeclaringType ?? param?.Member.DeclaringType;
+		var pReturn = method is not null ? "return: " : string.Empty;
+
+		var attribstr = $"[{pReturn}BindAs (typeof ({TypeManager.FormatType (declaringType, p.Type)}), OriginalType = typeof ({TypeManager.FormatType (declaringType, originalType)}))]";
+
+		if (sb is not null)
+			sb.Append ($"{attribstr} ");
+		else
+			print (attribstr);
+	}
+
+	// Not adding the experimental attribute is bad (it would mean that an API
+	// we meant to be experimental ended up being released as stable), so it's
+	// opt-out instead of opt-in.
+	public void PrintAttributes (ICustomAttributeProvider? mi, bool platform = false, bool preserve = false, bool advice = false, bool notImplemented = false, bool bindAs = false, bool requiresSuper = false, Type? inlinedType = null, bool experimental = true, bool obsolete = false, bool objectiveCFramework = false, bool simulatorAvailability = true, bool dynamicDependency = false)
+	{
+		if (platform)
+			PrintPlatformAttributes (mi as MemberInfo, inlinedType);
+		if (preserve)
+			PrintPreserveAttribute (mi);
+		if (advice)
+			PrintAdviceAttribute (mi);
+		if (notImplemented)
+			PrintNotImplementedAttribute (mi);
+		if (bindAs)
+			PrintBindAsAttribute (mi);
+		if (requiresSuper)
+			PrintRequiresSuperAttribute (mi);
+		if (experimental)
+			PrintExperimentalAttribute (mi);
+		if (obsolete)
+			PrintObsoleteAttributes (mi);
+		if (objectiveCFramework)
+			PrintObjectiveCFrameworkAttribute (mi);
+		if (simulatorAvailability)
+			PrintSimulatorAvailabilityAttributes (mi);
+		if (dynamicDependency)
+			PrintDynamicDependencyAttributes (mi);
+	}
+
+	public void PrintDynamicDependencyAttributes (ICustomAttributeProvider? mi)
+	{
+		if (mi is not MemberInfo memberInfo)
+			return;
+
+		var allAttribs = memberInfo.GetCustomAttributesData ();
+		foreach (var attrib in allAttribs) {
+			if (attrib.GetAttributeType ().FullName != "System.Diagnostics.CodeAnalysis.DynamicDependencyAttribute")
+				continue;
+			var args = attrib.ConstructorArguments;
+			var parts = new List<string> ();
+			foreach (var arg in args) {
+				if (arg.Value is string stringValue) {
+					parts.Add ($"\"{stringValue}\"");
+				} else if (arg.Value is int intValue) {
+					parts.Add (FormatDynamicallyAccessedMemberTypes (intValue));
+				} else if (arg.Value is Type typeValue) {
+					parts.Add ($"typeof ({typeValue})");
+				} else {
+					exceptions.Add (ErrorHelper.CreateError (99, $"Unexpected attribute argument value for DynamicDependency attribute: {arg.ArgumentType.FullName} => {arg.Value}"));
+				}
+			}
+			print ($"[DynamicDependency ({string.Join (", ", parts)})]");
+		}
+	}
+
+	static string FormatDynamicallyAccessedMemberTypes (int memberTypes)
+	{
+		if (memberTypes == -1) // All
+			return "DynamicallyAccessedMemberTypes.All";
+		if (memberTypes == 0) // None
+			return "DynamicallyAccessedMemberTypes.None";
+
+		// Use the composite values first to match the original source
+		var flagValues = new (int value, string name) [] {
+			(3, "PublicConstructors"), // 3 includes PublicParameterlessConstructor
+			(1, "PublicParameterlessConstructor"),
+			(4, "NonPublicConstructors"),
+			(8, "PublicMethods"),
+			(16, "NonPublicMethods"),
+			(32, "PublicFields"),
+			(64, "NonPublicFields"),
+			(128, "PublicNestedTypes"),
+			(256, "NonPublicNestedTypes"),
+			(512, "PublicProperties"),
+			(1024, "NonPublicProperties"),
+			(2048, "PublicEvents"),
+			(4096, "NonPublicEvents"),
+			(8192, "Interfaces"),
+		};
+
+		var parts = new List<string> ();
+		var remaining = memberTypes;
+		foreach (var (value, name) in flagValues) {
+			if (value != 0 && (remaining & value) == value) {
+				parts.Add ($"DynamicallyAccessedMemberTypes.{name}");
+				remaining &= ~value;
+			}
+		}
+		return string.Join (" | ", parts);
+	}
+
+	public void PrintExperimentalAttribute (ICustomAttributeProvider? mi)
+	{
+		var e = GetExperimentalAttribute (mi);
+		if (e is null)
+			return;
+		print ($"[Experimental (\"{e.DiagnosticId}\")]");
+	}
+
+	public void PrintObjectiveCFrameworkAttribute (ICustomAttributeProvider? mi)
+	{
+		var attrib = AttributeManager.GetCustomAttribute<ObjectiveCFrameworkAttribute> (mi);
+		if (attrib is null)
+			return;
+		print ($"[ObjectiveCFramework (\"{attrib.Framework}\")]");
+	}
+
+	public void PrintSimulatorAvailabilityAttributes (ICustomAttributeProvider? provider)
+	{
+		if (!TryGetSimulatorAvailabilityPlatformName (out var platformName))
+			return;
+
+		PrintSupportedSimulatorAttribute (provider, platformName);
+		PrintUnsupportedSimulatorAttribute (provider, platformName);
+	}
+
+	bool TryGetSimulatorAvailabilityPlatformName ([NotNullWhen (true)] out string? platformName)
+	{
+		platformName = null;
+
+		switch (CurrentPlatform) {
+		case PlatformName.MacCatalyst:
+		case PlatformName.MacOSX:
+			return false;
+		case PlatformName.iOS:
+			platformName = "ios";
+			return true;
+		case PlatformName.TvOS:
+			platformName = "tvos";
+			return true;
+		default:
+			throw new BindingException (1047, CurrentPlatform);
+		}
+	}
+
+	void PrintSupportedSimulatorAttribute (ICustomAttributeProvider? provider, string platformName)
+	{
+		var attribs = AttributeManager.GetCustomAttributes<SupportedSimulatorAttribute> (provider);
+		if (attribs?.Any () != true)
+			return;
+
+		// Only print the attribute for the current platform, we don't care about other platforms.
+		foreach (var attrib in attribs) {
+			if (!attrib.PlatformName.StartsWith (platformName, StringComparison.OrdinalIgnoreCase))
+				continue;
+			print ($"[SupportedSimulator (\"{attrib.PlatformName}\")]");
+		}
+	}
+
+	void PrintUnsupportedSimulatorAttribute (ICustomAttributeProvider? provider, string platformName)
+	{
+		var attribs = AttributeManager.GetCustomAttributes<UnsupportedSimulatorAttribute> (provider);
+		if (attribs?.Any () != true)
+			return;
+
+		// Only print the attribute for the current platform, we don't care about other platforms.
+		foreach (var attrib in attribs) {
+			if (!attrib.PlatformName.StartsWith (platformName, StringComparison.OrdinalIgnoreCase))
+				continue;
+			print ($"[UnsupportedSimulator (\"{attrib.PlatformName}\")]");
+		}
+	}
+
+	bool WriteDocumentation (MemberInfo info, Func<XmlNode, XmlNode>? transformNode = null)
+	{
+		return DocumentationManager.WriteDocumentation (sw!, indent, info, transformNode);
+	}
+
+	XmlNode CompleteMethodDocumentation (XmlNode node, MemberInformation minfo, ParameterInfo [] parameters, string? resultParameter = null)
+	{
+		if (node.SelectSingleNode ("param") is null && !(minfo.is_category_extension && minfo.Method!.GetParameters ().Length == 0))
+			return node;
+
+		// Documentation nodes are cached and reused for signatures with different parameters.
+		node = node.CloneNode (true);
+		var paramDocs = node.ChildNodes.Cast<XmlNode> ().Where (v => v.Name == "param").ToList ();
+
+		void AddParameter (string? name, string description, bool prepend = false)
+		{
+			if (paramDocs.Any (v => v.Attributes? ["name"]?.Value == name))
+				return;
+			var paramDoc = node.OwnerDocument!.CreateElement ("param");
+			paramDoc.SetAttribute ("name", name);
+			paramDoc.InnerText = description;
+			if (prepend)
+				node.InsertBefore (paramDoc, paramDocs.FirstOrDefault ());
+			else if (paramDocs.Count > 0)
+				node.InsertAfter (paramDoc, paramDocs.Last ());
+			else
+				node.AppendChild (paramDoc);
+			if (prepend)
+				paramDocs.Insert (0, paramDoc);
+			else
+				paramDocs.Add (paramDoc);
+		}
+
+		if (minfo.is_extension_method || minfo.category_extension_type is not null || (minfo.is_protocol_implementation_method && !minfo.is_static))
+			AddParameter ("This", "The instance on which this method operates.", prepend: true);
+		foreach (var parameter in parameters)
+			AddParameter (parameter.Name, $"The {parameter.Name} parameter.");
+		if (resultParameter is not null)
+			AddParameter (resultParameter, "The result returned by the synchronous method.");
+
+		return node;
+	}
+
+	// Emits a generated summary for a member of a strongly-typed appearance class. These members are
+	// proxies for the corresponding members on the enclosing type, and the documentation injected from
+	// Apple's documentation doesn't cover them, so we generate a summary that points back to the type.
+	void WriteAppearanceMemberDocumentation (Type type, string memberName)
+	{
+		if (!BindingTouch.SupportsXmlDocumentation)
+			return;
+		print ($"/// <summary>Appearance proxy for the <c>{memberName}</c> member of <see cref=\"global::{type.FullName}\" />.</summary>");
+	}
+
+	public bool TryComputeLibraryName (string? attributeLibraryName, Type type, [NotNullWhen (true)] out string? library_name, out string? library_path)
+	{
+		library_path = null;
+
+		if (attributeLibraryName is not null) {
+			// Remapped
+			library_name = attributeLibraryName;
+			if (library_name [0] == '+') {
+				switch (library_name) {
+				case "+CoreImage":
+					library_name = CurrentPlatform.GetCoreImageMap ();
+					break;
+				case "+CoreServices":
+					library_name = CurrentPlatform.GetCoreServicesMap ();
+					break;
+				case "+PDFKit":
+					library_name = "PdfKit";
+					library_path = CurrentPlatform.GetPDFKitMap ();
+					break;
+				}
+			} else {
+				// we get something in LibraryName from FieldAttribute so we asume
+				// it is a path to a library, so we save the path and change library name
+				// to a valid identifier if needed
+				library_path = library_name;
+				if (BindThirdPartyLibrary /* without extension makes more sense, but we can't change it since it breaks compat */) {
+					library_name = Path.GetFileName (library_name);
+				} else {
+					library_name = Path.GetFileNameWithoutExtension (library_name);
+				}
+				if (library_name.Contains ('.'))
+					library_name = library_name.Replace (".", string.Empty);
+			}
+		} else if (BindThirdPartyLibrary) {
+			// User should provide a LibraryName
+			library_name = null;
+			return false;
+		} else {
+			library_name = type.Namespace!;
+		}
+
+		if (!libraries.ContainsKey (library_name!))
+			libraries.Add (library_name!, library_path);
+
+		return true;
+	}
+
+	public string? GetSelector (MemberInfo mi)
+	{
+		object [] attr = AttributeManager.GetCustomAttributes<ExportAttribute> (mi);
+		if (attr.Length != 1) {
+			attr = AttributeManager.GetCustomAttributes<BindAttribute> (mi);
+			if (attr.Length != 1) {
+				return null;
+			} else {
+				var ba = (BindAttribute) attr [0];
+				return ba.Selector;
+			}
+		} else {
+			var ea = (ExportAttribute) attr [0];
+			return ea.Selector;
+		}
+	}
+
+	string GetAssemblyName ()
+	{
+		if (BindThirdPartyLibrary)
+			return Path.GetFileNameWithoutExtension (BindingTouch.outfile)!;
+
+		switch (BindingTouch.TargetFramework.Platform) {
+		case ApplePlatform.iOS:
+			return "Microsoft.iOS";
+		case ApplePlatform.MacOSX:
+			return "Microsoft.macOS";
+		case ApplePlatform.TVOS:
+			return "Microsoft.tvOS";
+		case ApplePlatform.MacCatalyst:
+			return "Microsoft.MacCatalyst";
+		default:
+			throw ErrorHelper.CreateError (1053, /* Internal error: unknown target framework '{0}'. */ BindingTouch.TargetFramework);
+		}
+	}
+
+	public void Generate (Type type)
+	{
+
+		// check if the type has been marked as a type that will be generated by the new code generator, if that
+		// is the case, bgen will ignore it allowing the rgen code generator add the type to the final assembly
+		bool is_rgen_type = AttributeManager.HasAttribute<BindingTypeAttribute<SmartEnum>> (type);
+		if (is_rgen_type)
+			return;
+
+		var tsa = AttributeManager.GetCustomAttribute<ThreadSafeAttribute> (type);
+		// if we're inside a special namespace then default is non-thread safe, otherwise default is thread safe
+		if (NamespaceCache.UINamespaces.Contains (type.Namespace!)) {
+			// Any type inside these namespaces requires, by default, a thread check
+			// unless it has a [ThreadSafe] or [ThreadSafe (true)] attribute
+			type_needs_thread_checks = tsa is null || !tsa.Safe;
+		} else {
+			// Any type outside these namespaces do NOT require a thread check
+			// unless it has a [ThreadSafe (false)] attribute
+			type_needs_thread_checks = tsa is not null && !tsa.Safe;
+		}
+
+		string TypeName = Nomenclator.GetGeneratedTypeName (type);
+		indent = 0;
+		var instance_fields_to_clear_on_dispose = new List<string> ();
+		var gtype = GeneratedTypes.Lookup (type);
+		var appearance_selectors = gtype.ImplementsAppearance ? gtype.AppearanceSelectors : null;
+
+		using (var sw = GetOutputStreamForType (type)) {
+			this.sw = sw;
+			bool is_category_class = AttributeManager.HasAttribute<CategoryAttribute> (type);
+			bool is_static_class = AttributeManager.HasAttribute<StaticAttribute> (type) || is_category_class;
+			bool is_partial = AttributeManager.HasAttribute<PartialAttribute> (type);
+			var model = AttributeManager.GetCustomAttribute<ModelAttribute> (type);
+			bool is_model = model is not null;
+			var protocol = AttributeManager.GetCustomAttribute<ProtocolAttribute> (type);
+			bool is_protocol = protocol is not null;
+			bool is_abstract = AttributeManager.HasAttribute<AbstractAttribute> (type);
+			bool is_sealed = AttributeManager.HasAttribute<SealedAttribute> (type);
+			string class_visibility = type.IsInternal (this) ? "internal" : "public";
+
+			var default_ctor_visibility = AttributeManager.GetCustomAttribute<DefaultCtorVisibilityAttribute> (type);
+			var bta = ReflectionExtensions.GetBaseTypeAttribute (type, this);
+			Type base_type = bta is not null ? bta.BaseType : TypeCache.System_Object;
+			string objc_type_name = bta is not null ? (bta.Name is not null ? bta.Name : TypeName) : TypeName;
+			string register_name = objc_type_name;
+
+			if (is_model) {
+				if (!string.IsNullOrEmpty (model!.Name)) {
+					register_name = model.Name;
+				} else {
+					// For .NET, we'll always generate the Objective-C name. If a user wants to use a different name,
+					// they can set the model name (so we'll enter the previous condition)
+					register_name = Registrar.Registrar.SanitizeObjectiveCName (GetAssemblyName () + "__" + type.FullName);
+				}
+			}
+			Header (sw);
+
+			if (is_protocol) {
+				if (is_static_class)
+					throw new BindingException (1025, true, type.FullName);
+				if (is_model && base_type == TypeCache.System_Object)
+					ErrorHelper.Warning (BindingTouch, 1060, type.FullName);
+
+				GenerateProtocolTypes (type, class_visibility, TypeName, protocol!.Name ?? objc_type_name, protocol);
+			}
+
+			if (!is_static_class && bta is null && is_protocol)
+				return;
+
+			if (type.Namespace is not null) {
+				print ("namespace {0} {{", type.Namespace);
+				indent++;
+			}
+
+			if (!WriteDocumentation (type)) {
+				if (is_model && !AttributeManager.HasAttribute<SyntheticAttribute> (type)) {
+					print ($"/// <summary>");
+					print ($"///   <para>This is a class that implements the interface <see cref=\"I{TypeName}\" /> (for the protocol <c>{(protocol?.Name ?? objc_type_name)}</c>).</para>");
+					print ($"///   <para>Subclass this class to easily create a type that implements the protocol.</para>");
+					print ($"///   <para>An alternative is to create a subclass of <see cref=\"NSObject\" /> and then implemented the interface <see cref=\"I{TypeName}\" />.</para>");
+					print ($"/// </summary>");
+				}
+			}
+
+			bool core_image_filter = false;
+			string? class_mod = null;
+
+			is_direct_binding_value = null;
+			is_direct_binding = null;
+			if (BindThirdPartyLibrary)
+				is_direct_binding_value = string.Format ("GetType ().Assembly == global::{0}.this_assembly", NamespaceCache.Messaging);
+			if (is_static_class || is_category_class || is_partial) {
+				base_type = TypeCache.System_Object;
+				if (!is_partial)
+					class_mod = "static ";
+			} else {
+				if (is_protocol) {
+					var pName = !string.IsNullOrEmpty (protocol!.Name) ? $"Name = \"{protocol.Name}\"" : string.Empty;
+					print ("[Protocol({0}{1}{2})]", pName, (!string.IsNullOrEmpty (pName) && protocol.IsInformal) ? ", " : string.Empty, protocol.IsInformal ? "IsInformal = true" : string.Empty);
+				}
+				core_image_filter = AttributeManager.HasAttribute<CoreImageFilterAttribute> (type);
+				if (!type.IsEnum && !core_image_filter) {
+					if (is_model || AttributeManager.HasAttribute<SyntheticAttribute> (type)) {
+						is_direct_binding = false;
+						is_direct_binding_value = "false";
+					}
+					print ($"[Register(\"{register_name}\", {(is_direct_binding == false ? "false" : "true")}{(bta!.IsStubClass ? ", IsStubClass = true" : string.Empty)})]");
+				}
+				if (is_abstract || need_abstract.ContainsKey (type)) {
+					// Don't mark [Abstract] classes as abstract in .NET, we might need to create instances of them at some point.
+					// This can happen if the OS gives an instance of a subclass, but that subclass is private (so we haven't bound it).
+					// In this case, the best managed type is this type, but it can't be abstract if we want to create an instance of it.
+					// Except that we declare models as abstract, because they're meant to be subclassed (and they're not wrapping a native type anyway).
+					if (is_model)
+						class_mod = "abstract ";
+				} else if (is_sealed)
+					class_mod = "sealed ";
+			}
+
+			if (is_sealed && is_direct_binding is null) {
+				is_direct_binding = true;
+				is_direct_binding_value = "true";
+			}
+
+			if (is_model) {
+				if (is_category_class)
+					ErrorHelper.Show (BindingTouch, new BindingException (1022, true));
+				print ("[Model]");
+			}
+
+			PrintAttributes (type, platform: true, preserve: true, advice: true, obsolete: true, objectiveCFramework: true);
+
+			if (type.IsEnum) {
+				GenerateEnum (type);
+				return;
+			}
+
+			if (core_image_filter) {
+				GenerateFilter (type);
+				return;
+			}
+
+			// Order of this list is such that the base type will be first,
+			// followed by the protocol interface, followed by any other
+			// interfaces in ascending order
+			var implements_list = new List<string> ();
+
+			foreach (var protocolType in type.GetInterfaces ()) {
+				if (!AttributeManager.HasAttribute<ProtocolAttribute> (protocolType)) {
+					if (protocolType.Name [0] != 'I')
+						continue;
+
+					string nonInterfaceName = protocolType.Name.Substring (1);
+					if (!api.Types.Any (x => x.Name.Contains (nonInterfaceName)))
+						continue;
+
+					if (is_category_class)
+						continue;
+					// 1. MKUserLocation implements the MKAnnotation protocol
+					// 2. The MKAnnotation protocol has a required 'coordinate' getter, and an optional 'coordinate' setter.
+					//    We've bound the former using an [Abstract] readonly Coordinate property, and the latter using a SetCoordinate method.
+					// 3. MKUserLocation has a readwrite 'coordinate' property, which we've bound as a readwrite Coordinate property.
+					// 4. If we make MKUserLocation implement the MKAnnotation protocol in the api bindings, then we'll
+					//    inline all the MKAnnotation protocol members in MKUserLocation. This includes the SetCoordinate method,
+					//    which causes problems, because it implements the 'setCoordinate:' selector, which the Coordinate property
+					//    does as well, resulting in:
+					//        error MM4119: Could not register the selector 'setCoordinate:' of the member 'MapKit.MKUserLocation.set_Coordinate' because the selector is already registered on the member 'SetCoordinate'.
+					//
+					// So we can't make the MKUserLocation implement the MKAnnotation protocol in the api definition (for now at least).
+					if (type.Name == "MKUserLocation" && protocolType.Name == "IMKAnnotation")
+						continue;
+
+					ErrorHelper.Warning (BindingTouch, 1111, protocolType, type, nonInterfaceName);
+					continue;
+				}
+
+				// skip protocols that aren't available on the current platform
+				if (protocolType.IsUnavailable (this))
+					continue;
+
+				// A protocol this class implements. We need to implement the corresponding interface for the protocol.
+				string pname = protocolType.Name;
+				// the extra 'I' is only required for the bindings being built, if it comes from something already
+				// built (e.g. monotouch.dll) then the interface will alreadybe prefixed
+				if (IsApiAssembly (protocolType.Assembly))
+					pname = "I" + pname;
+				var iface = TypeManager.FormatType (type, protocolType.Namespace, pname);
+				if (!implements_list.Contains (iface))
+					implements_list.Add (iface);
+			}
+
+			implements_list.Sort (StringComparer.Ordinal);
+
+			if (is_protocol)
+				implements_list.Insert (0, "I" + type.Name);
+
+			if (base_type != TypeCache.System_Object && TypeName != "NSObject" && !is_category_class)
+				implements_list.Insert (0, TypeManager.FormatType (type, base_type));
+
+			if (type.IsNested) {
+				var nestedName = type.FullName?.Substring (type.Namespace?.Length + 1 ?? 0);
+				var container = nestedName?.Substring (0, nestedName.IndexOf ('+'));
+
+				print ("partial class {0} {{", container);
+				indent++;
+			}
+
+			var class_name = TypeName;
+			var where_list = string.Empty;
+			if (type.IsGenericType) {
+				class_name += "<";
+				var gargs = type.GetGenericArguments ();
+				for (int i = 0; i < gargs.Length; i++) {
+					if (i > 0)
+						class_name += ", ";
+					class_name += TypeManager.FormatType (type, gargs [i]);
+
+					where_list += "\n\t\twhere " + gargs [i].Name + " : ";
+
+					var constraintList = new List<string> ();
+
+					var genericAttributes = gargs [i].GenericParameterAttributes;
+					if (genericAttributes.HasFlag (GenericParameterAttributes.ReferenceTypeConstraint)) {
+						constraintList.Add ("class");
+						genericAttributes &= ~GenericParameterAttributes.ReferenceTypeConstraint;
+					}
+					if (genericAttributes.HasFlag (GenericParameterAttributes.DefaultConstructorConstraint)) {
+						constraintList.Add ("new()");
+						genericAttributes &= ~GenericParameterAttributes.DefaultConstructorConstraint;
+					}
+					if (genericAttributes != GenericParameterAttributes.None) {
+						exceptions.Add (ErrorHelper.CreateError (99, $"Unexpected generic constraint attributes: {genericAttributes}"));
+					}
+
+					var constraints = gargs [i].GetGenericParameterConstraints ();
+					if (constraints.Length > 0) {
+						if (IsProtocol (constraints [0]))
+							constraintList.Add ("NSObject");
+
+						for (int c = 0; c < constraints.Length; c++)
+							constraintList.Add (TypeManager.FormatType (type, constraints [c]));
+					} else {
+						constraintList.Add ("NSObject");
+					}
+
+					where_list += string.Join (", ", constraintList);
+				}
+				class_name += ">";
+				if (where_list.Length > 0)
+					where_list += " ";
+			}
+
+			print ("{0} unsafe {1}partial class {2} {3} {4}{{",
+				   class_visibility,
+				   class_mod,
+				   class_name,
+				   implements_list.Count == 0 ? string.Empty : ": " + string.Join (", ", implements_list),
+				   where_list);
+
+			indent++;
+
+			if (!is_model && !is_partial) {
+				foreach (var ea in selectors [type].OrderBy (s => s, StringComparer.Ordinal)) {
+					var selectorField = SelectorField (ea, true);
+					if (!InlineSelectors) {
+						selectorField = selectorField.Substring (0, selectorField.Length - 6 /* Handle */);
+						print_generated_code ();
+						print ("const string {0} = \"{1}\";", selectorField, ea);
+						print ("static readonly {2} {0} = Selector.GetHandle (\"{1}\");", SelectorField (ea), ea, NativeHandleType);
+					}
+				}
+			}
+			print ("");
+
+			// Regular bindings (those that are not-static) or categories need this
+			if (!(is_static_class || is_partial) || is_category_class) {
+				if (is_category_class)
+					objc_type_name = FormatCategoryClassName (bta!);
+
+				if (!is_model) {
+					print_generated_code ();
+					print ("static readonly {1} class_ptr = Class.GetHandle (\"{0}\");", objc_type_name, NativeHandleType);
+					print ("");
+				}
+			}
+
+			if (!is_static_class && !is_partial) {
+				if (!is_model && !external) {
+					if (BindingTouch.SupportsXmlDocumentation) {
+						print ("/// <summary>The Objective-C class handle for this class.</summary>");
+						print ("/// <value>The pointer to the Objective-C class.</value>");
+						print ("/// <remarks>");
+						print ("///     Each managed class mirrors an unmanaged Objective-C class.");
+						print ("///     This value contains the pointer to the Objective-C class.");
+						print ("///     It is similar to calling the managed <see cref=\"ObjCRuntime.Class.GetHandle(string)\" /> or the native <see href=\"https://developer.apple.com/documentation/objectivec/1418952-objc_getclass\">objc_getClass</see> method with the type name.");
+						print ("/// </remarks>");
+					}
+					print ("public {1} {2} ClassHandle {{ get {{ return class_ptr; }} }}\n", objc_type_name, TypeName == "NSObject" ? "virtual" : "override", NativeHandleType);
+				}
+
+				var ctor_visibility = is_abstract ? "protected" : "public";
+				var disable_default_ctor = false;
+				if (default_ctor_visibility is not null) {
+					switch (default_ctor_visibility.Visibility) {
+					case Visibility.Public:
+						ctor_visibility = "public";
+						break;
+					case Visibility.Internal:
+						ctor_visibility = "internal";
+						break;
+					case Visibility.Protected:
+						ctor_visibility = "protected";
+						break;
+					case Visibility.ProtectedInternal:
+						ctor_visibility = "protected internal";
+						break;
+					case Visibility.Private:
+						ctor_visibility = string.Empty;
+						break;
+					case Visibility.Disabled:
+						disable_default_ctor = true;
+						break;
+					}
+				}
+
+				if (TypeName != "NSObject") {
+					var initSelector = (InlineSelectors || BindThirdPartyLibrary) ? "Selector.GetHandle (\"init\")" : "Selector.Init";
+					var initWithCoderSelector = (InlineSelectors || BindThirdPartyLibrary) ? "Selector.GetHandle (\"initWithCoder:\")" : "Selector.InitWithCoder";
+					string v = (class_mod == "abstract " && default_ctor_visibility is null) ? "protected" : ctor_visibility;
+					if (external) {
+						if (!disable_default_ctor) {
+							if (BindingTouch.SupportsXmlDocumentation) {
+								sw.WriteLine ($"\t\t/// <summary>Creates a new <see cref=\"{class_name.Replace ('<', '{').Replace ('>', '}')}\" /> with default values.</summary>");
+							}
+							GeneratedCode (sw, 2);
+							if (AttributeManager.HasAttribute<DesignatedDefaultCtorAttribute> (type))
+								sw.WriteLine ("\n\n[DesignatedInitializer]");
+							sw.WriteLine ("\t\t[EditorBrowsable (EditorBrowsableState.Advanced)]");
+							sw.WriteLine ("\t\t[Export (\"init\")]");
+							sw.WriteLine ("\t\t{0} {1} () : base (NSObjectFlag.Empty)", v, TypeName);
+							sw.WriteLine ("\t\t{");
+							if (is_direct_binding_value is not null)
+								sw.WriteLine ("\t\t\tIsDirectBinding = {0};", is_direct_binding_value);
+							if (debug)
+								sw.WriteLine ("\t\t\tConsole.WriteLine (\"{0}.ctor ()\");", TypeName);
+							sw.WriteLine ("\t\t\tInitializeHandle (global::{1}.IntPtr_objc_msgSend (this.Handle, global::ObjCRuntime.{0}), \"init\");", initSelector, NamespaceCache.Messaging);
+							sw.WriteLine ("\t\t\t");
+							sw.WriteLine ("\t\t}");
+						}
+					} else {
+						if (!disable_default_ctor) {
+							if (BindingTouch.SupportsXmlDocumentation) {
+								sw.WriteLine ($"\t\t/// <summary>Creates a new <see cref=\"{class_name.Replace ('<', '{').Replace ('>', '}')}\" /> with default values.</summary>");
+							}
+							GeneratedCode (sw, 2);
+							if (AttributeManager.HasAttribute<DesignatedDefaultCtorAttribute> (type))
+								sw.WriteLine ("\t\t[DesignatedInitializer]");
+							sw.WriteLine ("\t\t[EditorBrowsable (EditorBrowsableState.Advanced)]");
+							sw.WriteLine ("\t\t[Export (\"init\")]");
+							sw.WriteLine ("\t\t{0} {1} () : base (NSObjectFlag.Empty)", v, TypeName);
+							sw.WriteLine ("\t\t{");
+							if (type_needs_thread_checks) {
+								sw.Write ("\t\t\t");
+								GenerateThreadCheck (sw);
+							}
+							var indentation = 3;
+							WriteIsDirectBindingCondition (sw, ref indentation, is_direct_binding, is_direct_binding_value,
+														   () => string.Format ("InitializeHandle (global::{1}.IntPtr_objc_msgSend (this.Handle, global::ObjCRuntime.{0}), \"init\");", initSelector, NamespaceCache.Messaging),
+														   () => string.Format ("unsafe {{\nvar __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);\nInitializeHandle (global::{1}.IntPtr_objc_msgSendSuper (&__objc_super__, global::ObjCRuntime.{0}), \"init\");\nGC.KeepAlive (this);\n}}", initSelector, NamespaceCache.Messaging));
+
+							WriteMarkDirtyIfDerived (sw, type);
+							sw.WriteLine ("\t\t}");
+							sw.WriteLine ();
+						}
+						var nscoding = ConformToNSCoding (type);
+						if (nscoding) {
+							if (BindingTouch.SupportsXmlDocumentation) {
+								sw.WriteLine ($"\t\t/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>");
+								sw.WriteLine ($"\t\t/// <param name=\"coder\">The unarchiver object.</param>");
+								sw.WriteLine ($"\t\t/// <remarks>");
+								sw.WriteLine ($"\t\t///   <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization). This is part of the <see cref=\"Foundation.NSCoding\" /> protocol.</para>");
+								sw.WriteLine ($"\t\t///   <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref=\"Foundation.NSCoder\" /> and decorate it with the <c>[Export(\"initWithCoder:\"]</c> attribute.</para>");
+								sw.WriteLine ($"\t\t///   <para>The state of this object can also be serialized by using the <see cref=\"Foundation.INSCoding.EncodeTo\" /> companion method.</para>");
+								sw.WriteLine ($"\t\t/// </remarks>");
+							}
+							GeneratedCode (sw, 2);
+							sw.WriteLine ("\t\t[DesignatedInitializer]");
+							sw.WriteLine ("\t\t[EditorBrowsable (EditorBrowsableState.Advanced)]");
+							sw.WriteLine ("\t\t[Export (\"initWithCoder:\")]");
+							sw.WriteLine ("\t\t{0} {1} (NSCoder coder) : base (NSObjectFlag.Empty)", v, TypeName);
+							sw.WriteLine ("\t\t{");
+							if (nscoding) {
+								if (debug)
+									sw.WriteLine ("\t\t\tConsole.WriteLine (\"{0}.ctor (NSCoder)\");", TypeName);
+								if (type_needs_thread_checks) {
+									sw.Write ("\t\t\t");
+									GenerateThreadCheck (sw);
+								}
+								var indentation = 3;
+								WriteIsDirectBindingCondition (sw, ref indentation, is_direct_binding, is_direct_binding_value,
+															   () => string.Format ("InitializeHandle (global::{1}.IntPtr_objc_msgSend_IntPtr (this.Handle, {0}, coder.Handle), \"initWithCoder:\");", initWithCoderSelector, NamespaceCache.Messaging),
+															   () => string.Format ("unsafe {{\nvar __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);\nInitializeHandle (global::{1}.IntPtr_objc_msgSendSuper_IntPtr (&__objc_super__, {0}, coder.Handle), \"initWithCoder:\");\nGC.KeepAlive (this);\n}}", initWithCoderSelector, NamespaceCache.Messaging));
+								WriteMarkDirtyIfDerived (sw, type);
+								sw.WriteLine ("\t\t\tGC.KeepAlive (coder);");
+							} else {
+								sw.WriteLine ("\t\t\tthrow new InvalidOperationException (\"Type does not conform to NSCoding\");");
+							}
+							sw.WriteLine ("\t\t}");
+							sw.WriteLine ();
+						}
+					}
+					if (!is_sealed) {
+						if (BindingTouch.SupportsXmlDocumentation) {
+							sw.WriteLine ("\t\t/// <summary>Constructor to call on derived classes to skip initialization and merely allocate the object.</summary>");
+							sw.WriteLine ("\t\t/// <param name=\"t\">Unused sentinel value, pass NSObjectFlag.Empty.</param>");
+							sw.WriteLine ("\t\t/// <remarks>");
+							sw.WriteLine ("\t\t///     <para>");
+							sw.WriteLine ("\t\t///         This constructor should be called by derived classes when they completely construct the object in managed code and merely want the runtime to allocate and initialize the <see cref=\"Foundation.NSObject\" />.");
+							sw.WriteLine ("\t\t///         This is required to implement the two-step initialization process that Objective-C uses, the first step is to perform the object allocation, the second step is to initialize the object.");
+							sw.WriteLine ("\t\t///         When developers invoke this constructor, they take advantage of a direct path that goes all the way up to <see cref=\"Foundation.NSObject\" /> to merely allocate the object's memory and bind the Objective-C and C# objects together.");
+							sw.WriteLine ("\t\t///         The actual initialization of the object is up to the developer.");
+							sw.WriteLine ("\t\t///     </para>");
+							sw.WriteLine ("\t\t///     <para>");
+							sw.WriteLine ("\t\t///         This constructor is typically used by the binding generator to allocate the object, but prevent the actual initialization to take place.");
+							sw.WriteLine ("\t\t///         Once the allocation has taken place, the constructor has to initialize the object.");
+							sw.WriteLine ("\t\t///         With constructors generated by the binding generator this means that it manually invokes one of the \"init\" methods to initialize the object.");
+							sw.WriteLine ("\t\t///     </para>");
+							sw.WriteLine ("\t\t///     <para>It is the developer's responsibility to completely initialize the object if they chain up using this constructor chain.</para>");
+							sw.WriteLine ("\t\t///     <para>");
+							sw.WriteLine ("\t\t///         In general, if the developer's constructor invokes the corresponding base implementation, then it should also call an Objective-C init method.");
+							sw.WriteLine ("\t\t///         If this is not the case, developers should instead chain to the proper constructor in their class.");
+							sw.WriteLine ("\t\t///     </para>");
+							sw.WriteLine ("\t\t///     <para>");
+							sw.WriteLine ("\t\t///         The argument value is ignored and merely ensures that the only code that is executed is the construction phase is the basic <see cref=\"Foundation.NSObject\" /> allocation and runtime type registration.");
+							sw.WriteLine ("\t\t///         Typically the chaining would look like this:");
+							sw.WriteLine ("\t\t///     </para>");
+							sw.WriteLine ("\t\t///     <example>");
+							sw.WriteLine ("\t\t///             <code lang=\"csharp lang-csharp\"><![CDATA[");
+							sw.WriteLine ("\t\t/// //");
+							sw.WriteLine ("\t\t/// // The NSObjectFlag constructor merely allocates the object and registers the C# class with the Objective-C runtime if necessary.");
+							sw.WriteLine ("\t\t/// // No actual initXxx method is invoked, that is done later in the constructor");
+							sw.WriteLine ("\t\t/// //");
+							sw.WriteLine ("\t\t/// // This is taken from the iOS SDK's source code for the UIView class:");
+							sw.WriteLine ("\t\t/// //");
+							sw.WriteLine ("\t\t/// [Export (\"initWithFrame:\")]");
+							sw.WriteLine ("\t\t/// public UIView (CGRect frame) : base (NSObjectFlag.Empty)");
+							sw.WriteLine ("\t\t/// {");
+							sw.WriteLine ("\t\t///     // Invoke the init method now.");
+							sw.WriteLine ("\t\t///     var initWithFrame = new Selector (\"initWithFrame:\").Handle;");
+							sw.WriteLine ("\t\t///     if (IsDirectBinding) {");
+							sw.WriteLine ("\t\t///         Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSend_CGRect (this.Handle, initWithFrame, frame);");
+							sw.WriteLine ("\t\t///     } else {");
+							sw.WriteLine ("\t\t///         unsafe {");
+							sw.WriteLine ("\t\t///             var __objc_super__ = new ObjCRuntime.ObjCSuper (this);");
+							sw.WriteLine ("\t\t///             Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper_CGRect (&__objc_super__, initWithFrame, frame);");
+							sw.WriteLine ("\t\t///         }");
+							sw.WriteLine ("\t\t///         GC.KeepAlive (this);");
+							sw.WriteLine ("\t\t///     }");
+							sw.WriteLine ("\t\t/// }");
+							sw.WriteLine ("\t\t/// ]]></code>");
+							sw.WriteLine ("\t\t///     </example>");
+							sw.WriteLine ("\t\t/// </remarks>");
+						}
+						GeneratedCode (sw, 2);
+						sw.WriteLine ("\t\t[EditorBrowsable (EditorBrowsableState.Advanced)]");
+						sw.WriteLine ("\t\tprotected {0} (NSObjectFlag t) : base (t)", TypeName);
+						sw.WriteLine ("\t\t{");
+						if (is_direct_binding_value is not null)
+							sw.WriteLine ("\t\t\tIsDirectBinding = {0};", is_direct_binding_value);
+						WriteMarkDirtyIfDerived (sw, type);
+						sw.WriteLine ("\t\t}");
+						sw.WriteLine ();
+					}
+
+					if (!is_sealed && BindingTouch.SupportsXmlDocumentation) {
+						sw.WriteLine ("\t\t/// <summary>A constructor used when creating managed representations of unmanaged objects. Called by the runtime.</summary>");
+						sw.WriteLine ("\t\t/// <param name=\"handle\">Pointer (handle) to the unmanaged object.</param>");
+						sw.WriteLine ("\t\t/// <remarks>");
+						sw.WriteLine ("\t\t///     <para>");
+						sw.WriteLine ("\t\t///         This constructor is invoked by the runtime infrastructure (<see cref=\"ObjCRuntime.Runtime.GetNSObject(System.IntPtr)\" />) to create a new managed representation for a pointer to an unmanaged Objective-C object.");
+						sw.WriteLine ("\t\t///         Developers should not invoke this method directly, instead they should call <see cref=\"ObjCRuntime.Runtime.GetNSObject(System.IntPtr)\" /> as it will prevent two instances of a managed object pointing to the same native object.");
+						sw.WriteLine ("\t\t///     </para>");
+						sw.WriteLine ("\t\t/// </remarks>");
+					}
+					GeneratedCode (sw, 2);
+					sw.WriteLine ("\t\t[EditorBrowsable (EditorBrowsableState.Advanced)]");
+					sw.Write ($"\t\t");
+					if (!is_sealed)
+						sw.Write ("protected ");
+					sw.WriteLine ($"internal {TypeName} ({NativeHandleType} handle) : base (handle)");
+					sw.WriteLine ("\t\t{");
+					if (is_direct_binding_value is not null)
+						sw.WriteLine ("\t\t\tIsDirectBinding = {0};", is_direct_binding_value);
+					WriteMarkDirtyIfDerived (sw, type);
+					sw.WriteLine ("\t\t}");
+					sw.WriteLine ();
+				}
+			}
+
+			var bound_methods = new HashSet<MemberInformation> (); // List of methods bound on the class itself (not via protocols)
+			var generated_methods = new List<MemberInformation> (); // All method that have been generated
+			foreach (var mi in GetTypeContractMethods (type).OrderByDescending (m => m.Name == "Constructor").ThenBy (m => m.Name, StringComparer.Ordinal)) {
+				if (mi.IsSpecialName || (mi.Name == "Constructor" && type != mi.DeclaringType))
+					continue;
+
+				if (mi.IsUnavailable (this))
+					continue;
+
+				if (appearance_selectors is not null && AttributeManager.HasAttribute<AppearanceAttribute> (mi))
+					appearance_selectors.Add (mi);
+
+				var minfo = new MemberInformation (this, this, mi, type, is_category_class ? bta?.BaseType : null, isModel: is_model);
+				// the type above is not the the we're generating, e.g. it would be `NSCopying` for `Copy(NSZone?)`
+				minfo.is_type_sealed = is_sealed;
+
+				if (type == mi.DeclaringType || type.IsSubclassOf (mi.DeclaringType!)) {
+					// not an injected protocol method.
+					bound_methods.Add (minfo);
+				} else {
+					// don't inject a protocol method if the class already
+					// implements the same method.
+					if (bound_methods.Contains (minfo))
+						continue;
+
+					var protocolsThatHaveThisMethod = GetTypeContractMethods (type).Where (x => { var sel = GetSelector (x); return sel is not null && sel == minfo.selector; });
+					if (protocolsThatHaveThisMethod.Count () > 1) {
+						// If multiple protocols have this method and we haven't generated a copy yet
+						if (generated_methods.Any (x => x.selector == minfo.selector))
+							continue;
+
+						// Verify all of the versions have the same arguments / return value
+						// And just generate the first one (us)
+						var methodParams = mi.GetParameters ();
+						foreach (var duplicateMethod in protocolsThatHaveThisMethod) {
+							if (mi.ReturnType != duplicateMethod.ReturnType)
+								throw new BindingException (1038, true, mi.Name, type.Name);
+
+							if (methodParams.Length != duplicateMethod.GetParameters ().Length)
+								throw new BindingException (1039, true, minfo.selector, type.Name, mi.GetParameters ().Length, duplicateMethod.GetParameters ().Length);
+						}
+
+						int i = 0;
+						foreach (var param in methodParams) {
+							foreach (var duplicateMethod in protocolsThatHaveThisMethod) {
+								var duplicateParam = duplicateMethod.GetParameters () [i];
+								if (param.IsOut != duplicateParam.IsOut)
+									throw new BindingException (1040, true, minfo.selector, type.Name, i);
+								if (param.ParameterType != duplicateParam.ParameterType)
+									throw new BindingException (1041, true, minfo.selector, type.Name, i, param.ParameterType, duplicateParam.ParameterType);
+							}
+							i++;
+						}
+					}
+				}
+
+				generated_methods.Add (minfo);
+				GenerateMethod (minfo);
+			}
+
+			var field_exports = new List<PropertyInfo> ();
+			var notifications = new List<PropertyInfo> ();
+			var bound_properties = new List<string> (); // List of properties bound on the class itself (not via protocols)
+			var generated_properties = new List<string> (); // All properties that have been generated
+
+			foreach (var pi in GetTypeContractProperties (type).OrderBy (p => p.Name, StringComparer.Ordinal)) {
+
+				if (pi.IsUnavailable (this))
+					continue;
+
+				if (AttributeManager.HasAttribute<FieldAttribute> (pi)) {
+					field_exports.Add (pi);
+
+					if (AttributeManager.HasAttribute<NotificationAttribute> (pi))
+						notifications.Add (pi);
+					continue;
+				}
+
+				if (appearance_selectors is not null && AttributeManager.HasAttribute<AppearanceAttribute> (pi))
+					appearance_selectors.Add (pi);
+
+				var hasNullableMismatch = false;
+				if (type == pi.DeclaringType || type.IsSubclassOf (pi.DeclaringType!)) {
+					// not an injected protocol property.
+					bound_properties.Add (pi.Name);
+				} else {
+					// don't inject a protocol property if the class already
+					// implements the same property.
+					if (bound_properties.Contains (pi.Name))
+						continue;
+
+					var protocolsThatHaveThisProp = GetTypeContractProperties (type).Where (x => x.Name == pi.Name);
+					if (protocolsThatHaveThisProp.Count () > 1) {
+						// If multiple protocols have this property and we haven't generated a copy yet
+						if (generated_properties.Contains (pi.Name))
+							continue;
+
+						// If there is a version that has get and set
+						if (protocolsThatHaveThisProp.Any (x => x.CanRead && x.CanWrite)) {
+							// Skip if we are not it
+							if (!(pi.CanRead && pi.CanWrite))
+								continue;
+						} else {
+							// Verify all of the versions have the same get/set abilities since there is no universal get/set version
+							// And just generate the first one (us)
+							if (!protocolsThatHaveThisProp.All (x => x.CanRead == pi.CanRead && x.CanWrite == pi.CanWrite))
+								throw new BindingException (1037, true, pi.Name, type.Name);
+						}
+
+						if (AttributeManager.IsNullable (pi)) {
+							var nonNullableProperty = protocolsThatHaveThisProp.SingleOrDefault (v => !AttributeManager.IsNullable (v));
+							if (nonNullableProperty is not null) {
+								// We're getting the same property from multiple interfaces, and the nullability attributes don't match.
+								// This results in a warning (which turn into an error because we've turned on warnaserror):
+								// error CS8766: Nullability of reference types in return type of 'string? NSApplication.AccessibilityIdentifier.get' doesn't match implicitly implemented member 'string INSAccessibilityElementProtocol.AccessibilityIdentifier.get' (possibly because of nullability attributes).
+								// So we need to ignore this warning.
+								hasNullableMismatch = true;
+							}
+						}
+					}
+				}
+
+				generated_properties.Add (pi.Name);
+				if (hasNullableMismatch)
+					print ("#pragma warning disable CS8766");
+				GenerateProperty (type, pi, instance_fields_to_clear_on_dispose, is_model);
+				if (hasNullableMismatch)
+					print ("#pragma warning restore CS8766");
+			}
+
+			if (field_exports.Count != 0) {
+				foreach (var field_pi in field_exports.OrderBy (f => f.Name, StringComparer.Ordinal)) {
+					var fieldAttr = AttributeManager.GetCustomAttribute<FieldAttribute> (field_pi);
+					if (fieldAttr?.SymbolAddress == true && field_pi.PropertyType != TypeCache.System_IntPtr) {
+						exceptions.Add (ErrorHelper.CreateError (1128, type.FullName, field_pi.Name, field_pi.PropertyType.FullName));
+						continue;
+					}
+					if (!TryComputeLibraryName (fieldAttr?.LibraryName, type, out var library_name, out var library_path)) {
+						exceptions.Add (ErrorHelper.CreateError (1042, /* Missing '[Field (LibraryName=value)]' for {0} (e.g."__Internal") */ type.FullName + "." + field_pi.Name));
+						continue;
+					}
+
+					string fieldTypeName;
+					string? smartEnumTypeName = null;
+					if (IsSmartEnum (field_pi.PropertyType)) {
+						fieldTypeName = TypeManager.FormatType (TypeCache.NSString.DeclaringType, TypeCache.NSString);
+						smartEnumTypeName = TypeManager.FormatType (field_pi.DeclaringType, field_pi.PropertyType);
+					} else
+						fieldTypeName = TypeManager.FormatType (field_pi.DeclaringType, field_pi.PropertyType);
+
+					bool nullable = !field_pi.PropertyType.IsValueType && AttributeManager.IsNullable (field_pi);
+					// Value types we dont cache for now, to avoid Nullable<T>
+					if (!field_pi.PropertyType.IsValueType || smartEnumTypeName is not null) {
+						print_generated_code ();
+						PrintPreserveAttribute (field_pi);
+						print ("static {0}? _{1};", fieldTypeName, field_pi.Name);
+					}
+
+					if (BindingTouch.SupportsXmlDocumentation) {
+						if (!WriteDocumentation (field_pi)) {
+							var anyNotifications = AttributeManager.GetCustomAttributes<NotificationAttribute> (field_pi);
+							if (anyNotifications.Any ()) {
+								var notification = anyNotifications.First ();
+								var eventArgsTypeName = notification.Type?.Name ?? "NSNotificationEventArgs";
+								var notificationName = GetNotificationName (field_pi);
+								print (
+		$$"""
+		/// <summary>Notification constant for {{notificationName}}</summary>
+		/// <value><see cref="NSString" /> constant, should be used as a token to <see cref="NSNotificationCenter" />.</value>
+		/// <remarks>
+		///   <para>
+		///     This constant can be used with <see cref="NSNotificationCenter" /> to register a listener for this notification.
+		///     This is an <see cref="NSString" /> instead of a string, because these values can be used as tokens in some native
+		///     libraries instead of being used purely for their actual string content. The 'notification' parameter to the callback
+		///     contains extra information that is specific to the notification type.
+		///   </para>
+		///   <para>
+		///     To subscribe to this notification, developers can use the convenience <see cref="Notifications.Observe{{notificationName}}(NSObject,EventHandler{{"{" + eventArgsTypeName + "}"}})" />
+		///     or <see cref="Notifications.Observe{{notificationName}}(EventHandler{{"{" + eventArgsTypeName + "}"}})" /> methods,
+		///     which offers strongly typed access to the parameters of the notification.
+		///   </para>
+		///   <para>
+		///     The following example shows how to use the strongly typed <see cref="Notifications" /> class, to take the guesswork
+		///     out of the available properties in the notification:
+		///   </para>
+		///   <example>
+		///     <code lang="csharp lang-csharp"><![CDATA[
+		/// //
+		/// // Lambda style
+		/// //
+		///
+		/// // listening
+		/// notification = {{TypeName}}.Notifications.Observe{{notificationName}} ((sender, args) => {
+		/// /* Access strongly typed args */
+		/// Console.WriteLine ("Notification: {0}", args.Notification);
+		/// });
+		///
+		/// // To stop listening:
+		/// notification.Dispose ();
+		///
+		/// //
+		/// // Method style
+		/// //
+		/// NSObject notification;
+		/// void Callback (object sender, {{TypeName}}.{{eventArgsTypeName}} args)
+		/// {
+		///     // Access strongly typed args
+		///     Console.WriteLine ("Notification: {0}", args.Notification);
+		/// }
+		///
+		/// void Setup ()
+		/// {
+		///     notification = {{TypeName}}.Notifications.Observe{{notificationName}} (Callback);
+		/// }
+		///
+		/// void Teardown ()
+		/// {
+		///     notification.Dispose ();
+		/// }]]></code>
+		///   </example>
+		///   <para>
+		///     The following example shows how to use the notification with the DefaultCenter API:
+		///   </para>
+		///   <example>
+		///     <code lang="csharp lang-csharp"><![CDATA[
+		/// // Lambda style
+		/// NSNotificationCenter.DefaultCenter.AddObserver (
+		///     {{TypeName}}.{{notificationName}}Notification, (notification) => { Console.WriteLine ("Received the notification {{notificationName}}", notification); }
+		/// );
+		///
+		/// // Method style
+		/// void Callback (NSNotification notification)
+		/// {
+		///     Console.WriteLine ("Received the notification {{notificationName}}", notification);
+		/// }
+		///
+		/// void Setup ()
+		/// {
+		///     NSNotificationCenter.DefaultCenter.AddObserver ({{TypeName}}.{{notificationName}}Notification, Callback);
+		/// }
+		/// ]]></code>
+		///   </example>
+		/// </remarks>
+		""");
+							} else {
+								print ($"/// <summary>Represents the value associated with the constant '{fieldAttr?.SymbolName}'.</summary>");
+							}
+						}
+					}
+					PrintAttributes (field_pi, preserve: true, advice: true);
+					PrintObsoleteAttributes (field_pi);
+					print ("[Field (\"{0}\",  \"{1}\"{2})]", fieldAttr!.SymbolName, library_path ?? library_name, fieldAttr.SymbolAddress ? ", SymbolAddress = true" : "");
+					PrintPlatformAttributes (field_pi);
+					if (AttributeManager.HasAttribute<AdvancedAttribute> (field_pi)) {
+						print ("[EditorBrowsable (EditorBrowsableState.Advanced)]");
+					}
+					// Check if this is a notification and print Advice to use our Notification API
+					if (AttributeManager.HasAttribute<NotificationAttribute> (field_pi))
+						print ($"[Advice (\"Use {type.Name}.Notifications.Observe{GetNotificationName (field_pi)} helper method instead.\")]");
+
+					print ("{0} static {1}{2} {3} {{", field_pi.IsInternal (this) ? "internal" : "public",
+						smartEnumTypeName ?? fieldTypeName,
+						nullable ? "?" : "",
+						field_pi.Name);
+					indent++;
+
+					PrintAttributes (field_pi, platform: true);
+					PrintAttributes (field_pi.GetGetMethod (), preserve: true, advice: true);
+					print ("get {");
+					indent++;
+					if (field_pi.PropertyType == TypeCache.NSString) {
+						print ("if (_{0} is null)", field_pi.Name);
+						indent++;
+						print ("_{0} = Dlfcn.GetStringConstant (Libraries.{2}.Handle, \"{1}\")!;", field_pi.Name, fieldAttr.SymbolName, library_name);
+						indent--;
+						print ("return _{0};", field_pi.Name);
+					} else if (field_pi.PropertyType.Name == "NSArray") {
+						print ("if (_{0} is null)", field_pi.Name);
+						indent++;
+						print ("_{0} = Runtime.GetNSObject<NSArray> (Dlfcn.GetIndirect (Libraries.{2}.Handle, \"{1}\"))!;", field_pi.Name, fieldAttr.SymbolName, library_name);
+						indent--;
+						print ("return _{0};", field_pi.Name);
+					} else if (field_pi.PropertyType.Name == "NSNumber") {
+						print ("if (_{0} is null)", field_pi.Name);
+						indent++;
+						print ("_{0} = Runtime.GetNSObject<NSNumber> (Dlfcn.GetIndirect (Libraries.{2}.Handle, \"{1}\"))!;", field_pi.Name, fieldAttr.SymbolName, library_name);
+						indent--;
+						print ("return _{0};", field_pi.Name);
+					} else if (field_pi.PropertyType.Name == "UTType") {
+						print ("if (_{0} is null)", field_pi.Name);
+						indent++;
+						print ("_{0} = Runtime.GetNSObject<UTType> (Dlfcn.GetIntPtr (Libraries.{2}.Handle, \"{1}\"))!;", field_pi.Name, fieldAttr.SymbolName, library_name);
+						indent--;
+						print ("return _{0};", field_pi.Name);
+					} else if (field_pi.PropertyType == TypeCache.System_Byte) {
+						print ("return Dlfcn.GetByte (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_SByte) {
+						print ("return Dlfcn.GetSByte (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_Int16) {
+						print ("return Dlfcn.GetInt16 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_UInt16) {
+						print ("return Dlfcn.GetUInt16 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_Int32) {
+						print ("return Dlfcn.GetInt32 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_UInt32) {
+						print ("return Dlfcn.GetUInt32 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_Double) {
+						print ("return Dlfcn.GetDouble (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_Float) {
+						print ("return Dlfcn.GetFloat (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_IntPtr) {
+						if (fieldAttr.SymbolAddress)
+							print ("return Dlfcn.GetIndirect (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						else
+							print ("return Dlfcn.GetIntPtr (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_UIntPtr) {
+						print ("return Dlfcn.GetUIntPtr (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_Int64) {
+						print ("return Dlfcn.GetInt64 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else if (field_pi.PropertyType == TypeCache.System_UInt64) {
+						print ("return Dlfcn.GetUInt64 (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+					} else
+						//
+						// Handle various blittable value types here
+						//
+						if (Frameworks.HaveCoreMedia && Frameworks.HaveAVFoundation && (field_pi.PropertyType == TypeCache.CMTime ||
+						   field_pi.PropertyType == TypeCache.AVCaptureWhiteBalanceGains)) {
+							var valueTypeName = TypeManager.FormatType (type, field_pi.PropertyType.Namespace, field_pi.PropertyType.Name);
+							print ("return Dlfcn.GetStruct<{3}> (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name, valueTypeName);
+						} else if (field_pi.PropertyType == TypeCache.System_nint) {
+							print ("return Dlfcn.GetNInt (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_nuint) {
+							print ("return Dlfcn.GetNUInt (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_nfloat) {
+							print ("return Dlfcn.GetNFloat (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.CoreGraphics_CGSize) {
+							print ("return Dlfcn.GetCGSize (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.CMTag) {
+							print ("return Dlfcn.GetStruct<CoreMedia.CMTag> (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType.Namespace == "Foundation" && field_pi.PropertyType.Name == "NSOperatingSystemVersion") {
+							print ("return Dlfcn.GetStruct<Foundation.NSOperatingSystemVersion> (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType.IsEnum) {
+							var btype = field_pi.PropertyType.GetEnumUnderlyingType ();
+							if (smartEnumTypeName is not null) {
+								print ("if (_{0} is null)", field_pi.Name);
+								indent++;
+								print ("_{0} = Dlfcn.GetStringConstant (Libraries.{2}.Handle, \"{1}\")!;", field_pi.Name, fieldAttr.SymbolName, library_name);
+								indent--;
+								print ($"return {smartEnumTypeName}Extensions.GetValue (_{field_pi.Name});");
+							} else if (GetNativeEnumToManagedExpression (field_pi.PropertyType, out var preExpression, out var postExpression, out var _)) {
+								if (btype == TypeCache.System_nint || btype == TypeCache.System_Int64)
+									print ($"return {preExpression}Dlfcn.GetNInt (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\"){postExpression};");
+								else if (btype == TypeCache.System_nuint || btype == TypeCache.System_UInt64)
+									print ($"return {preExpression}Dlfcn.GetNUInt (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\"){postExpression};");
+								else
+									throw new BindingException (1014, true, fieldTypeName, FormatPropertyInfo (field_pi));
+							} else {
+								if (btype == TypeCache.System_Int32)
+									print ($"return ({fieldTypeName}) Dlfcn.GetInt32 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\");");
+								else if (btype == TypeCache.System_UInt32)
+									print ($"return ({fieldTypeName}) Dlfcn.GetUInt32 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\");");
+								else if (btype == TypeCache.System_Int64)
+									print ($"return ({fieldTypeName}) Dlfcn.GetInt64 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\");");
+								else if (btype == TypeCache.System_UInt64)
+									print ($"return ({fieldTypeName}) Dlfcn.GetUInt64 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\");");
+								else
+									throw new BindingException (1014, true, fieldTypeName, FormatPropertyInfo (field_pi));
+							}
+						} else if (field_pi.PropertyType.IsValueType) {
+							var valueTypeName = TypeManager.FormatType (type, field_pi.PropertyType.Namespace, field_pi.PropertyType.Name);
+							print ("return Dlfcn.GetStruct<{3}> (Libraries.{2}.Handle, \"{1}\");", field_pi.Name, fieldAttr.SymbolName, library_name, valueTypeName);
+						} else {
+							if (field_pi.PropertyType == TypeCache.System_String)
+								throw new BindingException (1013, true);
+							else
+								throw new BindingException (1014, true, fieldTypeName, FormatPropertyInfo (field_pi));
+						}
+
+					indent--;
+					print ("}");
+
+					if (field_pi.CanWrite) {
+						PrintAttributes (field_pi, platform: true);
+						PrintAttributes (field_pi.GetSetMethod (), preserve: true, advice: true);
+						print ("set {");
+						indent++;
+						if (field_pi.PropertyType == TypeCache.System_Int32) {
+							print ("Dlfcn.SetInt32 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_UInt32) {
+							print ("Dlfcn.SetUInt32 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_Double) {
+							print ("Dlfcn.SetDouble (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_Byte) {
+							print ("Dlfcn.SetByte (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_SByte) {
+							print ("Dlfcn.SetSByte (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_Int16) {
+							print ("Dlfcn.SetInt16 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_UInt16) {
+							print ("Dlfcn.SetUInt16 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_Float) {
+							print ("Dlfcn.SetFloat (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_IntPtr) {
+							print ("Dlfcn.SetIntPtr (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_UIntPtr) {
+							print ("Dlfcn.SetUIntPtr (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_Int64) {
+							print ("Dlfcn.SetInt64 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_UInt64) {
+							print ("Dlfcn.SetUInt64 (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.NSString) {
+							print ("Dlfcn.SetString (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType.Name == "NSArray") {
+							print ("Dlfcn.SetArray (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType.Name == "NSNumber") {
+							print ("Dlfcn.SetObject (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_nint) {
+							print ("Dlfcn.SetNInt (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_nuint) {
+							print ("Dlfcn.SetNUInt (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.System_nfloat) {
+							print ("Dlfcn.SetNFloat (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType == TypeCache.CoreGraphics_CGSize) {
+							print ("Dlfcn.SetCGSize (Libraries.{2}.Handle, \"{1}\", value);", field_pi.Name, fieldAttr.SymbolName, library_name);
+						} else if (field_pi.PropertyType.IsEnum) {
+							var btype = field_pi.PropertyType.GetEnumUnderlyingType ();
+							if (smartEnumTypeName is not null)
+								print ($"Dlfcn.SetString (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", value.GetConstant ());");
+							else if (GetNativeEnumToNativeExpression (field_pi.PropertyType, out var preExpression, out var postExpression, out var _)) {
+								if (btype == TypeCache.System_nint || (BindThirdPartyLibrary && btype == TypeCache.System_Int64))
+									print ($"Dlfcn.SetNInt (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (nint) {preExpression}value{postExpression});");
+								else if (btype == TypeCache.System_nuint || (BindThirdPartyLibrary && btype == TypeCache.System_UInt64))
+									print ($"Dlfcn.SetNUInt (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (nuint) {preExpression}value{postExpression});");
+								else
+									throw new BindingException (1021, true, fieldTypeName, field_pi.DeclaringType!.FullName, field_pi.Name);
+							} else {
+								if (btype == TypeCache.System_Int32)
+									print ($"Dlfcn.SetInt32 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (int) value);");
+								else if (btype == TypeCache.System_UInt32)
+									print ($"Dlfcn.SetUInt32 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (uint) value);");
+								else if (btype == TypeCache.System_Int64)
+									print ($"Dlfcn.SetInt64 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (long) value);");
+								else if (btype == TypeCache.System_UInt64)
+									print ($"Dlfcn.SetUInt64 (Libraries.{library_name}.Handle, \"{fieldAttr.SymbolName}\", (ulong) value);");
+								else
+									throw new BindingException (1021, true, fieldTypeName, field_pi.DeclaringType!.FullName, field_pi.Name);
+							}
+						} else
+							throw new BindingException (1021, true, fieldTypeName, field_pi.DeclaringType!.FullName, field_pi.Name);
+						indent--;
+						print ("}");
+					}
+					indent--;
+					print ("}");
+				}
+			}
+
+			var eventArgTypes = new Dictionary<string, ParameterInfo []> ();
+
+			if (bta is not null && bta.Events is not null) {
+				if (bta.Delegates is null)
+					throw new BindingException (1015, true, type.FullName);
+
+				print ("//");
+				print ("// Events and properties from the delegate");
+				print ("//\n");
+
+				if (bta.Events.Length != bta.Delegates.Length)
+					throw new BindingException (1023, true, type.FullName);
+
+				int delidx = 0;
+				foreach (var dtype in bta.Events) {
+					string delName = bta.Delegates [delidx++];
+					delName = delName.StartsWith ("Weak", StringComparison.Ordinal) ? delName.Substring (4) : delName;
+
+					var isWeakBacked = HasProperty (type, "Weak" + delName);
+
+					// Here's the problem:
+					//    If you have two or more types in an inheritence structure in the binding that expose events
+					//    they can fight over who's generated delegate gets used if you use the events at both level.
+					//    e.g. NSComboxBox.SelectionChanged (on NSComboxBox) and NSComboBox.EditingEnded (on NSTextField)
+					// We solve this under Unified when the delegate is protocalized (and leave Classic how it always has been)
+					// To handle this case, we do two things:
+					//    1) We have to ensure that the same internal delegate is uses for base and derived events, so they
+					//     aren't stepping on each other toes. This means we always instance up the leaf class's internal delegate
+					//    2) We have to have an some for of "inheritance" in the generated delegates, so the
+					//     base class can use this derived type (and have the events it expects on it) We do this via inhertiance and
+					//     use of the protocal interfaces.
+					//     See xamcore/test/apitest/DerivedEventTest.cs for specific tests
+
+					// Does this delegate qualify for this treatment. We fall back on the old "wrong" codegen if not.
+					bool isProtocolEventBacked = IsProtocolEventBacked (delName, type);
+
+					// The name of the the generated virtual property that specifies the type of the leaf most internal delegate
+					string delegateTypePropertyName = GetDelegateTypePropertyName (delName);
+
+					// The name of the method to instance up said internal delegate
+					string delegateCreationMethodName = "CreateInternalEvent" + delName + "Type";
+
+					// If we're not the base class in our inheritance tree to define this delegate, we need to override instead
+					bool shouldOverride = HasParentWithSameNamedDelegate (bta, delName);
+
+					// The name of the protocol in question
+					string interfaceName = GenerateInterfaceTypeName (bta, delName, dtype.Name);
+
+					bool hasKeepRefUntil = bta.KeepRefUntil is not null;
+
+					if (isProtocolEventBacked) {
+						// The generated virtual type property and creation virtual method
+						string generatedTypeOverrideType = shouldOverride ? "override" : "virtual";
+						print ("internal {0} Type {1}", generatedTypeOverrideType, delegateTypePropertyName);
+						print ("{");
+						print ("	get {{ return typeof (_{0}); }}", dtype.Name);
+						print ("}\n");
+
+						print ("internal {0} _{1} {2} ({3})", generatedTypeOverrideType, interfaceName, delegateCreationMethodName, hasKeepRefUntil ? "object oref" : "");
+						print ("{");
+						print ("	return (_{0})(new _{1}({2}));", interfaceName, dtype.Name, hasKeepRefUntil ? "oref" : "");
+						print ("}\n");
+					}
+
+					if (!hasKeepRefUntil)
+						print ("{0}_{1} Ensure{1} ()", isProtocolEventBacked ? "internal " : "", dtype.Name);
+					else {
+						print ("static System.Collections.ArrayList? instances;");
+						print ("{0}_{1} Ensure{1} (object oref)", isProtocolEventBacked ? "internal " : "", dtype.Name);
+					}
+
+					print ("{"); indent++;
+
+					if (isProtocolEventBacked && isWeakBacked) {
+						// If our delegate not null and it isn't the same type as our property
+						//   - We're in one of two cases: The user += an Event and then assigned their own delegate or the inverse
+						//   - One of them isn't being called anymore no matter what. Throw an exception.
+						if (!BindThirdPartyLibrary) {
+							print ("if (Weak{0} is not null)", delName);
+							print ("\t{0}.EnsureEventAndDelegateAreNotMismatched (Weak{1}, {2});", CurrentPlatform.GetApplicationClassName (), delName, delegateTypePropertyName);
+						}
+
+						print ("var del = {1} as _{0};", dtype.Name, delName);
+
+						print ("if (del is null){");
+						indent++;
+						if (!hasKeepRefUntil)
+							print ("del = (_{0}){1} ();", dtype.Name, delegateCreationMethodName);
+						else {
+							string oref = "new object[] {\"oref\"}";
+							print ("del = (_{0}){1} ({2});", dtype.Name, delegateCreationMethodName, oref);
+							print ("if (instances is null) instances = new System.Collections.ArrayList ();");
+							print ("if (!instances.Contains (this)) instances.Add (this);");
+						}
+						print ("{0} = (I{1})del;", delName, dtype.Name);
+						indent--;
+						print ("}");
+						print ("return del;");
+					} else {
+						print ("var del = {0};", delName);
+						print ("if (del is null || (!(del is _{0}))){{", dtype.Name);
+						print ("\tdel = new _{0} ({1});", dtype.Name, bta.KeepRefUntil is null ? "" : "oref");
+						if (hasKeepRefUntil) {
+							print ("\tif (instances is null) instances = new System.Collections.ArrayList ();");
+							print ("\tif (!instances.Contains (this)) instances.Add (this);");
+						}
+						print ("\t{0} = del;", delName);
+						print ("}");
+						print ("return (_{0}) del;", dtype.Name);
+					}
+					indent--; print ("}\n");
+
+					var noDefaultValue = new List<MethodInfo> ();
+
+					print ("#pragma warning disable 672");
+					print ("[Register]");
+					if (isProtocolEventBacked)
+						print ("internal class _{0} : {1}I{2} {{ ", dtype.Name, shouldOverride ? "_" + interfaceName + ", " : "NSObject, ", dtype.Name);
+					else
+						print ("sealed class _{0} : {1} {{ ", dtype.Name, TypeManager.RenderType (dtype));
+
+
+					indent++;
+					if (hasKeepRefUntil) {
+						print ("object reference;");
+						print ("public _{0} (object reference) {{ this.reference = reference; IsDirectBinding = false; }}\n", dtype.Name);
+					} else
+						print ("public _{0} () {{ IsDirectBinding = false; }}\n", dtype.Name);
+
+					// Tell the trimmer to not remove any of our protocol implementations, they might be called from native
+					// code even if we don't have any event handlers listening for them.
+					print ($"[DynamicDependency (DynamicallyAccessedMemberTypes.PublicMethods, typeof (_{dtype.Name}))]");
+					print ($"static _{dtype.Name} ()");
+					print ("{");
+					print ("\tGC.KeepAlive (null);"); // need to do _something_ (doesn't seem to matter what), otherwise the static cctor (and the DynamicDependency attributes) are trimmed away.
+					print ("}");
+
+					string shouldOverrideDelegateString = isProtocolEventBacked ? "" : "override ";
+
+					string? previous_miname = null;
+					int miname_count = 0;
+					foreach (var mi in dtype.GatherMethods (this).OrderBy (m => m.Name, StringComparer.Ordinal)) {
+						if (ShouldSkipEventGeneration (mi))
+							continue;
+
+						var pars = mi.GetParameters ();
+						int minPars = bta.Singleton ? 0 : 1;
+
+						if (AttributeManager.HasAttribute<NoDefaultValueAttribute> (mi))
+							noDefaultValue.Add (mi);
+
+						if (pars.Length < minPars)
+							throw new BindingException (1003, true, dtype.FullName, mi.Name);
+
+						var sender = pars.Length == 0 ? "this" : pars [0].Name;
+
+						var miname = mi.Name.PascalCase ();
+						if (miname == previous_miname) {
+							// overloads, add a numbered suffix (it's internal)
+							previous_miname = miname;
+							miname += (++miname_count).ToString ();
+						} else
+							previous_miname = miname;
+
+						if (mi.ReturnType == TypeCache.System_Void) {
+							if (bta.Singleton || mi.GetParameters ().Length == 1)
+								print ("internal EventHandler? {0};", miname);
+							else
+								print ("internal EventHandler<{0}>? {1};", Nomenclator.GetEventArgName (mi), miname);
+						} else
+							print ("internal {0}? {1};", Nomenclator.GetDelegateName (mi), miname);
+
+						if (isProtocolEventBacked)
+							print ("[Export (\"{0}\")]", FindSelector (dtype, mi));
+
+						print ("public {0}{1} {2} ({3})", shouldOverrideDelegateString, TypeManager.RenderType (mi.ReturnType, mi.ReturnTypeCustomAttributes), mi.Name, RenderParameterDecl (pars));
+						print ("{"); indent++;
+
+						if (mi.Name == bta.KeepRefUntil)
+							print ("instances?.Remove (reference);");
+
+						if (mi.ReturnType == TypeCache.System_Void) {
+							string eaname;
+
+							if (debug)
+								print ("Console.WriteLine (\"Method {0}.{1} invoked\");", dtype.Name, mi.Name);
+							if (pars.Length != minPars) {
+								eaname = Nomenclator.GetEventArgName (mi);
+								if (!generatedEvents.ContainsKey (eaname) && !eventArgTypes.ContainsKey (eaname)) {
+									eventArgTypes.Add (eaname, pars);
+									generatedEvents.Add (eaname, pars);
+								}
+							} else
+								eaname = "<NOTREACHED>";
+
+							print ("var handler = {0};", miname.PascalCase ());
+							print ("if (handler is not null){");
+							indent++;
+							string eventArgs;
+							if (pars.Length == minPars)
+								eventArgs = "EventArgs.Empty";
+							else {
+								print ("var args = new {0} ({1});", eaname, RenderArgs (pars.Skip (minPars), true));
+								eventArgs = "args";
+							}
+
+							print ("handler ({0}, {1});", sender, eventArgs);
+							if (pars.Length != minPars && MustPullValuesBack (pars.Skip (minPars))) {
+								foreach (var par in pars.Skip (minPars)) {
+									if (!par.ParameterType.IsByRef)
+										continue;
+
+									print ("{0} = args.{1};", par.Name, GetPublicParameterName (par));
+								}
+							}
+							if (AttributeManager.HasAttribute<CheckDisposedAttribute> (mi)) {
+								var arg = RenderArgs (pars.Take (1));
+								print ("if ({0}.Handle == IntPtr.Zero)", arg);
+								print ("\tthrow new ObjectDisposedException (\"{0}\", \"The object was disposed on the event, you should not call Dispose() inside the handler\");", arg);
+							}
+							indent--;
+							print ("}");
+						} else {
+							var delname = Nomenclator.GetDelegateName (mi);
+
+							if (!generatedDelegates.ContainsKey (delname) && !delegate_types.ContainsKey (delname)) {
+								generatedDelegates.Add (delname, null);
+								delegate_types.Add (type.Namespace + "." + delname, mi);
+							}
+							if (debug)
+								print ("Console.WriteLine (\"Method {0}.{1} invoked\");", dtype.Name, mi.Name);
+
+							print ("var handler = {0};", miname.PascalCase ());
+							print ("if (handler is not null)");
+							print ("	return handler ({0}{1});",
+								   sender,
+								   pars.Length == minPars ? "" : String.Format (", {0}", RenderArgs (pars.Skip (1))));
+
+							if (AttributeManager.HasAttribute<NoDefaultValueAttribute> (mi))
+								print ("throw new You_Should_Not_Call_base_In_This_Method ();");
+							else {
+								var def = GetDefaultValue (mi);
+								if ((def is string) && ((def as string) == "null") && mi.ReturnType.IsValueType)
+									print ("throw new Exception (\"No event handler has been added to the {0} event.\");", mi.Name);
+								else {
+									foreach (var j in pars) {
+										if (j.ParameterType.IsByRef && j.IsOut) {
+											print ("{0} = null;", j.Name.GetSafeParamName ());
+										}
+									}
+
+									if (mi.ReturnType == TypeCache.System_nint) {
+										print ("return ((nint) ({0}));", def);
+									} else if (mi.ReturnType == TypeCache.System_nuint) {
+										print ("return ((nuint) ({0}));", def);
+									} else {
+										print ("return {0}!;", def);
+									}
+								}
+							}
+						}
+
+						indent--;
+						print ("}\n");
+					}
+
+					if (noDefaultValue.Count > 0) {
+						string selRespondsToSelector = "Selector.GetHandle (\"respondsToSelector:\")";
+
+						if (!InlineSelectors) {
+							foreach (var mi in noDefaultValue) {
+								var export = AttributeManager.GetOneCustomAttribute<ExportAttribute> (mi);
+								print ("static {2} sel{0}Handle = Selector.GetHandle (\"{1}\");", mi.Name, export.Selector, NativeHandleType);
+							}
+							print ("static {0} selRespondsToSelector = " + selRespondsToSelector + ";", NativeHandleType);
+							selRespondsToSelector = "selRespondsToSelector";
+						}
+
+						print ("public override bool RespondsToSelector (Selector? sel)");
+						print ("{");
+						++indent;
+						print ("if (sel is null)");
+						++indent;
+						print ("return false;");
+						--indent;
+						print ("{0} selHandle = sel.Handle;", NativeHandleType);
+						foreach (var mi in noDefaultValue.OrderBy (m => m.Name, StringComparer.Ordinal)) {
+							if (InlineSelectors) {
+								var export = AttributeManager.GetOneCustomAttribute<ExportAttribute> (mi);
+								print ("if (selHandle.Equals (Selector.GetHandle (\"{0}\")))", export.Selector);
+							} else {
+								print ("if (selHandle.Equals (sel{0}Handle))", mi.Name);
+							}
+							++indent;
+							print ("return {0} is not null;", mi.Name.PascalCase ());
+							--indent;
+						}
+						print ("unsafe {");
+						indent++;
+						print ("var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);");
+						print ("return global::" + NamespaceCache.Messaging + ".bool_objc_msgSendSuper_IntPtr (&__objc_super__, " + selRespondsToSelector + ", selHandle) != 0;");
+						indent--;
+						print ("}");
+						--indent;
+						print ("}");
+
+						// Make sure we generate the required signature in Messaging only if needed 
+						// bool_objc_msgSendSuper_IntPtr: for respondsToSelector:
+						if (!send_methods.ContainsKey ("bool_objc_msgSendSuper_IntPtr")) {
+							print (m, "[DllImport (LIBOBJC_DYLIB, EntryPoint=\"objc_msgSendSuper\")]");
+							print (m, "public unsafe extern static byte bool_objc_msgSendSuper_IntPtr (ObjCSuper* receiever, IntPtr selector, IntPtr arg1);");
+							RegisterMethodName ("bool_objc_msgSendSuper_IntPtr");
+						}
+					}
+
+					indent--;
+					print ("}");
+
+					print ("#pragma warning restore 672");
+				}
+				print ("");
+
+				string? prev_miname = null;
+				int minameCount = 0;
+				Nomenclator.ForgetDelegateApiNames ();
+				// Now add the instance vars and event handlers
+				foreach (var dtype in bta.Events.OrderBy (d => d.Name, StringComparer.Ordinal)) {
+					foreach (var mi in dtype.GatherMethods (this).OrderBy (m => m.Name, StringComparer.Ordinal)) {
+						if (ShouldSkipEventGeneration (mi))
+							continue;
+
+						string ensureArg = bta.KeepRefUntil is null ? "" : "this";
+
+						var miname = mi.Name.PascalCase ();
+						if (miname == prev_miname) {
+							// overloads, add a numbered suffix (it's internal)
+							prev_miname = miname;
+							miname += (++minameCount).ToString ();
+						} else
+							prev_miname = miname;
+
+						var eventArgs = AttributeManager.GetCustomAttribute<EventArgsAttribute> (mi);
+						var xmlDocs = eventArgs?.XmlDocs;
+						var hasXmlDocs = !string.IsNullOrEmpty (xmlDocs);
+						if (!string.IsNullOrEmpty (xmlDocs)) {
+							var docLines = xmlDocs.Split ('\n');
+							foreach (var line in docLines)
+								print ($"/// {line}");
+						}
+
+						if (mi.ReturnType == TypeCache.System_Void) {
+							PrintObsoleteAttributes (mi);
+
+							if (bta.Singleton && mi.GetParameters ().Length == 0 || mi.GetParameters ().Length == 1) {
+								if (!hasXmlDocs && BindingTouch.SupportsXmlDocumentation)
+									print ("/// <summary>Raised by the object's delegate to signal an event.</summary>");
+								print ("public event EventHandler {0} {{", Nomenclator.GetEventName (mi).CamelCase ());
+							} else {
+								if (!hasXmlDocs && BindingTouch.SupportsXmlDocumentation)
+									print ("/// <summary>Raised by the object's delegate to signal an event, providing event data in a <see cref=\"{0}\" /> object.</summary>", Nomenclator.GetEventArgName (mi));
+								print ("public event EventHandler<{0}> {1} {{", Nomenclator.GetEventArgName (mi), Nomenclator.GetEventName (mi).CamelCase ());
+							}
+							print ("\tadd {{ Ensure{0} ({1})!.{2} += value; }}", dtype.Name, ensureArg, miname);
+							print ("\tremove {{ Ensure{0} ({1})!.{2} -= value; }}", dtype.Name, ensureArg, miname);
+							print ("}\n");
+						} else {
+							print ("public {0}? {1} {{", Nomenclator.GetDelegateName (mi), Nomenclator.GetDelegateApiName (mi).CamelCase ());
+							print ("\tget {{ return Ensure{0} ({1})!.{2}; }}", dtype.Name, ensureArg, miname);
+							print ("\tset {{ Ensure{0} ({1})!.{2} = value; }}", dtype.Name, ensureArg, miname);
+							print ("}\n");
+						}
+					}
+				}
+			}
+
+			//
+			// Do we need a dispose method?
+			//
+			if (!is_static_class) {
+				var attrs = AttributeManager.GetCustomAttributes<DisposeAttribute> (type);
+				// historical note: unlike many attributes our `DisposeAttribute` has `AllowMultiple=true`
+				var has_dispose_attributes = attrs.Length > 0;
+				if (has_dispose_attributes || (instance_fields_to_clear_on_dispose.Count > 0)) {
+					// if there are any [Dispose] attributes then they all must opt-in in order for the generated Dispose method to be optimizable
+					bool optimizable = !has_dispose_attributes || IsOptimizable (type);
+					if (BindingTouch.SupportsXmlDocumentation)
+						print ("/// <inheritdoc cref=\"Foundation.NSObject.Dispose(bool)\" />");
+					print_generated_code (optimizable: optimizable);
+					print ("protected override void Dispose (bool disposing)");
+					print ("{");
+					indent++;
+					if (has_dispose_attributes) {
+						foreach (var da in attrs)
+							Inject (da);
+					}
+
+					print ("base.Dispose (disposing);");
+
+					if (instance_fields_to_clear_on_dispose.Count > 0) {
+						print ("if (Handle == IntPtr.Zero) {");
+						indent++;
+						foreach (var field in instance_fields_to_clear_on_dispose.OrderBy (f => f, StringComparer.Ordinal))
+							print ("{0} = null;", field);
+						indent--;
+						print ("}");
+					}
+
+					indent--;
+					print ("}");
+				}
+			}
+
+			//
+			// Appearance class
+			//
+			var gt = GeneratedTypes.Lookup (type);
+			if (gt.ImplementsAppearance) {
+				var parent_implements_appearance = gt.Parent is not null && gt.ParentGenerated!.ImplementsAppearance;
+				string base_class;
+
+				if (parent_implements_appearance) {
+					var parent = Nomenclator.GetGeneratedTypeName (gt.Parent!);
+					base_class = "global::" + gt.Parent!.FullName + "." + parent + "Appearance";
+				} else
+					base_class = "UIAppearance";
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Appearance class for objects of type <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <remarks>");
+					print ($"///     <para>This appearance class is a strongly typed subclass of UIAppearance that is intended to be used with objects of class <see cref=\"global::{type.FullName}\" />.</para>");
+					print ($"///     <para>You can obtain an instance to this class by either accessing the static <see cref=\"global::{type.FullName}.Appearance\" /> property or by calling <see cref=\"global::{type.FullName}.AppearanceWhenContainedIn(System.Type[])\" /> to get a UIAppearance that is context sensitive.</para>");
+					print ($"/// </remarks>");
+				}
+
+				string appearance_type_name = TypeName + "Appearance";
+				print ("public partial class {0} : {1} {{", appearance_type_name, base_class);
+				indent++;
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ("/// <summary>A constructor used when creating managed representations of unmanaged objects. Called by the runtime.</summary>");
+					print ("/// <param name=\"handle\">Pointer (handle) to the unmanaged object.</param>");
+				}
+				print ("protected internal {0} (IntPtr handle) : base (handle) {{}}", appearance_type_name);
+
+				if (appearance_selectors is not null) {
+					var currently_ignored_fields = new List<string> ();
+
+					foreach (MemberInfo mi in appearance_selectors.OrderBy (m => m.Name, StringComparer.Ordinal)) {
+						if (mi is MethodInfo minfo)
+							GenerateMethod (type, minfo,
+									is_model: false,
+									category_extension_type: is_category_class ? base_type : null,
+									is_appearance: true);
+						else if (mi is PropertyInfo pinfo)
+							GenerateProperty (type, pinfo, currently_ignored_fields, false, is_appearance: true);
+					}
+				}
+
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Strongly-typed property that returns the UIAppearance class for this class.</summary>");
+					print ($"/// <remarks>");
+					print ($"///   <para>Setting any appearance properties on this instance will affect the appearance of all instances of <see cref=\"global::{type.FullName}\" />.</para>");
+					print ($"///   <para>If developers want to control the appearance of subclasses of <see cref=\"global::{type.FullName}\" />, they should use the <see cref=\"global::{type.FullName}.GetAppearance&lt;T&gt;(UIKit.UITraitCollection,System.Type[])\" /> method.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} Appearance {{", parent_implements_appearance ? "new " : "", appearance_type_name);
+				indent++;
+				print ("get {{ return new {0} (global::{1}.IntPtr_objc_msgSend (class_ptr, {2})); }}", appearance_type_name, NamespaceCache.Messaging, InlineSelectors ? "ObjCRuntime.Selector.GetHandle (\"appearance\")" : "UIAppearance.SelectorAppearance");
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Obtains the appearance proxy <see cref=\"global::{type.FullName}.{type.Name}Appearance\" /> for the subclass of <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <typeparam name=\"T\">The type for which the <see cref=\"global::UIKit.UIAppearance\" /> proxy must be returned.  This is a subclass of <see cref=\"global::{type.FullName}\" />.</typeparam>");
+					print ($"/// <returns>");
+					print ($"///   <para>An appearance proxy object for the specified type.</para>");
+					print ($"/// </returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>Setting any appearance properties on the returned object will affect the appearance of all classes and subclasses of the type parameter.</para>");
+					print ($"///   <para>Unlike the <see cref=\"global::{type.FullName}.Appearance\" /> property, or the <see cref=\"global::{type.FullName}.AppearanceWhenContainedIn(System.Type[])\" /> method which only work on instances of this particular class, the proxies returned by this method can be used to change the style of subclasses.</para>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var myTheme = {type.Name}.GetAppearance<My{type.Name}Subclass> ();");
+					print ($"///myTheme.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} GetAppearance<T> () where T: {2} {{", parent_implements_appearance ? "new " : "", appearance_type_name, TypeName);
+				indent++;
+				print ("return new {0} (global::{1}.IntPtr_objc_msgSend (Class.GetHandle (typeof (T)), {2}));", appearance_type_name, NamespaceCache.Messaging, InlineSelectors ? "ObjCRuntime.Selector.GetHandle (\"appearance\")" : "UIAppearance.SelectorAppearance");
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <param name=\"containers\">List of types that developers want to have as the containers to apply this particular appearance</param>");
+					print ($"/// <summary>Returns a strongly typed <see cref=\"global::UIKit.UIAppearance\" /> for instances of this class when the view is hosted in the specified hierarchy.</summary>");
+					print ($"/// <returns>The appearance proxy object that developers can use to set properties when the given container hierarchy is active</returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>The returned object represents the <see cref=\"global::UIKit.UIAppearance\" /> proxy where developers can set appearance properties for instances of <see cref=\"global::{type.FullName}\" /> when those instances are contained in the hierarchy specified by the <paramref name=\"containers\" /> parameter.</para>");
+					print ($"///   <para>If developers want to control the appearance of subclasses of <see cref=\"global::{type.FullName}\" />, they should use the <see cref=\"global::{type.FullName}.GetAppearance&lt;T&gt;(UIKit.UITraitCollection,System.Type[])\" /> method.</para>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///     <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var mySliders = UISlider.AppearanceWhenContainedIn (typeof (UINavigationBar), typeof (UIPopoverController));");
+					print ($"///mySliders.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} AppearanceWhenContainedIn (params Type [] containers)", parent_implements_appearance ? "new " : "", appearance_type_name);
+				print ("{");
+				indent++;
+				print ("return new {0} (UIAppearance.GetAppearance (class_ptr, containers));", appearance_type_name);
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Obtains the appearance proxy <see cref=\"global::{type.FullName}.{type.Name}Appearance\" /> for <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <param name=\"traits\">Trait collection to match.</param>");
+					print ($"/// <returns>");
+					print ($"///   <para>An appearance proxy object for the specified type.</para>");
+					print ($"/// </returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var myTraits = new UITraitCollection ();");
+					print ($"///var myTheme = {type.Name}.GetAppearance (myTraits);");
+					print ($"///myTheme.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>If developers want to control the appearance of subclasses of <see cref=\"global::{type.FullName}\" />, they should use the <see cref=\"global::{type.FullName}.GetAppearance&lt;T&gt;(UIKit.UITraitCollection)\" /> method.</para>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} GetAppearance (UITraitCollection traits) {{", parent_implements_appearance ? "new " : "", appearance_type_name);
+				indent++;
+				print ("return new {0} (UIAppearance.GetAppearance (class_ptr, traits));", appearance_type_name);
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Obtains the appearance proxy <see cref=\"global::{type.FullName}.{type.Name}Appearance\" /> for <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <param name=\"traits\">Trait collection to match.</param>");
+					print ($"/// <param name=\"containers\">List of types that the developer wishes to have as the containers to apply this particular appearance.</param>");
+					print ($"/// <returns>");
+					print ($"///   <para>An appearance proxy object for the specified type.</para>");
+					print ($"/// </returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var myTraits = new UITraitCollection ();");
+					print ($"///var myTheme = {type.Name}.GetAppearance (myTraits, typeof (UINavigationBar), typeof (UIPopoverController));");
+					print ($"///myTheme.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>If developers want to control the appearance of subclasses of <see cref=\"global::{type.FullName}\" />, they should use the <see cref=\"global::{type.FullName}.GetAppearance&lt;T&gt;(UIKit.UITraitCollection,System.Type[])\" /> method.</para>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} GetAppearance (UITraitCollection traits, params Type [] containers) {{", parent_implements_appearance ? "new " : "", appearance_type_name);
+				indent++;
+				print ("return new {0} (UIAppearance.GetAppearance (class_ptr, traits, containers));", appearance_type_name);
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Obtains the appearance proxy <see cref=\"global::{type.FullName}.{type.Name}Appearance\" /> for the subclass of <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <typeparam name=\"T\">The type for which the <see cref=\"global::UIKit.UIAppearance\" /> proxy must be returned.  This is a subclass of <see cref=\"global::{type.FullName}\" />.</typeparam>");
+					print ($"/// <param name=\"traits\">Trait collection to match.</param>");
+					print ($"/// <returns>");
+					print ($"///   <para>An appearance proxy object for the specified type.</para>");
+					print ($"/// </returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>Setting any appearance properties on the returned object will affect the appearance of all classes and subclasses of the type parameter.</para>");
+					print ($"///   <para>Unlike the <see cref=\"global::{type.FullName}.Appearance\" /> property, or the <see cref=\"global::{type.FullName}.AppearanceWhenContainedIn(System.Type[])\" /> method which only work on instances of this particular class, the proxies returned by this method can be used to change the style of subclasses.</para>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var myTraits = new UITraitCollection ();");
+					print ($"///var myTheme = {type.Name}.GetAppearance<My{type.Name}Subclass> (myTraits);");
+					print ($"///myTheme.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} GetAppearance<T> (UITraitCollection traits) where T: {2} {{", parent_implements_appearance ? "new " : "", appearance_type_name, TypeName);
+				indent++;
+				print ("return new {0} (UIAppearance.GetAppearance (Class.GetHandle (typeof (T)), traits));", appearance_type_name);
+				indent--;
+				print ("}\n");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Obtains the appearance proxy <see cref=\"global::{type.FullName}.{type.Name}Appearance\" /> for the subclass of <see cref=\"global::{type.FullName}\" />.</summary>");
+					print ($"/// <typeparam name=\"T\">The type for which the <see cref=\"global::UIKit.UIAppearance\" /> proxy must be returned.  This is a subclass of <see cref=\"global::{type.FullName}\" />.</typeparam>");
+					print ($"/// <param name=\"traits\">Trait collection to match.</param>");
+					print ($"/// <param name=\"containers\">List of types that the developer wishes to have as the containers to apply this particular appearance.</param>");
+					print ($"/// <returns>");
+					print ($"///   <para>An appearance proxy object for the specified type.</para>");
+					print ($"/// </returns>");
+					print ($"/// <remarks>");
+					print ($"///   <para>Setting any appearance properties on the returned object will affect the appearance of all classes and subclasses of the type parameter.</para>");
+					print ($"///   <para>Unlike the <see cref=\"global::{type.FullName}.Appearance\" /> property, or the <see cref=\"global::{type.FullName}.AppearanceWhenContainedIn(System.Type[])\" /> method which only work on instances of this particular class, the proxies returned by this method can be used to change the style of subclasses.</para>");
+					print ($"///   <para>The following example shows how this method works:</para>");
+					print ($"///   <example>");
+					print ($"///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+					print ($"///var myTraits = new UITraitCollection ();");
+					print ($"///var myTheme = {type.Name}.GetAppearance<My{type.Name}Subclass> (myTraits, typeof (UINavigationBar), typeof (UIPopoverController));");
+					print ($"///myTheme.TintColor = UIColor.Red;");
+					print ($"///]]></code>");
+					print ($"///   </example>");
+					print ($"///   <para>For more information, see the documentation for the <see cref=\"global::UIKit.UIAppearance\" /> class.</para>");
+					print ($"/// </remarks>");
+				}
+				print ("public static {0}{1} GetAppearance<T> (UITraitCollection traits, params Type [] containers) where T: {2}{{", parent_implements_appearance ? "new " : "", appearance_type_name, TypeName);
+				indent++;
+				print ("return new {0} (UIAppearance.GetAppearance (Class.GetHandle (typeof (T)), containers));", appearance_type_name);
+				indent--;
+				print ("}\n");
+
+				print ("");
+			}
+			//
+			// Notification extensions
+			//
+			if (notifications.Count > 0) {
+				print ("\n");
+				print ("//");
+				print ("// Notifications");
+				print ("//");
+
+				print ($"/// <summary>Notifications posted by the <see cref=\"global::{type.FullName}\" /> class.</summary>");
+				print ("/// <remarks>");
+				print ("///    <para>This class contains various helper methods that allow developers to observe events posted in the notification hub (<see cref=\"Foundation.NSNotificationCenter\" />).</para>");
+				print ("///    <para>The methods defined in this class post events that invoke the provided method or lambda with a <see cref=\"Foundation.NSNotificationEventArgs\" /> parameter, which contains strongly typed properties for the notification arguments.</para>");
+				print ("/// </remarks>");
+				print ("public static partial class Notifications {\n");
+				foreach (var property in notifications.OrderBy (p => p.Name, StringComparer.Ordinal)) {
+					string notification_name = GetNotificationName (property);
+					string notification_center = GetNotificationCenter (property);
+
+					foreach (var notification_attribute in AttributeManager.GetCustomAttributes<NotificationAttribute> (property)) {
+						var event_args_type = notification_attribute.Type;
+						var event_name = event_args_type is null ? "NSNotificationEventArgs" : event_args_type.FullName;
+
+						if (event_args_type is not null)
+							notification_event_arg_types [event_args_type] = event_args_type;
+
+						string constantReference;
+						if (property.IsInternal (this)) {
+							var fieldAttr = AttributeManager.GetOneCustomAttribute<FieldAttribute> (property);
+							constantReference = $"\"{fieldAttr.SymbolName}\"";
+						} else {
+							constantReference = $"<see cref=\"global::{type.FullName}.{property.Name}\" />";
+						}
+
+						print ($"\t/// <summary>Strongly typed notification for the {constantReference} constant.</summary>");
+						print ($"\t/// <param name=\"handler\">The handler that responds to the notification when it occurs.</param>");
+						print ($"\t/// <returns>Token object that can be used to stop receiving notifications by either disposing it or passing it to <see cref=\"Foundation.NSNotificationCenter.RemoveObservers(System.Collections.Generic.IEnumerable{{Foundation.NSObject}})\" />.</returns>");
+						print ($"\t/// <remarks>");
+						print ($"\t///   <para>This method can be used to subscribe to {constantReference} notifications.</para>");
+						print ($"\t///   <example>");
+						print ($"\t///   <code lang=\"csharp lang-csharp\"><![CDATA[");
+						print ($"\t/// // Listen to all notifications posted for any object");
+						print ($"\t/// var token = {type.Name}.Notifications.Observe{notification_name} ((notification) => {{");
+						print ($"\t///   Console.WriteLine (\"Observed {notification_name}Notification!\");");
+						print ($"\t/// }};");
+						print ($"\t/// ");
+						print ($"\t/// // Stop listening for notifications");
+						print ($"\t/// token.Dispose ();");
+						print ($"\t/// ]]></code>");
+						print ($"\t///   </example>");
+						print ($"\t/// </remarks>");
+						print ("\tpublic static NSObject Observe{0} (EventHandler<{1}> handler)", notification_name, event_name);
+						print ("\t{");
+						print ("\t\treturn {0}.AddObserver ({1}, notification => handler (null, new {2} (notification)));", notification_center, property.Name, event_name);
+						print ("\t}");
+
+						print ($"\t/// <summary>Strongly typed notification for the {constantReference} constant.</summary>");
+						print ($"\t/// <param name=\"objectToObserve\">The specific object to observe.</param>");
+						print ($"\t/// <param name=\"handler\">The handler that responds to the notification when it occurs.</param>");
+						print ($"\t/// <returns>Token object that can be used to stop receiving notifications by either disposing it or passing it to <see cref=\"Foundation.NSNotificationCenter.RemoveObservers(System.Collections.Generic.IEnumerable{{Foundation.NSObject}})\" />.</returns>");
+						print ($"\t/// <remarks>");
+						print ($"\t///   <para>This method can be used to subscribe to {constantReference} notifications.</para>");
+						print ($"\t///   <example>");
+						print ($"\t///     <code lang=\"csharp lang-csharp\"><![CDATA[");
+						print ($"\t/// // Listen to all notifications posted for a single object");
+						print ($"\t/// var token = {type.Name}.Notifications.Observe{notification_name} (objectToObserve, (notification) => {{");
+						print ($"\t///   Console.WriteLine ($\"Observed {notification_name}Notification for {{nameof (objectToObserve)}}!\");");
+						print ($"\t/// }};");
+						print ($"\t/// ");
+						print ($"\t/// // Stop listening for notifications");
+						print ($"\t/// token.Dispose ();");
+						print ($"\t/// ]]></code>");
+						print ($"\t///   </example>");
+						print ($"\t/// </remarks>");
+						print ("\tpublic static NSObject Observe{0} (NSObject objectToObserve, EventHandler<{1}> handler)", notification_name, event_name);
+						print ("\t{");
+						print ("\t\treturn {0}.AddObserver ({1}, notification => handler (null, new {2} (notification)), objectToObserve);", notification_center, property.Name, event_name);
+						print ("\t}");
+					}
+				}
+				print ("\n}");
+			}
+
+			indent--;
+			print ("}} /* class {0} */", TypeName);
+
+			//
+			// Copy delegates from the API files into the output if they were declared there
+			//
+			var rootAssembly = api.Types [0].Assembly;
+			foreach (var deltype in trampolines.Keys.OrderBy (d => d.Name, StringComparer.Ordinal)) {
+				if (deltype.Assembly != rootAssembly)
+					continue;
+
+				// This formats the delegate 
+				delegate_types [deltype.FullName!] = deltype.GetMethod ("Invoke")!;
+			}
+
+			if (eventArgTypes.Count > 0) {
+				print ("\n");
+				print ("//");
+				print ("// EventArgs classes");
+				print ("//");
+			}
+			// Now add the EventArgs classes
+			foreach (var eaclass in eventArgTypes.Keys.OrderBy (e => e, StringComparer.Ordinal)) {
+				if (Nomenclator.WasEventArgGenerated (eaclass)) {
+					continue;
+				}
+				int minPars = bta!.Singleton ? 0 : 1;
+
+				var pars = eventArgTypes [eaclass];
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ("/// <summary>Provides data for an event based on an Objective-C protocol method.</summary>");
+				}
+				print ("public partial class {0} : EventArgs {{", eaclass); indent++;
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Create a new instance of the <see cref=\"{eaclass}\" /> with the specified event data.</summary>");
+					foreach (var p in pars.Skip (1))
+						print ($"/// <param name=\"{p.Name.GetSafeParamName ()}\">The value for the <see cref=\"{GetPublicParameterName (p)}\" /> property.</param>");
+				}
+				print ("public {0} ({1})", eaclass, RenderParameterDecl (pars.Skip (1), true));
+				print ("{");
+				indent++;
+				foreach (var p in pars.Skip (minPars).OrderBy (p => p.Name, StringComparer.Ordinal)) {
+					print ("this.{0} = {1};", GetPublicParameterName (p), p.Name.GetSafeParamName ());
+				}
+				indent--;
+				print ("}");
+
+				// Now print the properties
+				foreach (var p in pars.Skip (minPars).OrderBy (p => p.Name, StringComparer.Ordinal)) {
+					var pt = p.ParameterType;
+					var bareType = pt.TryIsByRef (out var elementType) ? elementType : pt;
+					var nullable = !pt.IsValueType && AttributeManager.IsNullable (p);
+
+					if (BindingTouch.SupportsXmlDocumentation)
+						print ($"/// <summary>The value of the <c>{GetPublicParameterName (p)}</c> argument to the event.</summary>");
+					print ("public {0}{1} {2} {{ get; set; }}", TypeManager.RenderType (bareType), nullable ? "?" : "", GetPublicParameterName (p));
+				}
+				indent--; print ("}\n");
+			}
+
+			if (async_result_types.Count > 0) {
+				print ("\n");
+				print ("//");
+				print ("// Async result classes");
+				print ("//");
+			}
+
+			foreach (var async_type in async_result_types.OrderBy (t => t.Item1, StringComparer.Ordinal)) {
+				if (async_result_types_emitted.Contains (async_type.Item1))
+					continue;
+				async_result_types_emitted.Add (async_type.Item1);
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>This class holds the return values for an asynchronous operation.</summary>");
+				}
+				print ("public partial class {0} {{", async_type.Item1); indent++;
+
+				var ctor = new StringBuilder ();
+
+				bool comma = false;
+				foreach (var pi in async_type.Item2) {
+					if (BindingTouch.SupportsXmlDocumentation) {
+						print ($"/// <summary>The result value from the asynchronous operation.</summary>");
+					}
+					var safe_name = pi.Name.GetSafeParamName ();
+					print ("public {0} {1} {{ get; set; }}",
+						TypeManager.FormatType (type, pi.ParameterType),
+						safe_name.Capitalize ());
+
+					if (comma)
+						ctor.Append (", ");
+					comma = true;
+					ctor.Append (TypeManager.FormatType (type, pi.ParameterType)).Append (" ").Append (safe_name);
+				}
+
+				print ("\npartial void Initialize ();");
+
+				if (BindingTouch.SupportsXmlDocumentation) {
+					print ($"/// <summary>Creates a new instance of this class.</summary>");
+					foreach (var pi in async_type.Item2) {
+						var safe_name = pi.Name.GetSafeParamName ();
+						print ($"/// <param name=\"{safe_name}\">Result value from an asynchronous operation.</param>");
+					}
+				}
+				print ("\npublic {0} ({1}) {{", async_type.Item1, ctor); indent++;
+				foreach (var pi in async_type.Item2) {
+					var safe_name = pi.Name.GetSafeParamName ();
+					print ("this.{0} = {1};", safe_name.Capitalize (), safe_name);
+				}
+				print ("Initialize ();");
+				indent--; print ("}");
+
+				indent--; print ("}\n");
+			}
+			async_result_types.Clear ();
+
+			if (type.IsNested) {
+				indent--;
+				print ("}");
+			}
+			if (type.Namespace is not null) {
+				indent--;
+				print ("}");
+			}
+		}
+	}
+
+	// Searches base types as well
+	bool HasProperty (Type? type, string propertyName)
+	{
+		while (type is not null) {
+			if (type.GetProperty (propertyName) is not null)
+				return true;
+			var bta = ReflectionExtensions.GetBaseTypeAttribute (type, this);
+			type = bta?.BaseType;
+		}
+		return false;
+	}
+
+	static string GetDelegateTypePropertyName (string delName)
+	{
+		return "GetInternalEvent" + delName + "Type";
+	}
+
+	bool SafeIsProtocolEventBacked (string propertyName, Type type)
+	{
+		return CoreIsProtocolEventBacked (propertyName, type, false);
+	}
+
+	bool IsProtocolEventBacked (string propertyName, Type type)
+	{
+		return CoreIsProtocolEventBacked (propertyName, type, true);
+	}
+
+	bool CoreIsProtocolEventBacked (string propertyName, Type type, bool shouldThrowOnNotFound)
+	{
+		var pi = type.GetProperty (propertyName);
+		var bta = ReflectionExtensions.GetBaseTypeAttribute (type, this);
+		if (pi is null || bta is null) {
+			if (shouldThrowOnNotFound) {
+				if (propertyName == "Delegate" && bta!.Delegates!.Count () > 0) {
+					var delegates = new List<string> (bta.Delegates!);
+					// grab all the properties that have the Wrap attr
+					var propsAttrs = from p in type.GetProperties ()
+									 let attrs = AttributeManager.GetCustomAttributes<WrapAttribute> (p)
+									 where p.Name != "Delegate" && attrs.Length > 0
+									 select new { Name = p.Name, Attributes = Array.ConvertAll (attrs, item => item.MethodName) };
+
+					var props = new List<string> ();
+					foreach (var p in propsAttrs) {
+						if (delegates.Intersect (p.Attributes).Any ()) {
+							// add quoates since we are only using this info for the exception message
+							props.Add (String.Format ("'{0}'", p.Name));
+						}
+					}
+					if (props.Count == 1)
+						throw new BindingException (1112, true,
+							 props [0], false);
+					else if (props.Count > 1)
+						throw new BindingException (1112, true,
+							String.Join (", ", props.ToArray ()), false);
+					else
+						throw new BindingException (1113, true, false);
+				} else
+					throw new BindingException (1114, propertyName, type, false);
+			} else
+				return false;
+		}
+
+		if (bta.Events is null)
+			return false;
+
+		if (!IsProtocolInterface (pi.PropertyType, true, out var protocolType))
+			return false;
+
+		return bta.Events.Any (x => x.Name == protocolType.Name);
+	}
+
+	string? FindSelector (Type type, MethodInfo mi)
+	{
+		Type currentType = type;
+		do {
+			// avoid AmbiguousMatchException when GetMethod is used.
+			var parameters = mi.GetParameters ().Select ((arg) => arg.ParameterType).ToArray ();
+			var method = currentType.GetMethod (mi.Name, parameters);
+			if (method is not null) {
+				var export = GetExportAttribute (method, out var wrap);
+				if (export is not null)
+					return export.Selector;
+			}
+			var bta = ReflectionExtensions.GetBaseTypeAttribute (currentType, this);
+
+			if (bta is null)
+				break;
+			currentType = bta.BaseType;
+		}
+		while (currentType is not null);
+		throw new BindingException (1076, true, mi, type);
+	}
+
+	string GenerateInterfaceTypeName (BaseTypeAttribute bta, string delName, string currentTypeName)
+	{
+		if (HasParentWithSameNamedDelegate (bta, delName, out var parentType)) {
+			var parentProperty = parentType.GetProperty (delName)!;
+			if (IsProtocolInterface (parentProperty.PropertyType))
+				return parentProperty.PropertyType.Name.Substring (1);
+			return parentProperty.PropertyType.Name;
+		}
+		return currentTypeName;
+	}
+
+	bool ShouldSkipEventGeneration (MethodInfo mi)
+	{
+		// Skip property getter/setters
+		if (mi.IsSpecialName && (mi.Name.StartsWith ("get_", StringComparison.Ordinal) || mi.Name.StartsWith ("set_", StringComparison.Ordinal)))
+			return true;
+
+		if (mi.IsUnavailable (this))
+			return true;
+
+		// Skip those methods marked to be ignored by the developer
+		return AttributeManager.HasAttribute<IgnoredInDelegateAttribute> (mi);
+	}
+
+	// Safely strips away any Weak from the beginning of either delegate and returns if they match
+	static bool CompareTwoDelegateNames (string lhsDel, string rhsDel)
+	{
+		lhsDel = lhsDel.StartsWith ("Weak", StringComparison.Ordinal) ? lhsDel.Substring (4) : lhsDel;
+		rhsDel = rhsDel.StartsWith ("Weak", StringComparison.Ordinal) ? rhsDel.Substring (4) : rhsDel;
+		return lhsDel == rhsDel;
+	}
+
+	Type? GetParentTypeWithSameNamedDelegate (BaseTypeAttribute bta, string delegateName)
+	{
+		var currentType = bta.BaseType;
+		while (currentType is not null && currentType != TypeCache.NSObject) {
+			var currentBta = ReflectionExtensions.GetBaseTypeAttribute (currentType, this);
+			if (currentBta is not null && currentBta.Events is not null) {
+				int delidx = 0;
+				foreach (var v in currentBta.Events) {
+					var currentDelName = currentBta.Delegates! [delidx++];
+					if (CompareTwoDelegateNames (currentDelName, delegateName))
+						return currentType;
+				}
+			}
+			currentType = currentType.BaseType;
+		}
+		return null;
+	}
+
+	bool HasParentWithSameNamedDelegate (BaseTypeAttribute bta, string delegateName)
+	{
+		return HasParentWithSameNamedDelegate (bta, delegateName, out _);
+	}
+
+	bool HasParentWithSameNamedDelegate (BaseTypeAttribute bta, string delegateName, [NotNullWhen (true)] out Type? parentType)
+	{
+		parentType = GetParentTypeWithSameNamedDelegate (bta, delegateName);
+		return parentType is not null;
+	}
+
+	string GetNotificationCenter (PropertyInfo pi)
+	{
+		var a = AttributeManager.GetCustomAttributes<NotificationAttribute> (pi);
+		return a [0].NotificationCenter ?? "NSNotificationCenter.DefaultCenter";
+	}
+
+	string GetNotificationName (PropertyInfo pi)
+	{
+		// TODO: fetch the NotificationAttribute, see if there is an override there.
+		var name = pi.Name;
+		if (name.EndsWith ("Notification", StringComparison.Ordinal))
+			return name.Substring (0, name.Length - "Notification".Length);
+		return name;
+	}
+
+	//
+	// Support for the automatic delegate/event generation
+	//
+	string RenderParameterDecl (IEnumerable<ParameterInfo> pi)
+	{
+		return RenderParameterDecl (pi, false);
+	}
+
+	string RenderParameterDecl (IEnumerable<ParameterInfo> pi, bool removeRefTypes)
+	{
+		return String.Join (", ", pi.Select (p => RenderSingleParameter (p, removeRefTypes) + " " + p.Name.GetSafeParamName ()).ToArray ());
+	}
+
+	string RenderSingleParameter (ParameterInfo p, bool removeRefTypes)
+	{
+		var pt = p.ParameterType;
+
+		string name = string.Empty;
+		if (AttributeManager.HasAttribute<BlockCallbackAttribute> (p))
+			name = "[BlockCallback] ";
+		else if (AttributeManager.HasAttribute<CCallbackAttribute> (p))
+			name = "[CCallback] ";
+
+		if (pt.TryIsByRef (out var ptElementType)) {
+			pt = ptElementType;
+			name += (removeRefTypes ? "" : (p.IsOut ? "out " : "ref ")) + TypeManager.RenderType (pt, p);
+		} else
+			name += TypeManager.RenderType (pt, p);
+		return name;
+	}
+
+	string? GetPublicParameterName (ParameterInfo pi)
+	{
+		var attrs = AttributeManager.GetCustomAttributes<EventNameAttribute> (pi);
+		if (attrs.Length == 0)
+			return pi.Name.CamelCase ().GetSafeParamName ();
+
+		var a = attrs [0];
+		return a.EvtName.CamelCase ().GetSafeParamName ();
+	}
+
+	string RenderArgs (IEnumerable<ParameterInfo> pi)
+	{
+		return RenderArgs (pi, false);
+	}
+
+	string RenderArgs (IEnumerable<ParameterInfo> pi, bool removeRefTypes)
+	{
+		return String.Join (", ", pi.Select (p => (p.ParameterType.IsByRef ? (removeRefTypes ? "" : (p.IsOut ? "out " : "ref ")) : "") + p.Name.GetSafeParamName ()).ToArray ());
+	}
+
+	bool MustPullValuesBack (IEnumerable<ParameterInfo> parameters)
+	{
+		return parameters.Any (pi => pi.ParameterType.IsByRef);
+	}
+
+	object GetDefaultValue (MethodInfo mi)
+	{
+		Attribute? a = AttributeManager.GetCustomAttribute<DefaultValueAttribute> (mi);
+		if (a is null) {
+			a = AttributeManager.GetCustomAttribute<DefaultValueFromArgumentAttribute> (mi);
+			if (a is not null) {
+				var fvfa = (DefaultValueFromArgumentAttribute) a;
+				return fvfa.Argument;
+			}
+
+			throw new BindingException (1016, true, mi.DeclaringType!.FullName, mi.Name);
+		}
+		var def = ((DefaultValueAttribute) a).Default;
+		if (def is null)
+			return "null";
+
+		var type = def as Type;
+		if (type is not null && (
+			type.FullName == "CoreGraphics.CGPoint" ||
+			type.FullName == "CoreGraphics.CGSize" ||
+			type.FullName == "CoreGraphics.CGRect"))
+			return type.FullName + ".Empty";
+
+		if (def is bool)
+			return (bool) def ? "true" : "false";
+
+		if (mi.ReturnType.IsEnum) {
+			if (def is string)
+				return def;
+			var name = Enum.GetName (mi.ReturnType, def);
+			if (string.IsNullOrEmpty (name)) {
+				// The value could be negative so it need to be enclosed in parenthesis
+				return "(" + mi.ReturnType.FullName + ") (" + def + ")";
+			} else {
+				return mi.ReturnType.FullName + "." + name;
+			}
+		}
+
+		return def;
+	}
+
+	static string FormatPropertyInfo (PropertyInfo pi)
+	{
+		return pi.DeclaringType?.FullName + " " + pi.Name;
+	}
+
+	// Format a provider for error messages
+	public static string FormatProvider (ICustomAttributeProvider? provider)
+	{
+		if (provider is Type type) {
+			return type.FullName ?? "";
+		} else if (provider is MemberInfo mi) {
+			return mi.DeclaringType?.FullName + "." + mi.Name;
+		} else {
+			return provider?.ToString () ?? string.Empty;
+		}
+	}
+
+	public bool IsApiAssembly (Assembly assembly)
+	{
+		return assembly == api.Assembly;
+	}
+
+}

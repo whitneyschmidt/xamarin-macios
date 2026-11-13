@@ -28,36 +28,51 @@
 
 #if MONOMAC
 
-using System;
+using System.Diagnostics.CodeAnalysis;
 
-using ObjCRuntime;
+#nullable enable
 
-namespace Foundation
-{
-	public partial class NSConnection
-	{
+namespace Foundation {
+	public partial class NSConnection {
 
+		/// <summary>Gets the root proxy object for this connection.</summary>
+		/// <typeparam name="TProxy">The type of the proxy object to return.</typeparam>
+		/// <returns>The root proxy object, cast to the specified type.</returns>
+		/// <remarks>This method retrieves the root object provided by the receiver's peer. The returned object is a proxy that represents the root object on the remote side of the connection.</remarks>
 		public TProxy GetRootProxy<TProxy> () where TProxy : NSObject
 		{
 			return GetRootProxy<TProxy> (_GetRootProxy ());
 		}
 
-		public static TProxy GetRootProxy<TProxy> (string name, string hostName) where TProxy : NSObject
+		/// <summary>Gets the root proxy object for the connection identified by name and host.</summary>
+		/// <typeparam name="TProxy">The type of the proxy object to return.</typeparam>
+		/// <param name="name">The name of the connection.</param>
+		/// <param name="hostName">The name of the host on which the connection is registered.</param>
+		/// <returns>The root proxy object for the specified connection, cast to the specified type.</returns>
+		/// <remarks>This method retrieves the root object from a connection identified by <paramref name="name" /> on the specified <paramref name="hostName" />.</remarks>
+		public static TProxy GetRootProxy<TProxy> (string name, string? hostName) where TProxy : NSObject
 		{
 			return GetRootProxy<TProxy> (_GetRootProxy (name, hostName));
 		}
 
-		public static TProxy GetRootProxy<TProxy> (string name, string hostName, NSPortNameServer server) where TProxy : NSObject
+		/// <summary>Gets the root proxy object for the connection identified by name, host, and port name server.</summary>
+		/// <typeparam name="TProxy">The type of the proxy object to return.</typeparam>
+		/// <param name="name">The name of the connection.</param>
+		/// <param name="hostName">The name of the host on which the connection is registered.</param>
+		/// <param name="server">The <see cref="NSPortNameServer" /> to use for looking up the connection.</param>
+		/// <returns>The root proxy object for the specified connection, cast to the specified type.</returns>
+		/// <remarks>This method retrieves the root object from a connection identified by <paramref name="name" /> on the specified <paramref name="hostName" /> using the given port name server.</remarks>
+		public static TProxy GetRootProxy<TProxy> (string name, string? hostName, NSPortNameServer server) where TProxy : NSObject
 		{
 			return GetRootProxy<TProxy> (_GetRootProxy (name, hostName, server));
 		}
 
-		static TProxy GetRootProxy<TProxy> (IntPtr handle) where TProxy : NSObject
+		static TProxy GetRootProxy<[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] TProxy> (IntPtr handle) where TProxy : NSObject
 		{
 			var result = Runtime.TryGetNSObject (handle) as TProxy;
 
-			if (result == null)
-				result = (TProxy)Activator.CreateInstance (typeof (TProxy), new object[] { handle });
+			if (result is null)
+				result = (TProxy) Activator.CreateInstance (typeof (TProxy), new object [] { handle })!;
 
 			return result;
 		}

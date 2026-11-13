@@ -26,27 +26,40 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
-using Foundation; 
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #endif
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreAnimation {
 
 	public partial class CALayer {
 		const string selInitWithLayer = "initWithLayer:";
 
+		/// <param name="other">Source layer to copy</param>
+		///         <summary>This method must be implemented by derived classes to make a copy of the original layer.</summary>
+		///         <remarks>
+		/// 	  See the class summary for an example of how to use this constructor.
+		/// 	</remarks>
 		[Export ("initWithLayer:")]
 		public CALayer (CALayer other)
 		{
-			if (this.GetType () == typeof (CALayer)){
+			if (other is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (other));
+
+			if (this.GetType () == typeof (CALayer)) {
 				Messaging.IntPtr_objc_msgSend_IntPtr (Handle, Selector.GetHandle (selInitWithLayer), other.Handle);
+				GC.KeepAlive (other);
 			} else {
-				Messaging.IntPtr_objc_msgSendSuper_IntPtr (SuperHandle, Selector.GetHandle (selInitWithLayer), other.Handle);
+				unsafe {
+					var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+					Messaging.IntPtr_objc_msgSendSuper_IntPtr (&__objc_super__, Selector.GetHandle (selInitWithLayer), other.Handle);
+					GC.KeepAlive (this);
+					GC.KeepAlive (other);
+				}
 				Clone (other);
 			}
 			MarkDirtyIfDerived ();
@@ -59,6 +72,9 @@ namespace CoreAnimation {
 			MarkDirty (true);
 		}
 
+		/// <param name="other">The other layer to copy information from.</param>
+		///         <summary>This method should be overridden to provide cloning capabilities for the layer.</summary>
+		///         <remarks>You can either override this method and clone the information that you need from the original layer, or perform the copy in your initWithLayer: constructor (see the class description for details and a sample). </remarks>
 		public virtual void Clone (CALayer other)
 		{
 			// Subclasses must copy any instance values that they care from other
@@ -79,18 +95,18 @@ namespace CoreAnimation {
 		//    The workaround will ensure that UIView.Layer.Delegate is nulled out when
 		//    the CALayerDelegate is disposed, which will prevent the UIView from
 		//    having a pointer to a freed object.
-		WeakReference calayerdelegate;
-		void SetCALayerDelegate (CALayerDelegate value)
+		WeakReference? calayerdelegate;
+		void SetCALayerDelegate (CALayerDelegate? value)
 		{
 			// Remove ourselves from any existing CALayerDelegate.
-			if (calayerdelegate != null) {
-				var del = (CALayerDelegate) calayerdelegate.Target;
+			if (calayerdelegate is not null) {
+				var del = (CALayerDelegate?) calayerdelegate.Target;
 				if (del == value)
 					return;
-				del.SetCALayer (null);
+				del?.SetCALayer (null);
 			}
 			// Tell the new CALayerDelegate about ourselves
-			if (value == null) {
+			if (value is null) {
 				calayerdelegate = null;
 			} else {
 				calayerdelegate = new WeakReference (value);
@@ -98,77 +114,60 @@ namespace CoreAnimation {
 			}
 		}
 
+		// Note: preserving this member allows us to re-enable the `Optimizable` binding flag
+		[Preserve (Conditional = true)]
 		void OnDispose ()
 		{
-			if (calayerdelegate != null) {
-				var del = (CALayerDelegate) calayerdelegate.Target;
-				if (del != null)
+			if (calayerdelegate is not null) {
+				var del = (CALayerDelegate?) calayerdelegate.Target;
+				if (del is not null)
 					WeakDelegate = null;
 			}
 		}
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'BeginTime' instead.")]
-		public double CFTimeInterval {
-			get { return BeginTime; }
-			set { BeginTime = value; }
-		}
-		
-		[Obsolete ("Use 'ConvertRectFromLayer' instead.")]
-		public CGRect ConvertRectfromLayer (CGRect rect, CALayer layer)
-		{
-			return ConvertRectFromLayer (rect, layer);
-		}
-#endif
-
-		public T GetContentsAs <T> () where T : NSObject
+		/// <summary>Get the <see cref="Contents" /> property for an object that is not <see cref="CGImage" />.</summary>
+		/// <typeparam name="T">The type of the returned object.</typeparam>
+		/// <returns>The <see cref="Contents" /> property, but using the specified <typeparamref name="T" /> type.</returns>
+		/// <remarks>Specifying an incorrect type for <typeparamref name="T" /> will result in undefined behavior.</remarks>
+		public T? GetContentsAs<T> () where T : NSObject
 		{
 			return Runtime.GetNSObject<T> (_Contents);
 		}
 
-		public void SetContents (NSObject value)
+		/// <summary>Set the <see cref="Contents" /> property to an object that is not <see cref="CGImage" />.</summary>
+		/// <param name="value">The value to set the <see cref="Contents" /> property to.</param>
+		public void SetContents (NSObject? value)
 		{
-			_Contents = value == null ? IntPtr.Zero : value.Handle;
+			_Contents = value.GetHandle ();
+			GC.KeepAlive (value);
 		}
 
-#if MONOMAC
-		[Obsolete ("Use 'AutoresizingMask' instead.")]
-		public virtual CAAutoresizingMask AutoresizinMask { 
-			get {
-				return AutoresizingMask;
-			}
-			set {
-				AutoresizingMask = value;
-			}
-		}
-#endif
-		[Watch (3,0)][TV (10,0)][Mac (10,12)][iOS (10,0)]
+		/// <summary>Gets the contents format for the layer.</summary>
+		/// <value>The format used for the layer's contents.</value>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
 		public CAContentsFormat ContentsFormat {
 			get { return CAContentsFormatExtensions.GetValue (_ContentsFormat); }
-			set { _ContentsFormat = value.GetConstant (); }
+			set { _ContentsFormat = value.GetConstant ()!; }
 		}
 	}
 
 #if !MONOMAC
 	public partial class CADisplayLink {
-		NSActionDispatcher dispatcher;
+		NSActionDispatcher? dispatcher;
 
+		/// <param name="action">Method to invoke on each screen refresh.</param>
+		///         <summary>Registers the delegate to be invoked every time the display is about to be updated.</summary>
+		///         <returns>The DisplayLink object that will invoke the specified method on each screen update.</returns>
+		///         <remarks>Once you create the display link, you must add the handler to the runloop.</remarks>
 		public static CADisplayLink Create (Action action)
 		{
 			var dispatcher = new NSActionDispatcher (action);
 			var rv = Create (dispatcher, NSActionDispatcher.Selector);
 			rv.dispatcher = dispatcher;
 			return rv;
-		}
-	}
-#endif
-
-#if !XAMCORE_2_0
-	public partial class CAAnimation {
-		[Obsolete ("Use 'BeginTime' instead.")]
-		public double CFTimeInterval {
-			get { return BeginTime; }
-			set { BeginTime = value; }
 		}
 	}
 #endif

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKNoise
 //
 // Authors:
@@ -8,14 +8,9 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && XAMCORE_2_0
-
-using System;
-using OpenTK;
-using NUnit.Framework;
-
-using Foundation;
 using GameplayKit;
+
+using Vector3d = global::CoreGraphics.NVector3d;
 
 namespace MonoTouchFixtures.GamePlayKit {
 	[TestFixture]
@@ -27,9 +22,9 @@ namespace MonoTouchFixtures.GamePlayKit {
 		{
 			if (!TestRuntime.CheckXcodeVersion (8, 0))
 				Assert.Ignore ("Ignoring GameplayKit tests: Requires iOS10+");
-			
+
 			using (var noise = new GKNoise (GKCheckerboardNoiseSource.Create (5))) {
-				var delta = new Vector3d (1/8, 0, 1/3);
+				var delta = new Vector3d (1 / 8, 0, 1 / 3);
 				Assert.DoesNotThrow (() => noise.Move (delta), "Move");
 
 				var radians = new Vector3d (0, Math.PI / 3, 0);
@@ -41,4 +36,3 @@ namespace MonoTouchFixtures.GamePlayKit {
 		}
 	}
 }
-#endif

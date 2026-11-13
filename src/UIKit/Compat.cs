@@ -1,5 +1,5 @@
 //
-// Compat.cs: Stuff we won't provide in Xamarin.iOS.dll or newer XAMCORE_* profiles
+// Compat.cs: Stuff we won't provide anymore the next time we can make breaking changes.
 //
 // Authors:
 //   Sebastien Pouliot  <sebastien@xamarin.com>
@@ -8,223 +8,85 @@
 // Copyright 2019 Microsoft Corporation
 //
 
-using System;
+using System.ComponentModel;
+
 using CoreGraphics;
-using Foundation;
 
 namespace UIKit {
-
-#if !XAMCORE_2_0
-	public partial class UIPrintFormatter {
-
-		[Obsolete ("This cannot be directly created. Use UISimpleTextPrintFormatter instead.")]
-		public UIPrintFormatter (string text)
-		{
-		}
-
-		[Obsolete ("This cannot be directly created. Use UISimpleTextPrintFormatter instead.")]
-		public UIPrintFormatter (MonoTouch.Foundation.NSAttributedString attributedText)
-		{
-		}
-
-		[Obsolete ("This cannot be used directly. Use UISimpleTextPrintFormatter instead.")]
-		public virtual MonoTouch.Foundation.NSAttributedString AttributedText { get; set; }
-	}
-#endif
-
-#if !XAMCORE_3_0
-	public partial class UIAdaptivePresentationControllerDelegate {
-
-		[Obsolete ("Incorrect signature. Use the overload with a UITraitCollection parameter.")]
-		public virtual UIViewController GetAdaptivePresentationStyle (UIPresentationController controller, UIModalPresentationStyle style)
-		{
-			return null;
-		}
-	}
-
-#if !XAMCORE_2_0
-	public partial class  UIPopoverPresentationControllerDelegate {
-
-		[Obsolete ("Incorrect signature. Use the overload with a UITraitCollection parameter.")]
-		public override UIViewController GetAdaptivePresentationStyle (UIPresentationController controller, UIModalPresentationStyle style)
-		{
-			return null;
+#if !XAMCORE_5_0
+	partial class UIButtonConfiguration {
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Do not use; this API does not exist and will always return null.")]
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[UnsupportedOSPlatform ("ios26.1")]
+		[UnsupportedOSPlatform ("tvos26.1")]
+		[UnsupportedOSPlatform ("maccatalyst26.1")]
+		public static UIButtonConfiguration? TintedGlassButtonConfiguration {
+			get {
+				return null;
+			}
 		}
 	}
 #endif
 
-	public partial class UIAdaptivePresentationControllerDelegate_Extensions {
-
-		[Obsolete ("Incorrect signature. Use the overload with a UITraitCollection parameter.")]
-		public static UIViewController GetAdaptivePresentationStyle (IUIAdaptivePresentationControllerDelegate This, UIPresentationController controller, UIModalPresentationStyle style)
+#if !XAMCORE_5_0 && IOS
+	public partial class UIDocViewController {
+		[Obsolete ("Do not use; this constructor doesn't work.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public UIDocViewController ()
+			: base (ThrowInvalidOperationException ())
 		{
-			return null;
 		}
-	}
-
-	public static partial class NSIdentifier {
-
-		[Obsolete ("Use 'GetIdentifier' method.")]
-		public static string Identifier (this NSLayoutConstraint This)
+		static NSObjectFlag ThrowInvalidOperationException ()
 		{
-			return This.GetIdentifier ();
+			throw new InvalidOperationException ("Do not call this constructor, it may crash the app.");
 		}
 	}
 #endif
 
-#if !XAMCORE_4_0 && !WATCH
-	public partial class UIPresentationController {
-
-		[Obsolete ("Removed in iOS10. Use '.ctor (UIViewController,UIViewController)'.")]
-		public UIPresentationController ()
+	public static partial class UIAccessibilityTraitsExtensions {
+#if XAMCORE_6_0
+		// .NET: GetConstant (manually written, only exists for binary compat) is completely broken, use GetConstantValue (generated).
+		// XAMCORE_5_0: GetConstant works (generated), provide GetConstantValue (manually written) which does the same thing, but is obsoleted.
+		// XAMCORE_6_0: GetConstant works (generated), remove GetConstantValue since it was obsoleted in the previous version.
+#elif XAMCORE_5_0
+		// This method is to provide source-compatibility with the previous version. No need to break people's builds if we don't have to.
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'GetConstant' instead.")]
+		public static ulong? GetConstantValue (this UIAccessibilityTraits self)
 		{
+			return GetConstant (self);
 		}
-	}
-
-#if !TVOS
-	public partial class UIPreviewInteraction {
-		[Obsolete ("Use overload accepting a 'IUICoordinateSpace'.")]
-		public virtual CGPoint GetLocationInCoordinateSpace (UICoordinateSpace coordinateSpace)
+#else
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'GetConstantValue' instead.")]
+		public static NSString? GetConstant (this UIAccessibilityTraits self)
 		{
-			return GetLocationInCoordinateSpace ((IUICoordinateSpace) coordinateSpace);
+			throw new NotSupportedException ($"Use 'GetConstantValue' instead, the return type for this method is incorrect.");
 		}
-	}
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'GetValue (ulong)' instead.")]
+		public static UIAccessibilityTraits GetValue (NSString constant)
+		{
+			throw new NotSupportedException ($"Use 'GetValue (ulong)' instead.");
+		}
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'GetValue (ulong)' instead.")]
+		public static UIAccessibilityTraits GetValue (NativeHandle handle)
+		{
+			throw new NotSupportedException ($"Use 'GetValue (ulong)' instead.");
+		}
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'GetValue (ulong)' instead.")]
+		public static UIAccessibilityTraits? GetNullableValue (NativeHandle handle)
+		{
+			throw new NotSupportedException ($"Use 'GetValue (ulong)' instead.");
+		}
 #endif
-
-#endif
-
-#if !XAMCORE_4_0 && !WATCH
-	public partial class UICollectionViewFocusUpdateContext {
-		[Obsolete ("This cannot be directly created.")]
-		public UICollectionViewFocusUpdateContext () { }
 	}
-
-	public partial class UIFocusUpdateContext {
-		[Obsolete ("This cannot be directly created.")]
-		public UIFocusUpdateContext () { }
-	}
-
-	public partial class NSLayoutManager {
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public void AddTemporaryAttribute (NSString attributeName, NSObject value, NSRange characterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual void AddTemporaryAttribute (string attributeName, NSObject value, NSRange characterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual void AddTemporaryAttributes (NSDictionary<NSString,NSObject> attributes, NSRange characterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual nfloat GetDefaultBaselineOffset (UIFont font)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual nfloat GetDefaultLineHeight (UIFont font)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		protected virtual NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex, IntPtr effectiveRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex, out NSRange effectiveRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		protected virtual NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex, IntPtr longestEffectiveRange, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSObject GetTemporaryAttribute (NSString attributeName, nuint characterIndex, out NSRange longestEffectiveRange, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		protected virtual NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex, IntPtr effectiveCharacterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex, out NSRange effectiveCharacterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		protected virtual NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex, IntPtr longestEffectiveRange, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public NSDictionary<NSString,NSObject> GetTemporaryAttributes (nuint characterIndex, out NSRange longestEffectiveRange, NSRange rangeLimit)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual void RemoveTemporaryAttribute (NSString attributeName, NSRange characterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public void RemoveTemporaryAttribute (string attributeName, NSRange characterRange)
-		{
-			throw new NotSupportedException ();
-		}
-
-		[Obsolete ("Always throw a 'NotSupportedException' (only available on macOS).")]
-		public virtual void TextContainerChangedTextView (NSTextContainer container)
-		{
-			throw new NotSupportedException ();
-		}
-	}
-#endif
 }

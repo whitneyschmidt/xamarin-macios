@@ -1,19 +1,21 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
+#if !__MACCATALYST__
 
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
-using ObjCRuntime;
-using System;
 
 namespace CoreWlan {
+	/// <summary>Encapsulates a CoreWLAN network configuration.</summary>
 	public unsafe partial class CWConfiguration {
-		public CWNetworkProfile [] NetworkProfiles {
+		/// <summary>Gets the ordered list of preferred network profiles.</summary>
+		/// <value>An array of network profiles, or <see langword="null" /> if none are configured.</value>
+		public CWNetworkProfile []? NetworkProfiles {
 			get {
 				NSOrderedSet profiles = _NetworkProfiles;
-				if (profiles != null)
-					return profiles.ToArray<CWNetworkProfile> ();
-				return null;
+				return profiles?.ToArray<CWNetworkProfile> ();
 			}
 		}
 	}
 }
+#endif

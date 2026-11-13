@@ -7,18 +7,22 @@
 // Copyright Xamarin Inc.
 //
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 
-using Foundation;
+#nullable enable
 
-namespace SceneKit
-{
+namespace SceneKit {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class SCNPropertyControllers {
-		NSMutableDictionary mutDict;
+		NSMutableDictionary? mutDict;
 		internal NSDictionary dict;
-		
+
 		internal SCNPropertyControllers (NSDictionary dict)
 		{
 			this.dict = dict;
@@ -26,22 +30,34 @@ namespace SceneKit
 				mutDict = (NSMutableDictionary) dict;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public SCNPropertyControllers ()
 		{
 			mutDict = new NSMutableDictionary ();
 			dict = mutDict;
 		}
 
-		internal void Set (NSString key, SCNParticlePropertyController value)
+		internal void Set (NSString key, SCNParticlePropertyController? value)
 		{
-			if (mutDict == null){
+			if (value is null && mutDict is null)
+				return;
+
+			if (mutDict is null) {
 				mutDict = new NSMutableDictionary (dict);
 				dict = mutDict;
 			}
-			mutDict [key] = value;
+			if (value is null) {
+				mutDict.Remove (key);
+			} else {
+				mutDict [key] = value;
+			}
 		}
-		
-		public SCNParticlePropertyController Position {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Position {
 			get {
 				return dict [SCNParticleProperty.Position] as SCNParticlePropertyController;
 			}
@@ -49,8 +65,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Position, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Angle {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Angle {
 			get {
 				return dict [SCNParticleProperty.Angle] as SCNParticlePropertyController;
 			}
@@ -58,8 +77,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Angle, value);
 			}
 		}
-		
-		public SCNParticlePropertyController RotationAxis {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? RotationAxis {
 			get {
 				return dict [SCNParticleProperty.RotationAxis] as SCNParticlePropertyController;
 			}
@@ -67,8 +89,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.RotationAxis, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Velocity {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Velocity {
 			get {
 				return dict [SCNParticleProperty.Velocity] as SCNParticlePropertyController;
 			}
@@ -76,8 +101,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Velocity, value);
 			}
 		}
-		
-		public SCNParticlePropertyController AngularVelocity {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? AngularVelocity {
 			get {
 				return dict [SCNParticleProperty.AngularVelocity] as SCNParticlePropertyController;
 			}
@@ -85,8 +113,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.AngularVelocity, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Life {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Life {
 			get {
 				return dict [SCNParticleProperty.Life] as SCNParticlePropertyController;
 			}
@@ -94,8 +125,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Life, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Color {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Color {
 			get {
 				return dict [SCNParticleProperty.Color] as SCNParticlePropertyController;
 			}
@@ -103,8 +137,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Color, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Opacity {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Opacity {
 			get {
 				return dict [SCNParticleProperty.Opacity] as SCNParticlePropertyController;
 			}
@@ -112,8 +149,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Opacity, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Size {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Size {
 			get {
 				return dict [SCNParticleProperty.Size] as SCNParticlePropertyController;
 			}
@@ -121,8 +161,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Size, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Frame {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Frame {
 			get {
 				return dict [SCNParticleProperty.Frame] as SCNParticlePropertyController;
 			}
@@ -130,8 +173,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Frame, value);
 			}
 		}
-		
-		public SCNParticlePropertyController FrameRate {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? FrameRate {
 			get {
 				return dict [SCNParticleProperty.FrameRate] as SCNParticlePropertyController;
 			}
@@ -139,8 +185,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.FrameRate, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Bounce {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Bounce {
 			get {
 				return dict [SCNParticleProperty.Bounce] as SCNParticlePropertyController;
 			}
@@ -148,8 +197,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Bounce, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Charge {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Charge {
 			get {
 				return dict [SCNParticleProperty.Charge] as SCNParticlePropertyController;
 			}
@@ -157,8 +209,11 @@ namespace SceneKit
 				Set (SCNParticleProperty.Charge, value);
 			}
 		}
-		
-		public SCNParticlePropertyController Friction {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNParticlePropertyController? Friction {
 			get {
 				return dict [SCNParticleProperty.Friction] as SCNParticlePropertyController;
 			}
@@ -166,17 +221,22 @@ namespace SceneKit
 				Set (SCNParticleProperty.Friction, value);
 			}
 		}
-		
+
 	}
-	
-	public partial class SCNParticleSystem
-	{
-		public SCNPropertyControllers PropertyControllers {
+
+	public partial class SCNParticleSystem {
+		/// <summary>Gets or sets a dictionary of controllers that animate different properties of particles in the system.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SCNPropertyControllers? PropertyControllers {
 			get {
-				return new SCNPropertyControllers (WeakPropertyControllers);
+				var weak = WeakPropertyControllers;
+				if (weak is null)
+					return null;
+				return new SCNPropertyControllers (weak);
 			}
 			set {
-				WeakPropertyControllers = value == null ? null : value.dict;
+				WeakPropertyControllers = value?.dict;
 			}
 		}
 	}

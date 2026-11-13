@@ -1,18 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLPipelineBufferDescriptorTest {
 		MTLPipelineBufferDescriptor descriptor = null;
 
@@ -26,7 +18,7 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (descriptor != null)
+			if (descriptor is not null)
 				descriptor.Dispose ();
 			descriptor = null;
 		}
@@ -35,9 +27,7 @@ namespace MonoTouchFixtures.Metal {
 		public void GetSetMutabilityTest ()
 		{
 			descriptor.Mutability = MTLMutability.Immutable;
-			Assert.AreEqual (MTLMutability.Immutable, descriptor.Mutability);
+			Assert.That (descriptor.Mutability, Is.EqualTo (MTLMutability.Immutable));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

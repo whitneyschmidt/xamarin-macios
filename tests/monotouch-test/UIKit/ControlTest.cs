@@ -1,46 +1,28 @@
 // Copyright 2011 Xamarin Inc. All rights reserved
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class ControlTest {
-		
+
 		[Test]
 		public void InitWithFrame ()
 		{
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (UIControl c = new UIControl (frame)) {
 				Assert.That (c.Frame, Is.EqualTo (frame), "Frame");
 			}
 		}
-		
+
 		[Test]
 		public void CancelTrackingTest ()
 		{
@@ -55,8 +37,9 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			const int items = 100;
 			var handles = new GCHandle [items];
-			var handler = new EventHandler (delegate(object sender, EventArgs e) {
-				
+			var handler = new EventHandler (delegate (object sender, EventArgs e)
+			{
+
 			});
 			for (int i = 0; i < items; i++) {
 				var ctrl = new UIControl ();
@@ -69,11 +52,11 @@ namespace MonoTouchFixtures.UIKit {
 			// of object -> event handlers doesn't keep strong references.
 			var any_collected = false;
 			for (int i = 0; i < items; i++) {
-				if (handles [i].Target == null)
+				if (handles [i].Target is null)
 					any_collected = true;
 				handles [i].Free ();
 			}
-			Assert.IsTrue (any_collected, "Nothing collected");
+			Assert.That (any_collected, Is.True, "Nothing collected");
 		}
 
 		[Test]
@@ -81,17 +64,10 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			using (var ctrl = new UIControl ()) {
 				ctrl.AddTarget ((a, b) => { }, UIControlEvent.EditingDidBegin);
-				Assert.IsTrue ((GetFlags (ctrl) & 0x8) /* RegisteredToggleRef */ == 0x8, "RegisteredToggleRef");
+				Assert.That (TestRuntime.GetFlags (ctrl) & 0x8, Is.EqualTo (0x8), "RegisteredToggleRef");
 			}
 		}
-
-
-		byte GetFlags (NSObject obj)
-		{
-			return (byte) typeof (NSObject).GetField ("flags", BindingFlags.Instance | BindingFlags.GetField | BindingFlags.NonPublic).GetValue (obj);
-		}
-
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

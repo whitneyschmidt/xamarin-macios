@@ -1,37 +1,34 @@
-#if XAMCORE_2_0 || !MONOMAC
-using System;
-using ObjCRuntime;
-using Vector2i = global::OpenTK.Vector2i;
+
+using Vector2i = global::CoreGraphics.NVector2i;
+
+#nullable enable
 
 namespace ModelIO {
 
-	[iOS (9,0), Mac (10,11, onlyOn64 : true)]
-	public enum  MDLNoiseTextureType {
-		Vector,
-		Cellular,
-	}
-
 	public partial class MDLNoiseTexture {
-		[iOS (9,0), Mac (10,11, onlyOn64 : true)]
+
 		public MDLNoiseTexture (float input, string name, Vector2i textureDimensions, MDLTextureChannelEncoding channelEncoding) : this (input, name, textureDimensions, channelEncoding, MDLNoiseTextureType.Vector)
 		{
 		}
 
-		[iOS (10,2), Mac (10,12, onlyOn64 : true)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		public MDLNoiseTexture (float input, string name, Vector2i textureDimensions, MDLTextureChannelEncoding channelEncoding, MDLNoiseTextureType type)
+			: base (NSObjectFlag.Empty)
 		{
 			// two different `init*` would share the same C# signature
 			switch (type) {
 			case MDLNoiseTextureType.Vector:
-				Handle = InitVectorNoiseWithSmoothness (input, name, textureDimensions, channelEncoding);
+				InitializeHandle (_InitVectorNoiseWithSmoothness (input, name, textureDimensions, channelEncoding), "initVectorNoiseWithSmoothness:name:textureDimensions:channelEncoding:");
 				break;
 			case MDLNoiseTextureType.Cellular:
-				Handle = InitCellularNoiseWithFrequency (input, name, textureDimensions, channelEncoding);
+				InitializeHandle (_InitCellularNoiseWithFrequency (input, name, textureDimensions, channelEncoding), "initCellularNoiseWithFrequency:name:textureDimensions:channelEncoding:");
 				break;
 			default:
-				throw new ArgumentException ("type");
+				throw new ArgumentException (nameof (type));
 			}
 		}
 	}
 }
-#endif

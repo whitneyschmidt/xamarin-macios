@@ -11,32 +11,43 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
 namespace Security {
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class SecCertificate2 : NativeObject {
-		public SecCertificate2 (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal SecCertificate2 (NativeHandle handle, bool owns) : base (handle, owns) { }
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_certificate_create (IntPtr seccertificateHandle);
 
+		/// <param name="certificate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public SecCertificate2 (SecCertificate certificate)
 		{
-			if (certificate == null)
-				throw new ArgumentNullException (nameof (certificate));
+			if (certificate is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificate));
 			InitializeHandle (sec_certificate_create (certificate.Handle));
+			GC.KeepAlive (certificate);
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static /* SecCertificateRef */ IntPtr sec_certificate_copy_ref (/* OS_sec_certificate */ IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public SecCertificate Certificate => new SecCertificate (sec_certificate_copy_ref (GetCheckedHandle ()), owns: true);
 	}
 }

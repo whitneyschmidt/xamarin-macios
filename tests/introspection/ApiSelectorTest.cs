@@ -19,32 +19,24 @@
 // limitations under the License.
 //
 
-using System;
 using System.Reflection;
-using NUnit.Framework;
 
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 
 	public abstract class ApiSelectorTest : ApiBaseTest {
-		
+
 		// not everything should be even tried
-		
+
 		protected virtual bool Skip (Type type)
 		{
+			if (MemberHasEditorBrowsableNever (type))
+				return true;
+
 			if (type.ContainsGenericParameters)
 				return true;
-			
+
 			// skip delegate (and other protocol references)
 			foreach (object ca in type.GetCustomAttributes (false)) {
 				if (ca is ProtocolAttribute)
@@ -52,20 +44,41 @@ namespace Introspection {
 				if (ca is ModelAttribute)
 					return true;
 			}
+
+			switch (type.Namespace) {
+			case "SensorKit": // SensorKit doesn't exist on iPads
+				if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+					return true;
+				break;
+			}
+
+			switch (type.FullName) {
+			case "MetalPerformanceShaders.MPSCommandBuffer":
+				// The reflectable type metadata contains no selectors.
+				return true;
+			}
+
 			return SkipDueToAttribute (type);
 		}
 
 		protected virtual bool Skip (Type type, string selectorName)
 		{
-#if !XAMCORE_2_0
-			// old binding mistake
-			if (selectorName == "subscribedCentrals")
-				return true;
-#else
 			// The MapKit types/selectors are optional protocol members pulled in from MKAnnotation/MKOverlay.
 			// These concrete (wrapper) subclasses do not implement all of those optional members, but we
 			// still need to provide a binding for them, so that user subclasses can implement those members.
 			switch (type.Name) {
+			case "CALayer":
+				switch (selectorName) {
+				case "layerWithRemoteClientId:": // defined in a category
+					return true;
+				}
+				break;
+			case "AVCaptureDevice":
+				switch (selectorName) {
+				case "cinematicVideoCaptureSceneMonitoringStatuses": // works in Xcode
+					return true;
+				}
+				break;
 			case "AVAggregateAssetDownloadTask":
 				switch (selectorName) {
 				case "URLAsset": // added in Xcode 9 and it is present.
@@ -76,6 +89,15 @@ namespace Introspection {
 				switch (selectorName) {
 				case "sharedDownloadStorageManager": // added in Xcode 9 and it is present.
 					return true;
+				}
+				break;
+			case "AVPlayerInterstitialEvent":
+				switch (selectorName) {
+				case "copyWithZone:":
+					// AVPlayerInterstitialEvent started conforming to NSCopying in Xcode 14
+					if (!TestRuntime.CheckXcodeVersion (14, 0))
+						return true;
+					break;
 				}
 				break;
 			case "MKCircle":
@@ -114,7 +136,6 @@ namespace Introspection {
 			case "GKPolygonObstacle":
 			case "GKComponent":
 			case "GKGraphNode":
-			case "WKPreferences":
 			case "WKUserContentController":
 			case "WKProcessPool":
 			case "WKWebViewConfiguration":
@@ -129,6 +150,8 @@ namespace Introspection {
 			// iOS 10 beta 2
 			case "GKBehavior":
 			case "MDLTransform":
+			// UISceneActivationRequestOptions started conforming to NSCopying oin Xcode 13
+			case "UISceneActivationRequestOptions":
 				switch (selectorName) {
 				case "copyWithZone:":
 					return true;
@@ -175,15 +198,6 @@ namespace Introspection {
 					return !TestRuntime.CheckXcodeVersion (9, 0);
 				}
 				break;
-#if !XAMCORE_4_0
-			case "NSUrl":
-				switch (selectorName) {
-				case "previewItemTitle":
-					// 'previewItemTitle' should be optional (fixed in XAMCORE_4_0)
-					return true;
-				}
-				break;
-#endif
 			case "MKMapItem": // Selector not available on iOS 32-bit
 				switch (selectorName) {
 				case "encodeWithCoder:":
@@ -192,15 +206,43 @@ namespace Introspection {
 				break;
 #if !MONOMAC
 			case "MTLCaptureManager":
-			case "NEHotspotEapSettings": // Wireless Accessory Configuration is not supported in the simulator.
-			case "NEHotspotConfigurationManager":
-			case "NEHotspotHS20Settings":
-				if (Runtime.Arch == Arch.SIMULATOR)
+				if (TestRuntime.IsSimulatorOrDesktop)
 					return true;
 				break;
+			case "ARBodyTrackingConfiguration":
+			case "ARGeoTrackingConfiguration":
+				switch (selectorName) {
+				case "supportsAppClipCodeTracking": // Only available on device
+					return TestRuntime.IsSimulatorOrDesktop;
+				}
+				break;
+			case "CSImportExtension":
+				switch (selectorName) {
+				case "beginRequestWithExtensionContext:":
+				case "updateAttributes:forFileAtURL:error:":
+					if (TestRuntime.IsSimulatorOrDesktop) // not available in the sim
+						return true;
+					break;
+				}
+				break;
+			case "HKQuery":
+				switch (selectorName) {
+				case "predicateForVerifiableClinicalRecordsWithRelevantDateWithinDateInterval:": // not available in the sim
+					if (TestRuntime.IsSimulatorOrDesktop) // not available in the sim
+						return true;
+					break;
+				}
+				break;
 #endif
+			case "WKPreferences":
+				switch (selectorName) {
+				case "encodeWithCoder:": // from iOS 10
+					return true;
+				case "textInteractionEnabled": // xcode 13 renamed this to `isTextInteractionEnabled` but does not respond to the old one
+					return true;
+				}
+				break;
 			}
-#endif
 			// This ctors needs to be manually bound
 			switch (type.Name) {
 			case "AVCaptureVideoPreviewLayer":
@@ -244,10 +286,23 @@ namespace Introspection {
 					return true;
 				}
 				break;
-			case "NSImage":
+			case "NSOperationQueue":
 				switch (selectorName) {
-				case "initByReferencingFile:":
-					return true;
+				case "progress":
+					// The "progress" property comes from the NSProgressReporting protocol, where it was introduced a long time ago.
+					// Then NSOperationQueue started implementing the NSProgressReporting, but only in iOS 13, which means that
+					// this selector does not exist on earlier iOS versions, even to the managed property (from the protocol) claims so.
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						return true;
+					break;
+				}
+				break;
+			case "OSLogMessageComponent":
+				switch (selectorName) {
+				case "encodeWithCoder:":
+					if (!TestRuntime.CheckXcodeVersion (13, 0))
+						return true;
+					break;
 				}
 				break;
 			// Conform to SKWarpable
@@ -304,6 +359,24 @@ namespace Introspection {
 					return true;
 				}
 				break;
+			case "SKNode":
+				switch (selectorName) {
+				case "focusItemContainer":
+					if (!TestRuntime.CheckXcodeVersion (12, 0))
+						return true;
+					break;
+				case "convertPoint:fromCoordinateSpace:":
+				case "convertPoint:toCoordinateSpace:":
+				case "convertRect:fromCoordinateSpace:":
+				case "convertRect:toCoordinateSpace:":
+				case "focusItemsInRect:":
+				case "bounds":
+				case "coordinateSpace":
+					if (!TestRuntime.CheckXcodeVersion (16, 0))
+						return true;
+					break;
+				}
+				break;
 			case "INPriceRange":
 				switch (selectorName) {
 				case "initWithMaximumPrice:currencyCode:":
@@ -321,6 +394,15 @@ namespace Introspection {
 					return true;
 				}
 				break;
+#if __MACOS__ || __MACCATALYST__
+			case "AVPlayerItem":
+				switch (selectorName) { // comes from AVPlayerItem+MPAdditions.h
+				case "nowPlayingInfo":
+				case "setNowPlayingInfo:":
+					return TestRuntime.IsSimulatorOrDesktop;
+				}
+				break;
+#endif
 			case "AVPlayerItemVideoOutput":
 				switch (selectorName) {
 				case "initWithOutputSettings:":
@@ -328,8 +410,14 @@ namespace Introspection {
 					return true;
 				}
 				break;
+			case "AVDeviceCapture":
+				switch (selectorName) {
+				case "cinematicVideoCaptureSceneMonitoringStatuses":
+					return true; // works in an Xcode project
+				}
+				break;
 			case "MTLBufferLayoutDescriptor": // We do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "stepFunction":
 				case "setStepFunction:":
 				case "stepRate":
@@ -340,7 +428,7 @@ namespace Introspection {
 				}
 				break;
 			case "MTLFunctionConstant": // we do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "name":
 				case "type":
 				case "index":
@@ -349,7 +437,7 @@ namespace Introspection {
 				}
 				break;
 			case "MTLStageInputOutputDescriptor": // we do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "attributes":
 				case "indexBufferIndex":
 				case "setIndexBufferIndex:":
@@ -360,7 +448,7 @@ namespace Introspection {
 				}
 				break;
 			case "MTLAttributeDescriptor": // we do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "bufferIndex":
 				case "setBufferIndex:":
 				case "format":
@@ -371,7 +459,7 @@ namespace Introspection {
 				}
 				break;
 			case "MTLAttribute": // we do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "isActive":
 				case "attributeIndex":
 				case "attributeType":
@@ -383,7 +471,7 @@ namespace Introspection {
 				}
 				break;
 			case "MTLArgument": // we do have unit tests under monotouch-tests for this properties
-				switch (selectorName){
+				switch (selectorName) {
 				case "isDepthTexture":
 					return true;
 				}
@@ -429,6 +517,11 @@ namespace Introspection {
 				case "maxVertexBufferBindCount":
 				case "setMaxVertexBufferBindCount:":
 					return true;
+				case "supportColorAttachmentMapping":
+				case "setSupportColorAttachmentMapping:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
 				}
 				break;
 			case "MTLPipelineBufferDescriptor":
@@ -490,13 +583,175 @@ namespace Introspection {
 				case "setTileFunction:":
 				case "maxTotalThreadsPerThreadgroup":
 				case "setMaxTotalThreadsPerThreadgroup:":
+				case "binaryArchives":
+				case "setBinaryArchives:":
 					return true;
 				}
 				break;
+			case "MTLBlitPassDescriptor":
+				switch (selectorName) {
+				case "sampleBufferAttachments":
+					return true;
+				}
+				break;
+			case "MTLBlitPassSampleBufferAttachmentDescriptor":
+				switch (selectorName) {
+				case "endOfEncoderSampleIndex":
+				case "setEndOfEncoderSampleIndex:":
+				case "sampleBuffer":
+				case "setSampleBuffer:":
+				case "startOfEncoderSampleIndex":
+				case "setStartOfEncoderSampleIndex:":
+					return true;
+				}
+				break;
+			case "MTLComputePassDescriptor":
+				switch (selectorName) {
+				case "dispatchType":
+				case "setDispatchType:":
+				case "sampleBufferAttachments":
+					return true;
+				}
+				break;
+			case "MTLComputePassSampleBufferAttachmentDescriptor":
+				switch (selectorName) {
+				case "sampleBuffer":
+				case "setSampleBuffer:":
+				case "startOfEncoderSampleIndex":
+				case "setStartOfEncoderSampleIndex:":
+				case "endOfEncoderSampleIndex":
+				case "setEndOfEncoderSampleIndex:":
+					return true;
+				}
+				break;
+			case "MTLCounterSampleBufferDescriptor":
+				switch (selectorName) {
+				case "counterSet":
+				case "setCounterSet:":
+				case "label":
+				case "setLabel:":
+				case "sampleCount":
+				case "setSampleCount:":
+				case "storageMode":
+				case "setStorageMode:":
+					return true;
+				}
+				break;
+			case "MTLLinkedFunctions":
+				switch (selectorName) {
+				case "binaryFunctions":
+				case "setBinaryFunctions:":
+				case "functions":
+				case "setFunctions:":
+				case "groups":
+				case "setGroups:":
+					return true;
+				}
+				break;
+			case "MTLRenderPassSampleBufferAttachmentDescriptor":
+				switch (selectorName) {
+				case "endOfFragmentSampleIndex":
+				case "setEndOfFragmentSampleIndex:":
+				case "endOfVertexSampleIndex":
+				case "setEndOfVertexSampleIndex:":
+				case "sampleBuffer":
+				case "setSampleBuffer:":
+				case "startOfFragmentSampleIndex":
+				case "setStartOfFragmentSampleIndex:":
+				case "startOfVertexSampleIndex":
+				case "setStartOfVertexSampleIndex:":
+					return true;
+				}
+				break;
+			case "MTLIntersectionFunctionTableDescriptor":
+				switch (selectorName) {
+				case "functionCount":
+				case "setFunctionCount:":
+					return true;
+#if __TVOS__
+				case "intersectionFunctionTableDescriptor":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+#endif
+				}
+				break;
+			case "MTLResourceStatePassDescriptor":
+				switch (selectorName) {
+				case "sampleBufferAttachments":
+					return true;
+#if __TVOS__
+				case "resourceStatePassDescriptor":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+#endif
+				}
+				break;
+			case "MTLResourceStatePassSampleBufferAttachmentDescriptor":
+				switch (selectorName) {
+				case "endOfEncoderSampleIndex":
+				case "setEndOfEncoderSampleIndex:":
+				case "sampleBuffer":
+				case "setSampleBuffer:":
+				case "startOfEncoderSampleIndex":
+				case "setStartOfEncoderSampleIndex:":
+					return true;
+				}
+				break;
+			case "MTLVisibleFunctionTableDescriptor":
+				switch (selectorName) {
+				case "functionCount":
+				case "setFunctionCount:":
+					return true;
+#if __TVOS__
+				case "visibleFunctionTableDescriptor":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+#endif
+				}
+				break;
+#if __TVOS__
+			case "MTLRenderPipelineReflection":
+				switch (selectorName) {
+				case "meshBindings":
+				case "objectBindings":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+				}
+				break;
+			case "MTLAccelerationStructureBoundingBoxGeometryDescriptor":
+			case "MTLAccelerationStructureMotionBoundingBoxGeometryDescriptor":
+			case "MTLAccelerationStructureMotionTriangleGeometryDescriptor":
+			case "MTLAccelerationStructureTriangleGeometryDescriptor":
+			case "MTLInstanceAccelerationStructureDescriptor":
+			case "MTLPrimitiveAccelerationStructureDescriptor":
+				switch (selectorName) {
+				case "descriptor":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+				}
+				break;
+			case "MTLAccelerationStructurePassDescriptor":
+				switch (selectorName) {
+				case "accelerationStructurePassDescriptor":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+				}
+				break;
+			case "MTLMotionKeyframeData":
+				switch (selectorName) {
+				case "data":
+					return !TestRuntime.CheckXcodeVersion (14, 1);
+				}
+				break;
+#endif
 			case "AVPlayerLooper": // This API got introduced in Xcode 8.0 binding but is not currently present nor in Xcode 8.3 or Xcode 9.0 needs research
 				switch (selectorName) {
 				case "isLoopingEnabled":
 					return true;
+				}
+				break;
+			case "NSMenu":
+				switch (selectorName) {
+				case "appearance":
+				case "setAppearance:":
+				case "effectiveAppearance":
+					if (!TestRuntime.CheckXcodeVersion (12, TestRuntime.MinorXcode12APIMismatch))
+						return true;
+					break;
 				}
 				break;
 			case "NSQueryGenerationToken": // A test was added in monotouch tests to ensure the selector works
@@ -517,7 +772,7 @@ namespace Introspection {
 				case "copyWithZone:":
 				case "mutableCopyWithZone:":
 					// Added in Xcode9 (i.e. only 64 bits) so skip 32 bits
-					return !TestRuntime.CheckXcodeVersion (9,0);
+					return !TestRuntime.CheckXcodeVersion (9, 0);
 				}
 				break;
 			case "MPSCnnConvolution":
@@ -609,9 +864,429 @@ namespace Introspection {
 					return true;
 				}
 				break;
+			case "CPMessageListItem":
+				switch (selectorName) {
+				case "initWithConversationIdentifier:text:leadingConfiguration:trailingConfiguration:detailText:trailingText:":
+				case "initWithFullName:phoneOrEmailAddress:leadingConfiguration:trailingConfiguration:detailText:trailingText:":
+					return true;
+				}
+				break;
+			case "VNFaceLandmarkRegion":
+			case "VNFaceLandmarks":
+			case "PHLivePhoto":
+				switch (selectorName) {
+				case "copyWithZone:":
+				case "encodeWithCoder:":
+				case "requestRevision":
+					// Conformance added in Xcode 11
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						return true;
+					break;
+				case "objectWithItemProviderData:typeIdentifier:error:":
+				case "readableTypeIdentifiersForItemProvider":
+					// Conformance added in Xcode 12
+					if (!TestRuntime.CheckXcodeVersion (12, 0))
+						return true;
+					break;
+				}
+				break;
+			case "MPSNNNeuronDescriptor":
+			case "MLDictionaryConstraint":
+			case "MLFeatureDescription":
+			case "MLImageConstraint":
+			case "MLImageSize":
+			case "MLImageSizeConstraint":
+			case "MLModelConfiguration":
+			case "MLModelDescription":
+			case "MLMultiArrayConstraint":
+			case "MLMultiArrayShapeConstraint":
+			case "MLSequenceConstraint":
+				switch (selectorName) {
+				case "encodeWithCoder:":
+					// Conformance added in Xcode 11
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						return true;
+					break;
+				}
+				break;
+			case "MLDictionaryFeatureProvider":
+			case "MLMultiArray":
+			case "MLFeatureValue":
+			case "MLSequence":
+				switch (selectorName) {
+				case "encodeWithCoder:":
+					if (!TestRuntime.CheckXcodeVersion (12, TestRuntime.MinorXcode12APIMismatch))
+						return true;
+					break;
+				}
+				break;
+			case "BGTaskScheduler":
+				switch (selectorName) {
+				case "sharedScheduler":
+					return true;
+				}
+				break;
+#if !__MACOS__
+			case "ARSkeletonDefinition":
+				switch (selectorName) {
+				case "indexForJointName:":
+				case "defaultBody2DSkeletonDefinition":
+				case "defaultBody3DSkeletonDefinition":
+					// This selector does not exist in the simulator
+					if (TestRuntime.IsSimulatorOrDesktop)
+						return true;
+					break;
+				}
+				break;
+#endif
+			case "INParameter":
+				switch (selectorName) {
+				case "copyWithZone:":
+					if (!TestRuntime.CheckXcodeVersion (10, 0))
+						return true;
+					break;
+				}
+				break;
+			case "MTLCommandBufferDescriptor":
+				switch (selectorName) {
+				case "errorOptions":
+				case "setErrorOptions:":
+				case "retainedReferences":
+				case "setRetainedReferences:":
+					// iOS 15 sim (and macOS 12) fails, API added in 14.0
+					if (TestRuntime.CheckXcodeVersion (13, 0))
+						return true;
+					break;
+				}
+				break;
+			case "NSTask":
+				// category, NSTask won't respond -> @interface NSTask (NSTaskConveniences)
+				if (selectorName == "waitUntilExit")
+					return true;
+				break;
+			case "NSTextStorage":
+				switch (selectorName) {
+				// declared in a superclass, and implemented in a concrete subclass, so it doesn't show up during inspection of NSTextStorage itself.
+				case "initWithString:":
+					return true;
+				}
+				break;
+			case "MPSGraphCompilationDescriptor":
+				// Runtime lookup doesn't work, but executing it works fine.
+				return true;
+			case "MPSImageDescriptor":
+				switch (selectorName) {
+				case "copyWithZone:":
+					if (!TestRuntime.CheckXcodeVersion (10, 0))
+						return true;
+					break;
+				}
+				break;
+			case "MPSGraphExecutableExecutionDescriptor":
+				switch (selectorName) {
+				case "copyWithZone:":
+					if (!TestRuntime.CheckXcodeVersion (14, 0))
+						return true;
+					break;
+				}
+				break;
+			case "UIControl":
+#if __MACCATALYST__
+				switch (selectorName) {
+				case "contextMenuInteraction:configurationForMenuAtLocation:":
+					if (!TestRuntime.CheckXcodeVersion (12, 0))
+						return true;
+					break;
+				}
+#endif
+				break;
+			case "UISceneConnectionOptions":
+#if __MACCATALYST__
+				switch (selectorName) {
+				case "shortcutItem":
+					if (!TestRuntime.CheckXcodeVersion (12, 0))
+						return true;
+					break;
+				}
+#endif
+				break;
+			case "SKAdImpression":
+#if __MACCATALYST__
+				switch (selectorName) {
+				case "initWithSourceAppStoreItemIdentifier:advertisedAppStoreItemIdentifier:adNetworkIdentifier:adCampaignIdentifier:adImpressionIdentifier:timestamp:signature:version:":
+					if (TestRuntime.CheckXcodeVersion (14, 0))
+						return true;
+					break;
+				}
+#endif
+				break;
+			case "EKParticipant":
+#if __MACCATALYST__
+				switch (selectorName) {
+				case "ABRecordWithAddressBook:": // Deprecated in 13.1
+					if (TestRuntime.CheckXcodeVersion (14, 0))
+						return true;
+					break;
+				}
+#endif
+				break;
+			case "SWRemoveParticipantAlertController":
+				switch (selectorName) {
+				case "initWithFrame:":
+					return true;
+				}
+				break;
+			case "CAEdrMetadata":
+				switch (selectorName) {
+				case "copyWithZone:":
+				case "encodeWithCoder:":
+					return !TestRuntime.CheckXcodeVersion (14, 3);
+				}
+				break;
+			case "GCKeyboard":
+				switch (selectorName) {
+				case "encodeWithCoder:": // removed comformance
+					return TestRuntime.CheckXcodeVersion (14, 3);
+				}
+				break;
+			case "GCMouse":
+				switch (selectorName) {
+				case "encodeWithCoder:":
+					return true;
+				}
+				break;
+			case "SRFaceMetrics":
+				switch (selectorName) {
+				case "faceAnchor":
+					// This selector does not exist in the simulator
+					if (TestRuntime.IsSimulatorOrDesktop)
+						return true;
+					break;
+				}
+				break;
+			case "UIFeedbackGenerator":
+				switch (selectorName) {
+				case "didMoveToView:":
+				case "willMoveToView:":
+				case "view":
+					return !TestRuntime.CheckXcodeVersion (15, 4);
+				}
+				break;
+			case "ASAuthorizationPublicKeyCredentialLargeBlobRegistrationOutput":
+				// Added protocol conformance to NSCopying/NSSecureCoding in Xcode 16.0
+				switch (selectorName) {
+				case "copyWithZone:":
+				case "encodeWithCoder:":
+					return !TestRuntime.CheckXcodeVersion (16, 0);
+				}
+				break;
+			case "GKLeaderboardEntry":
+				// It's not possible to create an instance of GKLeaderboardEntry, so I believe that whenever Apple
+				// returns an instance they return something that responds to these selectors, thus we have to
+				// provide bindings for them.
+				switch (selectorName) {
+				case "context":
+				case "date":
+				case "formattedScore":
+				case "rank":
+				case "score":
+					return true;
+				}
+				break;
+#if __MACCATALYST__
+			case "GKLeaderboardSet":
+				switch (selectorName) {
+				case "loadImageWithCompletionHandler:":
+					// This exists in both iOS and macOS, so not existing in Mac Catalyst is weird - so just provide the binding.
+					return true;
+				}
+				break;
+			case "GKLocalPlayer":
+				switch (selectorName) {
+				case "isPresentingFriendRequestViewController":
+					// This exists in both iOS and macOS, so not existing in Mac Catalyst is weird - so just provide the binding.
+					return true;
+				}
+				break;
+#endif // __MACCATALYST__
+#if !XAMCORE_5_0
+			case "NSSharingCollaborationModeRestriction":
+				switch (selectorName) {
+				case "setAlertRecoverySuggestionButtonLaunchURL:":// binding mistake
+					return true;
+				}
+				break;
+#endif
+			case "CMWaterSubmersionManager":
+				switch (selectorName) {
+				case "maximumDepth":
+					return !TestRuntime.CheckXcodeVersion (15, 0); // it's not in iOS 16, but maybe iOS 17?
+				}
+				break;
+			case "CPListImageRowItem":
+				switch (selectorName) {
+				case "imageTitles":
+					if (TestRuntime.CheckXcodeVersion (26, 1))
+						return false; // fixed in Xcode 26.1, no longer need the skip
+					return TestRuntime.CheckXcodeVersion (26, 0); // https://github.com/rolfbjarne/apple-feedback/tree/main/FB18122430
+				}
+				break;
+			case "PhaseSoundEvent":
+				switch (selectorName) {
+				case "startAndReturnError:": // incorrect binding
+					return TestRuntime.CheckXcodeVersion (26, 0);
+				}
+				break;
+			case "NSDate":
+				switch (selectorName) {
+				case "dateWithSRAbsoluteTime:": // This is from a category defined in SensorKit, and SensorKit doesn't exist on iPads
+				case "initWithSRAbsoluteTime:": // This is from a category defined in SensorKit, and SensorKit doesn't exist on iPads
+				case "srAbsoluteTime": // This is from a category defined in SensorKit, and SensorKit doesn't exist on iPads
+					if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+						return true;
+					break;
+				}
+				break;
+			case "MTLRenderPassDescriptor":
+				switch (selectorName) {
+				case "supportColorAttachmentMapping":
+				case "setSupportColorAttachmentMapping:":
+				case "visibilityResultType":
+				case "setVisibilityResultType:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLArrayType":
+				switch (selectorName) {
+				case "elementTensorReferenceType":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLCompileOptions":
+				switch (selectorName) {
+				case "requiredThreadsPerThreadgroup":
+				case "setRequiredThreadsPerThreadgroup:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLComputePipelineDescriptor":
+				switch (selectorName) {
+				case "requiredThreadsPerThreadgroup":
+				case "setRequiredThreadsPerThreadgroup:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLFunctionReflection":
+				switch (selectorName) {
+				case "bindings":
+				case "userAnnotation":
+					return true;
+				}
+				break;
+			case "MTLMeshRenderPipelineDescriptor":
+				switch (selectorName) {
+				case "requiredThreadsPerMeshThreadgroup":
+				case "setRequiredThreadsPerMeshThreadgroup:":
+				case "requiredThreadsPerObjectThreadgroup":
+				case "setRequiredThreadsPerObjectThreadgroup:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLStructMember":
+				switch (selectorName) {
+				case "tensorReferenceType":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "MTLTextureDescriptor":
+				switch (selectorName) {
+				case "placementSparsePageSize":
+				case "setPlacementSparsePageSize:":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTLowLatencyFrameInterpolationConfiguration":
+				switch (selectorName) {
+				case "isSupported":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTFrameRateConversionConfiguration":
+				switch (selectorName) {
+				case "defaultRevision":
+				case "isSupported":
+				case "supportedRevisions":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTLowLatencySuperResolutionScalerConfiguration":
+				switch (selectorName) {
+				case "supportedScaleFactorsForFrameWidth:frameHeight:":
+				case "isSupported":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTMotionBlurConfiguration":
+				switch (selectorName) {
+				case "defaultRevision":
+				case "isSupported":
+				case "supportedRevisions":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTOpticalFlowConfiguration":
+				switch (selectorName) {
+				case "defaultRevision":
+				case "isSupported":
+				case "supportedRevisions":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTSuperResolutionScalerConfiguration":
+				switch (selectorName) {
+				case "defaultRevision":
+				case "isSupported":
+				case "supportedRevisions":
+				case "supportedScaleFactors":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
+			case "VTTemporalNoiseFilterConfiguration":
+				switch (selectorName) {
+				case "isSupported":
+				case "supportedSourcePixelFormats":
+					if (TestRuntime.IsSimulator)
+						return true;
+					break;
+				}
+				break;
 			}
-
-			// old binding mistake
 			return (selectorName == "initWithCoder:");
 		}
 
@@ -619,41 +1294,78 @@ namespace Introspection {
 		{
 			if (value)
 				return true;
-			
-			var mname = method.Name;
-			// properties getter and setter will be methods in the _Extensions type
-			if (method.IsSpecialName)
-				mname = mname.Replace ("get_", "Get").Replace ("set_", "Set");
 
-			// it's possible that the selector was inlined for an OPTIONAL protocol member
-			// we do not want those reported (too many false positives) and we have other tests to find such mistakes
-			foreach (var intf in actualType.GetInterfaces ()) {
-				if (intf.GetCustomAttributes<ProtocolAttribute> () == null)
-					continue;
-				var ext = Type.GetType (intf.Namespace + "." + intf.Name.Remove (0, 1) + "_Extensions, " + intf.Assembly.FullName);
-				if (ext == null)
-					continue;
-				foreach (var m in ext.GetMethods ()) {
-					if (mname != m.Name)
-						continue;
-					var parameters = method.GetParameters ();
-					var ext_params = m.GetParameters ();
-					// first parameters is `this XXX This`
-					if (parameters.Length == ext_params.Length - 1) {
-						bool match = true;
-						for (int i = 1; i < ext_params.Length; i++) {
-							match |= (parameters [i - 1].ParameterType == ext_params [i].ParameterType);
-						}
-						if (match)
-							return true;
-					}
-				}
-			}
-			
+			if (CheckForInlinedProtocolMember (actualType, method))
+				return true;
+
 			name = actualType.FullName + " : " + name;
 			return false;
 		}
-		
+
+		static bool CheckForInlinedProtocolMember (Type actualType, MethodBase method)
+		{
+			// it's possible that the selector was inlined for an OPTIONAL protocol member
+			// we do not want those reported (too many false positives) and we have other tests to find such mistakes
+			foreach (var intf in actualType.GetInterfaces ()) {
+				if (intf.GetCustomAttributes<ProtocolAttribute> () is null)
+					continue;
+
+				// First check the actual interface
+				if (IsMethodImplemented (intf, intf, method, false))
+					return true;
+
+				// Then check any _Extensions class
+				var ext = Type.GetType (intf.Namespace + "." + intf.Name.Remove (0, 1) + "_Extensions, " + intf.Assembly.FullName);
+				if (IsMethodImplemented (intf, ext, method, true))
+					return true;
+			}
+
+			return false;
+		}
+
+		static bool IsMethodImplemented (Type iface, Type? type, MethodBase method, bool isExtensionMethod)
+		{
+			if (type is null)
+				return false;
+
+			// properties getter and setter will be methods in the _Extensions type
+			var mname = method.Name;
+			if (method.IsSpecialName)
+				mname = mname.Replace ("get_", "Get").Replace ("set_", "Set");
+
+			foreach (var m in type.GetMethods ()) {
+				if (method.Name != m.Name) {
+					if (method.IsSpecialName) {
+						if (mname != m.Name)
+							continue;
+					} else {
+						continue;
+					}
+				}
+				var parametersA = method.GetParameters ();
+				var parametersB = m.GetParameters ();
+				var match = true;
+				if (isExtensionMethod) {
+					// first parameters is `this XXX This`
+					if (parametersA.Length != parametersB.Length - 1)
+						continue;
+					match &= parametersB [0].ParameterType == iface;
+					for (var i = 1; i < parametersB.Length; i++) {
+						match &= parametersA [i - 1].ParameterType == parametersB [i].ParameterType;
+					}
+				} else {
+					if (parametersA.Length != parametersB.Length)
+						continue;
+					for (var i = 0; i < parametersA.Length; i++)
+						match &= parametersA [i].ParameterType == parametersB [i].ParameterType;
+				}
+				if (match)
+					return true;
+			}
+
+			return false;
+		}
+
 		static IntPtr responds_handle = Selector.GetHandle ("instancesRespondToSelector:");
 
 		[Test]
@@ -677,7 +1389,7 @@ namespace Introspection {
 					}
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} protocol selectors validated", Errors, n);
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} protocol selectors validated");
 		}
 
 		void ProcessProtocolMember (Type t, MethodBase m, ref int n)
@@ -686,11 +1398,11 @@ namespace Introspection {
 				return;
 
 			foreach (object ca in m.GetCustomAttributes (true)) {
-				ExportAttribute export = (ca as ExportAttribute);
-				if (export == null)
+				var export = (ca as ExportAttribute);
+				if (export is null)
 					continue;
 
-				string name = export.Selector;
+				string name = export.Selector!;
 				if (Skip (t, name))
 					continue;
 
@@ -699,12 +1411,21 @@ namespace Introspection {
 			}
 		}
 
-		protected virtual IntPtr GetClassForType (Type type)
+		protected virtual bool TryGetClassForType (Type type, out IntPtr cls)
 		{
+			if (type.IsGenericType) {
+				cls = Class.GetHandle (type);
+				return true;
+			}
+
 			var fi = type.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-			if (fi == null)
-				return IntPtr.Zero; // e.g. *Delegate
-			return (IntPtr) fi.GetValue (null);
+			if (fi is null) {
+				cls = IntPtr.Zero; // e.g. *Delegate
+				return false;
+			}
+
+			cls = (NativeHandle) fi.GetValue (null)!;
+			return true;
 		}
 
 		[Test]
@@ -713,15 +1434,16 @@ namespace Introspection {
 			Errors = 0;
 			ErrorData.Clear ();
 			int n = 0;
-			
+
 			foreach (Type t in Assembly.GetTypes ()) {
 				if (t.IsNested || !NSObjectType.IsAssignableFrom (t))
 					continue;
 
 				if (Skip (t) || SkipDueToAttribute (t))
 					continue;
-				
-				IntPtr class_ptr = GetClassForType (t);
+
+				if (!TryGetClassForType (t, out var class_ptr))
+					continue;
 
 				if (class_ptr == IntPtr.Zero)
 					continue;
@@ -734,7 +1456,7 @@ namespace Introspection {
 					Process (class_ptr, t, m, ref n);
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} instance selector validated{2}", Errors, n, Errors == 0 ? string.Empty : ":\n" + ErrorData.ToString () + "\n");
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} instance selector validated:\n{ErrorData}\n");
 		}
 
 		void Process (IntPtr class_ptr, Type t, MethodBase m, ref int n)
@@ -743,11 +1465,11 @@ namespace Introspection {
 				return;
 
 			foreach (object ca in m.GetCustomAttributes (true)) {
-				ExportAttribute export = (ca as ExportAttribute);
-				if (export == null)
+				var export = (ca as ExportAttribute);
+				if (export is null)
 					continue;
 
-				string name = export.Selector;
+				string name = export.Selector!;
 				if (Skip (t, name))
 					continue;
 
@@ -756,23 +1478,25 @@ namespace Introspection {
 				bool result = bool_objc_msgSend_IntPtr (class_ptr, responds_handle, Selector.GetHandle (name));
 				bool response = CheckResponse (result, t, m, ref name);
 				if (!response)
-					ReportError ("Selector not found for {0}", name);
+					ReportError ("Selector not found for {0} in {1} on {2}", name, m, t.FullName);
 				n++;
 			}
 		}
 
 		void CheckInit (Type t, MethodBase m, string name)
 		{
-			if (SkipInit (name, m))
-				return;
-
 			bool init = IsInitLike (name);
 			if (m is ConstructorInfo) {
 				if (!init)
 					ReportError ("Selector {0} used on a constructor (not a method) on {1}", name, t.FullName);
 			} else {
-				if (init)
-					ReportError ("Selector {0} used on a method (not a constructor) on {1}", name, t.FullName);
+				if (init) {
+					var isPubliclyVisible = m.IsPublic || m.IsFamily || m.IsFamilyOrAssembly;
+					if (isPubliclyVisible || !m.Name.StartsWith ("_Init", StringComparison.Ordinal)) {
+						// ignore methods that start '_Init' and aren't publicly exposed, they're probably used by manually bound ctors.
+						ReportError ($"Selector {name} used on the method '{m.Name}' (not a constructor) on {t.FullName}");
+					}
+				}
 			}
 		}
 
@@ -783,56 +1507,20 @@ namespace Introspection {
 			return selector.Length < 5 || Char.IsUpper (selector [4]);
 		}
 
-		protected virtual bool SkipInit (string selector, MethodBase m)
-		{
-			switch (selector) {
-			// NSAttributedString
-			case "initWithHTML:documentAttributes:":
-			case "initWithRTF:documentAttributes:":
-			case "initWithRTFD:documentAttributes:":
-			case "initWithURL:options:documentAttributes:error:":
-			case "initWithFileURL:options:documentAttributes:error:":
-			// AVAudioRecorder
-			case "initWithURL:settings:error:":
-			case "initWithURL:format:error:":
-			// NSUrlProtectionSpace
-			case "initWithHost:port:protocol:realm:authenticationMethod:":
-			case "initWithProxyHost:port:type:realm:authenticationMethod:":
-			// NSUserDefaults
-			case "initWithSuiteName:":
-			case "initWithUser:":
-			// GKScore
-			case "initWithCategory:":
-			case "initWithLeaderboardIdentifier:":
-			// MCSession
-			case "initWithPeer:securityIdentity:encryptionPreference:":
-			// INSetProfileInCarIntent and INSaveProfileInCarIntent
-			case "initWithProfileNumber:profileName:defaultProfile:":
-			case "initWithProfileNumber:profileLabel:defaultProfile:":
-			case "initWithProfileNumber:profileName:":
-			case "initWithProfileNumber:profileLabel:":
-			// MPSCnnBinaryConvolutionNode and MPSCnnBinaryFullyConnectedNode
-			case "initWithSource:weights:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:":
-			// UISegmentedControl
-			case "initWithItems:":
-				var mi = m as MethodInfo;
-				return mi != null && !mi.IsPublic && mi.ReturnType.Name == "IntPtr";
-			default:
-				return false;
-			}
-		}
-		
 		protected virtual void Dispose (NSObject obj, Type type)
 		{
 			obj.Dispose ();
 		}
-		
+
 		// funny, this is how I envisioned the instance version... before hitting run :|
-		protected virtual bool CheckStaticResponse (bool value, Type actualType, Type declaredType, ref string name)
+		protected virtual bool CheckStaticResponse (bool value, Type actualType, Type? declaredType, MethodBase method, ref string name)
 		{
 			if (value)
 				return true;
-			
+
+			if (CheckForInlinedProtocolMember (actualType, method))
+				return true;
+
 			name = actualType.FullName + " : " + name;
 			return false;
 		}
@@ -843,9 +1531,9 @@ namespace Introspection {
 			Errors = 0;
 			ErrorData.Clear ();
 			int n = 0;
-			
+
 			IntPtr responds_handle = Selector.GetHandle ("respondsToSelector:");
-			
+
 			foreach (Type t in Assembly.GetTypes ()) {
 				if (t.IsNested || !NSObjectType.IsAssignableFrom (t))
 					continue;
@@ -853,24 +1541,22 @@ namespace Introspection {
 				if (Skip (t) || SkipDueToAttribute (t))
 					continue;
 
-				FieldInfo fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-				if (fi == null)
+				if (!TryGetClassForType (t, out var class_ptr))
 					continue; // e.g. *Delegate
-				IntPtr class_ptr = (IntPtr) fi.GetValue (null);
-				
+
 				foreach (var m in t.GetMethods (BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)) {
 					if (SkipDueToAttribute (m))
 						continue;
 
 					foreach (object ca in m.GetCustomAttributes (true)) {
-						if (ca is ExportAttribute) {
-							string name = (ca as ExportAttribute).Selector;
+						if (ca is ExportAttribute ea) {
+							var name = ea.Selector!;
 
 							if (Skip (t, name))
 								continue;
 
 							bool result = bool_objc_msgSend_IntPtr (class_ptr, responds_handle, Selector.GetHandle (name));
-							bool response = CheckStaticResponse (result, t, m.DeclaringType, ref name);
+							bool response = CheckStaticResponse (result, t, m.DeclaringType, m, ref name);
 							if (!response)
 								ReportError (name);
 							n++;
@@ -878,7 +1564,7 @@ namespace Introspection {
 					}
 				}
 			}
-			Assert.AreEqual (0, Errors, "{0} errors found in {1} static selector validated{2}", Errors, n, Errors == 0 ? string.Empty : ":\n" + ErrorData.ToString () + "\n");
+			Assert.That (Errors, Is.EqualTo (0), $"{Errors} errors found in {n} static selector validated:\n{ErrorData}\n");
 		}
 	}
 }

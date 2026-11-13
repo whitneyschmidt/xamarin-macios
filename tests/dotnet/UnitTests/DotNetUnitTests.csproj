@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<DefineConstants>$(DefineConstants);NET;TESTS</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NUnit" Version="$(NUnitPackageVersion)" />
+		<PackageReference Include="NUnit3TestAdapter" Version="$(NUnit3TestAdapterPackageVersion)" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkPackageVersion)" />
+		<PackageReference Include="Mono.Cecil" Version="$(MonoCecilPackageVersion)" />
+		<PackageReference Include="MSBuild.StructuredLogger" Version="$(MSBuildStructuredLoggerPackageVersion)" />
+		<PackageReference Include="NUnitXml.TestLogger" Version="$(NUnitXmlTestLoggerPackageVersion)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="..\..\common\Touch.Unit\Touch.Client\Runner\ConsoleTextWriter.cs">
+			<Link>external\ConsoleTextWriter.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\Configuration.cs">
+			<Link>external\Configuration.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\ConfigurationNUnit.cs">
+			<Link>external\ConfigurationNUnit.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\DotNet.cs">
+			<Link>external\DotNet.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\ExecutionHelper.cs">
+			<Link>external\ExecutionHelper.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\Profile.cs">
+			<Link>external\Profile.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\StringUtils.cs">
+			<Link>external\StringUtils.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\ApplePlatform.cs">
+			<Link>external\ApplePlatform.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\Execution.cs">
+			<Link>external\Execution.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\OSPlatformAttributeExtensions.cs">
+			<Link>external\OSPlatformAttributeExtensions.cs</Link>
+		</Compile>
+		<Compile Include="..\..\mtouch\Cache.cs">
+			<Link>external\Cache.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\IToolLog.cs">
+			<Link>external\IToolLog.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\TargetFramework.cs">
+			<Link>external\TargetFramework.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\BinLog.cs">
+			<Link>external\BinLog.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\SdkVersions.cs">
+			<Link>external\SdkVersions.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\MachO.cs">
+			<Link>external\MachO.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\RegistrarAssembliesObjectWriter.cs">
+			<Link>external\RegistrarAssembliesObjectWriter.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\mtouch\Errors.designer.cs">
+			<Link>external\Errors.designer.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\src\ObjCRuntime\ErrorHelper.cs">
+			<Link>external\ErrorHelper.cs</Link>
+		</Compile>
+		<Compile Include="..\..\common\ErrorHelper.tests.cs">
+			<Link>external\ErrorHelper.tests.cs</Link>
+		</Compile>
+		<Compile Include="..\..\..\tools\common\error.cs">
+			<Link>external\error.cs</Link>
+		</Compile>
+		<Compile Include="..\..\cecil-tests\CecilExtensions.cs">
+			<Link>external\CecilExtensions.cs</Link>
+		</Compile>
+		<Compile Include="..\..\cecil-tests\Helper.cs">
+			<Link>external\Helper.cs</Link>
+		</Compile>
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="external\" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\external\Xamarin.MacDev\Xamarin.MacDev\Xamarin.MacDev.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Remove="System.Text.Json" />
+	</ItemGroup>
+</Project>

@@ -1,10 +1,13 @@
-using System;
+#nullable enable
 
 namespace GameplayKit {
 
+	/// <summary>Describes gameplay in a way that can be optimized with a <see cref="GameplayKit.GKMinMaxStrategist" />.</summary>
 	public partial class GKGameModel {
 
+		/// <summary>The maximum allowable score.</summary>
 		public const int MaxScore = (1 << 24);
+		/// <summary>The minimum allowable score.</summary>
 		public const int MinScore = (-(1 << 24));
 	}
 }

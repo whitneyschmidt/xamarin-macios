@@ -1,20 +1,14 @@
-#if XAMCORE_2_0 || !MONOMAC
-using System;
+#nullable enable
+
 namespace ModelIO {
 	public partial class MDLAsset {
+		/// <summary>Gets the top-level <see cref="ModelIO.MDLObject" /> node in this asset's indexed list of <see cref="ModelIO.MDLObject" /> nodes, at the specified index.</summary>
+		/// <value>The <see cref="MDLObject" /> at the specified index.</value>
+		/// <param name="index">The zero-based index of the object to retrieve.</param>
 		public MDLObject this [nuint index] {
 			get {
 				return GetObject (index);
 			}
 		}
-
-#if !XAMCORE_4_0
-		[Obsolete ("Use the overload that takes an 'MDLLightProbeIrradianceDataSource' instead.")]
-		public static MDLLightProbe[] PlaceLightProbes (float density, MDLProbePlacement type, MDLLightProbeIrradianceDataSource dataSource)
-		{
-			return PlaceLightProbes (density, type, (IMDLLightProbeIrradianceDataSource) dataSource);
-		}
-#endif
 	}
 }
-#endif

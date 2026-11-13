@@ -8,45 +8,38 @@
 // Copyright 2014 Xamarin, Inc.
 //
 
-using ObjCRuntime;
-
 namespace MessageUI {
-
-#if XAMCORE_4_0
+	/// <summary>The result from composing an email message.</summary>
 	[Native]
 	public enum MFMailComposeResult : long {
-#else
-	// Before iOS 10 beta 3, this was an untyped enum -> MFMailComposeViewController.h
-	// Note: now used as a NSInteger in the API.
-	public enum MFMailComposeResult {
-#endif
+		/// <summary>The operation was cancelled by the user.</summary>
 		Cancelled,
+		/// <summary>The message was saved.</summary>
 		Saved,
+		/// <summary>The message was sent.</summary>
 		Sent,
-		Failed
+		/// <summary>There was a failure sending the message.</summary>
+		Failed,
 	}
 
+	/// <summary>Details of the composing error.</summary>
 	[ErrorDomain ("MFMailComposeErrorDomain")]
-#if XAMCORE_4_0
 	[Native]
 	public enum MFMailComposeErrorCode : long {
-#else
-	// Before iOS 10 beta 3, this was an untyped enum -> MFMailComposeViewController.h
-	// Note: now used as a NSInteger in the API.
-	public enum MFMailComposeErrorCode {
-#endif
-	    SaveFailed,
-	    SendFailed
+		/// <summary>Failed to save the message.</summary>
+		SaveFailed,
+		/// <summary>Failed to send the message.</summary>
+		SendFailed,
 	}
 
-#if XAMCORE_4_0
+	/// <summary>An enumeration whose values specify the various results possible from a message being composed.</summary>
 	[Native]
 	public enum MessageComposeResult : long {
-#else
-	// Before iOS 10 beta 3, this was an untyped enum -> MFMessageComposeViewController.h
-	// Note: now used as a NSInteger in the API.
-	public enum MessageComposeResult {
-#endif
-		Cancelled, Sent, Failed
+		/// <summary>The message composition was cancelled by the user.</summary>
+		Cancelled,
+		/// <summary>The message was sent successfully.</summary>
+		Sent,
+		/// <summary>The message failed to send.</summary>
+		Failed,
 	}
 }

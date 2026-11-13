@@ -1,0 +1,42 @@
+//
+// Unit tests for DDDevice
+//
+// Authors:
+//   Israel Soto (issoto@microsoft.com)
+//   Rolf Bjarne Kvinge (rolf@xamarin.com)
+//
+// Copyright 2022, 2024 Microsoft Corporation.
+//
+
+#nullable enable
+
+#if __IOS__ && !__MACCATALYST__
+
+using DeviceDiscoveryExtension;
+using Network;
+using UniformTypeIdentifiers;
+
+namespace MonoTouchFixtures.DeviceDiscoveryExtension {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class DDDeviceTest {
+
+		[Test]
+		public void NetworkEndpointTest ()
+		{
+			TestRuntime.AssertXcodeVersion (14, 0);
+
+			var uuid = Guid.NewGuid ();
+			var endpoint = NWEndpoint.Create ("www.microsoft.com", "https");
+			var device = new DDDevice ("MyDevice", DDDeviceCategory.LaptopComputer, UTType.CreateFromIdentifier ("com.adobe.pdf"), uuid.ToString ());
+
+			device.NetworkEndpoint = endpoint;
+			var tmpEndpoint = device.NetworkEndpoint;
+
+			Assert.That (endpoint.GetHandle () == tmpEndpoint.GetHandle (), Is.True, "NetworkEndpoint");
+		}
+	}
+}
+
+#endif // __IOS__

@@ -1,0 +1,42 @@
+//
+// Unit tests for GKGameCenterViewControllerTest
+//
+
+#if MONOMAC
+using AppKit;
+#else
+using UIKit;
+#endif
+using GameKit;
+using Xamarin.Utils;
+
+namespace MonoTouchFixtures.GameKit {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class GKGameCenterViewControllerTest {
+		[Test]
+		public void StringCtor ()
+		{
+			TestRuntime.AssertXcodeVersion (12, 0);
+			using var controller = new GKGameCenterViewController ("achievementId");
+			Assert.That (GKGameCenterViewControllerState.Achievements, Is.EqualTo (controller.ViewState), "ViewState");
+		}
+
+		[Test]
+		public void StringOptionCtor_AchievementId ()
+		{
+			TestRuntime.AssertXcodeVersion (12, 0);
+			using var controller = new GKGameCenterViewController ("achievementId", GKGameCenterViewControllerInitializationOption.Achievement);
+			Assert.That (GKGameCenterViewControllerState.Achievements, Is.EqualTo (controller.ViewState), "ViewState");
+		}
+
+		[Test]
+		public void StringOptionCtor_LeaderboardSetId ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+			using var controller = new GKGameCenterViewController ("achievementId", GKGameCenterViewControllerInitializationOption.LeaderboardSet);
+			Assert.That (GKGameCenterViewControllerState.Leaderboards, Is.EqualTo (controller.ViewState), "ViewState");
+		}
+	}
+}

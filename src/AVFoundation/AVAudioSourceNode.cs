@@ -1,0 +1,163 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+using AudioToolbox;
+
+namespace AVFoundation {
+
+	// This is messy...
+	// * The good delegate is:
+	//   - AVAudioSourceNodeRenderHandler in XAMCORE_5_0
+	//   - AVAudioSourceNodeRenderHandler3 otherwise
+	// * There are two legacy delegates:
+	//   - AVAudioSourceNodeRenderHandler in .NET and legacy Xamarin
+	//   - AVAudioSourceNodeRenderHandler2 in legacy Xamarin.
+	//
+	// History of mistakes:
+	//
+	// 1. We first bound this using AVAudioSourceNodeRenderHandler (legacy Xamarin version), which was wrong.
+	// 2. We then found the mistake, and bound it as AVAudioSourceNodeRenderHandler2 in legacy Xamarin, removed the initial version in .NET, and named it AVAudioSourceNodeRenderHandler in .NET.
+	//    * However, we failed to write tests, so this delegate was broken too.
+	// 3. Finally we got a customer report, and realized the new delegate was broken too. So now there are two broken delegates, and one working (AVAudioSourceNodeRenderHandler3 in .NET and legacy Xamarin, named as AVAudioSourceNodeRenderHandler in XAMCORE_5_0).
+	//    * And tests were added too.
+	//
+	// Note: broken = made to work with a workaround, which makes this even messier.
+	//
+
+	/// <summary>The delegate that will be called in a callback from <see cref="AVAudioSourceNode" />.</summary>
+	/// <returns>An OSStatus result code. Return 0 to indicate success.</returns>
+	/// <param name="isSilence">Indicates whether the supplied audio data only contains silence.</param>
+	/// <param name="timestamp">The timestamp the audio renders (HAL time).</param>
+	/// <param name="frameCount">The number of frames of audio to supply.</param>
+	/// <param name="outputData">The <see cref="AudioToolbox.AudioBuffers" /> that contains the supplied audio data when the callback returns.</param>
+#if XAMCORE_5_0
+	public delegate /* OSStatus */ int AVAudioSourceNodeRenderHandler (ref bool isSilence, ref AudioTimeStamp timestamp, uint frameCount, AudioBuffers outputData);
+#else
+	public delegate /* OSStatus */ int AVAudioSourceNodeRenderHandler3 (ref bool isSilence, ref AudioTimeStamp timestamp, uint frameCount, AudioBuffers outputData);
+#endif
+
+#if !XAMCORE_5_0
+	[EditorBrowsable (EditorBrowsableState.Never)]
+	public delegate /* OSStatus */ int AVAudioSourceNodeRenderHandler (ref bool isSilence, ref AudioTimeStamp timestamp, uint frameCount, ref AudioBuffers outputData);
+#endif // XAMCORE_5_0
+
+	public partial class AVAudioSourceNode {
+		/// <summary>Creates an <see cref="AVAudioSourceNode" /> with a realtime-safe render block to supply audio data.</summary>
+		/// <param name="renderHandler">The realtime-safe callback that supplies audio data. It is called on the realtime thread, so it must be handled in a thread-safe manner and must not make any blocking calls.</param>
+		/// <returns>A new <see cref="AVAudioSourceNode" />.</returns>
+		/// <remarks>This is the preferred way to create an <see cref="AVAudioSourceNode" /> when the engine is configured for realtime use.</remarks>
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+#if XAMCORE_5_0
+		public static AVAudioSourceNode CreateRealtimeSafe (AVAudioSourceNodeRenderHandler renderHandler)
+#else
+		public static AVAudioSourceNode CreateRealtimeSafe (AVAudioSourceNodeRenderHandler3 renderHandler)
+#endif
+			=> new AVAudioSourceNode (GetHandler (renderHandler), realtimeSafe: true);
+
+		/// <summary>Creates an <see cref="AVAudioSourceNode" /> with the specified format and a realtime-safe render block to supply audio data.</summary>
+		/// <param name="format">The format of the PCM audio data the callback supplies.</param>
+		/// <param name="renderHandler">The realtime-safe callback that supplies audio data. It is called on the realtime thread, so it must be handled in a thread-safe manner and must not make any blocking calls.</param>
+		/// <returns>A new <see cref="AVAudioSourceNode" />.</returns>
+		/// <remarks>This is the preferred way to create an <see cref="AVAudioSourceNode" /> when the engine is configured for realtime use.</remarks>
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+#if XAMCORE_5_0
+		public static AVAudioSourceNode CreateRealtimeSafe (AVAudioFormat format, AVAudioSourceNodeRenderHandler renderHandler)
+#else
+		public static AVAudioSourceNode CreateRealtimeSafe (AVAudioFormat format, AVAudioSourceNodeRenderHandler3 renderHandler)
+#endif
+			=> new AVAudioSourceNode (format, GetHandler (renderHandler), realtimeSafe: true);
+
+		AVAudioSourceNode (AVAudioSourceNodeRenderHandlerRaw renderHandler, bool realtimeSafe)
+			: base (NSObjectFlag.Empty)
+		{
+			InitializeHandle (_InitWithRealtimeSafeRenderBlock (renderHandler), "initWithRealtimeSafeRenderBlock:");
+		}
+
+		AVAudioSourceNode (AVAudioFormat format, AVAudioSourceNodeRenderHandlerRaw renderHandler, bool realtimeSafe)
+			: base (NSObjectFlag.Empty)
+		{
+			InitializeHandle (_InitWithFormatRealtimeSafeRenderBlock (format, renderHandler), "initWithFormat:realtimeSafeRenderBlock:");
+		}
+
+#if !XAMCORE_5_0
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the overload that takes a delegate that does not take a 'ref AudioBuffers' instead. Assigning a value to the 'inputData' parameter in the callback has no effect.")]
+		public AVAudioSourceNode (AVAudioSourceNodeRenderHandler renderHandler)
+			: this (GetHandler (renderHandler))
+		{
+		}
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the overload that takes a delegate that does not take a 'ref AudioBuffers' instead. Assigning a value to the 'inputData' parameter in the callback has no effect.")]
+		public AVAudioSourceNode (AVAudioFormat format, AVAudioSourceNodeRenderHandler renderHandler)
+			: this (format, GetHandler (renderHandler))
+		{
+		}
+#endif // !XAMCORE_5_0
+
+		/// <summary>Creates an <see cref="AVAudioSourceNode" /> with the specified callback to render audio.</summary>
+		/// <param name="renderHandler">The callback that will be called to supply audio data.</param>
+#if XAMCORE_5_0
+		public AVAudioSourceNode (AVAudioSourceNodeRenderHandler renderHandler)
+#else
+		public AVAudioSourceNode (AVAudioSourceNodeRenderHandler3 renderHandler)
+#endif // XAMCORE_5_0
+			: this (GetHandler (renderHandler))
+		{
+		}
+
+		/// <summary>Creates an <see cref="AVAudioSourceNode" /> with the specified callback to render audio.</summary>
+		/// <param name="format">The format of the PCM audio data the callback supplies.</param>
+		/// <param name="renderHandler">The callback that will be called to supply audio data.</param>
+#if XAMCORE_5_0
+		public AVAudioSourceNode (AVAudioFormat format, AVAudioSourceNodeRenderHandler renderHandler)
+#else
+		public AVAudioSourceNode (AVAudioFormat format, AVAudioSourceNodeRenderHandler3 renderHandler)
+#endif // XAMCORE_5_0
+			: this (format, GetHandler (renderHandler))
+		{
+		}
+
+#if !XAMCORE_5_0
+		static AVAudioSourceNodeRenderHandlerRaw GetHandler (AVAudioSourceNodeRenderHandler renderHandler)
+		{
+			AVAudioSourceNodeRenderHandlerRaw rv = (IntPtr isSilence, IntPtr timestamp, uint frameCount, IntPtr outputData) => {
+				unsafe {
+					byte* isSilencePtr = (byte*) isSilence;
+					bool isSilenceBool = (*isSilencePtr) != 0;
+					var buffers = new AudioBuffers (outputData);
+					var rv = renderHandler (ref isSilenceBool, ref Unsafe.AsRef<AudioTimeStamp> ((void*) timestamp), frameCount, ref buffers);
+					*isSilencePtr = isSilenceBool.AsByte ();
+					return rv;
+				}
+			};
+			return rv;
+		}
+#endif // !XAMCORE_5_0
+
+#if XAMCORE_5_0
+		static AVAudioSourceNodeRenderHandlerRaw GetHandler (AVAudioSourceNodeRenderHandler renderHandler)
+#else
+		static AVAudioSourceNodeRenderHandlerRaw GetHandler (AVAudioSourceNodeRenderHandler3 renderHandler)
+		{
+#endif // !XAMCORE_5_0
+			AVAudioSourceNodeRenderHandlerRaw rv = (IntPtr isSilence, IntPtr timestamp, uint frameCount, IntPtr outputData) => {
+				unsafe {
+					byte* isSilencePtr = (byte*) isSilence;
+					bool isSilenceBool = (*isSilencePtr) != 0;
+					var buffers = new AudioBuffers (outputData);
+					var rv = renderHandler (ref isSilenceBool, ref Unsafe.AsRef<AudioTimeStamp> ((void*) timestamp), frameCount, buffers);
+					*isSilencePtr = isSilenceBool.AsByte ();
+					return rv;
+				}
+			};
+			return rv;
+		}
+	}
+}

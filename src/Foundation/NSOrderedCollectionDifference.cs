@@ -1,0 +1,47 @@
+#nullable enable
+using System.Collections.Generic;
+using System.Collections;
+
+namespace Foundation {
+#if false // https://github.com/dotnet/macios/issues/15577
+	public delegate NSOrderedCollectionDifference<NSObject>? NSOrderedCollectionDifferenceGetDifferenceHandler (NSOrderedCollectionChange<NSObject>? collectionChange);
+
+	[SupportedOSPlatform ("ios"), SupportedOSPlatform ("tvos"), SupportedOSPlatform ("macos")]
+	public partial class NSOrderedCollectionDifference
+	{
+
+		public NSObject[] Insertions => NSArray.ArrayFromHandle<NSObject> (_Insertions);
+
+		public NSObject[] Removals => NSArray.ArrayFromHandle<NSObject> (_Removals);
+
+		internal delegate NSOrderedCollectionDifference<NSObject>? NSOrderedCollectionDifferenceGetDifferenceHandlerProxy (IntPtr blockLiteral, /* NSOrderedCollectionChange */ IntPtr change);
+		static readonly NSOrderedCollectionDifferenceGetDifferenceHandlerProxy static_ChangeAllback = GetDiffHandler;
+
+		[MonoPInvokeCallback (typeof (NSOrderedCollectionDifferenceGetDifferenceHandlerProxy))]
+		static NSOrderedCollectionDifference<NSObject>? GetDiffHandler (IntPtr block, IntPtr change)
+		{
+			var callback = BlockLiteral.GetTarget<NSOrderedCollectionDifferenceGetDifferenceHandler> (block);
+			if (callback is not null) {
+				var nsChange = Runtime.GetNSObject<NSOrderedCollectionChange<NSObject>> (change, false);
+				return callback (nsChange);
+			}
+			return null;
+		}
+
+		public NSOrderedCollectionDifference? GetDifference (NSOrderedCollectionDifferenceGetDifferenceHandler callback)
+		{
+			if (callback is null)
+				throw new ArgumentNullException (nameof (callback));
+
+			var block = new BlockLiteral ();
+			block.SetupBlock (static_ChangeAllback, callback);
+			try {
+				return Runtime.GetNSObject<NSOrderedCollectionDifference> (_GetDifference (ref block));
+			} finally {
+				block.CleanupBlock ();
+			}
+		}
+	
+	}
+#endif
+}

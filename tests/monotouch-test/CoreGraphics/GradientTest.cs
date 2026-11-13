@@ -7,10 +7,6 @@
 // Copyright 2012, 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 using UIColor = AppKit.NSColor;
@@ -18,27 +14,9 @@ using UIColor = AppKit.NSColor;
 using UIKit;
 #endif
 using CoreGraphics;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreGraphics {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class GradientTest {
@@ -48,7 +26,7 @@ namespace MonoTouchFixtures.CoreGraphics {
 			TestRuntime.GetCGColor (UIColor.Clear),
 			TestRuntime.GetCGColor (UIColor.Blue),
 		};
-		
+
 		[Test]
 		public void Colorspace_Null ()
 		{
@@ -58,18 +36,15 @@ namespace MonoTouchFixtures.CoreGraphics {
 			using (var g = new CGGradient (null, array, new nfloat [3] { 0f, 1f, 0.5f })) {
 				Assert.That (g.Handle, Is.Not.EqualTo (IntPtr.Zero), "null,CGColor[],float[]");
 			}
-			
+
 			using (var g = new CGGradient (null, array, new nfloat [3] { 0f, 1f, 0.5f })) {
 				Assert.That (g.Handle, Is.Not.EqualTo (IntPtr.Zero), "null,CGColor[],float[]");
 			}
 		}
-		
+
 		static CGColorSpace [] spaces = {
 			CGColorSpace.CreateDeviceGray (),
 			CGColorSpace.CreateDeviceRGB (),
-#if !XAMCORE_3_0
-			CGColorSpace.Null
-#endif
 		};
 
 		[Test]
@@ -82,10 +57,10 @@ namespace MonoTouchFixtures.CoreGraphics {
 			}
 		}
 
-		[DllImport(Constants.CoreGraphicsLibrary)]
+		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGGradientRef */ IntPtr CGGradientCreateWithColorComponents (/* CGColorSpaceRef */ IntPtr colorspace, /* CGFloat[] */ nfloat [] components, /* CGFloat[] */ nfloat [] locations, /* size_t */ nint count);
 
-		[DllImport(Constants.CoreGraphicsLibrary)]
+		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGGradientRef */ IntPtr CGGradientCreateWithColors (/* CGColorSpaceRef */ IntPtr space, /* CFArrayRef */ IntPtr colors, /* CGFloat[] */ nfloat [] locations);
 
 		[Test]
@@ -111,6 +86,34 @@ namespace MonoTouchFixtures.CoreGraphics {
 			var gdo = CGGradientDrawingOptions.DrawsAfterEndLocation | CGGradientDrawingOptions.DrawsBeforeStartLocation;
 			// this would be "3" without a [Flags] attribute
 			Assert.That (gdo.ToString (), Is.EqualTo ("DrawsBeforeStartLocation, DrawsAfterEndLocation"), "ToString/Flags");
+		}
+
+		[Test]
+		public void CreateWithHeadroom ()
+		{
+			TestRuntime.AssertXcodeVersion (26, 0);
+
+			var colorComponents = new nfloat [] {
+				0.1f, 0.2f, 0.3f,
+				0.4f, 0.5f, 0.6f,
+				0.7f, 0.8f, 0.9f,
+			};
+			var locations = new nfloat [] {
+				0,
+				0.25f,
+				1,
+			};
+
+			using var hdrCapableColorspace = CGColorSpace.CreateWithName (CGColorSpaceNames.DisplayP3_PQ);
+			Assert.That (hdrCapableColorspace.IsHdr, Is.True, "IsHdr");
+			using (var gradient = CGGradient.Create (0.5f, hdrCapableColorspace, colorComponents, locations)) {
+				Assert.That (gradient, Is.Not.Null, "Gradient #1");
+				Assert.That (gradient.ContentHeadroom, Is.EqualTo (1.0f), "Gradient #1 - ContentHeadroom");
+			}
+
+			using (var gradient = CGGradient.Create (0.5f, null, colorComponents, locations)) {
+				Assert.That (gradient, Is.Null, "Gradient #2");
+			}
 		}
 	}
 }

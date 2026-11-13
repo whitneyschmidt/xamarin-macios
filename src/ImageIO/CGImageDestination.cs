@@ -24,112 +24,25 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
+using System.ComponentModel;
+
 using CoreFoundation;
 using CoreGraphics;
 
 namespace ImageIO {
 
-#if !XAMCORE_2_0
 	public partial class CGImageDestinationOptions {
-
-		public float? LossyCompressionQuality { get; set; }
-		public CGColor DestinationBackgroundColor { get; set; }
-
-		// new in iOS 7 and 10.8
-		[iOS (7,0)]
-		public CGImageMetadata Metadata { get; set; }
-
-		[iOS (7,0)]
-		public bool MergeMetadata { get; set; }
-
-		[iOS (7,0)]
-		public bool ShouldExcludeXMP { get; set; }
-
-		[iOS (7,0)]
-		public int? Orientation { get; set; }
-
-		[iOS (7,0)]
-		public DateTime? DateTime { get; set; }
-
-		[Mac (10, 10)]
-		[iOS (8, 0)]
-		public int? ImageMaxPixelSize { get; set; }
-
-		[Mac (10, 10)]
-		[iOS (8, 0)]
-		public bool EmbedThumbnail { get; set; }
-
-		[Mac (10, 10)]
-		[iOS (8, 0)]
-		public bool ShouldExcludeGPS { get; set; }
-
-		[iOS (9,3)][Mac (10,12)]
-		public bool OptimizeColorForSharing { get; set; }
-
-		internal NSMutableDictionary ToDictionary ()
-		{
-			var dict = new NSMutableDictionary ();
-
-			if (LossyCompressionQuality.HasValue)
-				dict.LowlevelSetObject (new NSNumber (LossyCompressionQuality.Value), kLossyCompressionQuality);
-			if (DestinationBackgroundColor != null)
-				dict.LowlevelSetObject (DestinationBackgroundColor.Handle, kBackgroundColor);
-
-			// new in iOS 7 and 10.8
-			if (Metadata != null) {
-				dict.LowlevelSetObject (Metadata.Handle, kMetadata);
-				// default are false
-				if (MergeMetadata)
-					dict.LowlevelSetObject (CFBoolean.TrueHandle, kMergeMetadata);
-				if (ShouldExcludeXMP)
-					dict.LowlevelSetObject (CFBoolean.TrueHandle, kShouldExcludeXMP);
-			} else {
-				// DateTime is exclusive of metadata (which includes its own)
-				if (DateTime.HasValue)
-					dict.LowlevelSetObject ((NSDate) DateTime, kDateTime);
-			}
-
-			if (Orientation.HasValue) {
-				using (var n = new NSNumber (Orientation.Value))
-					dict.LowlevelSetObject (n.Handle, kOrientation);
-			}
-
-			// new in iOS 8 and 10.10 
-			if (ImageMaxPixelSize.HasValue && (kImageMaxPixelSize != IntPtr.Zero)) {
-				using (var n = new NSNumber (ImageMaxPixelSize.Value))
-					dict.LowlevelSetObject (n.Handle, kOrientation);
-			}
-
-			// new in iOS 8 and 10.10 - default is false
-			if (EmbedThumbnail && (kEmbedThumbnail != IntPtr.Zero))
-				dict.LowlevelSetObject (CFBoolean.TrueHandle, kEmbedThumbnail);
-
-			// new in iOS 8 and 10.10 - default is false
-			if (ShouldExcludeGPS && (kShouldExcludeGPS != IntPtr.Zero))
-				dict.LowlevelSetObject (CFBoolean.TrueHandle, kShouldExcludeGPS);
-
-			if (OptimizeColorForSharing && (kOptimizeColorForSharing != IntPtr.Zero))
-				dict.LowlevelSetObject (CFBoolean.TrueHandle, kOptimizeColorForSharing);
-
-			return dict;
-		}
-	}
-
-#else
-	public partial class CGImageDestinationOptions
-	{
-		CGColor destinationBackgroundColor;
-		public CGColor DestinationBackgroundColor {
+		CGColor? destinationBackgroundColor;
+		/// <summary>The background color used during image compositing for transparent regions of the image.</summary>
+		///         <value>The color used for background compositing.</value>
+		///         <remarks>To be added.</remarks>
+		public CGColor? DestinationBackgroundColor {
 			get { return destinationBackgroundColor; }
 			set {
 				destinationBackgroundColor = value;
-				(Dictionary as NSMutableDictionary).LowlevelSetObject (destinationBackgroundColor.Handle, CGImageDestinationOptionsKeys.BackgroundColor.Handle);
+				(Dictionary as NSMutableDictionary)?.LowlevelSetObject (destinationBackgroundColor!, CGImageDestinationOptionsKeys.BackgroundColor);
 			}
 		}
 
@@ -139,62 +52,14 @@ namespace ImageIO {
 		}
 	}
 
-	public partial class CGCopyImageSourceOptions
-	{
-		[iOS (7,0)]
-		public CGImageMetadata Metadata { get; set; }
-
-		[iOS (7,0)]
-		public bool MergeMetadata { get; set; }
-
-		[iOS (7,0)]
-		public bool ShouldExcludeXMP { get; set; }
-
-		[Mac (10, 10)]
-		[iOS (8, 0)]
-		public bool ShouldExcludeGPS { get; set; }
-
-		[iOS (7,0)]
-		public DateTime? DateTime { get; set; }
-
-		[iOS (7,0)]
-		public int? Orientation { get; set; }
-
-		internal NSMutableDictionary ToDictionary ()
-		{
-			var dict = new NSMutableDictionary ();
-
-			// new in iOS 7 and 10.8
-			if (Metadata != null) {
-				dict.LowlevelSetObject (Metadata.Handle, kMetadata);
-				// default are false
-				if (MergeMetadata)
-					dict.LowlevelSetObject (CFBoolean.TrueHandle, kMergeMetadata);
-				if (ShouldExcludeXMP)
-					dict.LowlevelSetObject (CFBoolean.TrueHandle, kShouldExcludeXMP);
-			} else {
-				// DateTime is exclusive of metadata (which includes its own)
-				if (DateTime.HasValue)
-					dict.LowlevelSetObject ((NSDate) DateTime, kDateTime);
-			}
-
-			// new in iOS 8 and 10.10 - default is false
-			if (ShouldExcludeGPS && (kShouldExcludeGPS != IntPtr.Zero))
-				dict.LowlevelSetObject (CFBoolean.TrueHandle, kShouldExcludeGPS);
-
-			if (Orientation.HasValue) {
-				using (var n = new NSNumber (Orientation.Value))
-					dict.LowlevelSetObject (n.Handle, kOrientation);
-			}
-			
-			return dict;
-		}
-	}
-#endif
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
 	public partial class CGImageAuxiliaryDataInfo {
 
-		public CGImageMetadata Metadata {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CGImageMetadata? Metadata {
 			get {
 				return GetNativeValue<CGImageMetadata> (CGImageAuxiliaryDataInfoKeys.MetadataKey);
 			}
@@ -204,58 +69,41 @@ namespace ImageIO {
 		}
 	}
 
-	public class CGImageDestination : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		// invoked by marshallers
-		internal CGImageDestination (IntPtr handle) : this (handle, false)
+	/// <include file="../../docs/api/ImageIO/CGImageDestination.xml" path="/Documentation/Docs[@DocId='T:ImageIO.CGImageDestination']/*" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CGImageDestination : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CGImageDestination (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
-		}
-
-		[Preserve (Conditional=true)]
-		internal CGImageDestination (IntPtr handle, bool owns)
-		{
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
 		}
 
-		~CGImageDestination ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-		
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
-				
-		[DllImport (Constants.ImageIOLibrary, EntryPoint="CGImageDestinationGetTypeID")]
+		/// <summary>Type identifier for the ImageIO.CGImageDestination type.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>
+		///           <para>The returned token is the CoreFoundation type identifier (CFType) that has been assigned to this class.</para>
+		///           <para>This can be used to determine type identity between different CoreFoundation objects.</para>
+		///           <para>You can retrieve the type of a CoreFoundation object by invoking the <see cref="CoreFoundation.CFType.GetTypeID(System.IntPtr)" /> on the native handle of the object</para>
+		///           <example>
+		///             <code lang="csharp lang-csharp"><![CDATA[bool isCGImageDestination = (CFType.GetTypeID (foo.Handle) == CGImageDestination.GetTypeID ());]]></code>
+		///           </example>
+		///         </remarks>
+		[DllImport (Constants.ImageIOLibrary, EntryPoint = "CGImageDestinationGetTypeID")]
 		public extern static /* CFTypeID */ nint GetTypeID ();
-		
+
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static /* CFArrayRef __nonnull */ IntPtr CGImageDestinationCopyTypeIdentifiers ();
 
-		public static string [] TypeIdentifiers {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public static string? []? TypeIdentifiers {
 			get {
 				var handle = CGImageDestinationCopyTypeIdentifiers ();
-				var array = NSArray.StringArrayFromHandle (handle);
-				CFObject.CFRelease (handle);
-				return array;
+				return CFArray.StringArrayFromHandle (handle, true);
 			}
 		}
 
@@ -264,54 +112,61 @@ namespace ImageIO {
 			/* CGDataConsumerRef __nonnull */ IntPtr consumer, /* CFStringRef __nonnull */ IntPtr type,
 			/* size_t */ nint count, /* CFDictionaryRef __nullable */ IntPtr options);
 
-		public static CGImageDestination Create (CGDataConsumer consumer, string typeIdentifier, int imageCount, CGImageDestinationOptions options = null)
+		/// <param name="consumer">To be added.</param>
+		///         <param name="typeIdentifier">To be added.</param>
+		///         <param name="imageCount">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CGImageDestination? Create (CGDataConsumer consumer, string typeIdentifier, int imageCount, CGImageDestinationOptions? options = null)
 		{
-			if (consumer == null)
-				throw new ArgumentNullException ("consumer");
-			if (typeIdentifier == null)
-				throw new ArgumentNullException ("typeIdentifier");
+			if (consumer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (consumer));
+			if (typeIdentifier is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (typeIdentifier));
 
-			var dict = options == null ? null : options.ToDictionary ();
-			var typeId = NSString.CreateNative (typeIdentifier);
-			IntPtr p = CGImageDestinationCreateWithDataConsumer (consumer.Handle, typeId, imageCount, dict == null ? IntPtr.Zero : dict.Handle);
-			NSString.ReleaseNative (typeId);
-			var ret = p == IntPtr.Zero ? null : new CGImageDestination (p, true);
-			if (dict != null)
-				dict.Dispose ();
-			return ret;
+			using var dict = options?.ToDictionary ();
+			var typeId = CFString.CreateNative (typeIdentifier);
+			try {
+				IntPtr p = CGImageDestinationCreateWithDataConsumer (consumer.Handle, typeId, imageCount, dict.GetHandle ());
+				GC.KeepAlive (consumer);
+				GC.KeepAlive (dict);
+				return p == IntPtr.Zero ? null : new CGImageDestination (p, true);
+			} finally {
+				CFString.ReleaseNative (typeId);
+			}
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static /* CGImageDestinationRef __nullable */ IntPtr CGImageDestinationCreateWithData (
-			/* CFMutableDataRef __nonnull */ IntPtr data, /* CFStringRef __nonnull */ IntPtr stringType, 
+			/* CFMutableDataRef __nonnull */ IntPtr data, /* CFStringRef __nonnull */ IntPtr stringType,
 			/* size_t */ nint count, /* CFDictionaryRef __nullable */ IntPtr options);
 
-		// binding mistake -> NSMutableData, not NSData
-		// naming mistake -> it's not From since it will write into (not read from) 'data'
-#if XAMCORE_2_0
-		public static CGImageDestination Create (NSMutableData data, string typeIdentifier, int imageCount, CGImageDestinationOptions options = null)
-#else
-		public static CGImageDestination FromData (NSData data, string typeIdentifier, int imageCount)
+		/// <param name="data">To be added.</param>
+		///         <param name="typeIdentifier">To be added.</param>
+		///         <param name="imageCount">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CGImageDestination? Create (NSMutableData data, string typeIdentifier, int imageCount, CGImageDestinationOptions? options = null)
 		{
-			return FromData (data, typeIdentifier, imageCount, null);
-		}
+			if (data is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (data));
+			if (typeIdentifier is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (typeIdentifier));
 
-		public static CGImageDestination FromData (NSData data, string typeIdentifier, int imageCount, CGImageDestinationOptions options)
-#endif
-		{
-			if (data == null)
-				throw new ArgumentNullException ("data");
-			if (typeIdentifier == null)
-				throw new ArgumentNullException ("typeIdentifier");
-
-			var dict = options == null ? null : options.ToDictionary ();
-			var typeId = NSString.CreateNative (typeIdentifier);
-			IntPtr p = CGImageDestinationCreateWithData (data.Handle, typeId, imageCount, dict == null ? IntPtr.Zero : dict.Handle);
-			NSString.ReleaseNative (typeId);
-			var ret = p == IntPtr.Zero ? null : new CGImageDestination (p, true);
-			if (dict != null)
-				dict.Dispose ();
-			return ret;
+			using var dict = options?.ToDictionary ();
+			var typeId = CFString.CreateNative (typeIdentifier);
+			try {
+				IntPtr p = CGImageDestinationCreateWithData (data.Handle, typeId, imageCount, dict.GetHandle ());
+				GC.KeepAlive (data);
+				GC.KeepAlive (dict);
+				return p == IntPtr.Zero ? null : new CGImageDestination (p, true);
+			} finally {
+				CFString.ReleaseNative (typeId);
+			}
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
@@ -319,42 +174,40 @@ namespace ImageIO {
 			/* CFURLRef __nonnull */ IntPtr url, /* CFStringRef __nonnull */ IntPtr stringType,
 			/* size_t */ nint count, /* CFDictionaryRef __nullable */ IntPtr options);
 
-		// naming mistake -> it's not From since it will write into (not read from) 'url'
-#if XAMCORE_2_0
-		//
-		// Dropped the CGImageDestinationOption parameter, as it turns out that for *creation* operations
-		// it was never supported to begin with (it is expected to be null).   The CGImageDestinationOption
-		// is actually just used for AddImage methods
-		//
-		public static CGImageDestination Create (NSUrl url, string typeIdentifier, int imageCount)
-#else
-		public static CGImageDestination FromUrl (NSUrl url, string typeIdentifier, int imageCount)
+		/// <param name="url">To be added.</param>
+		///         <param name="typeIdentifier">To be added.</param>
+		///         <param name="imageCount">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CGImageDestination? Create (NSUrl url, string typeIdentifier, int imageCount)
 		{
-			return FromUrl (url, typeIdentifier, imageCount, null);
-		}
-		
-		public static CGImageDestination FromUrl (NSUrl url, string typeIdentifier, int imageCount, CGImageDestinationOptions options)
-#endif
-		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
-			if (typeIdentifier == null)
-				throw new ArgumentNullException ("typeIdentifier");
+			if (url is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (url));
+			if (typeIdentifier is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (typeIdentifier));
 
-			var typeId = NSString.CreateNative (typeIdentifier);
-			IntPtr p = CGImageDestinationCreateWithURL (url.Handle, typeId, imageCount, IntPtr.Zero);
-			NSString.ReleaseNative (typeId);
-			var ret = p == IntPtr.Zero ? null : new CGImageDestination (p, true);
-			return ret;
+			var typeId = CFString.CreateNative (typeIdentifier);
+			try {
+				IntPtr p = CGImageDestinationCreateWithURL (url.Handle, typeId, imageCount, IntPtr.Zero);
+				GC.KeepAlive (url);
+				return p == IntPtr.Zero ? null : new CGImageDestination (p, true);
+			} finally {
+				CFString.ReleaseNative (typeId);
+			}
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static void CGImageDestinationSetProperties (/* CGImageDestinationRef __nonnull */ IntPtr idst,
 			/* CFDictionaryRef __nullable */ IntPtr properties);
 
-		public void SetProperties (NSDictionary properties)
+		/// <param name="properties">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void SetProperties (NSDictionary? properties)
 		{
-			CGImageDestinationSetProperties (handle, properties == null ? IntPtr.Zero : properties.Handle);
+			CGImageDestinationSetProperties (Handle, properties.GetHandle ());
+			GC.KeepAlive (properties);
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
@@ -362,140 +215,200 @@ namespace ImageIO {
 			/* CGImageRef __nonnull */ IntPtr image,
 			/* CFDictionaryRef __nullable */ IntPtr properties);
 
-		public void AddImage (CGImage image, CGImageDestinationOptions options = null)
+		/// <param name="image">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void AddImage (CGImage image, CGImageDestinationOptions? options = null)
 		{
-			if (image == null)
-				throw new ArgumentNullException ("image");
+			if (image is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (image));
 
-			var dict = options == null ? null : options.ToDictionary ();
-			CGImageDestinationAddImage (handle, image.Handle, dict == null ? IntPtr.Zero : dict.Handle);
-			if (dict != null)
-				dict.Dispose ();
+			using (var dict = options?.ToDictionary ()) {
+				CGImageDestinationAddImage (Handle, image.Handle, dict.GetHandle ());
+				GC.KeepAlive (image);
+			}
 		}
 
-		public void AddImage (CGImage image, NSDictionary properties)
+		/// <param name="image">To be added.</param>
+		///         <param name="properties">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void AddImage (CGImage image, NSDictionary? properties)
 		{
-			if (image == null)
-				throw new ArgumentNullException ("image");
-			
-			CGImageDestinationAddImage (handle, image.Handle, properties == null ? IntPtr.Zero : properties.Handle);
+			if (image is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (image));
+
+			CGImageDestinationAddImage (Handle, image.Handle, properties.GetHandle ());
+			GC.KeepAlive (image);
+			GC.KeepAlive (properties);
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static void CGImageDestinationAddImageFromSource (/* CGImageDestinationRef __nonnull */ IntPtr idst,
-			/* CGImageSourceRef __nonnull */ IntPtr sourceHandle, /* size_t */ nint index, 
+			/* CGImageSourceRef __nonnull */ IntPtr sourceHandle, /* size_t */ nint index,
 			/* CFDictionaryRef __nullable */ IntPtr properties);
 
-		public void AddImage (CGImageSource source, int index, CGImageDestinationOptions options = null)
+		/// <param name="source">To be added.</param>
+		///         <param name="index">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void AddImage (CGImageSource source, int index, CGImageDestinationOptions? options = null)
 		{
-			if (source == null)
-				throw new ArgumentNullException ("source");
+			if (source is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (source));
 
-			var dict = options == null ? null : options.ToDictionary ();
-			CGImageDestinationAddImageFromSource (handle, source.Handle, index, dict == null ? IntPtr.Zero : dict.Handle);
-			if (dict != null)
-				dict.Dispose ();
+			using var dict = options?.ToDictionary ();
+			CGImageDestinationAddImageFromSource (Handle, source.Handle, index, dict.GetHandle ());
+			GC.KeepAlive (source);
+			GC.KeepAlive (dict);
 		}
 
-		public void AddImage (CGImageSource source, int index, NSDictionary properties)
+		/// <param name="source">To be added.</param>
+		///         <param name="index">To be added.</param>
+		///         <param name="properties">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void AddImage (CGImageSource source, int index, NSDictionary? properties)
 		{
-			if (source == null)
-				throw new ArgumentNullException ("source");
-			
-			CGImageDestinationAddImageFromSource (handle, source.Handle, index, properties == null ? IntPtr.Zero : properties.Handle);
+			if (source is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (source));
+
+			CGImageDestinationAddImageFromSource (Handle, source.Handle, index, properties.GetHandle ());
+			GC.KeepAlive (source);
+			GC.KeepAlive (properties);
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageDestinationFinalize (/* CGImageDestinationRef __nonnull */ IntPtr idst);
+		extern static byte CGImageDestinationFinalize (/* CGImageDestinationRef __nonnull */ IntPtr idst);
 
+		/// <summary>Writes the images to the destination and disposes the object.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool Close ()
 		{
-			var success = CGImageDestinationFinalize (handle);
+			var success = CGImageDestinationFinalize (Handle);
 			Dispose ();
-			return success;
+			return success != 0;
 		}
 
-		[iOS (7,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static void CGImageDestinationAddImageAndMetadata (/* CGImageDestinationRef __nonnull */ IntPtr idst,
 			/* CGImageRef __nonnull */ IntPtr image, /* CGImageMetadataRef __nullable */ IntPtr metadata,
 			/* CFDictionaryRef __nullable */ IntPtr options);
 
+		/// <param name="image">To be added.</param>
+		///         <param name="meta">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
-		[iOS (7,0)]
-		public void AddImageAndMetadata (CGImage image, CGImageMetadata meta, NSDictionary options)
+		public void AddImageAndMetadata (CGImage image, CGImageMetadata meta, NSDictionary? options)
 		{
-			if (image == null)
-				throw new ArgumentNullException ("image");
-			IntPtr m = meta == null ? IntPtr.Zero : meta.Handle;
-			IntPtr o = options == null ? IntPtr.Zero : options.Handle;
-			CGImageDestinationAddImageAndMetadata (handle, image.Handle, m, o);
+			if (image is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (image));
+			CGImageDestinationAddImageAndMetadata (Handle, image.Handle, meta.GetHandle (), options.GetHandle ());
+			GC.KeepAlive (image);
+			GC.KeepAlive (meta);
+			GC.KeepAlive (options);
 		}
 
-		[iOS (7,0)]
-		public void AddImageAndMetadata (CGImage image, CGImageMetadata meta, CGImageDestinationOptions options)
+		/// <param name="image">To be added.</param>
+		///         <param name="meta">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		public void AddImageAndMetadata (CGImage image, CGImageMetadata meta, CGImageDestinationOptions? options)
 		{
-			NSDictionary o = null;
-			if (options != null)
-				o = options.ToDictionary ();
-			try {
-				AddImageAndMetadata (image, meta, o);
-			}
-			finally {
-				if (options != null)
-					o.Dispose ();
-			}
+			using var o = options?.ToDictionary ();
+			AddImageAndMetadata (image, meta, o);
 		}
 
-		[iOS (7,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageDestinationCopyImageSource (/* CGImageDestinationRef __nonnull */ IntPtr idst,
+		unsafe extern static byte CGImageDestinationCopyImageSource (/* CGImageDestinationRef __nonnull */ IntPtr idst,
 			/* CGImageSourceRef __nonnull */ IntPtr image, /* CFDictionaryRef __nullable */ IntPtr options,
-			/* CFErrorRef* */ out IntPtr err);
+			/* CFErrorRef* */ IntPtr* err);
 
+		/// <param name="image">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
-		[iOS (7,0)]
-		public bool CopyImageSource (CGImageSource image, NSDictionary options, out NSError error)
+		public bool CopyImageSource (CGImageSource image, NSDictionary? options, out NSError? error)
 		{
-			if (image == null)
-				throw new ArgumentNullException ("image");
+			if (image is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (image));
+			byte result;
 			IntPtr err;
-			IntPtr o = options == null ? IntPtr.Zero : options.Handle;
-			bool result = CGImageDestinationCopyImageSource (handle, image.Handle, o, out err);
-			error = err == IntPtr.Zero ? null : new NSError (err);
-			return result;
+			unsafe {
+				result = CGImageDestinationCopyImageSource (Handle, image.Handle, options.GetHandle (), &err);
+				GC.KeepAlive (image);
+				GC.KeepAlive (options);
+			}
+			error = Runtime.GetNSObject<NSError> (err);
+			return result != 0;
 		}
 
-		[iOS (7,0)]
-#if XAMCORE_2_0
-		public bool CopyImageSource (CGImageSource image, CGCopyImageSourceOptions options, out NSError error)
-#else
-		public bool CopyImageSource (CGImageSource image, CGImageDestinationOptions options, out NSError error)
-#endif
+		/// <param name="image">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		public bool CopyImageSource (CGImageSource image, CGCopyImageSourceOptions? options, out NSError? error)
 		{
-			NSDictionary o = null;
-			if (options != null)
-				o = options.ToDictionary ();
-			try {
-				return CopyImageSource (image, o, out error);
-			}
-			finally {
-				if (options != null)
-					o.Dispose ();
-			}
+			using var o = options?.Dictionary;
+			return CopyImageSource (image, o, out error);
 		}
 
-		[Watch (4, 0), TV (11, 0), Mac (10, 13), iOS (11, 0)]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.ImageIOLibrary)]
 		static extern void CGImageDestinationAddAuxiliaryDataInfo (IntPtr /* CGImageDestinationRef* */ idst, IntPtr /* CFStringRef* */ auxiliaryImageDataType, IntPtr /* CFDictionaryRef* */ auxiliaryDataInfoDictionary);
 
-		[Watch (4, 0), TV (11, 0), Mac (10, 13), iOS (11, 0)]
-		public void AddAuxiliaryDataInfo (CGImageAuxiliaryDataType auxiliaryImageDataType, CGImageAuxiliaryDataInfo auxiliaryDataInfo)
+		/// <param name="auxiliaryImageDataType">To be added.</param>
+		///         <param name="auxiliaryDataInfo">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public void AddAuxiliaryDataInfo (CGImageAuxiliaryDataType auxiliaryImageDataType, CGImageAuxiliaryDataInfo? auxiliaryDataInfo)
 		{
 			using (var dict = auxiliaryDataInfo?.Dictionary) {
-				CGImageDestinationAddAuxiliaryDataInfo (Handle, auxiliaryImageDataType.GetConstant ().GetHandle (), dict.GetHandle ());
+				var constant = auxiliaryImageDataType.GetConstant ();
+				CGImageDestinationAddAuxiliaryDataInfo (Handle, constant.GetHandle (), dict.GetHandle ());
+				GC.KeepAlive (constant);
 			}
 		}
 	}

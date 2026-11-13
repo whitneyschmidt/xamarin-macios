@@ -1,28 +1,17 @@
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if !MONOMAC
 using UIKit;
 #endif
 using SpriteKit;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.SpriteKit;
-using MonoTouch.UIKit;
-using MonoTouch.ObjCRuntime;
-#endif
-using OpenTK;
 
-using MatrixFloat2x2 = global::OpenTK.NMatrix2;
-using MatrixFloat3x3 = global::OpenTK.NMatrix3;
-using MatrixFloat4x4 = global::OpenTK.NMatrix4;
-using VectorFloat3 = global::OpenTK.NVector3;
+using System.Numerics;
+using MatrixFloat2x2 = global::CoreGraphics.NMatrix2;
+using MatrixFloat3x3 = global::CoreGraphics.NMatrix3;
+using MatrixFloat4x4 = global::CoreGraphics.NMatrix4;
+using VectorFloat3 = global::CoreGraphics.NVector3;
 
 using Bindings.Test;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.SpriteKit {
 
@@ -45,9 +34,9 @@ namespace MonoTouchFixtures.SpriteKit {
 				V3 = new VectorFloat3 (1, 2, 3);
 				obj.EulerAngles = V3;
 				// The values bellow match what the same code in Swift returns.
-				Assert.AreEqual (-2.14159298f, obj.EulerAngles.X, "#x1");
-				Assert.AreEqual (1.14159274f, obj.EulerAngles.Y, "#y1");
-				Assert.AreEqual (-0.141592711f, obj.EulerAngles.Z, "#z1");
+				Assert.That (obj.EulerAngles.X, Is.EqualTo (-2.14159298f).Within (0.000001f), "#x1");
+				Assert.That (obj.EulerAngles.Y, Is.EqualTo (1.14159274f).Within (0.000001f), "#y1");
+				Assert.That (obj.EulerAngles.Z, Is.EqualTo (-0.141592711f).Within (0.000001f), "#z1");
 			}
 		}
 
@@ -77,8 +66,8 @@ namespace MonoTouchFixtures.SpriteKit {
 				);
 				obj.RotationMatrix = rotatedMatrix;
 				Asserts.AreEqual (rotatedMatrix, obj.RotationMatrix, 0.000001f, "RotationMatrix b");
-				Assert.AreEqual ((nfloat) (Math.PI / 2), obj.XRotation, 0.000001f, "XRotation b");
-				Assert.AreEqual (0, obj.YRotation, 0.000001f, "YRotation b"); // Setting YRotation changes RotationMatrix, but setting RotationMatrix doesn't change YRotation.
+				Assert.That ((double) obj.XRotation, Is.EqualTo (Math.PI / 2).Within (0.000001), "XRotation b");
+				Assert.That ((double) obj.YRotation, Is.EqualTo (0.0).Within (0.000001), "YRotation b"); // Setting YRotation changes RotationMatrix, but setting RotationMatrix doesn't change YRotation.
 			}
 		}
 
@@ -96,5 +85,4 @@ namespace MonoTouchFixtures.SpriteKit {
 		}
 	}
 }
-
-#endif // !__WATCHOS__
+#endif // !MONOMAC

@@ -1,33 +1,42 @@
-using System;
 
-using Foundation;
-using CoreFoundation;
-using ObjCRuntime;
-using CoreVideo;
+#nullable enable
 
 namespace Compression {
 
-	// this enum as per the headers is an int NOT an NSInterger
-	[iOS (9,0), TV (9,0), Mac (10,11)]
+	// this enum as per the headers is an int NOT an NSInteger
+	/// <summary>Specifies the algorithm to use to compress or decompress the underlying stream.</summary>
 	public enum CompressionAlgorithm {
+		/// <summary>The LZ4 compression format.</summary>
 		LZ4 = 0x100,
+		/// <summary>The <see cref="LZ4">LZ4</see> compression format, without block headers.</summary>
 		LZ4Raw = 0x101,
+		/// <summary>The Lempel–Ziv Finite State Entropy (LZFSE) compression format. This is the format Apple recommends on Apple platforms.</summary>
 		Lzfse = 0x801,
+		/// <summary>The Lempel–Ziv–Markov (LZMA) compression format. The encoder in the Compression framework only supports level 6. The decoder supports all compression levels.</summary>
 		Lzma = 0x306,
+		/// <summary>The zlib compression format. This is the compression format most compatible with other platforms. The encoder in the Compression framework only supports level 5. The decoder supports all compression levels.</summary>
 		Zlib = 0x205,
+		/// <summary>The Brotli compression format. The encoder in the Compression framework only supports the Brotli level 2 encoder. The decoder supports all compression levels.</summary>
+		Brotli = 0xB02,
+		/// <summary>The LZBitmap compression format. This compression algorithm is only available on Apple devices.</summary>
+		[iOS (15, 0), TV (15, 0), MacCatalyst (15, 0)]
+		LZBitmap = 0x702,
 	}
 
+	[Internal]
 	enum CompressionStatus {
 		Ok = 0,
 		End = 1,
 		Error = -1,
 	}
 
+	[Internal]
 	enum StreamFlag {
 		Continue = 0, // not present in the API, but makes it nice in our case
 		Finalize = 0x0001,
 	}
 
+	[Internal]
 	enum StreamOperation {
 		Encode = 0,
 		Decode = 1,

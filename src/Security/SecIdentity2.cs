@@ -11,62 +11,112 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
 namespace Security {
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class SecIdentity2 : NativeObject {
-		internal SecIdentity2 (IntPtr handle) : base (handle, false) {}
-		public SecIdentity2 (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal SecIdentity2 (NativeHandle handle, bool owns) : base (handle, owns) { }
 
 #if !COREBUILD
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_identity_create (IntPtr secidentityHandle);
 
+		/// <param name="identity">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public SecIdentity2 (SecIdentity identity)
 		{
-			if (identity == null)
-				throw new ArgumentNullException (nameof (identity));
+			if (identity is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (identity));
 
 			InitializeHandle (sec_identity_create (identity.Handle));
+			GC.KeepAlive (identity);
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_identity_create_with_certificates (IntPtr secidentityHandle, IntPtr arrayHandle);
 
-		public SecIdentity2 (SecIdentity identity, SecCertificate [] certificates)
+		/// <param name="identity">To be added.</param>
+		///         <param name="certificates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public SecIdentity2 (SecIdentity identity, params SecCertificate [] certificates)
 		{
-			if (identity == null)
-				throw new ArgumentNullException (nameof (identity));
-			if (certificates == null)
-				throw new ArgumentNullException (nameof (certificates));
-			using (var nsarray = NSArray.FromObjects (certificates))
+			if (identity is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (identity));
+			if (certificates is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificates));
+			using (var nsarray = NSArray.FromObjects (certificates)) {
 				InitializeHandle (sec_identity_create_with_certificates (identity.Handle, nsarray.Handle));
+				GC.KeepAlive (identity);
+				GC.KeepAlive (nsarray);
+			}
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static /* SecIdentityRef */ IntPtr sec_identity_copy_ref (/* OS_sec_identity */ IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public SecIdentity Identity => new SecIdentity (sec_identity_copy_ref (GetCheckedHandle ()), owns: true);
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr sec_identity_copy_certificates_ref (IntPtr handle);
 
-		public SecCertificate [] Certificates {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public SecCertificate []? Certificates {
 			get {
 				var certArray = sec_identity_copy_certificates_ref (GetCheckedHandle ());
-				var n = (int) NSArray.GetCount (certArray);
-				var ret = new SecCertificate [n];
-				for (int i = 0; i < n; i++)
-					ret [i] = new SecCertificate (NSArray.GetAtIndex (certArray, (nuint) i), owns: false);
-				CFObject.CFRelease (certArray);
-				return ret;
+				return NSArray.ArrayFromHandleDropNullElements<SecCertificate> (certArray, releaseHandle: true);
+			}
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.SecurityLibrary)]
+		unsafe static extern byte sec_identity_access_certificates (IntPtr identity, BlockLiteral* block);
+
+		[UnmanagedCallersOnly]
+		static void TrampolineAccessCertificates (IntPtr block, IntPtr cert)
+		{
+			var del = BlockLiteral.GetTarget<Action<SecCertificate2>> (block);
+			if (del is not null)
+				del (new SecCertificate2 (cert, false));
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		// no [Async] as it can be called multiple times
+		[BindingImpl (BindingImplOptions.Optimizable)]
+		public bool AccessCertificates (Action</* sec_identity_t */SecCertificate2> handler)
+		{
+			if (handler is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (handler));
+
+			unsafe {
+				delegate* unmanaged<IntPtr, IntPtr, void> trampoline = &TrampolineAccessCertificates;
+				using var block = new BlockLiteral (trampoline, handler, typeof (SecIdentity2), nameof (TrampolineAccessCertificates));
+				var result = sec_identity_access_certificates (GetCheckedHandle (), &block) != 0;
+				GC.KeepAlive (this);
+				return result;
 			}
 		}
 #endif

@@ -1,4 +1,4 @@
-﻿//
+//
 // VSAccountManager extensions & syntax sugar
 //
 // Authors:
@@ -7,29 +7,35 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !MONOMAC
+#nullable enable
 
-using System;
+#if !MONOMAC && !__MACCATALYST__
+
 using System.Threading.Tasks;
-using Foundation;
 
 namespace VideoSubscriberAccount {
 	public partial class VSAccountManager {
 
+		/// <summary>Checks whether the user has provided permission for the app to access their subscription information.</summary>
+		/// <param name="accessOptions">If not empty, may specify whether the user should be asked for access permission.</param>
+		/// <param name="completionHandler">Called by the system with the results of the permission check.</param>
 		public void CheckAccessStatus (VSAccountManagerAccessOptions accessOptions, Action<VSAccountAccessStatus, NSError> completionHandler)
 		{
-			if (accessOptions == null)
-				throw new ArgumentNullException (nameof (accessOptions));
-			if (completionHandler == null)
-				throw new ArgumentNullException (nameof (completionHandler));
+			if (accessOptions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (accessOptions));
+			if (completionHandler is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (completionHandler));
 
 			CheckAccessStatus (accessOptions.Dictionary, completionHandler);
 		}
 
+		/// <summary>Asynchronously checks whether the user has provided permission for the app to access their subscription information.</summary>
+		/// <param name="accessOptions">If not empty, may specify whether the user should be asked for access permission.</param>
+		/// <returns>A task that represents the asynchronous operation. The task result contains the current <see cref="VSAccountAccessStatus" />.</returns>
 		public Task<VSAccountAccessStatus> CheckAccessStatusAsync (VSAccountManagerAccessOptions accessOptions)
 		{
-			if (accessOptions == null)
-				throw new ArgumentNullException (nameof (accessOptions));
+			if (accessOptions is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (accessOptions));
 
 			return CheckAccessStatusAsync (accessOptions.Dictionary);
 		}

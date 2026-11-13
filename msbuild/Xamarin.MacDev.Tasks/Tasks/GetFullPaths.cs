@@ -1,0 +1,83 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+using Xamarin.Localization.MSBuild;
+using Xamarin.Messaging.Build.Client;
+
+#nullable enable
+
+namespace Xamarin.MacDev.Tasks {
+	public class GetFullPaths : XamarinTask, ICancelableTask, ITaskCallback {
+		[Required]
+		public ITaskItem [] Items { get; set; } = Array.Empty<ITaskItem> ();
+
+		public string [] Metadata { get; set; } = Array.Empty<string> ();
+
+		[Output]
+		public ITaskItem [] Output { get; set; } = Array.Empty<ITaskItem> ();
+
+		public override bool Execute ()
+		{
+			if (Items?.Any () != true) {
+				Log.LogMessage (MessageImportance.Low, MSBStrings.M7159 /* Skipping {0} - {1} is empty. */, nameof (GetFullPaths), nameof (Items));
+				return true;
+			}
+
+			if (ShouldExecuteRemotely ())
+				return ExecuteRemotely ();
+
+			return ExecuteLocally ();
+		}
+
+		public void Cancel ()
+		{
+			if (ShouldExecuteRemotely ())
+				BuildConnection.CancelAsync (BuildEngine4).Wait ();
+		}
+
+		bool ExecuteLocally ()
+		{
+			var rv = new List<ITaskItem> ();
+
+			foreach (var item in Items) {
+				var identity = item.ItemSpec;
+				if (Metadata.Length == 0 || Array.IndexOf (Metadata, "Identity") >= 0)
+					identity = Path.GetFullPath (identity);
+				var newItem = new TaskItem (identity);
+				item.CopyMetadataTo (newItem);
+				foreach (var md in Metadata) {
+					if (string.IsNullOrEmpty (md))
+						continue;
+					if (md == "Identity")
+						continue;
+					newItem.SetMetadata (md, Path.GetFullPath (newItem.GetMetadata (md)));
+				}
+				rv.Add (newItem);
+			}
+
+			Output = rv.ToArray ();
+
+			return !Log.HasLoggedErrors;
+		}
+
+		public bool ShouldCopyToBuildServer (ITaskItem item)
+		{
+			var finfo = new FileInfo (item.ItemSpec);
+			if (finfo.Exists && finfo.Length == 0) {
+				// an empty file is most likely an output file from the Mac, so don't overwrite the corresponding file on the Mac with the empty output file from Windows
+				Log.LogMessage (MessageImportance.Low, "Not copying {0} to the Mac, it's an empty file.", item.ItemSpec);
+				return false;
+			}
+			return true;
+		}
+
+		public bool ShouldCreateOutputFile (ITaskItem item) => false;
+
+		public IEnumerable<ITaskItem> GetAdditionalItemsToBeCopied () => Enumerable.Empty<ITaskItem> ();
+	}
+}

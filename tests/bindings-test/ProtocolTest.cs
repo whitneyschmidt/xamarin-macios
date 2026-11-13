@@ -1,150 +1,317 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-#if __UNIFIED__
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+using Bindings.Test;
 
-using NUnit.Framework;
-
-namespace Xamarin.BindingTests
-{
+namespace Xamarin.BindingTests {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class ProtocolTest
-	{
+	public class ProtocolTest {
 		bool HasProtocolAttributes {
 			get {
-				if (TestRuntime.IsLinkAll && !Runtime.DynamicRegistrationSupported)
-					return false;
-			
+				// The [Protocol] attributes are removed by a custom trimmer step (RemoveAttributesStep),
+				// which doesn't run at all when ILLink is skipped, so the attributes are still around.
+				if (TestRuntime.IsILLinkSkipped)
+					return true;
+
+				if (TestRuntime.IsLinkAll) {
+#if OPTIMIZEALL
+					var registeredProtocols = true;
+#elif __MACOS__
+					var registeredProtocols = false;
+#else
+					var registeredProtocols = true;
+#endif
+					if (!registeredProtocols)
+						return Runtime.DynamicRegistrationSupported;
+
+					return !IsStaticRegistrar;
+				}
+
+
 				return true;
 			}
 		}
 
+		bool IsStaticRegistrar {
+			get {
+				return global::XamarinTests.ObjCRuntime.Registrar.IsStaticRegistrar;
+			}
+		}
+
+		bool IsTrimmableStaticRegistrar {
+			get {
+				return global::XamarinTests.ObjCRuntime.Registrar.IsTrimmableStaticRegistrar;
+			}
+		}
+
 		[Test]
+		public void Constructors ()
+		{
+			using var dateNow = (NSDate) DateTime.Now;
+
+			using (var obj = IConstructorProtocol.CreateInstance<TypeProvidingProtocolConstructors> ("Hello world")!) {
+				Assert.That (obj.StringValue, Is.EqualTo ("Hello world"), "A StringValue");
+				Assert.That (obj.DateValue, Is.Null, "A DateValue");
+			}
+
+			using (var obj = IConstructorProtocol.CreateInstance<TypeProvidingProtocolConstructors> (dateNow)!) {
+				Assert.That (obj.StringValue, Is.Null, "B StringValue");
+				Assert.That (obj.DateValue, Is.EqualTo (dateNow), "B DateValue");
+			}
+
+			using (var obj = IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors> ("Hello Subclassed")!) {
+				Assert.That (obj.StringValue, Is.EqualTo ("Hello Subclassed"), "C1 StringValue");
+				Assert.That (obj.DateValue, Is.Null, "C1 DateValue");
+			}
+
+			using (var obj = IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors> (dateNow)!) {
+				Assert.That (obj.StringValue, Is.Null, "C2 StringValue");
+				Assert.That (obj.DateValue, Is.EqualTo (dateNow), "C2 DateValue");
+			}
+
+			if (global::XamarinTests.ObjCRuntime.Registrar.IsDynamicRegistrar) {
+				Assert.Throws<RuntimeException> (() => {
+					IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors2> ("Hello Subclassed 2");
+				}, "D1 Exception");
+			} else {
+				using (var obj = IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors2> ("Hello Subclassed 2")!) {
+					Assert.That (obj.StringValue, Is.EqualTo ("Managed interceptor! Hello Subclassed 2"), "D1 StringValue");
+					Assert.That (obj.DateValue, Is.Null, "D1 DateValue");
+				}
+			}
+
+			if (XamarinTests.ObjCRuntime.Registrar.IsDynamicRegistrar) {
+				Assert.Throws<RuntimeException> (() => {
+					IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors2> (dateNow);
+				}, "D2 Exception");
+			} else {
+				using (var obj = IConstructorProtocol.CreateInstance<SubclassedTypeProvidingProtocolConstructors2> (dateNow)!) {
+					Assert.That (obj.StringValue, Is.Null, "D2 StringValue");
+					Assert.That (obj.DateValue, Is.EqualTo (dateNow.AddSeconds (42)), "D2 DateValue");
+				}
+			}
+		}
+
+		class SubclassedTypeProvidingProtocolConstructors : TypeProvidingProtocolConstructors {
+			SubclassedTypeProvidingProtocolConstructors (NativeHandle handle) : base (handle) { }
+
+		}
+
+		class SubclassedTypeProvidingProtocolConstructors2 : TypeProvidingProtocolConstructors {
+			SubclassedTypeProvidingProtocolConstructors2 (NativeHandle handle) : base (handle) { }
+
+			[Export ("initRequired:")]
+			public SubclassedTypeProvidingProtocolConstructors2 (string value)
+				: base ($"Managed interceptor! " + value)
+			{
+			}
+
+			[Export ("initOptional:")]
+			public SubclassedTypeProvidingProtocolConstructors2 (NSDate value)
+				: base (value.AddSeconds (42))
+			{
+			}
+		}
+
+		[Test]
+		[UnconditionalSuppressMessage ("Trimming", "IL2026", Justification = "This test verifies trimmer behavior, and as such must do trimmer-unsafe stuff.")]
 		public void OnlyProtocol ()
 		{
 			// a binding with only [Protocol]
 			var bindingAssembly = GetType ().Assembly;
 
 			// the interface must be created
-			var IP1 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP1");
-			Assert.IsNotNull (IP1, "IP1");
+			var IP1 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP1")!;
+			Assert.That (IP1, Is.Not.Null, "IP1");
 			// with a [Protocol] attribute
 			var IP1Attributes = IP1.GetCustomAttributes (typeof (ProtocolAttribute), false);
 			if (HasProtocolAttributes) {
-				Assert.AreEqual (1, IP1Attributes.Length, "[Protocol] IP1");
-				var IP1Protocol = (ProtocolAttribute)IP1Attributes [0];
-				Assert.AreEqual ("P1", IP1Protocol.Name, "Name");
+				Assert.That (IP1Attributes.Length, Is.EqualTo (1), "[Protocol] IP1");
+				var IP1Protocol = (ProtocolAttribute) IP1Attributes [0];
+				Assert.That (IP1Protocol.Name, Is.EqualTo ("P1"), "Name");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P1Wrapper");
-				Assert.IsNotNull (wrapperType, "P1_Wrapper");
-				Assert.AreEqual (wrapperType, IP1Protocol.WrapperType, "WrapperType");
+				Assert.That (wrapperType, Is.Not.Null, "P1_Wrapper");
+				Assert.That (IP1Protocol.WrapperType, Is.EqualTo (wrapperType), "WrapperType");
 			} else {
-				Assert.AreEqual (0, IP1Attributes.Length, "[Protocol] IP1");
+				Assert.That (IP1Attributes.Length, Is.EqualTo (0), "[Protocol] IP1");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P1Wrapper");
-				Assert.IsNotNull (wrapperType, "P1_Wrapper");
+				Assert.That (wrapperType, Is.Not.Null, "P1_Wrapper");
 			}
 			// but not the model
-			Assert.IsNull (bindingAssembly.GetType ("Bindings.Test.Protocol.P1"), "P1");
+			Assert.That (bindingAssembly.GetType ("Bindings.Test.Protocol.P1"), Is.Null, "P1");
 		}
 
 		[Test]
+		[UnconditionalSuppressMessage ("Trimming", "IL2026", Justification = "This test verifies trimmer behavior, and as such must do trimmer-unsafe stuff.")]
 		public void ProtocolWithBaseType ()
 		{
 			// a binding with [Protocol] and [BaseType]
 			var bindingAssembly = GetType ().Assembly;
 
 			// the interface must be created
-			var IP2 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP2");
-			Assert.IsNotNull (IP2, "IP2");
+			var IP2 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP2")!;
+			Assert.That (IP2, Is.Not.Null, "IP2");
 
 			// with a [Protocol] attribute
 			var IP2Attributes = IP2.GetCustomAttributes (typeof (ProtocolAttribute), false);
 			if (HasProtocolAttributes) {
-				Assert.AreEqual (1, IP2Attributes.Length, "[Protocol] IP2");
-				var IP2Protocol = (ProtocolAttribute)IP2Attributes [0];
-				Assert.AreEqual ("P2", IP2Protocol.Name, "Name");
+				Assert.That (IP2Attributes.Length, Is.EqualTo (1), "[Protocol] IP2");
+				var IP2Protocol = (ProtocolAttribute) IP2Attributes [0];
+				Assert.That (IP2Protocol.Name, Is.EqualTo ("P2"), "Name");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P2Wrapper");
-				Assert.IsNotNull (wrapperType, "P2_Wrapper");
-				Assert.AreEqual (wrapperType, IP2Protocol.WrapperType, "WrapperType");
+				Assert.That (wrapperType, Is.Not.Null, "P2_Wrapper");
+				Assert.That (IP2Protocol.WrapperType, Is.EqualTo (wrapperType), "WrapperType");
 			} else {
-				Assert.AreEqual (0, IP2Attributes.Length, "[Protocol] IP2");
+				Assert.That (IP2Attributes.Length, Is.EqualTo (0), "[Protocol] IP2");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P2Wrapper");
-				Assert.IsNotNull (wrapperType, "P2_Wrapper");
+				Assert.That (wrapperType, Is.Not.Null, "P2_Wrapper");
 			}
 
 			// and a model-like class
-			var model = bindingAssembly.GetType ("Bindings.Test.Protocol.P2");
-			Assert.IsNotNull (model, "P2");
+			var model = bindingAssembly.GetType ("Bindings.Test.Protocol.P2")!;
+			Assert.That (model, Is.Not.Null, "P2");
 			// but without the [Model] attribute
-			Assert.False (model.IsDefined (typeof(ModelAttribute), false), "model");
+			Assert.That (model.IsDefined (typeof (ModelAttribute), false), Is.False, "model");
 		}
 
 		[Test]
+		[UnconditionalSuppressMessage ("Trimming", "IL2026", Justification = "This test verifies trimmer behavior, and as such must do trimmer-unsafe stuff.")]
 		public void ProtocolWithBaseTypeAndModel ()
 		{
 			// a binding with [Protocol] and [BaseType]
 			var bindingAssembly = GetType ().Assembly;
 
 			// the interface must be created
-			var IP3 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP3");
-			Assert.IsNotNull (IP3, "IP3");
+			var IP3 = bindingAssembly.GetType ("Bindings.Test.Protocol.IP3")!;
+			Assert.That (IP3, Is.Not.Null, "IP3");
 
 			// with a [Protocol] attribute
 			var IP3Attributes = IP3.GetCustomAttributes (typeof (ProtocolAttribute), false);
 			if (HasProtocolAttributes) {
-				Assert.AreEqual (1, IP3Attributes.Length, "[Protocol] IP3");
-				var IP3Protocol = (ProtocolAttribute)IP3Attributes [0];
-				Assert.AreEqual ("P3", IP3Protocol.Name, "Name");
+				Assert.That (IP3Attributes.Length, Is.EqualTo (1), "[Protocol] IP3");
+				var IP3Protocol = (ProtocolAttribute) IP3Attributes [0];
+				Assert.That (IP3Protocol.Name, Is.EqualTo ("P3"), "Name");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P3Wrapper");
-				Assert.IsNotNull (wrapperType, "P3_Wrapper");
-				Assert.AreEqual (wrapperType, IP3Protocol.WrapperType, "WrapperType");
+				Assert.That (wrapperType, Is.Not.Null, "P3_Wrapper");
+				Assert.That (IP3Protocol.WrapperType, Is.EqualTo (wrapperType), "WrapperType");
 			} else {
-				Assert.AreEqual (0, IP3Attributes.Length, "[Protocol] IP3");
+				Assert.That (IP3Attributes.Length, Is.EqualTo (0), "[Protocol] IP3");
 
 				// and a wrapper type
 				var wrapperType = bindingAssembly.GetType ("Bindings.Test.Protocol.P3Wrapper");
-				Assert.IsNotNull (wrapperType, "P3_Wrapper");
+				Assert.That (wrapperType, Is.Not.Null, "P3_Wrapper");
 			}
 
 			// and a model class
-			var model = bindingAssembly.GetType ("Bindings.Test.Protocol.P3");
-			Assert.IsNotNull (model, "P3");
+			var model = bindingAssembly.GetType ("Bindings.Test.Protocol.P3")!;
+			Assert.That (model, Is.Not.Null, "P3");
 			// with a [Model] attribute
-			Assert.True (model.IsDefined (typeof(ModelAttribute), false), "model");
+			Assert.That (model.IsDefined (typeof (ModelAttribute), false), Is.True, "model");
 		}
 
-		class MembersImplementation : NSObject, Bindings.Test.Protocol.IMemberAttributes
-		{
+		class MembersImplementation : NSObject, Bindings.Test.Protocol.IMemberAttributes {
 			public void RequiredInstanceMethod ()
 			{
 			}
 
 			public string RequiredInstanceProperty {
-				get { return null; }
+				get { return null!; }
 				set { }
 			}
 
 			public NSString RequiredReadonlyProperty {
-				get { return null; }
+				get { return null!; }
 			}
+		}
+
+		class BindAsProtocolImplementation : NSObject, IBindAsProtocol {
+			public StrongEnum Value { get; private set; }
+			public StrongEnum Other { get; private set; }
+
+			public void SetStrongEnum (StrongEnum value)
+			{
+				Value = value;
+			}
+
+			public void SetStrongEnums (StrongEnum value, StrongEnum other)
+			{
+				Value = value;
+				Other = other;
+			}
+
+			public void GetValues (string [] identifiers, StrongEnum value, Action<string []> handler)
+			{
+				Value = value;
+				handler (identifiers.Reverse ().ToArray ());
+			}
+		}
+
+		class BindAsProtocolModelSubclass : BindAsProtocol {
+			public StrongEnum Value { get; private set; }
+
+			public override void GetValues (string [] identifiers, StrongEnum value, Action<string []> handler)
+			{
+				Value = value;
+				handler (identifiers.Reverse ().ToArray ());
+			}
+		}
+
+		[Test]
+		public void BindAsProtocolParameter ()
+		{
+			using var implementation = new BindAsProtocolImplementation ();
+			var value = StrongEnum.B.GetConstant ();
+			if (value is null)
+				throw new InvalidOperationException ("Could not get the native StrongEnum.B value.");
+			Messaging.void_objc_msgSend_IntPtr (implementation.Handle, Selector.GetHandle ("setStrongEnum:"), value.Handle);
+			GC.KeepAlive (value);
+			Assert.That (implementation.Value, Is.EqualTo (StrongEnum.B));
+		}
+
+		[Test]
+		public void MultipleBindAsProtocolParameters ()
+		{
+			using var implementation = new BindAsProtocolImplementation ();
+			var value = StrongEnum.B.GetConstant ();
+			var other = StrongEnum.C.GetConstant ();
+			if (value is null || other is null)
+				throw new InvalidOperationException ("Could not get the native strong enum values.");
+			Messaging.void_objc_msgSend_IntPtr_IntPtr (implementation.Handle, Selector.GetHandle ("setStrongEnum:other:"), value.Handle, other.Handle);
+			GC.KeepAlive (value);
+			GC.KeepAlive (other);
+			Assert.That (implementation.Value, Is.EqualTo (StrongEnum.B));
+			Assert.That (implementation.Other, Is.EqualTo (StrongEnum.C));
+		}
+
+		[TestCase (false)]
+		[TestCase (true)]
+		public void BindAsProtocolParameterWithBlock (bool useModel)
+		{
+			using NSObject implementation = useModel ? new BindAsProtocolModelSubclass () : new BindAsProtocolImplementation ();
+			string []? values = null;
+			var callbackCount = 0;
+
+			// Use the generated messaging helper to avoid managed interface dispatch, including when legacy extensions are disabled.
+			IBindAsProtocol._GetValues ((IBindAsProtocol) implementation, ["first", "second"], StrongEnum.C, result => {
+				values = result;
+				callbackCount++;
+			});
+
+			var value = implementation is BindAsProtocolModelSubclass model ? model.Value : ((BindAsProtocolImplementation) implementation).Value;
+			Assert.That (value, Is.EqualTo (StrongEnum.C), "Strong enum");
+			Assert.That (callbackCount, Is.EqualTo (1), "Callback count");
+			Assert.That (values, Is.EqualTo (new [] { "second", "first" }), "Callback values");
 		}
 
 		void CleanupSignatures (objc_method_description [] methods)
@@ -158,123 +325,138 @@ namespace Xamarin.BindingTests
 		public void ProtocolMembers ()
 		{
 			IntPtr protocol = objc_getProtocol ("MemberAttributes");
-			Assert.AreNotEqual (IntPtr.Zero, protocol, "a");
+			Assert.That (protocol, Is.Not.EqualTo (IntPtr.Zero), "a");
 
-			objc_method_description[] methods;
+			objc_method_description [] methods;
 
 			// Required instance methods
 			methods = protocol_copyMethodDescriptionList (protocol, true, true);
 			CleanupSignatures (methods);
-			Assert.AreEqual (4, methods.Length, "Required Instance Methods: Count");
-			Assert.That (methods, Contains.Item (new objc_method_description ("requiredInstanceMethod", "v@:")), "Required Instance Methods: requiredInstanceMethod");
-			Assert.That (methods, Contains.Item (new objc_method_description ("requiredInstanceProperty", "@@:")), "Required Instance Methods: requiredInstanceProperty");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setRequiredInstanceProperty:", "v@:@")), "Required Instance Methods: setRequiredInstanceProperty");
-			Assert.That (methods, Contains.Item (new objc_method_description ("requiredReadonlyProperty", "@@:")), "Required Instance Methods: requiredReadonlyProperty:");
-			
+			Assert.That (methods.Length, Is.EqualTo (4), "Required Instance Methods: Count");
+			AssertContains (methods, new objc_method_description ("requiredInstanceMethod", "v@:"), "Required Instance Methods: requiredInstanceMethod");
+			AssertContains (methods, new objc_method_description ("requiredInstanceProperty", "@@:"), "Required Instance Methods: requiredInstanceProperty");
+			AssertContains (methods, new objc_method_description ("setRequiredInstanceProperty:", "v@:@"), "Required Instance Methods: setRequiredInstanceProperty");
+			AssertContains (methods, new objc_method_description ("requiredReadonlyProperty", "@@:"), "Required Instance Methods: requiredReadonlyProperty:");
+
 			// Required static methods
 			methods = protocol_copyMethodDescriptionList (protocol, true, false);
 			CleanupSignatures (methods);
-			Assert.AreEqual (3, methods.Length, "Required Static Methods: Count");
-			Assert.That (methods, Contains.Item (new objc_method_description ("requiredStaticMethod", "v@:")), "Required Static Methods: requiredStaticMethod");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setRequiredStaticProperty:", "v@:@")), "Required Static Methods: setRequiredStaticProperty:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("requiredStaticProperty", "@@:")), "Required Static Methods: requiredStaticProperty");
-			
+			Assert.That (methods.Length, Is.EqualTo (3), "Required Static Methods: Count");
+			AssertContains (methods, new objc_method_description ("requiredStaticMethod", "v@:"), "Required Static Methods: requiredStaticMethod");
+			AssertContains (methods, new objc_method_description ("setRequiredStaticProperty:", "v@:@"), "Required Static Methods: setRequiredStaticProperty:");
+			AssertContains (methods, new objc_method_description ("requiredStaticProperty", "@@:"), "Required Static Methods: requiredStaticProperty");
+
 			// Optional instance methods
 			methods = protocol_copyMethodDescriptionList (protocol, false, true);
 			CleanupSignatures (methods);
-			Assert.AreEqual (19, methods.Length, "Optional Instance Methods: Count");
-			Assert.That (methods, Contains.Item (new objc_method_description ("variadicMethod:", "v@:^v")), "Optional Instance Methods: variadicMethod:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("methodWithReturnType", "@@:")), "Optional Instance Methods: methodWithReturnType");
-			Assert.That (methods, Contains.Item (new objc_method_description ("methodWithParameter:", "v@:i")), "Optional Instance Methods: methodWithParameter:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("methodWithParameters:second:third:fourth:", "v@:iiii")), "Optional Instance Methods: methodWithParameters:second:third:fourth:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("optionalInstanceMethod", "v@:")), "Optional Instance Methods: optionalInstanceMethod");
-			Assert.That (methods, Contains.Item (new objc_method_description ("methodWithRefParameters:second:third:fourth:", "v@:i^i^ii")), "Optional Instance Methods: methodWithRefParameters:second:third:fourth:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("optionalInstanceProperty", "@@:")), "Optional Instance Methods: optionalInstanceProperty");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setOptionalInstanceProperty:", "v@:@")), "Optional Instance Methods: setOptionalInstanceProperty:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("get_propertyWithCustomAccessors", "@@:")), "Optional Instance Methods: get_propertyWithCustomAccessors");
-			Assert.That (methods, Contains.Item (new objc_method_description ("set_propertyWithCustomAccessors:", "v@:@")), "Optional Instance Methods: set_propertyWithCustomAccessors:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("propertyWithArgumentSemanticNone", "@@:")), "Optional Instance Methods: propertyWithArgumentSemanticNone");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setPropertyWithArgumentSemanticNone:", "v@:@")), "Optional Instance Methods: setPropertyWithArgumentSemanticNone:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("propertyWithArgumentSemanticCopy", "@@:")), "Optional Instance Methods: propertyWithArgumentSemanticCopy");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setPropertyWithArgumentSemanticCopy:", "v@:@")), "Optional Instance Methods: setPropertyWithArgumentSemanticCopy:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("propertyWithArgumentSemanticAssign", "@@:")), "Optional Instance Methods: propertyWithArgumentSemanticAssign");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setPropertyWithArgumentSemanticAssign:", "v@:@")), "Optional Instance Methods: setPropertyWithArgumentSemanticAssign:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("readonlyProperty", "@@:")), "Optional Instance Methods: readonlyProperty:");
-			Assert.That (methods, Contains.Item (new objc_method_description ("propertyWithArgumentSemanticRetain", "@@:")), "Optional Instance Methods: propertyWithArgumentSemanticRetain");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setPropertyWithArgumentSemanticRetain:", "v@:@")), "Optional Instance Methods: setPropertyWithArgumentSemanticRetain:");
+			Assert.That (methods.Length, Is.EqualTo (19), "Optional Instance Methods: Count");
+			AssertContains (methods, new objc_method_description ("variadicMethod:", "v@:^v"), "Optional Instance Methods: variadicMethod:");
+			AssertContains (methods, new objc_method_description ("methodWithReturnType", "@@:"), "Optional Instance Methods: methodWithReturnType");
+			AssertContains (methods, new objc_method_description ("methodWithParameter:", "v@:i"), "Optional Instance Methods: methodWithParameter:");
+			AssertContains (methods, new objc_method_description ("methodWithParameters:second:third:fourth:", "v@:iiii"), "Optional Instance Methods: methodWithParameters:second:third:fourth:");
+			AssertContains (methods, new objc_method_description ("optionalInstanceMethod", "v@:"), "Optional Instance Methods: optionalInstanceMethod");
+			AssertContains (methods, new objc_method_description ("methodWithRefParameters:second:third:fourth:", "v@:i^i^ii"), "Optional Instance Methods: methodWithRefParameters:second:third:fourth:");
+			AssertContains (methods, new objc_method_description ("optionalInstanceProperty", "@@:"), "Optional Instance Methods: optionalInstanceProperty");
+			AssertContains (methods, new objc_method_description ("setOptionalInstanceProperty:", "v@:@"), "Optional Instance Methods: setOptionalInstanceProperty:");
+			AssertContains (methods, new objc_method_description ("get_propertyWithCustomAccessors", "@@:"), "Optional Instance Methods: get_propertyWithCustomAccessors");
+			AssertContains (methods, new objc_method_description ("set_propertyWithCustomAccessors:", "v@:@"), "Optional Instance Methods: set_propertyWithCustomAccessors:");
+			AssertContains (methods, new objc_method_description ("propertyWithArgumentSemanticNone", "@@:"), "Optional Instance Methods: propertyWithArgumentSemanticNone");
+			AssertContains (methods, new objc_method_description ("setPropertyWithArgumentSemanticNone:", "v@:@"), "Optional Instance Methods: setPropertyWithArgumentSemanticNone:");
+			AssertContains (methods, new objc_method_description ("propertyWithArgumentSemanticCopy", "@@:"), "Optional Instance Methods: propertyWithArgumentSemanticCopy");
+			AssertContains (methods, new objc_method_description ("setPropertyWithArgumentSemanticCopy:", "v@:@"), "Optional Instance Methods: setPropertyWithArgumentSemanticCopy:");
+			AssertContains (methods, new objc_method_description ("propertyWithArgumentSemanticAssign", "@@:"), "Optional Instance Methods: propertyWithArgumentSemanticAssign");
+			AssertContains (methods, new objc_method_description ("setPropertyWithArgumentSemanticAssign:", "v@:@"), "Optional Instance Methods: setPropertyWithArgumentSemanticAssign:");
+			AssertContains (methods, new objc_method_description ("readonlyProperty", "@@:"), "Optional Instance Methods: readonlyProperty:");
+			AssertContains (methods, new objc_method_description ("propertyWithArgumentSemanticRetain", "@@:"), "Optional Instance Methods: propertyWithArgumentSemanticRetain");
+			AssertContains (methods, new objc_method_description ("setPropertyWithArgumentSemanticRetain:", "v@:@"), "Optional Instance Methods: setPropertyWithArgumentSemanticRetain:");
 
 			// Optional static methods
 			methods = protocol_copyMethodDescriptionList (protocol, false, false);
 			CleanupSignatures (methods);
-			Assert.AreEqual (3, methods.Length, "Optional Static Methods: Count");
-			Assert.That (methods, Contains.Item (new objc_method_description ("optionalStaticMethod", "v@:")), "Optional Static Methods: optionalStaticMethod");
-			Assert.That (methods, Contains.Item (new objc_method_description ("optionalStaticProperty", "@@:")), "Optional Static Methods: optionalStaticProperty");
-			Assert.That (methods, Contains.Item (new objc_method_description ("setOptionalStaticProperty:", "v@:@")), "Optional Static Methods: setOptionalStaticProperty:");
+			Assert.That (methods.Length, Is.EqualTo (3), "Optional Static Methods: Count");
+			AssertContains (methods, new objc_method_description ("optionalStaticMethod", "v@:"), "Optional Static Methods: optionalStaticMethod");
+			AssertContains (methods, new objc_method_description ("optionalStaticProperty", "@@:"), "Optional Static Methods: optionalStaticProperty");
+			AssertContains (methods, new objc_method_description ("setOptionalStaticProperty:", "v@:@"), "Optional Static Methods: setOptionalStaticProperty:");
 
-			objc_property[] properties;
+			objc_property [] properties;
 			properties = protocol_copyPropertyList (protocol);
 
 			// The ObjC runtime won't add optional properties dynamically (the code is commented out,
 			// see file objc4-647/runtime/objc-runtime-old.mm in Apple's open source code),
 			// so we need to verify differently for the dynamic registrar.
-			if (XamarinTests.ObjCRuntime.Registrar.CurrentRegistrar == XamarinTests.ObjCRuntime.Registrars.Static) {
-				Assert.AreEqual (9, properties.Length, "Properties: Count");
+			if (XamarinTests.ObjCRuntime.Registrar.IsStaticRegistrar) {
+				Assert.That (properties.Length, Is.EqualTo (9), "Properties: Count");
 			} else {
-				Assert.AreEqual (2, properties.Length, "Properties: Count");
+				Assert.That (properties.Length, Is.EqualTo (2), "Properties: Count");
 			}
 
-			Assert.That (properties, Contains.Item (new objc_property ("requiredInstanceProperty", "T@\"NSString\",N", new objc_property_attribute [] {
+			AssertContains (properties, new objc_property ("requiredInstanceProperty", "T@\"NSString\",N", new objc_property_attribute [] {
 				new objc_property_attribute ("T", "@\"NSString\""),
 				new objc_property_attribute ("N", "")
-			})), "Properties: requiredInstanceProperty");
+			}), "Properties: requiredInstanceProperty");
 
-			Assert.That (properties, Contains.Item (new objc_property ("requiredReadonlyProperty", "T@\"NSString\",R,N", new objc_property_attribute [] {
+			AssertContains (properties, new objc_property ("requiredReadonlyProperty", "T@\"NSString\",R,N", new objc_property_attribute [] {
 				new objc_property_attribute ("T", "@\"NSString\""),
 				new objc_property_attribute ("R", ""),
 				new objc_property_attribute ("N", "")
-			})), "Properties: requiredReadonlyProperty");
+			}), "Properties: requiredReadonlyProperty");
 
-			if (XamarinTests.ObjCRuntime.Registrar.CurrentRegistrar == XamarinTests.ObjCRuntime.Registrars.Static) {
-				Assert.That (properties, Contains.Item (new objc_property ("optionalInstanceProperty", "T@\"NSString\",N", new objc_property_attribute [] {
+			if (XamarinTests.ObjCRuntime.Registrar.IsStaticRegistrar) {
+				AssertContains (properties, new objc_property ("optionalInstanceProperty", "T@\"NSString\",N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("N", "")
-				})), "Properties: optionalInstanceProperty");
+				}), "Properties: optionalInstanceProperty");
 
-				Assert.That (properties, Contains.Item (new objc_property ("propertyWithCustomAccessors", "T@\"NSString\",N,Gget_propertyWithCustomAccessors,Sset_propertyWithCustomAccessors:", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("propertyWithCustomAccessors", "T@\"NSString\",N,Gget_propertyWithCustomAccessors,Sset_propertyWithCustomAccessors:", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("N", ""),
 					new objc_property_attribute ("G", "get_propertyWithCustomAccessors"),
 					new objc_property_attribute ("S", "set_propertyWithCustomAccessors:")
-				})), "Properties: propertyWithCustomAccessors");
+				}), "Properties: propertyWithCustomAccessors");
 
-				Assert.That (properties, Contains.Item (new objc_property ("propertyWithArgumentSemanticNone", "T@\"NSString\",N", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("propertyWithArgumentSemanticNone", "T@\"NSString\",N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("N", "")
-				})), "Properties: propertyWithArgumentSemanticNone");
+				}), "Properties: propertyWithArgumentSemanticNone");
 
-				Assert.That (properties, Contains.Item (new objc_property ("propertyWithArgumentSemanticCopy", "T@\"NSString\",C,N", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("propertyWithArgumentSemanticCopy", "T@\"NSString\",C,N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("N", ""),
 					new objc_property_attribute ("C", "")
-				})), "Properties: propertyWithArgumentSemanticCopy");
+				}), "Properties: propertyWithArgumentSemanticCopy");
 
-				Assert.That (properties, Contains.Item (new objc_property ("propertyWithArgumentSemanticAssign", "T@\"NSString\",N", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("propertyWithArgumentSemanticAssign", "T@\"NSString\",N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("N", "")
-				})), "Properties: propertyWithArgumentSemanticAssign");
+				}), "Properties: propertyWithArgumentSemanticAssign");
 
-				Assert.That (properties, Contains.Item (new objc_property ("propertyWithArgumentSemanticRetain", "T@\"NSString\",&,N", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("propertyWithArgumentSemanticRetain", "T@\"NSString\",&,N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("&", ""),
 					new objc_property_attribute ("N", "")
-				})), "Properties: propertyWithArgumentSemanticRetain");
+				}), "Properties: propertyWithArgumentSemanticRetain");
 
-				Assert.That (properties, Contains.Item (new objc_property ("readonlyProperty", "T@\"NSString\",R,N", new objc_property_attribute [] {
+				AssertContains (properties, new objc_property ("readonlyProperty", "T@\"NSString\",R,N", new objc_property_attribute [] {
 					new objc_property_attribute ("T", "@\"NSString\""),
 					new objc_property_attribute ("R", ""),
 					new objc_property_attribute ("N", "")
-				})), "Properties: readonlyProperty");
+				}), "Properties: readonlyProperty");
 			}
+		}
+
+		static void AssertContains<T> (T [] array, T item, string message) where T : IEquatable<T>
+		{
+			for (var i = 0; i < array.Length; i++) {
+				var element = array [i];
+				if (element is null && item is null)
+					return;
+				if (element is null || item is null)
+					continue;
+				if (element.Equals (item))
+					return;
+			}
+
+			throw new Exception ($"Collection {array} does not contain item {item}: {message}");
 		}
 
 		[DllImport ("/usr/lib/libobjc.dylib")]
@@ -286,7 +468,7 @@ namespace Xamarin.BindingTests
 		[DllImport ("/usr/lib/libobjc.dylib", EntryPoint = "protocol_copyMethodDescriptionList")]
 		extern static IntPtr _protocol_copyMethodDescriptionList (IntPtr protocol, bool isRequiredMethod, bool isInstanceMethod, out int count);
 
-		static objc_method_description[] protocol_copyMethodDescriptionList (IntPtr protocol, bool isRequiredMethod, bool isInstanceMethod)
+		static objc_method_description [] protocol_copyMethodDescriptionList (IntPtr protocol, bool isRequiredMethod, bool isInstanceMethod)
 		{
 			int count;
 			IntPtr methods = _protocol_copyMethodDescriptionList (protocol, isRequiredMethod, isInstanceMethod, out count);
@@ -294,7 +476,7 @@ namespace Xamarin.BindingTests
 				var rv = new objc_method_description [count];
 				for (int i = 0; i < count; i++) {
 					var sel = new Selector (Marshal.ReadIntPtr (methods + (IntPtr.Size * 2) * i)).Name;
-					var types = Marshal.PtrToStringAuto (Marshal.ReadIntPtr (methods + (IntPtr.Size * 2) * i + IntPtr.Size));
+					var types = Marshal.PtrToStringAuto (Marshal.ReadIntPtr (methods + (IntPtr.Size * 2) * i + IntPtr.Size))!;
 					rv [i] = new objc_method_description (sel, types);
 				}
 				return rv;
@@ -306,19 +488,27 @@ namespace Xamarin.BindingTests
 		[DllImport ("/usr/lib/libobjc.dylib", EntryPoint = "protocol_copyPropertyList")]
 		internal extern static IntPtr _protocol_copyPropertyList (IntPtr protocol, out int count);
 
-		static objc_property[] protocol_copyPropertyList (IntPtr protocol)
+		static void Trace (string message)
+		{
+			TestRuntime.NSLog (message);
+		}
+
+		static objc_property [] protocol_copyPropertyList (IntPtr protocol)
 		{
 			int count;
 			IntPtr list = _protocol_copyPropertyList (protocol, out count);
-			var rv = new objc_property[count];
+			var rv = new objc_property [count];
+			Trace ($"Protocol {new Protocol (protocol)} has {rv} properties");
 			try {
 				for (int i = 0; i < count; i++) {
-					var prop = new objc_property ();
 					IntPtr p = Marshal.ReadIntPtr (list, IntPtr.Size * i);
+					var prop = new objc_property (
+						property_getName (p),
+						property_getAttributes (p),
+						property_copyAttributeList (p)
+					);
 					rv [i] = prop;
-					prop.Name = property_getName (p);
-					prop.Attributes = property_getAttributes (p);
-					prop.AttributeList = property_copyAttributeList (p);
+					Trace ($"    #{i + 1}: Name={prop.Name} Attributes={prop.Attributes} AttributeList={prop.AttributeList}");
 				}
 				return rv;
 			} finally {
@@ -335,7 +525,7 @@ namespace Xamarin.BindingTests
 
 		static string property_getName (IntPtr property)
 		{
-			return Marshal.PtrToStringAuto (_property_getName (property));
+			return Marshal.PtrToStringAuto (_property_getName (property))!;
 		}
 
 		[DllImport ("/usr/lib/libobjc.dylib", EntryPoint = "property_getAttributes")]
@@ -343,27 +533,35 @@ namespace Xamarin.BindingTests
 
 		static string property_getAttributes (IntPtr property)
 		{
-			return Marshal.PtrToStringAuto (_property_getAttributes (property));
+			var v = Marshal.PtrToStringAuto (_property_getAttributes (property))!;
+
+			// Ignore any "?" attributes, apparently it's a new property attribute in Xcode 16, but since there's no documentation about it yet, just ignore it.
+			var attribs = v.Split (',').Where (v => v != "?").ToArray ();
+			return string.Join (",", attribs);
 		}
 
 		[DllImport ("/usr/lib/libobjc.dylib", EntryPoint = "property_copyAttributeList")]
 		extern static IntPtr _property_copyAttributeList (IntPtr property, out int outCount);
 
-		static objc_property_attribute[] property_copyAttributeList (IntPtr property)
+		static objc_property_attribute [] property_copyAttributeList (IntPtr property)
 		{
 			int count;
 			IntPtr list = _property_copyAttributeList (property, out count);
-			var rv = new objc_property_attribute [count];
+			var rv = new List<objc_property_attribute> (count);
 			try {
 				for (int i = 0; i < count; i++) {
-					var attrib = new objc_property_attribute ();
-					rv [i] = attrib;
 					IntPtr n = Marshal.ReadIntPtr (list, (IntPtr.Size * 2) * i);
 					IntPtr v = Marshal.ReadIntPtr (list, (IntPtr.Size * 2) * i + IntPtr.Size);
-					attrib.Name = Marshal.PtrToStringAuto (n);
-					attrib.Value = Marshal.PtrToStringAuto (v);
+					var attrib = new objc_property_attribute (
+						Marshal.PtrToStringAuto (n)!,
+						Marshal.PtrToStringAuto (v)!
+					);
+					// Ignore any "?" attributes, apparently it's a new property attribute in Xcode 16, but since there's no documentation about it yet, just ignore it.
+					if (attrib.Name == "?" && string.IsNullOrEmpty (attrib.Value))
+						continue;
+					rv.Add (attrib);
 				}
-				return rv;
+				return rv.ToArray ();
 			} finally {
 				free (list);
 			}
@@ -376,32 +574,30 @@ namespace Xamarin.BindingTests
 			public string Name;
 			public string Value;
 
-			public objc_property_attribute ()
-			{
-			}
-
 			public objc_property_attribute (string name, string value)
 			{
 				this.Name = name;
 				this.Value = value;
 			}
 
-			bool IEquatable<objc_property_attribute>.Equals (objc_property_attribute other)
+			bool IEquatable<objc_property_attribute>.Equals (objc_property_attribute? other)
 			{
+				if (other is null)
+					return false;
+
 				return Name == other.Name && Value == other.Value;
 			}
 
-			public override bool Equals (object obj)
+			public override bool Equals (object? obj)
 			{
-				var other = (objc_property_attribute)obj;
-				if (other == null)
+				if (obj is not objc_property_attribute other)
 					return false;
 				return Name == other.Name && Value == other.Value;
 			}
 
 			public override int GetHashCode ()
 			{
-				return Name.GetHashCode () ^ Value.GetHashCode ();
+				return HashCode.Combine (Name, Value);
 			}
 
 			public override string ToString ()
@@ -409,16 +605,16 @@ namespace Xamarin.BindingTests
 				return string.Format ("{0} = {1}", Name, Value);
 			}
 		}
-			
+
 		class objc_property : IEquatable<objc_property> {
 			public string Name;
 			public string Attributes;
-			public objc_property_attribute[] AttributeList;
-
-			public objc_property ()
-			{
-			}
-
+			public objc_property_attribute [] AttributeList;
+			/*
+						public objc_property ()
+						{
+						}
+			*/
 			public objc_property (string name, string attributes, objc_property_attribute [] list)
 			{
 				this.Name = name;
@@ -431,8 +627,11 @@ namespace Xamarin.BindingTests
 				return string.Format ("[{0}; {1}; {2}]", Name, Attributes, string.Join (", ", new List<objc_property_attribute> (AttributeList).Select ((v) => string.Format ("{0} = {1}", v.Name, v.Value))));
 			}
 
-			bool IEquatable<objc_property>.Equals (objc_property other)
+			bool IEquatable<objc_property>.Equals (objc_property? other)
 			{
+				if (other is null)
+					return false;
+
 				if (other.Name != Name)
 					return false;
 				if (other.Attributes != Attributes)
@@ -461,11 +660,13 @@ namespace Xamarin.BindingTests
 				return string.Format ("[{0}; {1}]", Name, Types);
 			}
 
-			bool IEquatable<objc_method_description>.Equals (objc_method_description other)
+			bool IEquatable<objc_method_description>.Equals (objc_method_description? other)
 			{
+				if (other is null)
+					return false;
+
 				return other.Name == Name && other.Types == Types;
 			}
 		}
 	}
 }
-

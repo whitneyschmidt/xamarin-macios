@@ -1,0 +1,12 @@
+# no generator support for FastEnumeration
+!missing-protocol-conformance! GCPhysicalInputElementCollection should conform to NSFastEnumeration
+
+# Replicated in managed code, no need to bind
+!missing-field! GCPoint2Zero not bound
+
+# These are bound as enums
+!missing-protocol! GCAxisElementName not bound
+!missing-protocol! GCButtonElementName not bound
+!missing-protocol! GCDirectionPadElementName not bound
+!missing-protocol! GCPhysicalInputElementName not bound
+!missing-protocol! GCSwitchElementName not bound

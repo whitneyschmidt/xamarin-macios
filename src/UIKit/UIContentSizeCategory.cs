@@ -1,46 +1,59 @@
-﻿#if !WATCH
-
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
 
 namespace UIKit {
 	static public partial class UIContentSizeCategoryExtensions {
 
-		[iOS (11, 0), TV (11, 0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.UIKitLibrary)]
 		static extern nint /* NSComparisonResult */ UIContentSizeCategoryCompareToCategory (IntPtr /* NSString */ lhs, IntPtr /* NSString */ rhs);
 
-		[iOS (11, 0), TV (11, 0)]
+		/// <param name="category1">To be added.</param>
+		///         <param name="category2">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		public static NSComparisonResult Compare (UIContentSizeCategory category1, UIContentSizeCategory category2)
 		{
 			var c1 = category1.GetConstant ();
-			if (c1 == null)
+			if (c1 is null)
 				throw new ArgumentException ($"Unknown 'UIContentSizeCategory' value", nameof (category1));
 
 			var c2 = category2.GetConstant ();
-			if (c2 == null)
+			if (c2 is null)
 				throw new ArgumentException ($"Unknown 'UIContentSizeCategory' value", nameof (category2));
 
-			return (NSComparisonResult)(long)UIContentSizeCategoryCompareToCategory (c1.Handle, c2.Handle);
+			NSComparisonResult result = (NSComparisonResult) (long) UIContentSizeCategoryCompareToCategory (c1.Handle, c2.Handle);
+			GC.KeepAlive (c1);
+			GC.KeepAlive (c2);
+			return result;
 		}
 
-		[iOS (11, 0), TV (11, 0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.UIKitLibrary)]
-		static extern bool UIContentSizeCategoryIsAccessibilityCategory (IntPtr /* NSString */ category);
+		static extern byte UIContentSizeCategoryIsAccessibilityCategory (IntPtr /* NSString */ category);
 
-		[iOS (11, 0), TV (11, 0)]
+		/// <param name="self">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		static public bool IsAccessibilityCategory (this UIContentSizeCategory self)
 		{
 			var c1 = self.GetConstant ();
-			if (c1 == null)
+			if (c1 is null)
 				throw new ArgumentException ($"Unknown 'UIContentSizeCategory' value");
 
-			return UIContentSizeCategoryIsAccessibilityCategory (c1.Handle);
+			bool result = UIContentSizeCategoryIsAccessibilityCategory (c1.Handle) != 0;
+			GC.KeepAlive (c1);
+			return result;
 		}
 	}
 }
-
-#endif // !WATCH

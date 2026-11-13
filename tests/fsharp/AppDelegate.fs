@@ -1,16 +1,10 @@
-﻿namespace fsharp
+namespace fsharp
 
-#if !__WATCHOS__
 open System
 open System.Reflection
 
-#if __UNIFIED__
 open UIKit
 open Foundation
-#else
-open MonoTouch.UIKit
-open MonoTouch.Foundation
-#endif
 
 open MonoTouch.NUnit.UI
 
@@ -32,4 +26,3 @@ type AppDelegate () =
         window.MakeKeyAndVisible ()
 
         true
-#endif // !__WATCHOS__

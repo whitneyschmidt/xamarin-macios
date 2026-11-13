@@ -5,19 +5,17 @@
 // Copyright 2013-2014 Xamarin Inc
 //
 
+#nullable enable
+
 #if !MONOMAC
 
-using System;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
-using CoreFoundation;
-using CoreGraphics;
 
 namespace ImageIO {
-	
+
+	/// <summary>Image Loader.</summary>
+	///     <remarks>
+	///     </remarks>
 	public partial class CGImageSource {
 
 		// CGImageSource.h
@@ -26,34 +24,41 @@ namespace ImageIO {
 			/* CGImageSourceRef __nonnull */ IntPtr isrc, /* size_t */ nint idx,
 			/* CFDictionaryRef __nullable */ IntPtr options);
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
-		[iOS (7,0)]
-		public CGImageMetadata CopyMetadata (nint index, NSDictionary options)
+		public CGImageMetadata? CopyMetadata (nint index, NSDictionary? options)
 		{
-			IntPtr o = options == null ? IntPtr.Zero : options.Handle;
-			IntPtr result = CGImageSourceCopyMetadataAtIndex (Handle, index, o);
-			return (result == IntPtr.Zero) ? null : new CGImageMetadata (result);
+			var result = CGImageSourceCopyMetadataAtIndex (Handle, index, options.GetHandle ());
+			GC.KeepAlive (options);
+			return (result == IntPtr.Zero) ? null : new CGImageMetadata (result, true);
 		}
 
-		[iOS (7,0)]
-		public CGImageMetadata CopyMetadata (nint index, CGImageOptions options)
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
+		public CGImageMetadata? CopyMetadata (nint index, CGImageOptions? options)
 		{
-			NSDictionary o = null;
-			if (options != null)
-				o = options.ToDictionary ();
-			var result = CopyMetadata (index, o);
-			if (options != null)
-				o.Dispose ();
-			return result;
+			using var o = options?.ToDictionary ();
+			return CopyMetadata (index, o);
 		}
 
 		// CGImageSource.h
-		[iOS (7,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static void CGImageSourceRemoveCacheAtIndex (/* CGImageSourceRef __nonnull */ IntPtr isrc,
 			/* size_t */ nint index);
 
-		[iOS (7,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("macos")]
 		public void RemoveCache (nint index)
 		{
 			CGImageSourceRemoveCacheAtIndex (Handle, index);

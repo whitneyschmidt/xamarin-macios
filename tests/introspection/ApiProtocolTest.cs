@@ -7,21 +7,7 @@
 // Copyright 2013, 2015 Xamarin Inc.
 //
 
-using System;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
 
 namespace Introspection {
 
@@ -41,18 +27,49 @@ namespace Introspection {
 
 		protected virtual bool Skip (Type type)
 		{
+			if (MemberHasEditorBrowsableNever (type))
+				return true;
+
+			switch (type.Namespace) {
+			// Xcode 15:
+			case "MetalFX":
+			case "Cinematic":
+				// only present on device :/
+				if (TestRuntime.IsSimulatorOrDesktop)
+					return true;
+				break;
+			case "SensorKit": // SensorKit doesn't exist on iPads
+				if (TestRuntime.IsDevice && TestRuntime.IsiPad)
+					return true;
+				break;
+			}
+
 			switch (type.Name) {
 			// *** NSForwarding: warning: object 0x5cbd078 of class 'JSExport' does not implement methodSignatureForSelector: -- trouble ahead
 			// *** NSForwarding: warning: object 0x5cbd078 of class 'JSExport' does not implement doesNotRecognizeSelector: -- abort
 			case "JSExport":
 				return true;
-			default:
-#if !XAMCORE_2_0
-				// in Classic our internal delegates _inherits_ the type with the [Protocol] attribute
-				// in Unified our internal delegates _implements_ the interface that has the [Protocol] attribute
-				if (type.GetCustomAttribute<ProtocolAttribute> (true) != null)
-					return true;
+			case "MPSImageLaplacianPyramid":
+			case "MPSImageLaplacianPyramidSubtract":
+			case "MPSImageLaplacianPyramidAdd":
+			case "MPSCnnYoloLossNode":
+				// The presence of these seem to depend on hardware capabilities, and not only OS version.
+				// Unfortunately I couldn't find any documentation related to determining exactly which
+				// hardware capability these need (or how to detect them), so just ignore them.
+				return true;
+			case "CLKComplicationWidgetMigrator":
+				// Not present in the simulator, is a migration class
+				return true;
+			// was removed by apple and is a compat class.
+			case "HMMatterRequestHandler":
+				return true;
+#if !XAMCORE_5_0
+			case "GKHybridStrategist":
+				// We removed the bindings for this type.
+				return true;
 #endif
+
+			default:
 				return SkipDueToAttribute (type);
 			}
 		}
@@ -74,6 +91,20 @@ namespace Introspection {
 			}
 
 			switch (protocolName) {
+			case "AVRoutingPlaybackParticipant":
+				switch (type.Name) {
+				case "AVPlayer": // conformance defined in category
+				case "AVQueuePlayer": // conformance defined in category
+					return true;
+				}
+				break;
+			case "NSTextViewportRenderingSurfaceKey":
+				switch (type.Name) {
+				// Xcode 27 beta: conformance is declared in the headers but is not reported by the runtime (empty marker protocol)
+				case "NSTextLayoutFragment":
+					return true;
+				}
+				break;
 			case "NSCopying":
 				switch (type.Name) {
 				// undocumented conformance (up to 7.0) and conformity varies between iOS versions
@@ -97,12 +128,111 @@ namespace Introspection {
 				case "MLMultiArrayConstraint":
 				case "VSSubscription":
 					return true; // skip
-				// xcode 10
+								 // xcode 10
 				case "VSAccountMetadata":
 				case "VSAccountMetadataRequest":
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
 				case "HKCumulativeQuantitySeriesSample":
+				// Xcode 11 - Conformance not in headers
+				case "UISceneActivationConditions":
+				case "UISceneSession":
+					return true;
+				// Xcode 11
+				case "NSFileProviderSearchQuery":
+					return true;
+				// Xcode 12
+				case "ACAccountType":
+				case "ASAccountAuthenticationModificationExtensionContext":
+				case "ASCredentialProviderExtensionContext":
+				case "AVAssetDownloadUrlSession":
+				case "NSFileProviderDomain": // Conformance not in headers
+				case "NSUrlSession":
+				case "SNClassification":
+				case "SNClassificationResult":
+					return true;
+				// PassKit now available on macOS 11+
+				case "PKPaymentMethod":
+				case "PKPaymentMerchantSession":
+				case "PKPaymentSummaryItem":
+				case "PKShareablePassMetadata":
+				case "PKShippingMethod":
+				case "PKSuicaPassProperties": // Conformance not in headers
+				case "PKTransitPassProperties": // Conformance not in headers
+												// Xcode 12.2
+				case "VSAccountApplicationProvider": // Conformance not in headers
+													 // Xcode 12.5
+				case "HMCharacteristicMetadata":
+				case "HMAccessoryCategory":
+					return true;
+				// Xcode 13
+				case "HKVerifiableClinicalRecord":
+				case "PKDeferredPaymentSummaryItem":
+				case "PKRecurringPaymentSummaryItem":
+				case "PKStoredValuePassProperties":
+				case "SNTimeDurationConstraint": // Conformance not in headers
+												 // Xcode 13.3
+				case "HMAccessorySetupPayload": // Conformance not in headers
+					return true;
+				// Xcode 14
+				case "CLKComplicationIntentWidgetMigrationConfiguration":
+				case "CLKComplicationStaticWidgetMigrationConfiguration":
+				case "CLKComplicationWidgetMigrationConfiguration":
+				case "HKElectrocardiogramVoltageMeasurement":
+				case "AVPlayerInterstitialEvent":
+				case "HKWorkoutActivity":
+				case "HKContactsPrescription":
+				case "HKGlassesPrescription":
+				case "HKVisionPrescription":
+				case "PKAutomaticReloadPaymentRequest":
+				case "PKAutomaticReloadPaymentSummaryItem":
+				case "PKPaymentOrderDetails":
+				case "PKPaymentTokenContext":
+				case "PKRecurringPaymentRequest":
+				case "PKShareablePassMetadataPreview":
+				// Xcode 14.3, Conformance not in headers
+				case "PKDeferredPaymentRequest":
+					return true;
+				// Xcode 15, Conformance not in headers
+				case "GKBasePlayer":
+				case "GKLocalPlayer":
+				case "GKPlayer":
+				case "PKDisbursementRequest":
+				case "PKContact":
+				case "TKSmartCardPinFormat":
+					return true;
+				// Xcode 16, conformance not in headers
+				case "ASAccessory":
+				case "ASAccessorySettings":
+				case "ASDiscoveryDescriptor":
+				case "ASMigrationDisplayItem":
+				case "ASPickerDisplayItem":
+				case "DDDevice":
+				case "PKAddCarKeyPassConfiguration":
+				case "PKAddIdentityDocumentConfiguration":
+				case "PKAddSecureElementPassConfiguration":
+				case "PKAddShareablePassConfiguration":
+				case "PKAddPassMetadataPreview":
+				case "PKIdentityDocumentMetadata":
+				case "PKJapanIndividualNumberCardMetadata":
+				case "PKPassRelevantDate":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionInput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionOutput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobRegistrationInput":
+				case "SCContentFilter":
+				case "SCDisplay":
+				case "SCRunningApplication":
+				case "SCWindow":
+				case "SCStreamConfiguration":
+					return true;
+				// Xcode 26.0 Conformance not in headers
+				case "ASPickerDisplaySettings":
+				case "ASPropertyCompareString":
+				case "PKAddIdentityDocumentMetadata":
+					return true;
+				// Xcode 26.1 Conformance not in headers
+				case "ASDiscoveredAccessory":
+				case "ASDiscoveredDisplayItem":
 					return true;
 				}
 				break;
@@ -111,9 +241,14 @@ namespace Introspection {
 				// iOS 10 : test throw because of generic usage
 				case "NSMeasurement`1":
 					return true; // skip
-				// Xcode 10
+								 // Xcode 10
 				case "UNNotificationCategory":
 				case "UNNotificationSound":
+				// Xcode 11 - Conformance not in headers
+				case "UISceneSession":
+					return true;
+				// xocde 12 beta 1
+				case "NSUrlSessionConfiguration":
 					return true;
 				}
 				break;
@@ -154,12 +289,198 @@ namespace Introspection {
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
 					return true;
+				// Xcode 11 (on device only)
+				case "ICHandle":
+				case "ICNotification":
+				case "ICNotificationManagerConfiguration":
+				case "MPSNNNeuronDescriptor":
+				// Xcode 11
+				case "NSFileProviderItemVersion":
+				case "NSFileProviderRequest":
+				case "NSFileProviderSearchQuery":
+					return true;
+				// Xcode 11.4, not documented
+				case "NSHttpCookie":
+					return true;
+				// Xcode 12 beta 1
+				case "ASAccountAuthenticationModificationExtensionContext":
+				case "ASCredentialProviderExtensionContext":
+				case "GCController":
+				case "GCExtendedGamepad":
+				case "GCMicroGamepad":
+				case "GCMotion":
+				case "INFile":
+				case "SNClassification":
+				case "SNClassificationResult":
+					return true;
+				// PassKit now available on macOS 11+
+				case "PKPayment":
+				case "PKPaymentSummaryItem":
+				case "PKShippingMethod":
+				case "PKPaymentRequest":
+				case "PKPaymentToken":
+				case "PKLabeledValue":
+				case "PKPaymentAuthorizationResult":
+				case "PKPaymentRequestShippingMethodUpdate":
+				case "PKPaymentRequestUpdate":
+				case "PKPaymentRequestPaymentMethodUpdate":
+				case "PKPaymentRequestShippingContactUpdate":
+				case "PKSuicaPassProperties": // Conformance not in headers
+				case "PKTransitPassProperties": // Conformance not in headers
+				case "PKDisbursementRequest":
+				case "PKDisbursementVoucher":
+				case "PKAddCarKeyPassConfiguration":
+				case "PKAddSecureElementPassConfiguration":
+				case "PKAddShareablePassConfiguration":
+				case "PKBarcodeEventConfigurationRequest":
+				case "PKBarcodeEventMetadataRequest":
+				case "PKBarcodeEventMetadataResponse":
+				case "PKBarcodeEventSignatureRequest":
+				case "PKBarcodeEventSignatureResponse":
+				case "PKIssuerProvisioningExtensionPaymentPassEntry":
+				case "PKIssuerProvisioningExtensionStatus":
+				case "PKPaymentMerchantSession":
+				case "PKPaymentRequestMerchantSessionUpdate":
+				case "PKShareablePassMetadata":
+				// Xcode 12.2
+				case "VSAccountApplicationProvider": // Conformance not in headers
+					return true;
+				// Xcode 12.3
+				case "GCDirectionalGamepad":
+				case "GCExtendedGamepadSnapshot":
+				case "GCGamepadSnapshot":
+				case "GCMicroGamepadSnapshot":
+				case "GCGamepad":
+					return true;
+				// Xcode 12.5
+				case "GCDualSenseGamepad":
+				// Xcode 13
+				case "AVAssetDownloadConfiguration":
+				case "AVAssetDownloadContentConfiguration":
+				case "AVAssetVariant":
+				case "AVAssetVariantQualifier":
+				case "PKDeferredPaymentSummaryItem":
+				case "PKPaymentRequestCouponCodeUpdate":
+				case "PKRecurringPaymentSummaryItem":
+				case "PKStoredValuePassBalance":
+				case "PKStoredValuePassProperties":
+				case "QLPreviewReply": // conformance not in headers
+				case "QLPreviewReplyAttachment": // conformance not in headers
+				case "SNTimeDurationConstraint": // Conformance not in headers
+												 // Xcode 13.3
+				case "SRWristDetection": // Conformance not in headers
+				case "HMAccessorySetupPayload": // Conformance not in headers
+				case "HMAccessorySetupRequest": // Conformance not in headers
+				case "HMAccessorySetupResult": // Conformance not in headers
+					return true;
+				// Xcode 14 beta 2
+				case "CLKComplicationIntentWidgetMigrationConfiguration":
+				case "CLKComplicationStaticWidgetMigrationConfiguration":
+				case "CLKComplicationWidgetMigrationConfiguration":
+				case "PHPickerConfiguration":
+				case "PHAssetChangeRequest":
+				case "PHAssetCreationRequest":
+				case "NSUserActivity":
+				case "UIDictationPhrase":
+				case "HKWorkoutActivity":
+				case "PKAutomaticReloadPaymentRequest":
+				case "PKAutomaticReloadPaymentSummaryItem":
+				case "PKPaymentOrderDetails":
+				case "PKPaymentTokenContext":
+				case "PKRecurringPaymentRequest":
+				case "PKShareablePassMetadataPreview":
+				// Xcode 14.3, Conformance not in headers
+				case "PKDeferredPaymentRequest":
+					return true;
+				// Xcode 15, Conformance not in headers
+				case "MKGeodesicPolyline":
+				case "MKPolyline":
+				case "MKCircle":
+				case "MKCircleRenderer":
+				case "MKGradientPolylineRenderer":
+				case "MKMultiPolygon":
+				case "MKMultiPolygonRenderer":
+				case "MKMultiPolyline":
+				case "MKMultiPolylineRenderer":
+				case "MKPolygonRenderer":
+				case "MKPolylineRenderer":
+				case "AVAudioPcmBuffer":
+				case "TKSmartCardPinFormat":
+				case "TKSmartCardUserInteraction":
+				case "TKSmartCardUserInteractionForPinOperation":
+				case "TKSmartCardUserInteractionForSecurePinChange":
+				case "TKSmartCardUserInteractionForSecurePinVerification":
+					return true;
+				// Xcode 15.3, Conformance not in headers
+				case "ASWebAuthenticationSessionCallback":
+				case "VSAppleSubscription":
+					return true;
+				// Xcode 16, conformance not in headers
+				case "ASAccessory":
+				case "ASAccessorySettings":
+				case "ASDiscoveryDescriptor":
+				case "ASMigrationDisplayItem":
+				case "ASPickerDisplayItem":
+				case "NEVpnIkev2PpkConfiguration":
+				case "QLFileThumbnailRequest":
+				case "QLThumbnailReply":
+				case "PHPickerResult":
+				case "PKAddIdentityDocumentConfiguration":
+				case "PKAddPassMetadataPreview":
+				case "PKIdentityDocumentMetadata":
+				case "PKJapanIndividualNumberCardMetadata":
+				case "PKPassRelevantDate":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionInput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionOutput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobRegistrationInput":
+				case "DDDevice":
+				case "DDDeviceEvent":
+				case "FSMessageConnection":
+				case "FSModuleIdentity":
+				case "NSFileProviderKnownFolderLocations":
+				case "UIGestureRecognizer":
+				case "UIRotationGestureRecognizer":
+				case "UILongPressGestureRecognizer":
+				case "UITapGestureRecognizer":
+				case "UIPanGestureRecognizer":
+				case "UIPinchGestureRecognizer":
+				case "UISwipeGestureRecognizer":
+				case "UIScreenEdgePanGestureRecognizer":
+				case "UIHoverGestureRecognizer":
+				// Xcode 16.2 Conformance not in headers
+				case "SCSensitivityAnalysis":
+				case "SCContentFilter":
+				case "SCDisplay":
+				case "SCRunningApplication":
+				case "SCWindow":
+				case "SCStreamConfiguration":
+					return true;
+				// Xcode 16.3 Conformance not in headers
+				case "FSMutableFileDataBuffer":
+				case "FSTask":
+				case "FSTaskOptions":
+					return true;
+				// Xcode 26.0 Conformance not in headers
+				case "ASPickerDisplaySettings":
+				case "ASPropertyCompareString":
+				case "PKAddIdentityDocumentMetadata":
+					return true;
+				// Xcode 26.1 Conformance not in headers
+				case "ASDiscoveredAccessory":
+				case "ASDiscoveredDisplayItem":
+					return true;
+				// Xcode 26.4 Conformance not in headers
+				case "CNFetchRequest":
+					return true;
+				// Xcode 27.0 Conformance not in headers
+				case "PHPickerSearchText":
+					return true;
 				}
 				break;
 			case "NSSecureCoding":
 				switch (type.Name) {
 				case "NSMergeConflict": // undocumented
-				// only documented to support NSCopying (and OSX side only does that)
+										// only documented to support NSCopying (and OSX side only does that)
 				case "NSUrlSessionTask":
 				case "NSUrlSessionDataTask":
 				case "NSUrlSessionUploadTask":
@@ -171,7 +492,7 @@ namespace Introspection {
 				case "NSParagraphStyle": //17770106
 				case "NSMutableParagraphStyle": //17770106
 					return true; // skip
-				// iOS9 / 10.11
+								 // iOS9 / 10.11
 				case "CNSaveRequest":
 				case "NSPersonNameComponentsFormatter":
 				case "GKCloudPlayer":
@@ -179,7 +500,7 @@ namespace Introspection {
 				// iOS 10 : test throw because of generic usage
 				case "NSMeasurement`1":
 					return true; // skip
-				// xcode 9
+								 // xcode 9
 				case "NSConstraintConflict": // Conformance not in headers
 				case "VSSubscription":
 				// iOS 11.3 / macOS 10.13.4
@@ -201,6 +522,203 @@ namespace Introspection {
 				case "VSAccountProviderResponse":
 				case "PHEditingExtensionContext":
 					return true;
+				// Xcode 11 (on device only)
+				case "ICHandle":
+				case "ICNotification":
+				case "ICNotificationManagerConfiguration":
+				case "MPSNNNeuronDescriptor":
+				case "MPSNDArrayAllocator": // Conformance in header, but fails at runtime.
+				case "MPSNNLossCallback": // Conformance in header, but fails at runtime.
+					return true;
+				// Xcode 11
+				case "NSFileProviderItemVersion":
+				case "NSFileProviderRequest":
+				case "NSFileProviderSearchQuery":
+				case "INUserContext": // Header shows NSSecureCoding but intro on both device and simulator says nope FB7604793
+					return true;
+				// Xcode 11.4, not documented
+				case "NSHttpCookie":
+					return true;
+				// Xcode 12
+				case "ASAccountAuthenticationModificationExtensionContext":
+				case "ASCredentialProviderExtensionContext":
+				case "GCController":
+				case "GCExtendedGamepad":
+				case "GCMicroGamepad":
+				case "GCMotion":
+				case "SNClassification":
+				case "SNClassificationResult":
+				case "CPMessageListItem": // Conformance not in headers
+					return true;
+				// PassKit now available on macOS 11+
+				case "PKPayment":
+				case "PKPaymentSummaryItem":
+				case "PKShippingMethod":
+				case "PKPaymentRequest":
+				case "PKPaymentToken":
+				case "PKLabeledValue":
+				case "PKPaymentAuthorizationResult":
+				case "PKPaymentRequestShippingMethodUpdate":
+				case "PKPaymentRequestUpdate":
+				case "PKPaymentRequestPaymentMethodUpdate":
+				case "PKPaymentRequestShippingContactUpdate":
+				case "PKSuicaPassProperties": // Conformance not in headers
+				case "PKTransitPassProperties": // Conformance not in headers
+				case "PKDisbursementRequest":
+				case "PKDisbursementVoucher":
+				case "PKAddCarKeyPassConfiguration":
+				case "PKAddSecureElementPassConfiguration":
+				case "PKAddShareablePassConfiguration":
+				case "PKBarcodeEventConfigurationRequest":
+				case "PKBarcodeEventMetadataRequest":
+				case "PKBarcodeEventMetadataResponse":
+				case "PKBarcodeEventSignatureRequest":
+				case "PKBarcodeEventSignatureResponse":
+				case "PKIssuerProvisioningExtensionPaymentPassEntry":
+				case "PKIssuerProvisioningExtensionStatus":
+				case "PKPaymentMerchantSession":
+				case "PKPaymentRequestMerchantSessionUpdate":
+				case "PKShareablePassMetadata":
+				// Xcode 12.2
+				case "VSAccountApplicationProvider": // Conformance not in headers
+													 // Xcode 12.3
+				case "ARAppClipCodeAnchor": // Conformance comes from the base type, ARAppClipCodeAnchor conforms to NSSecureCoding but SupportsSecureCoding returned false.
+				case "GCDirectionalGamepad":
+				case "GCExtendedGamepadSnapshot":
+				case "GCGamepadSnapshot":
+				case "GCMicroGamepadSnapshot":
+				case "GCGamepad":
+					return true;
+				// Xcode 12.5
+				case "GCDualSenseGamepad":
+				// xcode 13
+				case "AVAssetDownloadConfiguration":
+				case "AVAssetDownloadContentConfiguration":
+				case "AVAssetVariant":
+				case "AVAssetVariantQualifier":
+				case "PKDeferredPaymentSummaryItem":
+				case "PKPaymentRequestCouponCodeUpdate":
+				case "PKRecurringPaymentSummaryItem":
+				case "PKStoredValuePassBalance":
+				case "PKStoredValuePassProperties":
+				case "QLPreviewReply": // conformance not in headers
+				case "QLPreviewReplyAttachment": // conformance not in headers
+				case "SNTimeDurationConstraint": // Conformance not in headers
+				case "NSInflectionRule":
+				// Xcode 13.3
+				case "SRWristDetection": // Conformance not in headers
+				case "HMAccessorySetupPayload": // Conformance not in headers
+				case "HMAccessorySetupRequest": // Conformance not in headers
+				case "HMAccessorySetupResult": // Conformance not in headers
+					return true;
+				// Xcode 14
+				case "CLKComplicationIntentWidgetMigrationConfiguration":
+				case "CLKComplicationStaticWidgetMigrationConfiguration":
+				case "CLKComplicationWidgetMigrationConfiguration":
+				case "PHPickerConfiguration":
+				case "PHAssetChangeRequest":
+				case "PHAssetCreationRequest":
+				case "NSUserActivity":
+				case "UIDictationPhrase":
+				case "HKWorkoutActivity":
+				case "PKAutomaticReloadPaymentRequest":
+				case "PKAutomaticReloadPaymentSummaryItem":
+				case "PKPaymentOrderDetails":
+				case "PKPaymentTokenContext":
+				case "PKRecurringPaymentRequest":
+				case "PKShareablePassMetadataPreview":
+				// Xcode 14.3, Conformance not in headers
+				case "PKDeferredPaymentRequest":
+					return true;
+				// Xcode 15, Conformance not in headers
+				case "MKGeodesicPolyline":
+				case "MKPolyline":
+				case "MKCircle":
+				case "MKCircleRenderer":
+				case "MKGradientPolylineRenderer":
+				case "MKMultiPolygon":
+				case "MKMultiPolygonRenderer":
+				case "MKMultiPolyline":
+				case "MKMultiPolylineRenderer":
+				case "MKPolygonRenderer":
+				case "MKPolylineRenderer":
+				case "AVAudioPcmBuffer":
+				case "TKSmartCardPinFormat":
+				case "TKSmartCardUserInteraction":
+				case "TKSmartCardUserInteractionForPinOperation":
+				case "TKSmartCardUserInteractionForSecurePinChange":
+				case "TKSmartCardUserInteractionForSecurePinVerification":
+					return true;
+				// Xcode 15.3, Conformance not in headers
+				case "ASWebAuthenticationSessionCallback":
+				case "VSAppleSubscription":
+					return true;
+				// Xcode 16, conformance not in headers
+				case "ASAccessory":
+				case "ASAccessorySettings":
+				case "ASDiscoveryDescriptor":
+				case "ASMigrationDisplayItem":
+				case "ASPickerDisplayItem":
+				case "NEVpnIkev2PpkConfiguration":
+				case "QLFileThumbnailRequest":
+				case "QLThumbnailReply":
+				case "PHPickerResult":
+				case "PKAddIdentityDocumentConfiguration":
+				case "PKAddPassMetadataPreview":
+				case "PKIdentityDocumentMetadata":
+				case "PKJapanIndividualNumberCardMetadata":
+				case "PKPassRelevantDate":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionInput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobAssertionOutput":
+				case "ASAuthorizationPublicKeyCredentialLargeBlobRegistrationInput":
+				case "DDDevice":
+				case "DDDeviceEvent":
+				case "FSMessageConnection":
+				case "FSModuleIdentity":
+				case "NSFileProviderKnownFolderLocations":
+				case "UIGestureRecognizer":
+				case "UIRotationGestureRecognizer":
+				case "UILongPressGestureRecognizer":
+				case "UITapGestureRecognizer":
+				case "UIPanGestureRecognizer":
+				case "UIPinchGestureRecognizer":
+				case "UISwipeGestureRecognizer":
+				case "UIScreenEdgePanGestureRecognizer":
+				case "UIHoverGestureRecognizer":
+					return true;
+				case "NSLocalizedNumberFormatRule":
+					// Foundation.MonoTouchException : Objective-C exception thrown. Name: NSInvalidArgumentException Reason: *** -supportsSecureCoding cannot be sent to an abstract object of class NSLocalizedNumberFormatRule: Create a concrete instance!
+					return true;
+				case "FSResource": // header says yes, runtime says no
+					return true;
+				// Xcode 16.2 Conformance not in headers
+				case "SCSensitivityAnalysis":
+				case "SCContentFilter":
+				case "SCDisplay":
+				case "SCRunningApplication":
+				case "SCWindow":
+				case "SCStreamConfiguration":
+					return true;
+				// Xcode 16.3 Conformance not in headers
+				case "FSMutableFileDataBuffer":
+				case "FSTask":
+				case "FSTaskOptions":
+					return true;
+				// Xcode 26.0 Conformance not in headers
+				case "ASPickerDisplaySettings":
+				case "ASPropertyCompareString":
+				case "PKAddIdentityDocumentMetadata":
+					return true;
+				// Xcode 26.1 Conformance not in headers
+				case "ASDiscoveredAccessory":
+				case "ASDiscoveredDisplayItem":
+					return true;
+				// Xcode 26.4 Conformance not in headers
+				case "CNFetchRequest":
+					return true;
+				// Xcode 27.0 Conformance not in headers
+				case "PHPickerSearchText":
+					return true;
 				}
 				break;
 			// conformance added in Xcode 8 (iOS 10 / macOS 10.12)
@@ -218,8 +736,16 @@ namespace Introspection {
 				}
 				break;
 			case "NSProgressReporting":
-				if (!TestRuntime.CheckXcodeVersion (9, 0))
-					return true;
+				switch (type.Name) {
+				case "NSOperationQueue":
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						return true;
+					break;
+				default:
+					if (!TestRuntime.CheckXcodeVersion (9, 0))
+						return true;
+					break;
+				}
 				break;
 			case "GKSceneRootNodeType":
 				// it's an empty protocol, defined by a category and does not reply as expected
@@ -243,14 +769,97 @@ namespace Introspection {
 					return true;
 				}
 				break;
+			case "SCNTechniqueSupport":
+				if (!TestRuntime.CheckXcodeVersion (11, 0))
+					return false;
+				switch (type.Name) {
+				case "SCNLight":
+					return true;
+				}
+				break;
+			case "VNRequestRevisionProviding":
+				switch (type.Name) {
+				case "VNFaceLandmarks":
+				case "VNFaceLandmarks2D":
+				case "VNFaceLandmarkRegion":
+				case "VNFaceLandmarkRegion2D":
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						return true;
+					break;
+				case "VNRecognizedText":
+					// Conformance added in Xcode 13
+					if (!TestRuntime.CheckXcodeVersion (13, 0))
+						return true;
+					break;
+				}
+				break;
+			case "NSUserActivityRestoring":
+				return true;
+#if __MACCATALYST__
+			case "UIScrollViewDelegate":
+				// The headers say PKCanvasViewDelegate implements UIScrollViewDelegate
+				if (type.Name == "PKCanvasViewDelegate")
+					return true;
+				break;
+#endif
+			case "QLPreviewItem":
+				if (type.Name == "NSUrl")
+					return true;
+				break;
+			case "UIInteraction":
+				switch (type.Name) {
+				case "UIFeedbackGenerator":
+				case "UIImpactFeedbackGenerator":
+				case "UINotificationFeedbackGenerator":
+				case "UISelectionFeedbackGenerator":
+					if (!TestRuntime.CheckXcodeVersion (15, 4))
+						return true;
+					break;
+				}
+				break;
+			case "NSTextAttachmentContainer":
+				// NSTextAttachment implementing the NSTextAttachmentContainer protocol was deprecated in Xcode 16 beta 1.
+				if (type.Name == "NSTextAttachment")
+					return true;
+				break;
+			case "UIFocusItemContainer":
+			case "UICoordinateSpace":
+				// SKVideoNode started implementing UIFocusItemContainer and UICoordinateSpace in Xcode 16
+				if (type.Name == "SKVideoNode" && !TestRuntime.CheckXcodeVersion (16, 0))
+					return true;
+				break;
+			case "UISpringLoadedInteractionSupporting":
+				switch (type.Name) {
+				case "UISearchTab":
+				case "UITab":
+				case "UITabGroup":
+					// These types implement UISpringLoadedInteractionSupporting using category, which we can't detect at runtime.
+					return true;
+				}
+				break;
+			case "BEExtensionProcess":
+				switch (type.Name) {
+				case "BENetworkingProcess": // conforming using a categeory in headers
+				case "BERenderingProcess": // conforming using a categeory in headers
+				case "BEWebContentProcess": // conforming using a categeory in headers
+					return true;
+				}
+				break;
+			case "AVMetricEventStreamPublisher":
+				switch (type.Name) {
+				case "AVPlayerItem":
+					// AVPlayerItem started implementing AVMetricEventStreamPublisher in Xcode 16
+					return !TestRuntime.CheckXcodeVersion (16, 0);
+				}
+				break;
 			}
 			return false;
 		}
 
-		void CheckProtocol (string protocolName, Action<Type,IntPtr,bool> action)
+		void CheckProtocol (string protocolName, Action<Type, IntPtr, bool> action)
 		{
 			IntPtr protocol = Runtime.GetProtocol (protocolName);
-			Assert.AreNotEqual (protocol, IntPtr.Zero, protocolName);
+			Assert.That (IntPtr.Zero, Is.Not.EqualTo (protocol), protocolName);
 
 			int n = 0;
 			foreach (Type t in Assembly.GetTypes ()) {
@@ -272,26 +881,29 @@ namespace Introspection {
 		public void Coding ()
 		{
 			Errors = 0;
-			CheckProtocol ("NSCoding", delegate (Type type, IntPtr klass, bool result) {
+			var list = new List<string> ();
+			CheckProtocol ("NSCoding", delegate (Type type, IntPtr klass, bool result)
+			{
+				// `type` conforms to (native) NSCoding so...
 				if (result) {
-					// `type` conforms to (native) NSCoding so...
-					if (result) {
-						// the type should implements INSCoding
-						if (!typeof (INSCoding).IsAssignableFrom (type)) {
-							ReportError ("{0} conforms to NSCoding but does not implement INSCoding", type.Name);
-						}
-						// FIXME: and implement the .ctor(NSCoder)
+					// the type should implements INSCoding
+					if (!typeof (INSCoding).IsAssignableFrom (type)) {
+						list.Add (type.Name);
+						ReportError ("{0} conforms to NSCoding but does not implement INSCoding", type.Name);
 					}
+					// FIXME: and implement the .ctor(NSCoder)
 				}
 			});
-			Assert.AreEqual (Errors, 0, "{0} types conforms to NSCoding but does not implement INSCoding", Errors);
+			Assert.That (0, Is.EqualTo (Errors), $"{Errors} types conforms to NSCoding but does not implement INSCoding: {String.Join ('\n', list)}");
 		}
 
 		// [Test] -> iOS 6.0+ and Mountain Lion (10.8) +
 		public virtual void SecureCoding ()
 		{
 			Errors = 0;
-			CheckProtocol ("NSSecureCoding", delegate (Type type, IntPtr klass, bool result) {
+			var list = new List<string> ();
+			CheckProtocol ("NSSecureCoding", delegate (Type type, IntPtr klass, bool result)
+			{
 				if (result) {
 					// the type should implements INSSecureCoding
 					if (!typeof (INSSecureCoding).IsAssignableFrom (type)) {
@@ -299,7 +911,7 @@ namespace Introspection {
 					}
 				}
 			});
-			Assert.AreEqual (Errors, 0, "{0} types conforms to NSSecureCoding but does not implement INSSecureCoding", Errors);
+			Assert.That (0, Is.EqualTo (Errors), $"{Errors} types conforms to NSSecureCoding but does not implement INSSecureCoding: {String.Join ('\n', list)}");
 		}
 
 		bool SupportsSecureCoding (Type type)
@@ -316,65 +928,103 @@ namespace Introspection {
 		public virtual void SupportsSecureCoding ()
 		{
 			Errors = 0;
-			CheckProtocol ("NSSecureCoding", delegate (Type type, IntPtr klass, bool result) {
+			CheckProtocol ("NSSecureCoding", delegate (Type type, IntPtr klass, bool result)
+			{
 				bool supports = SupportsSecureCoding (type);
 				if (result) {
 					// check that +supportsSecureCoding returns YES
 					if (!supports) {
+#if __IOS__ && !__MACCATALYST__
+						if (TestRuntime.IsSimulator) {
+							switch (type.Name) {
+							case "ARFaceGeometry":
+							case "ARPointCloud":
+							case "ARReferenceObject":
+							case "ARWorldMap":
+							case "ARPlaneGeometry":
+							case "ARGeometryElement":
+							case "ARGeometrySource":
+							case "ARMeshGeometry":
+								return;
+							}
+						}
+#endif
 						ReportError ("{0} conforms to NSSecureCoding but SupportsSecureCoding returned false", type.Name);
 					}
 				} else if (type.IsPublic && supports) {
 					// there are internal types, e.g. DataWrapper : NSData, that subclass NSSecureCoding-types without
 					// [re-]declaring their allegiance - but we can live with those small betrayals
-					Assert.IsFalse (NSSecureCoding.SupportsSecureCoding (type), "{0} !SupportsSecureCoding", type.Name);
+					Assert.That (NSSecureCoding.SupportsSecureCoding (type), Is.False, $"{type.Name} !SupportsSecureCoding");
 					ReportError ("SupportsSecureCoding returns true but {0} does not conforms to NSSecureCoding", type.Name);
 				}
 			});
-			Assert.AreEqual (Errors, 0, "{0} types conforms to NSCoding but does not implement INSSecureCoding", Errors);
+			Assert.That (0, Is.EqualTo (Errors), $"{Errors} types conforms to NSCoding but does not implement INSSecureCoding");
 		}
 
 		[Test]
 		public void Copying ()
 		{
 			Errors = 0;
-			CheckProtocol ("NSCopying", delegate (Type type, IntPtr klass, bool result) {
+			var list = new List<string> ();
+			CheckProtocol ("NSCopying", delegate (Type type, IntPtr klass, bool result)
+			{
 				// `type` conforms to (native) NSCopying so...
 				if (result) {
 					// the type should implements INSCopying
 					if (!typeof (INSCopying).IsAssignableFrom (type)) {
+						list.Add (type.Name);
 						ReportError ("{0} conforms to NSCopying but does not implement INSCopying", type.Name);
 					}
 				}
 			});
-			Assert.AreEqual (Errors, 0, "{0} types conforms to NSCopying but does not implement INSCopying", Errors);
+			Assert.That (0, Is.EqualTo (Errors), $"{Errors} types conforms to NSCopying but does not implement INSCopying: {String.Join ('\n', list)}");
 		}
 
 		[Test]
 		public void MutableCopying ()
 		{
 			Errors = 0;
-			CheckProtocol ("NSMutableCopying", delegate (Type type, IntPtr klass, bool result) {
+			var list = new List<string> ();
+			CheckProtocol ("NSMutableCopying", delegate (Type type, IntPtr klass, bool result)
+			{
 				// `type` conforms to (native) NSMutableCopying so...
 				if (result) {
 					// the type should implements INSMutableCopying
 					if (!typeof (INSMutableCopying).IsAssignableFrom (type)) {
+						list.Add (type.Name);
 						ReportError ("{0} conforms to NSMutableCopying but does not implement INSMutableCopying", type.Name);
 					}
 				}
 			});
-			Assert.AreEqual (Errors, 0, "{0} types conforms to NSMutableCopying but does not implement INSMutableCopying", Errors);
+			Assert.That (0, Is.EqualTo (Errors), $"{Errors} types conforms to NSMutableCopying but does not implement INSMutableCopying: {String.Join ('\n', list)}");
 		}
 
 		[Test]
 		public void GeneralCase ()
 		{
 			Errors = 0;
+			var list = new List<string> ();
 			foreach (Type t in Assembly.GetTypes ()) {
 				if (!NSObjectType.IsAssignableFrom (t))
 					continue;
 
 				if (Skip (t))
 					continue;
+
+				var klass = new Class (t);
+				if (klass.Handle == IntPtr.Zero) {
+					// This can often by caused by [Protocol] classes with no [Model] but having a [BaseType].
+					// Either have both a Model and BaseType or neither
+					switch (t.Name) {
+					case "AVPlayerInterstitialEventMonitor": // deprecated
+						continue;
+					default:
+						var e = $"[FAIL] Could not load {t.FullName}";
+						list.Add (e);
+						AddErrorLine (e);
+						continue;
+					}
+				}
 
 				foreach (var intf in t.GetInterfaces ()) {
 					if (SkipDueToAttribute (intf))
@@ -389,20 +1039,13 @@ namespace Introspection {
 						// we have special test cases for them
 						continue;
 					default:
-#if !XAMCORE_2_0
-						// in Classic our internal delegates _inherits_ the type with the [Protocol] attribute
-						// in Unified our internal delegates _implements_ the interface that has the [Protocol] attribute
-						var pt = Type.GetType (intf.Namespace + "." + protocolName + ", " + intf.Assembly.FullName);
-						if (SkipDueToAttribute (pt))
-							continue;
-#endif
 						if (Skip (t, protocolName))
 							continue;
 						break;
 					}
 
 					var a = intf.GetCustomAttribute<ProtocolAttribute> (true);
-					if (a == null || a.IsInformal)
+					if (a is null || a.IsInformal)
 						continue;
 
 					IntPtr protocol = Runtime.GetProtocol (protocolName);
@@ -412,18 +1055,15 @@ namespace Introspection {
 					if (LogProgress)
 						Console.WriteLine ("{0} conforms to {1}", t.FullName, protocolName);
 
-					var klass = new Class (t);
-					if (klass.Handle == IntPtr.Zero) {
-						// This can often by caused by [Protocol] classes with no [Model] but having a [BaseType].
-						// Either have both a Model and BaseType or neither
-						AddErrorLine ("[FAIL] Could not load {0}", t.FullName);
-					} else if (t.IsPublic && !ConformTo (klass.Handle, protocol)) {
+					if (t.IsPublic && !ConformTo (klass.Handle, protocol)) {
 						// note: some internal types, e.g. like UIAppearance subclasses, return false (and there's not much value in changing this)
-						ReportError ("Type {0} (native: {1}) does not conform {2}", t.FullName, klass.Name, protocolName);
+						var msg = $"Type {t.FullName} (native: {klass.Name}) does not conform to {protocolName}";
+						list.Add (msg);
+						ReportError (msg);
 					}
 				}
 			}
-			AssertIfErrors ("{0} types do not really conform to the protocol interfaces", Errors);
+			AssertIfErrors ("{0} types do not really conform to the protocol interfaces: {1}", Errors, String.Join ('\n', list));
 		}
 	}
 }

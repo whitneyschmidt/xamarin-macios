@@ -1,4 +1,4 @@
-﻿//
+//
 // GKComponentSystem.cs: Implements some nicer methods for GKComponentSystem
 //
 // Authors:
@@ -6,26 +6,27 @@
 //
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
-#if XAMCORE_2_0 // GKComponentSystem is a generic type, which we only support in Unified (for now at least)
-using System;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace GameplayKit {
 	public partial class GKComponentSystem<TComponent> {
-		
+
+		/// <summary>Creates a new component system object with default values.</summary>
 		public GKComponentSystem ()
 			: this (GKState.GetClass (typeof (TComponent), "componentType"))
 		{
 		}
 
-		public Type ComponentType { 
+		/// <summary>Gets the System.Type that represents the component class of the components that can be contained in this component system.</summary>
+		public Type? ComponentType {
 			get { return Class.Lookup (ComponentClass); }
 		}
 
+		/// <summary>Gets the component at the specified index from the array of components that are contained in the component system.</summary>
+		/// <param name="index">The 0-based index of the component to get.</param>
 		public TComponent this [nuint index] {
 			get { return ObjectAtIndexedSubscript (index); }
 		}
 	}
 }
-#endif

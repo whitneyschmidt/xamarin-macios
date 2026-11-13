@@ -6,17 +6,20 @@
 //     
 // Copyright 2014 Xamarin Inc. All rights reserved.
 
-using System;
+#nullable enable
+
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
 using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>Class for storing callbacks for processing PDF documents.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGPDFOperatorTable.h
-	public class CGPDFOperatorTable : INativeObject, IDisposable {
+	public class CGPDFOperatorTable : NativeObject {
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGPDFOperatorTableRef */ IntPtr CGPDFOperatorTableCreate ();
@@ -30,80 +33,48 @@ namespace CoreGraphics {
 		// CGPDFOperatorCallback
 		delegate void CGPDFOperatorCallback (/* CGPDFScannerRef */ IntPtr scanner, /* void* */ IntPtr info);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CGPDFOperatorTable ()
+			: base (CGPDFOperatorTableCreate (), true)
 		{
-			Handle = CGPDFOperatorTableCreate ();
 		}
 
-		public CGPDFOperatorTable (IntPtr handle)
+		[Preserve (Conditional = true)]
+		internal CGPDFOperatorTable (NativeHandle handle, bool owns)
+			 : base (handle, owns)
 		{
-			CGPDFOperatorTableRetain (handle);
-			Handle = handle;
 		}
 
-		[Preserve (Conditional=true)]
-		internal CGPDFOperatorTable (IntPtr handle, bool owns)
+		protected internal override void Retain ()
 		{
-			if (!owns)
-				CGPDFOperatorTableRetain (handle);
-
-			Handle = handle;
+			CGPDFOperatorTableRetain (GetCheckedHandle ());
 		}
 
-		~CGPDFOperatorTable ()
+		protected internal override void Release ()
 		{
-			Dispose (false);
+			CGPDFOperatorTableRelease (GetCheckedHandle ());
 		}
 
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (Handle != IntPtr.Zero) {
-				CGPDFOperatorTableRelease (Handle);
-				Handle = IntPtr.Zero;
-			}
-		}
-
-		public IntPtr Handle { get; private set; }
-
+		// The good part about this signature is that it enforces at compile time that 'callback' is callable from native code in a FullAOT scenario.
+		// The bad part is that it's unsafe code (and callers must be in unsafe mode as well).
 		[DllImport (Constants.CoreGraphicsLibrary)]
-		extern static void CGPDFOperatorTableSetCallback (/* CGPDFOperatorTableRef */ IntPtr table, /* const char */ string name, /* CGPDFOperatorCallback */ Action<IntPtr,IntPtr> callback);
+		unsafe extern static void CGPDFOperatorTableSetCallback (/* CGPDFOperatorTableRef */ IntPtr table, /* const char */ IntPtr name, /* CGPDFOperatorCallback */ delegate* unmanaged<IntPtr, IntPtr, void> callback);
 
-#if MONOMAC
-		// this won't work with AOT since the callback must be decorated with [MonoPInvokeCallback]
-		public void SetCallback (string name, Action<CGPDFScanner,object> callback)
+		public unsafe void SetCallback (string name, delegate* unmanaged<IntPtr, IntPtr, void> callback)
 		{
-			if (name == null)
-				throw new ArgumentNullException ("name");
+			if (name is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (name));
 
-			if (callback == null)
-				CGPDFOperatorTableSetCallback (Handle, name, null);
-			else
-				CGPDFOperatorTableSetCallback (Handle, name, new Action<IntPtr, IntPtr> (delegate (IntPtr reserved, IntPtr gchandle) {
-					// we could do 'new CGPDFScanner (reserved, true)' but we would not get `UserInfo` (managed state) back
-					// we could GCHandle `userInfo` but that would (even more) diverge both code bases :(
-					var scanner = GetScannerFromInfo (gchandle);
-					callback (scanner, scanner != null ? scanner.UserInfo : null);
-				}));
+			using var namePtr = new TransientString (name);
+			CGPDFOperatorTableSetCallback (Handle, namePtr, callback);
 		}
 
-		[Advice ("Use the nicer SetCallback(string,Action<CGPDFScanner,object>) API when possible.")]
-#endif
-		// this API is ugly - but I do not see a better way with the AOT limitation
-		public void SetCallback (string name, Action<IntPtr,IntPtr> callback)
-		{
-			if (name == null)
-				throw new ArgumentNullException ("name");
-
-			CGPDFOperatorTableSetCallback (Handle, name, callback);
-		}
-
-		static public CGPDFScanner GetScannerFromInfo (IntPtr gchandle)
+		/// <param name="gchandle">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		static public CGPDFScanner? GetScannerFromInfo (IntPtr gchandle)
 		{
 			return GCHandle.FromIntPtr (gchandle).Target as CGPDFScanner;
 		}

@@ -1,4 +1,4 @@
-﻿//
+//
 // NSArray_GameplayKit.cs: Generic extensions to NSArray
 //
 // Authors:
@@ -7,28 +7,45 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 || !MONOMAC
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace GameplayKit {
-	[iOS (10,0), TV (10,0), Mac (10,12, onlyOn64: true)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public static class NSArray_GameplayKit {
 
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="This">The instance on which this method operates.</param>
+		///         <param name="randomSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("shuffledArrayWithRandomSource:")]
 		public static T [] GetShuffledArray<T> (this NSArray This, GKRandomSource randomSource) where T : class, INativeObject
 		{
-			if (randomSource == null)
-				throw new ArgumentNullException (nameof (randomSource));
-			return NSArray.ArrayFromHandle<T> (Messaging.IntPtr_objc_msgSend_IntPtr (This.Handle, Selector.GetHandle ("shuffledArrayWithRandomSource:"), randomSource.Handle));
+			if (randomSource is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (randomSource));
+			var result = NSArray.NonNullArrayFromHandleDropNullElements<T> (Messaging.IntPtr_objc_msgSend_IntPtr (This.Handle, Selector.GetHandle ("shuffledArrayWithRandomSource:"), randomSource.Handle));
+			GC.KeepAlive (This);
+			GC.KeepAlive (randomSource);
+			return result;
 		}
 
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="This">The instance on which this method operates.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("shuffledArray")]
 		public static T [] GetShuffledArray<T> (this NSArray This) where T : class, INativeObject
 		{
-			return NSArray.ArrayFromHandle<T> (Messaging.IntPtr_objc_msgSend (This.Handle, Selector.GetHandle ("shuffledArray")));
+			var result = NSArray.NonNullArrayFromHandleDropNullElements<T> (Messaging.IntPtr_objc_msgSend (This.Handle, Selector.GetHandle ("shuffledArray")));
+			GC.KeepAlive (This);
+			return result;
 		}
 	}
 }
-#endif

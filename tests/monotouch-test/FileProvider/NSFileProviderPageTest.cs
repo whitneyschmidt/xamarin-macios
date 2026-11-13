@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NSFileProviderPage
 //
 // Authors:
@@ -8,12 +8,9 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 && __IOS__
+#if __IOS__ && !__MACCATALYST__
 
-using System;
 using FileProvider;
-using Foundation;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.FileProvider {
 
@@ -26,10 +23,10 @@ namespace MonoTouchFixtures.FileProvider {
 		{
 			// The FileProvider's NSData constants are only available running on device.
 			TestRuntime.AssertDevice ();
-			TestRuntime.AssertXcodeVersion (9,0);
+			TestRuntime.AssertXcodeVersion (9, 0);
 
-			Assert.IsNotNull (NSFileProviderPage.InitialPageSortedByDate, "InitialPageSortedByDate should not be null");
-			Assert.IsNotNull (NSFileProviderPage.InitialPageSortedByName, "InitialPageSortedByName should not be null");
+			Assert.That (NSFileProviderPage.InitialPageSortedByDate, Is.Not.Null, "InitialPageSortedByDate should not be null");
+			Assert.That (NSFileProviderPage.InitialPageSortedByName, Is.Not.Null, "InitialPageSortedByName should not be null");
 		}
 	}
 }

@@ -21,56 +21,28 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 using System.Reflection;
 using System.Collections;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 #if !COREBUILD
 using CoreFoundation;
 using CoreGraphics;
 #endif
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Foundation {
-	[Native]
-	public enum NSStringEncoding : ulong {
-		ASCIIStringEncoding = 1,
-		NEXTSTEP = 2,
-		JapaneseEUC = 3,
-		UTF8 = 4,
-		ISOLatin1 = 5,
-		Symbol = 6,
-		NonLossyASCII = 7,
-		ShiftJIS = 8,
-		ISOLatin2 = 9,
-		Unicode = 10,
-		WindowsCP1251 = 11,
-		WindowsCP1252 = 12,
-		WindowsCP1253 = 13,
-		WindowsCP1254 = 14,
-		WindowsCP1250 = 15,
-		ISO2022JP = 21,
-		MacOSRoman = 30,
-		UTF16BigEndian = 0x90000100,
-		UTF16LittleEndian = 0x94000100,
-		UTF32 = 0x8c000100,
-		UTF32BigEndian = 0x98000100,
-		UTF32LittleEndian = 0x9c000100,
-	};
-	
-	[Native]
-	public enum NSStringCompareOptions : ulong {
-		CaseInsensitiveSearch = 1,
-		LiteralSearch = 2,
-		BackwardsSearch = 4,
-		AnchoredSearch = 8,
-		NumericSearch = 64,
-		DiacriticInsensitiveSearch = 128,
-		WidthInsensitiveSearch = 256,
-		ForcedOrderingSearch = 512,
-		RegularExpressionSearch = 1024
-	}
+
+#if COREBUILD
+	[Protocol]
+	public interface INSCopying { }
+	[Protocol]
+	public interface INSCoding { }
+	[Protocol]
+	public interface INSSecureCoding { }
+#endif
 
 	public partial class NSString : NSObject
 #if COREBUILD
@@ -78,157 +50,176 @@ namespace Foundation {
 #endif
 	 {
 #if !COREBUILD
-		const string selUTF8String = "UTF8String";
-		const string selInitWithCharactersLength = "initWithCharacters:length:";
+		/// <summary>An <see cref="NSString" /> instance for an empty (zero-length) string.</summary>
+		public static readonly NSString Empty = new NSString (String.Empty) { RemoveFromObjectMap = true };
 
-#if MONOMAC
-		static IntPtr selUTF8StringHandle = Selector.GetHandle (selUTF8String);
-		static IntPtr selInitWithCharactersLengthHandle = Selector.GetHandle (selInitWithCharactersLength);
-#endif
-
-		public static readonly NSString Empty = new NSString (String.Empty);
-
-		internal NSString (IntPtr handle, bool alloced) : base (handle, alloced)
+		internal NSString (NativeHandle handle, bool owns) : base (handle, owns)
 		{
 		}
 
-		static IntPtr CreateWithCharacters (IntPtr handle, string str, int offset, int length, bool autorelease = false)
-		{
-			unsafe {
-				fixed (char *ptrFirstChar = str) {
-					var ptrStart = (IntPtr) (ptrFirstChar + offset);
-	#if MONOMAC
-					handle = Messaging.IntPtr_objc_msgSend_IntPtr_IntPtr (handle, selInitWithCharactersLengthHandle, ptrStart, (IntPtr) length);
-	#else
-					handle = Messaging.IntPtr_objc_msgSend_IntPtr_IntPtr (handle, Selector.GetHandle (selInitWithCharactersLength), ptrStart, (IntPtr) length);
-	#endif
-
-					if (autorelease)
-						NSObject.DangerousAutorelease (handle);
-
-					return handle;
-				}
-			}
-		}
-
-		public static IntPtr CreateNative (string str)
+		/// <summary>Creates an Objective-C NSString from the C# string and returns a pointer to it.</summary>
+		/// <param name="str">C# String to wrap</param>
+		/// <returns>Pointer to the <see cref="NSString" /> object, must be released with <see cref="ReleaseNative" />.</returns>
+		/// <remarks>
+		///   <para>
+		///     This method creates an Objective-C NSString and returns an
+		///     <see cref="NativeHandle" /> that points to it.  This does not create the managed
+		///     NSString object that points to it, which is ideal for
+		///     transient strings that must be passed to Objective-C as it is
+		///     not necessary for the garbage collector to track this object.
+		///   </para>
+		///   <para>
+		///     The memory associated with this object should be released
+		///     by calling the <see cref="ReleaseNative" />
+		///     method.
+		///   </para>
+		///   <example>
+		///     <code lang="csharp lang-csharp"><![CDATA[
+		/// IntPtr objcString = NSString.CreateNative ("Hello");
+		/// // You can pass objcString to any methods that expect an Objective-C NSString pointer
+		/// NSString.ReleaseNative (objcString);
+		/// ]]></code></example>
+		///   </remarks>
+		public static NativeHandle CreateNative (string? str)
 		{
 			return CreateNative (str, false);
 		}
 
-		public static IntPtr CreateNative (string str, bool autorelease)
+		/// <inheritdoc cref="CreateNative(string)" />
+		/// <param name="str">C# String to wrap</param>
+		/// <param name="autorelease">Whether the return value is autoreleased (in which case <see cref="ReleaseNative" /> must not be called on the return value).</param>
+		public static NativeHandle CreateNative (string? str, bool autorelease)
 		{
-			if (str == null)
-				return IntPtr.Zero;
-
-			return CreateNative (str, 0, str.Length, autorelease);
+			return CFString.CreateNative (str, autorelease);
 		}
 
-		public static IntPtr CreateNative (string value, int start, int length)
+		/// <inheritdoc cref="CreateNative(string)" />
+		/// <param name="value">C# String to wrap</param>
+		/// <param name="start">The offset of the managed string to create the native string from.</param>
+		/// <param name="length">The length of the managed string to create the native string from.</param>
+		public static NativeHandle CreateNative (string? value, int start, int length)
 		{
-			return CreateNative (value, start, length, false);
+			return CFString.CreateNative (value, start, length, false);
 		}
 
-		public static IntPtr CreateNative (string value, int start, int length, bool autorelease)
+		/// <inheritdoc cref="CreateNative(string)" />
+		/// <param name="value">C# String to wrap</param>
+		/// <param name="start">The offset of the managed string to create the native string from.</param>
+		/// <param name="length">The length of the managed string to create the native string from.</param>
+		/// <param name="autorelease">Whether the return value is autoreleased (in which case <see cref="ReleaseNative" /> must not be called on the return value).</param>
+		public static NativeHandle CreateNative (string? value, int start, int length, bool autorelease)
 		{
-			if (value == null)
-				return IntPtr.Zero;
-
-			if (start < 0 || start > value.Length)
-				throw new ArgumentOutOfRangeException (nameof (start));
-
-			if (length < 0 || start > value.Length - length)
-				throw new ArgumentOutOfRangeException (nameof (length));
-
-#if MONOMAC
-			var handle = Messaging.IntPtr_objc_msgSend (class_ptr, Selector.AllocHandle);
-#else
-			var handle = Messaging.IntPtr_objc_msgSend (class_ptr, Selector.GetHandle (Selector.Alloc));
-#endif
-
-			return CreateWithCharacters (handle, value, start, length, autorelease);
+			return CFString.CreateNative (value, start, length, autorelease);
 		}
 
-		public static void ReleaseNative (IntPtr handle)
+		/// <param name="handle">Handle to the Objective-C native NSString object.</param>
+		/// <summary>Releases a native Objective-C string.</summary>
+		/// <remarks>Use this method to release Objective-C NSString handles that were previously allocated with <see cref="CreateNative(System.String)" />.</remarks>
+		public static void ReleaseNative (NativeHandle handle)
 		{
 			NSObject.DangerousRelease (handle);
 		}
-	
-		public NSString (string str) {
-			if (str == null)
-				throw new ArgumentNullException ("str");
 
-			Handle = CreateWithCharacters (Handle, str, 0, str.Length);
-		}
-
-		public NSString (string value, int start, int length) {
-			if (value == null)
-				throw new ArgumentNullException (nameof (value));
-
-			if (start < 0 || start > value.Length)
-				throw new ArgumentOutOfRangeException (nameof (start));
-
-			if (length < 0 || start > value.Length - length)
-				throw new ArgumentOutOfRangeException (nameof (length));
-
-			Handle = CreateWithCharacters (Handle, value, start, length);
-		}
-	
-		public unsafe override string ToString ()
+		/// <summary>Creates an <see cref="NSString" /> from a C# string.</summary>
+		/// <param name="str">A C# string to create an <see cref="NSString" /> from.</param>
+		public NSString (string str)
+			: base (CFString.CreateNative (ThrowHelper.ThrowIfNull (str)))
 		{
-			return FromHandle (Handle);
 		}
 
-		public static implicit operator string (NSString str)
+		/// <summary>Creates an <see cref="NSString" /> from a C# string.</summary>
+		/// <param name="value">A C# string to create an <see cref="NSString" /> from.</param>
+		/// <param name="start">The starting index of the <paramref name="value" /> string to create the <see cref="NSString" /> from.</param>
+		/// <param name="length">The length, starting at <paramref name="start" />, of the <paramref name="value" /> string to create the <see cref="NSString" /> from.</param>
+		public NSString (string value, int start, int length)
+			: base (CFString.CreateNative (ThrowHelper.ThrowIfNull (value), start, length, false))
 		{
-			if (((object) str) == null)
-				return null;
-			return str.ToString ();
 		}
 
-		public static explicit operator NSString (string str)
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		public override string ToString ()
 		{
-			if (str == null)
+			return FromHandle (Handle)!;
+		}
+
+		/// <summary>Converts the <see cref="NSString" /> to a managed string.</summary>
+		/// <param name="str">The NSString to convert.</param>
+		/// <returns>A managed string.</returns>
+		[return: NotNullIfNotNull (nameof (str))]
+		public static implicit operator string? (NSString? str)
+		{
+			return str?.ToString ();
+		}
+
+		/// <summary>Converts the managed string to an <see cref="NSString" />.</summary>
+		/// <param name="str">The managed string to convert.</param>
+		/// <returns>A <see cref="NSString" /> instance.</returns>
+		[return: NotNullIfNotNull (nameof (str))]
+		public static explicit operator NSString? (string? str)
+		{
+			if (str is null)
 				return null;
 			return new NSString (str);
 		}
 
-		public unsafe static string FromHandle (IntPtr usrhandle)
+		/// <summary>Utility method that returns a string from a pointer that points to an Objective-C NSString or CFString object.</summary>
+		/// <param name="usrhandle">Pointer to an Objective-C NSString or CFString object (not the managed NSString object).</param>
+		/// <returns>The Objective-C string in the NSString as a C# string.</returns>
+		public static string? FromHandle (NativeHandle usrhandle)
 		{
-			if (usrhandle == IntPtr.Zero)
-				return null;
-
-#if MONOMAC
-			return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (usrhandle, selUTF8StringHandle));
-#else
-			return Marshal.PtrToStringAuto (Messaging.IntPtr_objc_msgSend (usrhandle, Selector.GetHandle (selUTF8String)));
-#endif
+			return FromHandle (usrhandle, false);
 		}
 
-		public static bool Equals (NSString a, NSString b)
+		/// <summary>Utility method that returns a string from a pointer that points to an Objective-C NSString or CFString object.</summary>
+		/// <param name="handle">Pointer to an Objective-C NSString or CFString object (not the managed NSString object).</param>
+		/// <param name="owns">Whether the <paramref name="handle" /> should be released or not.</param>
+		/// <returns>The Objective-C string in the NSString as a C# string.</returns>
+		public static string? FromHandle (NativeHandle handle, bool owns)
+		{
+			return CFString.FromHandle (handle, owns);
+		}
+
+		/// <summary>Compare two <see cref="NSString" /> instances.</summary>
+		/// <param name="a">The first <see cref="NSString" /> to compare.</param>
+		/// <param name="b">The second <see cref="NSString" /> to compare.</param>
+		/// <returns><see langword="true" /> if equal, <see langword="false" /> otherwise.</returns>
+		public static bool Equals (NSString? a, NSString? b)
 		{
 			if ((a as object) == (b as object))
 				return true;
 
-			if (((object) a) == null || ((object) b) == null)
+			if (a is null || b is null)
 				return false;
 
 			if (a.Handle == b.Handle)
 				return true;
-			return a.IsEqualTo (b.Handle);
+			bool result = a.IsEqualTo (b.Handle);
+			GC.KeepAlive (b);
+			return result;
 		}
 
-		public static bool operator == (NSString a, NSString b)
+		/// <summary>Compare two <see cref="NSString" /> instances.</summary>
+		/// <param name="a">The first <see cref="NSString" /> to compare.</param>
+		/// <param name="b">The second <see cref="NSString" /> to compare.</param>
+		/// <returns><see langword="true" /> if equal, <see langword="false" /> otherwise.</returns>
+		public static bool operator == (NSString? a, NSString? b)
 		{
 			return Equals (a, b);
 		}
-		
-		public static bool operator != (NSString a, NSString b)
+
+		/// <summary>Compare two <see cref="NSString" /> instances.</summary>
+		/// <param name="a">The first <see cref="NSString" /> to compare.</param>
+		/// <param name="b">The second <see cref="NSString" /> to compare.</param>
+		/// <returns><see langword="true" /> if not equal, <see langword="false" /> otherwise.</returns>
+		public static bool operator != (NSString? a, NSString? b)
 		{
 			return !Equals (a, b);
 		}
 
-		public override bool Equals (Object obj)
+		/// <summary>Compare this <see cref="NSString" /> to another object.</summary>
+		/// <param name="obj">The other object to compare against.</param>
+		/// <returns><see langword="true" /> if equal, <see langword="false" /> otherwise.</returns>
+		public override bool Equals (object? obj)
 		{
 			return Equals (this, obj as NSString);
 		}
@@ -253,75 +244,94 @@ namespace Foundation {
 		extern static IntPtr xamarin_localized_string_format_8 (IntPtr fmt, IntPtr arg1, IntPtr arg2, IntPtr arg3, IntPtr arg4, IntPtr arg5, IntPtr arg6, IntPtr arg7, IntPtr arg8);
 		[DllImport ("__Internal")]
 		extern static IntPtr xamarin_localized_string_format_9 (IntPtr fmt, IntPtr arg1, IntPtr arg2, IntPtr arg3, IntPtr arg4, IntPtr arg5, IntPtr arg6, IntPtr arg7, IntPtr arg8, IntPtr arg9);
-		
+
+		/// <summary>Format a localizable string with the specified arguments.</summary>
+		/// <param name="format">The localizable string to format.</param>
+		/// <param name="args">The arguments to apply to the localizable string.</param>
+		/// <returns>A localized string with the specified format arguments applied.</returns>
 		public static NSString LocalizedFormat (string format, params object [] args)
 		{
 			using (var ns = new NSString (format))
 				return LocalizedFormat (ns, args);
 		}
-		
+
+		/// <summary>Format a localizable string with the specified arguments.</summary>
+		/// <param name="format">The localizable string to format.</param>
+		/// <param name="args">The arguments to apply to the localizable string.</param>
+		/// <returns>A localized string with the specified format arguments applied.</returns>
 		public static NSString LocalizedFormat (NSString format, params object [] args)
 		{
 			int argc = args.Length;
 			var nso = new NSObject [argc];
 			for (int i = 0; i < argc; i++)
-				nso [i] = NSObject.FromObject (args [i]);
-				
+				nso [i] = NSObject.FromObject (args [i])!;
+
 			return LocalizedFormat (format, nso);
 		}
-		       
+
+		/// <summary>Format a localizable string with the specified arguments.</summary>
+		/// <param name="format">The localizable string to format.</param>
+		/// <param name="args">The arguments to apply to the localizable string.</param>
+		/// <returns>A localized string with the specified format arguments applied.</returns>
 		public static NSString LocalizedFormat (NSString format, NSObject [] args)
 		{
-			switch (args.Length){
+			NSString result;
+			NativeHandle formatHandle = format.Handle;
+			switch (args.Length) {
 			case 0:
-				return new NSString (xamarin_localized_string_format (format.Handle));
+				result = new NSString (xamarin_localized_string_format (formatHandle));
+				break;
 			case 1:
-				return new NSString (xamarin_localized_string_format_1 (format.Handle, args[0].Handle));
+				result = new NSString (xamarin_localized_string_format_1 (formatHandle, args [0].Handle));
+				break;
 			case 2:
-				return new NSString (xamarin_localized_string_format_2 (format.Handle, args[0].Handle, args[1].Handle));
+				result = new NSString (xamarin_localized_string_format_2 (formatHandle, args [0].Handle, args [1].Handle));
+				break;
 			case 3:
-				return new NSString (xamarin_localized_string_format_3 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle));
+				result = new NSString (xamarin_localized_string_format_3 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle));
+				break;
 			case 4:
-				return new NSString (xamarin_localized_string_format_4 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle));
+				result = new NSString (xamarin_localized_string_format_4 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle));
+				break;
 			case 5:
-				return new NSString (xamarin_localized_string_format_5 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle, args[4].Handle));
+				result = new NSString (xamarin_localized_string_format_5 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle, args [4].Handle));
+				break;
 			case 6:
-				return new NSString (xamarin_localized_string_format_6 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle, args[4].Handle, args[5].Handle));
+				result = new NSString (xamarin_localized_string_format_6 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle, args [4].Handle, args [5].Handle));
+				break;
 			case 7:
-				return new NSString (xamarin_localized_string_format_7 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle, args[4].Handle, args[5].Handle, args[6].Handle));
+				result = new NSString (xamarin_localized_string_format_7 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle, args [4].Handle, args [5].Handle, args [6].Handle));
+				break;
 			case 8:
-				return new NSString (xamarin_localized_string_format_8 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle, args[4].Handle, args[5].Handle, args[6].Handle, args[7].Handle));
+				result = new NSString (xamarin_localized_string_format_8 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle, args [4].Handle, args [5].Handle, args [6].Handle, args [7].Handle));
+				break;
 			case 9:
-				return new NSString (xamarin_localized_string_format_9 (format.Handle, args[0].Handle, args[1].Handle, args[2].Handle, args[3].Handle, args[4].Handle, args[5].Handle, args[6].Handle, args[7].Handle, args[8].Handle));
+				result = new NSString (xamarin_localized_string_format_9 (formatHandle, args [0].Handle, args [1].Handle, args [2].Handle, args [3].Handle, args [4].Handle, args [5].Handle, args [6].Handle, args [7].Handle, args [8].Handle));
+				break;
 			default:
 				throw new Exception ("Unsupported number of arguments, maximum number is 9");
 			}
+			GC.KeepAlive (format);
+			GC.KeepAlive (args);
+			return result;
 		}
 
-		public NSString TransliterateString (NSStringTransform transform, bool reverse)
+		/// <summary>Transliterate this string using the specified string transformation.</summary>
+		/// <param name="transform">The string transformation to use.</param>
+		/// <param name="reverse">Whether to apply the transformation in reverse or not.</param>
+		/// <returns>The transliterated string.</returns>
+		public NSString? TransliterateString (NSStringTransform transform, bool reverse)
 		{
-			return TransliterateString (transform.GetConstant (), reverse);
+			return TransliterateString (transform.GetConstant ()!, reverse);
 		}
-		
+
+		/// <summary>Generates a hash code for the current instance.</summary>
+		/// <returns>A int containing the hash code for this instance.</returns>
+		/// <remarks>The algorithm used to generate the hash code is unspecified.</remarks>
 		public override int GetHashCode ()
 		{
-#if XAMCORE_2_0
-			// for unified NSObject already deals with `hash` for both 32/64 bits
 			return base.GetHashCode ();
-#else
-			// for classic there's no GetHashCode override in NSObject, so Hash makes sense
-			return (int) GetNativeHash ();
-#endif
 		}
-
-#if !MONOMAC && !XAMCORE_2_0
-		[Advice ("Use the version with a `ref float actualFontSize`")]
-		public CGSize DrawString (CGPoint point, nfloat width, UIKit.UIFont font, nfloat minFontSize, nfloat actualFontSize, UIKit.UILineBreakMode breakMode, UIKit.UIBaselineAdjustment adjustment)
-		{
-			nfloat temp = actualFontSize;
-			return DrawString (point, width, font, minFontSize, ref temp, breakMode, adjustment);
-		}
-#endif
 #endif // !COREBUILD
 	}
 }

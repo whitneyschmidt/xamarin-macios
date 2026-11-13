@@ -9,329 +9,593 @@
 //
 using System.ComponentModel;
 using AVFoundation;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 using CoreGraphics;
 using CoreLocation;
+using CoreMedia;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-using System;
-#if WATCH
-using AVMediaSelectionGroup = Foundation.NSObject;
-using AVMediaSelectionOption = Foundation.NSObject;
+
+#if MONOMAC
+using UIControlState = Foundation.NSObject;
+using UIImage = AppKit.NSImage;
+using UIInterfaceOrientation = Foundation.NSObject;
+using UIView = AppKit.NSView;
+using UIViewAnimationCurve = Foundation.NSObject;
+using UIViewController = AppKit.NSViewController;
+#else
+using NSImage = UIKit.UIImage;
 #endif
 
 namespace MediaPlayer {
-#if XAMCORE_2_0 || !MONOMAC
-	[Mac (10,12,2, onlyOn64: true)] // type exists only to expose fields
+	/// <summary>Abstract base class for <see cref="MediaPlayer.MPMediaItem" /> and <see cref="MediaPlayer.MPMediaItemCollection" /> classes.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaEntity_ClassReference/index.html">Apple documentation for <c>MPMediaEntity</c></related>
 	[BaseType (typeof (NSObject))]
-#if IOS || WATCH
-	// introduced in 4.2
-	[Watch (5,0)]
+#if !MONOMAC
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	interface MPMediaEntity : NSSecureCoding {
 #else
 	interface MPMediaItem : NSSecureCoding {
-#endif
+#endif // !MONOMAC
+		/// <param name="property">To be added.</param>
+		///         <summary>Returns a Boolean value that tells whether the specified <paramref name="property" /> can be used in a media property predicate.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("canFilterByProperty:")]
 		bool CanFilterByProperty (NSString property);
 
+		/// <param name="property">To be added.</param>
+		///         <summary>Returns the value for the specified <paramref name="property" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("valueForProperty:")]
+		[return: NullAllowed]
 		NSObject ValueForProperty (NSString property);
 
+		/// <param name="propertiesToEnumerate">To be added.</param>
+		///         <param name="enumerator">To be added.</param>
+		///         <summary>Runs the provided <paramref name="enumerator" /> on the values for the specified properties.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("enumerateValuesForProperties:usingBlock:")]
 		void EnumerateValues (NSSet propertiesToEnumerate, MPMediaItemEnumerator enumerator);
 
-		[iOS (8,0)]
+		/// <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[return: NullAllowed]
 		[Export ("objectForKeyedSubscript:")]
 		NSObject GetObject (NSObject key);
 
+		/// <summary>The value that is associated with the MPMediaEntityPropertyPersistentID constant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaEntityPropertyPersistentID")]
 		NSString PropertyPersistentID { get; }
 
-		[NoiOS, NoMac, NoTV, Watch (5,0)]
+		[NoiOS, NoMac]
+		[MacCatalyst (13, 1)]
 		[Export ("persistentID")]
 		ulong PersistentID { get; }
 
-#if IOS || WATCH
+#if IOS || TVOS
 	}
-#if MONOMAC || TVOS || WATCH
-	[Mac (10,12,2, onlyOn64: true)]
-	[Watch (5,0)]
+#if MONOMAC
 	[Static]
 #else
 	[BaseType (typeof (MPMediaEntity))]
 #endif
 	interface MPMediaItem {
 #endif
+		/// <param name="groupingType">Grouping type.</param>
+		///         <summary>Returns the persistent ID for the specified grouping type.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		[NoMac]
 		[NoTV]
-		[NoWatch]
-		[Export ("persistentIDPropertyForGroupingType:")][Static]
+		[MacCatalyst (13, 1)]
+		[Export ("persistentIDPropertyForGroupingType:")]
+		[Static]
 		string GetPersistentIDProperty (MPMediaGrouping groupingType);
 
+		/// <param name="groupingType">Grouping type.</param>
+		///         <summary>Returns the title for the specified grouping type</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		[NoMac]
 		[NoTV]
-		[NoWatch]
-		[Export ("titlePropertyForGroupingType:")][Static]
+		[MacCatalyst (13, 1)]
+		[Export ("titlePropertyForGroupingType:")]
+		[Static]
 		string GetTitleProperty (MPMediaGrouping groupingType);
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		/// 	  Persistent IDs can be used as unique identifiers across
+		/// 	  application launches and as long as the media item has not
+		/// 	  been changed or synchronized again with the host computer.
+		/// 	</remarks>
 		[Field ("MPMediaItemPropertyAlbumPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumPersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyArtistPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyArtistPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ArtistPersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumArtistPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		/// 	  Persistent IDs can be used as unique identifiers across
+		/// 	  application launches and as long as the media item has not
+		/// 	  been changed or synchronized again with the host computer.
+		/// 	</remarks>
 		[Field ("MPMediaItemPropertyAlbumArtistPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumArtistPersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyGenrePersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyGenrePersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString GenrePersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyComposerPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyComposerPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ComposerPersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyPodcastPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyPodcastPersistentID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PodcastPersistentIDProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyMediaType</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyMediaType")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString MediaTypeProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyTitle</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyTitle")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString TitleProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumTitle</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyAlbumTitle")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumTitleProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyArtist</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyArtist")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ArtistProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumArtist</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyAlbumArtist")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumArtistProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyGenre</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyGenre")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString GenreProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyComposer</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyComposer")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ComposerProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyPlaybackDuration</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyPlaybackDuration")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PlaybackDurationProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumTrackNumber</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyAlbumTrackNumber")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumTrackNumberProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAlbumTrackCount</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyAlbumTrackCount")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AlbumTrackCountProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyDiscNumber</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyDiscNumber")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString DiscNumberProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyDiscCount</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyDiscCount")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString DiscCountProperty { get; }
 
-		[Mac (10,13,1, onlyOn64: true)]
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyArtwork</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaItemPropertyArtwork")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ArtworkProperty { get; }
 
-		[iOS (7,0)]
+		/// <summary>The value that is associated with the MPMediaItemPropertyIsExplicit constant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPMediaItemPropertyIsExplicit")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString IsExplicitProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyLyrics</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyLyrics")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString LyricsProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyIsCompilation</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyIsCompilation")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString IsCompilationProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyReleaseDate</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyReleaseDate")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString ReleaseDateProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyBeatsPerMinute</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyBeatsPerMinute")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString BeatsPerMinuteProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyComments</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyComments")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString CommentsProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyAssetURL</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyAssetURL")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString AssetURLProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyPlayCount</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyPlayCount")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PlayCountProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertySkipCount</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertySkipCount")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString SkipCountProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyRating</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyRating")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString RatingProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyLastPlayedDate</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyLastPlayedDate")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString LastPlayedDateProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyUserGrouping</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyUserGrouping")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString UserGroupingProperty { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyPodcastTitle</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyPodcastTitle")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PodcastTitleProperty { get; }
 
-		[iOS (6,0)]
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyBookmarkTime</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyBookmarkTime")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString BookmarkTimeProperty { get; }
 
-		[iOS (6,0)]
+		/// <summary>Represents the value associated with the constant MPMediaItemPropertyIsCloudItem</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		[Field ("MPMediaItemPropertyIsCloudItem")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString IsCloudItemProperty { get; }
 
-		[iOS (9,2)]
-		[TV (9,2)]
+		/// <summary>The value that is associated with the MPMediaItemPropertyHasProtectedAsset constant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaItemPropertyHasProtectedAsset")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString HasProtectedAssetProperty { get; }
 
-		[iOS (10, 0)]
+		/// <summary>The value that is associated with the MPMediaItemPropertyDateAdded constant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaItemPropertyDateAdded")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString DateAddedProperty { get; }
 
-		[iOS (10,3)]
-		[TV (10,3)]
+#if !__MACOS__
+		/// <summary>Backing store for the <see cref="MPMediaItem.PlaybackStoreID" /> property.</summary>
+#endif
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaItemPropertyPlaybackStoreID")]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		NSString PlaybackStoreIDProperty { get; }
+
+		[TV (14, 5), iOS (14, 5)]
+		[MacCatalyst (14, 5)]
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[Field ("MPMediaItemPropertyIsPreorder")]
+		NSString IsPreorderProperty { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[Watch (5,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPMediaItemArtwork {
-#if !MONOMAC
-		[iOS (10,0)]
-		[TV (10,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithBoundsSize:requestHandler:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (CGSize boundsSize, Func<CGSize, UIImage> requestHandler);
-
-		[Deprecated (PlatformName.iOS, 10, 0)]
-		[Export ("initWithImage:")]
-		IntPtr Constructor (UIImage image);
-		
-		[Export ("imageWithSize:")]
-		[return: NullAllowed]
-		UIImage ImageWithSize (CGSize size);
-#else
-		[Export ("initWithBoundsSize:requestHandler:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (CGSize boundsSize, Func<CGSize, NSImage> requestHandler);
-
-		[Export ("imageWithSize:")]
-		[return: NullAllowed]
-		NSImage ImageWithSize (CGSize size);
-#endif
-
-		[Export ("bounds")]
-		CGRect Bounds { get; }
+		NativeHandle Constructor (CGSize boundsSize, Func<CGSize, UIImage> requestHandler);
 
 		[NoMac]
 		[Deprecated (PlatformName.iOS, 10, 0)]
+		[Deprecated (PlatformName.TvOS, 10, 0)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
+		[Export ("initWithImage:")]
+		NativeHandle Constructor (UIImage image);
+
+		/// <summary>Get an image of a specific size for the artwork.</summary>
+		/// <param name="size">The size of the returned image.</param>
+		[Export ("imageWithSize:")]
+		[return: NullAllowed]
+		UIImage ImageWithSize (CGSize size);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("bounds")]
+		CGRect Bounds { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NoMac]
+		[Deprecated (PlatformName.iOS, 10, 0)]
+		[Deprecated (PlatformName.TvOS, 10, 0)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("imageCropRect")]
 		CGRect ImageCropRectangle { get; }
 	}
 
+	/// <summary>A sorted set of <see cref="MediaPlayer.MPMediaItem" />s.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaItemCollection_ClassReference/index.html">Apple documentation for <c>MPMediaItemCollection</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	// Objective-C exception thrown.  Name: MPMediaItemCollectionInitException Reason: -init is not supported, use -initWithItems:
 	[DisableDefaultCtor]
-#if XAMCORE_2_0 && IOS
+#if IOS
 	// introduced in 4.2 - but the type was never added to classic
 	[BaseType (typeof (MPMediaEntity))]
 #else
 	[BaseType (typeof (NSObject))]
 #endif
-#if XAMCORE_3_0 || !XAMCORE_2_0 || !IOS
 	interface MPMediaItemCollection : NSSecureCoding {
-#else
-	// part of the bug is that we inlined MPMediaEntity needlessly
-	interface MPMediaItemCollection : MPMediaEntity, NSSecureCoding {
-#endif
+		/// <param name="items">To be added.</param>
+		///         <summary>Creates a new <see cref="MediaPlayer.MPMediaItemCollection" /> by copying the provided <paramref name="items" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("collectionWithItems:")]
 		MPMediaItemCollection FromItems (MPMediaItem [] items);
 
+		/// <param name="items">To be added.</param>
+		/// <summary>Creates a new <see cref="MediaPlayer.MPMediaItemCollection" /> from the provided <paramref name="items" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithItems:")]
-		IntPtr Constructor (MPMediaItem [] items);
+		NativeHandle Constructor (MPMediaItem [] items);
 
+		/// <summary>Gets an array that contains the items in the collection.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("items")]
 		MPMediaItem [] Items { get; }
 
+		/// <summary>Gets a representative item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("representativeItem")]
+		[NullAllowed]
 		MPMediaItem RepresentativeItem { get; }
 
+		/// <summary>Gets the number of items in the collection.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("count")]
 		nint Count { get; }
 
+		/// <summary>Gets an array that contains the media types of the items in the collection.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("mediaTypes")]
 		MPMediaType MediaTypes { get; }
 	}
 
+	/// <summary>Represents the synced set of <see cref="MediaPlayer.MPMediaItem" />s on a device.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaLibrary_ClassReference/index.html">Apple documentation for <c>MPMediaLibrary</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMediaLibrary : NSSecureCoding {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("defaultMediaLibrary")]
 		MPMediaLibrary DefaultMediaLibrary { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("lastModifiedDate")]
 		NSDate LastModifiedDate { get; }
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("beginGeneratingLibraryChangeNotifications")]
 		void BeginGeneratingLibraryChangeNotifications ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("endGeneratingLibraryChangeNotifications")]
 		void EndGeneratingLibraryChangeNotifications ();
 
@@ -339,924 +603,1631 @@ namespace MediaPlayer {
 		[Notification]
 		NSString DidChangeNotification { get; }
 
-		[iOS (9,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("authorizationStatus")]
 		MPMediaLibraryAuthorizationStatus AuthorizationStatus { get; }
 
-		[iOS (9,3)]
+		/// <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
-		[Async]
+		[Async (XmlDocs = """
+			<summary>To be added.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous RequestAuthorization operation.  The value of the TResult parameter is of type System.Action&lt;MediaPlayer.MPMediaLibraryAuthorizationStatus&gt;.</para>
+			        </returns>
+			<remarks>To be added.</remarks>
+			""")]
 		[Export ("requestAuthorization:")]
 		void RequestAuthorization (Action<MPMediaLibraryAuthorizationStatus> handler);
 
-		[iOS (9,3)]
+		/// <param name="productID">To be added.</param>
+		///         <param name="completionHandler">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("addItemWithProductID:completionHandler:")]
-		[Async]
-#if XAMCORE_2_0 && IOS
-		// MPMediaEntity was not part of classic
-		void AddItem (string productID, [NullAllowed] Action<MPMediaEntity[], NSError> completionHandler);
+		[Async (XmlDocs = """
+			<param name="productID">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous AddItem operation.  The value of the TResult parameter is of type System.Action&lt;MediaPlayer.MPMediaEntity[],Foundation.NSError&gt;.</para>
+			        </returns>
+			<remarks>To be added.</remarks>
+			""")]
+#if IOS
+		void AddItem (string productID, [NullAllowed] Action<MPMediaEntity [], NSError> completionHandler);
 #else
-		void AddItem (string productID, [NullAllowed] Action<MPMediaItem[], NSError> completionHandler);
+		void AddItem (string productID, [NullAllowed] Action<MPMediaItem [], NSError> completionHandler);
 #endif
 
-		[iOS (9,3)]
-		[Async]
+		/// <param name="uuid">To be added.</param>
+		///         <param name="creationMetadata">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Async (XmlDocs = """
+			<param name="uuid">To be added.</param>
+			<param name="creationMetadata">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous GetPlaylist operation.  The value of the TResult parameter is of type System.Action&lt;MediaPlayer.MPMediaPlaylist,Foundation.NSError&gt;.</para>
+			        </returns>
+			<remarks>
+			          <para copied="true">The GetPlaylistAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("getPlaylistWithUUID:creationMetadata:completionHandler:")]
 		void GetPlaylist (NSUuid uuid, [NullAllowed] MPMediaPlaylistCreationMetadata creationMetadata, Action<MPMediaPlaylist, NSError> completionHandler);
 	}
 
-#if !MONOMAC && !WATCH
+	/// <summary>A <see cref="UIKit.UIViewController" /> that allows the application user to select a media item.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaPickerController_ClassReference/index.html">Apple documentation for <c>MPMediaPickerController</c></related>
 	[NoTV]
-	[BaseType (typeof (UIViewController), Delegates=new string [] { "WeakDelegate" }, Events=new Type [] {typeof(MPMediaPickerControllerDelegate)})]
+	[NoMac]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (UIViewController), Delegates = new string [] { "WeakDelegate" }, Events = new Type [] { typeof (MPMediaPickerControllerDelegate) })]
 	interface MPMediaPickerController {
+		/// <param name="mediaTypes">To be added.</param>
+		/// <summary>Creates a new <see cref="MediaPlayer.MPMediaPickerController" /> for media with the specified <paramref name="mediaTypes" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithMediaTypes:")]
-		IntPtr Constructor (MPMediaType mediaTypes);
+		NativeHandle Constructor (MPMediaType mediaTypes);
 
+		/// <summary>Gets the media types that the picker enables the user to pick.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("mediaTypes")]
 		MPMediaType MediaTypes { get; }
 
+		/// <summary>An object that can respond to the delegate protocol for this type</summary>
+		///         <value>The instance that will respond to events and data requests.</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>   Methods must be decorated with the [Export ("selectorName")] attribute to respond to each method from the protocol.   Alternatively use the Delegate method which is strongly typed and does not require the [Export] attributes on methods.</para>
+		///         </remarks>
 		[Export ("delegate", ArgumentSemantic.Weak), NullAllowed]
 		NSObject WeakDelegate { get; set; }
 
+		/// <summary>An instance of the MediaPlayer.IMPMediaPickerControllerDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the MediaPlayer.IMPMediaPickerControllerDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		MPMediaPickerControllerDelegate Delegate { get; set; }
+		IMPMediaPickerControllerDelegate Delegate { get; set; }
 
+		/// <summary>Gets or sets a Boolean value that controls whether the user can pick multiple items.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("allowsPickingMultipleItems")]
 		bool AllowsPickingMultipleItems { get; set; }
 
+		/// <summary>Gets or sets a string that appears above the picker.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed] // by default this property is null
 		[Export ("prompt", ArgumentSemantic.Copy)]
 		string Prompt { get; set; }
 
-		[iOS (6,0)]
+		/// <summary>Gets or sets a Boolean value that controls whether items from the cloud are shown.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("showsCloudItems")]
 		bool ShowsCloudItems { get; set; }
 
-		[iOS (9,2)]
+		/// <summary>Gets or sets a Boolean value that controls whether items that have protected assets are shown.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("showsItemsWithProtectedAssets")]
 		bool ShowsItemsWithProtectedAssets { get; set; }
 	}
 
+	interface IMPMediaPickerControllerDelegate { }
+
+	/// <summary>A delegate object for the <see cref="MediaPlayer.MPMediaPickerController" /> class. Application developers can use this deelegate to respond to events relating to media-item selection.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaPickerControllerDelegate_ProtocolReference/index.html">Apple documentation for <c>MPMediaPickerControllerDelegate</c></related>
 	[NoTV]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface MPMediaPickerControllerDelegate {
-		[Export ("mediaPicker:didPickMediaItems:"), EventArgs ("ItemsPicked"), EventName ("ItemsPicked")]
+		/// <param name="sender">To be added.</param>
+		///         <param name="mediaItemCollection">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("mediaPicker:didPickMediaItems:"), EventArgs ("ItemsPicked", XmlDocs = """
+			<summary>Event that is raised when items are picked.</summary>
+			<remarks>To be added.</remarks>
+			"""), EventName ("ItemsPicked")]
 		void MediaItemsPicked (MPMediaPickerController sender, MPMediaItemCollection mediaItemCollection);
-		
-		[Export ("mediaPickerDidCancel:"), EventArgs ("MPMediaPickerController"), EventName ("DidCancel")]
+
+		/// <param name="sender">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("mediaPickerDidCancel:"), EventArgs ("MPMediaPickerController", XmlDocs = """
+			<summary>Method that is called after the user dismisses the picker by canceling it.</summary>
+			<remarks>To be added.</remarks>
+			"""), EventName ("DidCancel")]
 		void MediaPickerDidCancel (MPMediaPickerController sender);
 	}
-#endif
 
+	/// <summary>A playable collection of <see cref="MediaPlayer.MPMediaItem" />s.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaPlaylist_ClassReference/index.html">Apple documentation for <c>MPMediaPlaylist</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPMediaItemCollection))]
 	// Objective-C exception thrown.  Name: MPMediaItemCollectionInitException Reason: -init is not supported, use -initWithItems:
 	[DisableDefaultCtor]
 	interface MPMediaPlaylist : NSSecureCoding {
+		/// <param name="items">To be added.</param>
+		/// <summary>Creates a new <see cref="MediaPlayer.MPMediaPlaylist" /> from the specified <paramref name="items" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithItems:")]
-		IntPtr Constructor (MPMediaItem [] items);
+		NativeHandle Constructor (MPMediaItem [] items);
 
+		/// <param name="property">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("canFilterByProperty:")]
 		bool CanFilterByProperty (string property);
 
+		/// <param name="property">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("valueForProperty:")]
 		NSObject ValueForProperty (string property);
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("persistentID")]
 		ulong PersistentID { get; }
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("name")]
+		[NullAllowed]
 		string Name { get; }
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playlistAttributes")]
 		MPMediaPlaylistAttribute PlaylistAttributes { get; }
 
-		[iOS (8,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("seedItems")]
-		MPMediaItem [] SeedItems { get; }		
+		[NullAllowed]
+		MPMediaItem [] SeedItems { get; }
 
-		[iOS (9,3)]
+		/// <summary>Gets the user-supplied playlist description.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("descriptionText")]
 		string DescriptionText { get; }
 
-		[iOS (9,3)]
+		/// <summary>When overridden by the developer, gets the playlist display name. The default value is the application name.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("authorDisplayName")]
 		string AuthorDisplayName { get; }
 
-		[iOS (9,3)]
-		[Async]
+		/// <param name="productID">To be added.</param>
+		///         <param name="completionHandler">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Async (XmlDocs = """
+			<param name="productID">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>A task that represents the asynchronous AddItem operation</returns>
+			<remarks>To be added.</remarks>
+			""")]
 		[Export ("addItemWithProductID:completionHandler:")]
 		void AddItem (string productID, [NullAllowed] Action<NSError> completionHandler);
 
-		[iOS (9,3)]
-		[Async]
+		/// <param name="mediaItems">To be added.</param>
+		///         <param name="completionHandler">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Async (XmlDocs = """
+			<param name="mediaItems">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>A task that represents the asynchronous AddMediaItems operation</returns>
+			<remarks>
+			          <para copied="true">The AddMediaItemsAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("addMediaItems:completionHandler:")]
-		void AddMediaItems (MPMediaItem[] mediaItems, [NullAllowed] Action<NSError> completionHandler);
+		void AddMediaItems (MPMediaItem [] mediaItems, [NullAllowed] Action<NSError> completionHandler);
+
+		[iOS (14, 0)]
+		[MacCatalyst (14, 0)]
+		[NullAllowed, Export ("cloudGlobalID")]
+		string CloudGlobalId { get; }
 	}
 
-	[NoMac, Watch (5,0)]
+	/// <summary>Properties of a <see cref="MediaPlayer.MPMediaPlaylist" />, such as name, attributes, and seed items.</summary>
+	/// <remarks>To be added.</remarks>
+	[Mac (10, 16)]
+	[MacCatalyst (13, 1)]
 	[Static]
 	interface MPMediaPlaylistProperty {
+		/// <summary>Represents the value associated with the constant MPMediaPlaylistPropertyPersistentID</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPMediaPlaylistPropertyPersistentID")]
 		NSString PersistentID { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaPlaylistPropertyName</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPMediaPlaylistPropertyName")]
 		NSString Name { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaPlaylistPropertyPlaylistAttributes</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPMediaPlaylistPropertyPlaylistAttributes")]
 		NSString PlaylistAttributes { get; }
 
+		/// <summary>Represents the value associated with the constant MPMediaPlaylistPropertySeedItems</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPMediaPlaylistPropertySeedItems")]
 		NSString SeedItems { get; }
 
-		[iOS (9, 3)]
+		/// <summary>Gets the description text.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NoTV] // do not work on AppleTV devices (only in simulator)
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaPlaylistPropertyDescriptionText")]
 		NSString DescriptionText { get; }
 
-		[iOS (9, 3)]
+		/// <summary>Gets the display name for the author.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NoTV] // do not work on AppleTV devices (only in simulator)
+		[MacCatalyst (13, 1)]
 		[Field ("MPMediaPlaylistPropertyAuthorDisplayName")]
 		NSString AuthorDisplayName { get; }
+
+		[iOS (14, 0)]
+		[TV (14, 0)]
+		[MacCatalyst (14, 0)]
+		[Field ("MPMediaPlaylistPropertyCloudGlobalID")]
+		NSString CloudGlobalId { get; }
 	}
 
+	/// <summary>Allows the application developer to programmatically search an <see cref="MediaPlayer.MPMediaLibrary" /> by applying zero-or-more <see cref="MediaPlayer.MPMediaPredicate" />s and an optional <see cref="MediaPlayer.MPMediaGrouping" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaQuery_ClassReference/index.html">Apple documentation for <c>MPMediaQuery</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMediaQuery : NSSecureCoding, NSCopying {
+		/// <param name="filterPredicates">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithFilterPredicates:")]
-		IntPtr Constructor ([NullAllowed] NSSet filterPredicates);
+		NativeHandle Constructor ([NullAllowed] NSSet filterPredicates);
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed] // by default this property is null
 		[Export ("filterPredicates", ArgumentSemantic.Retain)]
 		NSSet FilterPredicates { get; set; }
 
+		/// <param name="predicate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("addFilterPredicate:")]
 		void AddFilterPredicate (MPMediaPredicate predicate);
 
+		/// <param name="predicate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeFilterPredicate:")]
 		void RemoveFilterPredicate (MPMediaPredicate predicate);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("items")]
+		[NullAllowed]
 		MPMediaItem [] Items { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("collections")]
+		[NullAllowed]
 		MPMediaItemCollection [] Collections { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("groupingType")]
 		MPMediaGrouping GroupingType { get; set; }
-#if XAMCORE_2_0
-		[Export ("albumsQuery")][Static]
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("albumsQuery")]
+		[Static]
 		MPMediaQuery AlbumsQuery { get; }
 
-		[Export ("artistsQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("artistsQuery")]
+		[Static]
 		MPMediaQuery ArtistsQuery { get; }
 
-		[Export ("songsQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("songsQuery")]
+		[Static]
 		MPMediaQuery SongsQuery { get; }
 
-		[Export ("playlistsQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("playlistsQuery")]
+		[Static]
 		MPMediaQuery PlaylistsQuery { get; }
 
-		[Export ("podcastsQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("podcastsQuery")]
+		[Static]
 		MPMediaQuery PodcastsQuery { get; }
 
-		[Export ("audiobooksQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("audiobooksQuery")]
+		[Static]
 		MPMediaQuery AudiobooksQuery { get; }
 
-		[Export ("compilationsQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("compilationsQuery")]
+		[Static]
 		MPMediaQuery CompilationsQuery { get; }
 
-		[Export ("composersQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("composersQuery")]
+		[Static]
 		MPMediaQuery ComposersQuery { get; }
 
-		[Export ("genresQuery")][Static]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("genresQuery")]
+		[Static]
 		MPMediaQuery GenresQuery { get; }
-#else
-		[Export ("albumsQuery")][Static]
-		MPMediaQuery albumsQuery { get; }
-		
-		[Export ("artistsQuery")][Static]
-		MPMediaQuery artistsQuery { get; }
-		
-		[Export ("songsQuery")][Static]
-		MPMediaQuery songsQuery { get; }
-		
-		[Export ("playlistsQuery")][Static]
-		MPMediaQuery playlistsQuery { get; }
-		
-		[Export ("podcastsQuery")][Static]
-		MPMediaQuery podcastsQuery { get; }
-		
-		[Export ("audiobooksQuery")][Static]
-		MPMediaQuery audiobooksQuery { get; }
-		
-		[Export ("compilationsQuery")][Static]
-		MPMediaQuery compilationsQuery { get; }
-		
-		[Export ("composersQuery")][Static]
-		MPMediaQuery composersQuery { get; }
-		
-		[Export ("genresQuery")][Static]
-		MPMediaQuery genresQuery { get; }
-#endif
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("collectionSections")]
+		[NullAllowed]
 		MPMediaQuerySection [] CollectionSections { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("itemSections")]
+		[NullAllowed]
 		MPMediaQuerySection [] ItemSections { get; }
 	}
 
+	/// <summary>A base class for types that specify filters for <see cref="MediaPlayer.MPMediaQuery" /> queries.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaPredicate_ClassReference/index.html">Apple documentation for <c>MPMediaPredicate</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMediaPredicate : NSSecureCoding {
 	}
 
+	/// <summary>A type of <see cref="MediaPlayer.MPMediaPredicate" /> that evaluates <see cref="MediaPlayer.MPMediaType" />s.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMediaPropertyPredicate_ClassReference/index.html">Apple documentation for <c>MPMediaPropertyPredicate</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPMediaPredicate))]
 	interface MPMediaPropertyPredicate {
+		/// <param name="value">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="property">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("predicateWithValue:forProperty:")]
 		MPMediaPropertyPredicate PredicateWithValue ([NullAllowed] NSObject value, string property);
 
+		/// <param name="value">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="property">To be added.</param>
+		///         <param name="comparisonType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("predicateWithValue:forProperty:comparisonType:")]
 		MPMediaPropertyPredicate PredicateWithValue ([NullAllowed] NSObject value, string property, MPMediaPredicateComparison comparisonType);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("property", ArgumentSemantic.Copy)]
 		string Property { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("value", ArgumentSemantic.Copy)]
+		[NullAllowed]
 		NSObject Value { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("comparisonType")]
 		MPMediaPredicateComparison ComparisonType { get; }
 	}
 
+	/// <summary>Logs metrics relating to streaming playback of a movie.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMovieAccessLog_Class/index.html">Apple documentation for <c>MPMovieAccessLog</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMovieAccessLog : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("events")]
 		MPMovieAccessLogEvent [] Events { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("extendedLogDataStringEncoding")]
 		NSStringEncoding ExtendedLogDataStringEncoding { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("extendedLogData")]
 		NSData ExtendedLogData { get; }
 	}
 
+	/// <summary>A log of errors that occurred during network resources.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMovieErrorLog_Class/index.html">Apple documentation for <c>MPMovieErrorLog</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMovieErrorLog : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("events")]
 		MPMovieErrorLogEvent [] Events { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("extendedLogDataStringEncoding")]
 		NSStringEncoding ExtendedLogDataStringEncoding { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("extendedLogData")]
 		NSData ExtendedLogData { get; }
 	}
 
+	/// <summary>Represents a specific metric or event that occurred during network playback of a movie.</summary>
+	///     
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMovieAccessLogEvent_Class/index.html">Apple documentation for <c>MPMovieAccessLogEvent</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMovieAccessLogEvent : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfSegmentsDownloaded")]
 		nint SegmentedDownloadedCount { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackStartDate")]
 		NSData PlaybackStartDate { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("URI")]
 		string Uri { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("serverAddress")]
 		string ServerAddress { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfServerAddressChanges")]
 		nint ServerAddressChangeCount { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackSessionID")]
 		string PlaybackSessionID { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackStartOffset")]
 		double PlaybackStartOffset { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("segmentsDownloadedDuration")]
 		double SegmentsDownloadedDuration { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("durationWatched")]
 		double DurationWatched { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfStalls")]
 		nint StallCount { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfBytesTransferred")]
 		long BytesTransferred { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("observedBitrate")]
 		double ObservedBitrate { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("indicatedBitrate")]
 		double IndicatedBitrate { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfDroppedVideoFrames")]
 		nint DroppedVideoFrameCount { get; }
 	}
 
+	/// <summary>An event documenting a network playback error.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMovieErrorLogEvent_Class/index.html">Apple documentation for <c>MPMovieErrorLogEvent</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface MPMovieErrorLogEvent : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("date")]
 		NSDate Date { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("URI")]
 		string Uri { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("serverAddress")]
 		string ServerAddress { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackSessionID")]
 		string PlaybackSessionID { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("errorStatusCode")]
 		nint ErrorStatusCode { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("errorDomain")]
 		string ErrorDomain { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("errorComment")]
 		string ErrorComment { get; }
 	}
 
+	/// <summary>Provides data for the  event.</summary>
 	[NoMac]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	interface MPMoviePlayerFinishedEventArgs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerPlaybackDidFinishReasonUserInfoKey")]
 		MPMovieFinishReason FinishReason { get; }
 	}
 
-#if !MONOMAC
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	/// <summary>Provides data for the  event.</summary>
+	[NoMac]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	interface MPMoviePlayerFullScreenEventArgs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerFullscreenAnimationDurationUserInfoKey")]
 		double AnimationDuration { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerFullscreenAnimationCurveUserInfoKey")]
 		UIViewAnimationCurve AnimationCurve { get; }
 	}
 
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	/// <summary>Provides data for the  event.</summary>
+	[NoMac]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	interface MPMoviePlayerThumbnailEventArgs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerThumbnailImageKey")]
 		UIImage Image { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerThumbnailTimeKey")]
 		double Time { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerThumbnailErrorKey")]
 		NSError Error { get; }
 	}
-#endif
 
+	/// <summary>Provides data for the  event.</summary>
 	[NoMac]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	interface MPMoviePlayerTimedMetadataEventArgs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("MPMoviePlayerTimedMetadataUserInfoKey")]
 		MPTimedMetadata [] TimedMetadata { get; }
 	}
 
-	// no [Model] yet... it can be easily created in user code (all abstract) if needed
 	[NoMac]
-	[Watch (5,0)]
+	[TV (16, 0)]
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPMediaPlayback {
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("play")]
 		void Play ();
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("stop")]
 		void Stop ();
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("pause")]
 		void Pause ();
-		
+
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("prepareToPlay")]
 		void PrepareToPlay ();
 
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("isPreparedToPlay")]
 		bool IsPreparedToPlay { get; }
 
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("currentPlaybackTime")]
 		double CurrentPlaybackTime { get; set; }
 
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("currentPlaybackRate")]
 		float CurrentPlaybackRate { get; set; } // float, not CGFloat
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("beginSeekingForward")]
 		void BeginSeekingForward ();
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("beginSeekingBackward")]
 		void BeginSeekingBackward ();
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("endSeeking")]
 		void EndSeeking ();
 	}
 
-#if !MONOMAC 
-
-#if WATCH
-	[Static]
-	interface MPMoviePlayerController {
-#else
+	/// <summary>A class that manages the playback of a movie from a file or via streaming.</summary>
+	///     
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMoviePlayerController_Class/index.html">Apple documentation for <c>MPMoviePlayerController</c></related>
+	[NoMac]
 	[NoTV]
-	[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+	[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+	[MacCatalyst (14, 0)] // docs says 13.0 but this throws: NSInvalidArgumentException Reason: MPMoviePlayerController is no longer available. Use AVPlayerViewController in AVKit.
+	[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 	[BaseType (typeof (NSObject))]
 	interface MPMoviePlayerController : MPMediaPlayback {
-#endif
-		[NoWatch]
+		/// <param name="url">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
 		[Export ("initWithContentURL:")]
-		IntPtr Constructor (NSUrl url);
+		NativeHandle Constructor (NSUrl url);
 
-		[NoWatch]
-		[Export ("backgroundColor", ArgumentSemantic.Retain)]
-		// <quote>You should avoid using this property. It is available only when you use the initWithContentURL: method to initialize the movie player controller object.</quote>
-		[Availability (Deprecated = Platform.iOS_3_2, Obsoleted = Platform.iOS_8_0, Message = "Do not use; this API was removed and is not always available.")]
-		UIColor BackgroundColor { get; set; }
-
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("scalingMode")]
 		MPMovieScalingMode ScalingMode { get; set; }
 
-		[NoWatch]
-		[Export ("movieControlMode")]
-		[Availability (Deprecated = Platform.iOS_3_2, Obsoleted = Platform.iOS_8_0, Message = "Do not use; this API was removed.")]
-		MPMovieControlMode MovieControlMode { get; set; }
-
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initialPlaybackTime")]
 		double InitialPlaybackTime { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed] // by default this property is null
 		[Export ("contentURL", ArgumentSemantic.Copy)]
 		NSUrl ContentUrl { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("view")]
 		UIView View { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("backgroundView")]
 		UIView BackgroundView { get; }
-		
-		[NoWatch]
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("playbackState")]
 		MPMoviePlaybackState PlaybackState { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("loadState")]
 		MPMovieLoadState LoadState { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("controlStyle")]
 		MPMovieControlStyle ControlStyle { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("repeatMode")]
 		MPMovieRepeatMode RepeatMode { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("shouldAutoplay")]
 		bool ShouldAutoplay { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("useApplicationAudioSession")]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		bool UseApplicationAudioSession { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("fullscreen")]
 		bool Fullscreen { [Bind ("isFullscreen")] get; set; }
 
-		[NoWatch]
+		/// <param name="fullscreen">To be added.</param>
+		///         <param name="animated">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("setFullscreen:animated:")]
 		void SetFullscreen (bool fullscreen, bool animated);
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("allowsAirPlay")]
 		bool AllowsAirPlay { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("airPlayVideoActive")]
 		bool AirPlayVideoActive { [Bind ("isAirPlayVideoActive")] get; }
 
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0)]
+		/// <summary>Developers should not use this deprecated property. </summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("accessLog")]
 		MPMovieAccessLog AccessLog { get; }
 
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("errorLog")]
 		MPMovieErrorLog ErrorLog { get; }
 
 		// Brought it from the MPMediaPlayback.h
 
-		[NoWatch]
+		/// <param name="time">To be added.</param>
+		///         <param name="timeOption">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("thumbnailImageAtTime:timeOption:")]
-		[Availability (Deprecated = Platform.iOS_7_0, Message = "Use 'RequestThumbnails' instead.")]
+		[Deprecated (PlatformName.iOS, 7, 0, message: "Use 'RequestThumbnails' instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'RequestThumbnails' instead.")]
 		UIImage ThumbnailImageAt (double time, MPMovieTimeOption timeOption);
 
-		[NoWatch]
+		/// <param name="doubleNumbers">To be added.</param>
+		///         <param name="timeOption">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("requestThumbnailImagesAtTimes:timeOption:")]
 		void RequestThumbnails (NSNumber [] doubleNumbers, MPMovieTimeOption timeOption);
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("cancelAllThumbnailImageRequests")]
 		void CancelAllThumbnailImageRequests ();
 
 		//
 		// From interface MPMovieProperties
 		//
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("movieMediaTypes")]
 		MPMovieMediaType MovieMediaTypes { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("movieSourceType")]
 		MPMovieSourceType SourceType { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("duration")]
 		double Duration { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("playableDuration")]
 		double PlayableDuration { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("naturalSize")]
 		CGSize NaturalSize { get; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("endPlaybackTime")]
 		double EndPlaybackTime { get; set; }
 
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("timedMetadata")]
 		MPTimedMetadata [] TimedMetadata { get; }
 
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerScalingModeDidChangeNotification")]
 		[Notification]
 		NSString ScalingModeDidChangeNotification { get; }
 
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerPlaybackDidFinishNotification")]
 		[Notification (typeof (MPMoviePlayerFinishedEventArgs))]
 		NSString PlaybackDidFinishNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerPlaybackDidFinishReasonUserInfoKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerPlaybackDidFinishReasonUserInfoKey")] // NSNumber (MPMovieFinishReason)
 		NSString PlaybackDidFinishReasonUserInfoKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerPlaybackStateDidChangeNotification")]
 		[Notification]
 		NSString PlaybackStateDidChangeNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerLoadStateDidChangeNotification")]
 		[Notification]
 		NSString LoadStateDidChangeNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerNowPlayingMovieDidChangeNotification")]
 		[Notification]
 		NSString NowPlayingMovieDidChangeNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerWillEnterFullscreenNotification")]
 		[Notification (typeof (MPMoviePlayerFullScreenEventArgs))]
 		[Notification]
 		NSString WillEnterFullscreenNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerDidEnterFullscreenNotification")]
 		[Notification]
 		NSString DidEnterFullscreenNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerWillExitFullscreenNotification")]
 		[Notification (typeof (MPMoviePlayerFullScreenEventArgs))]
 		NSString WillExitFullscreenNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerDidExitFullscreenNotification")]
 		[Notification]
 		NSString DidExitFullscreenNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerFullscreenAnimationDurationUserInfoKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerFullscreenAnimationDurationUserInfoKey")]
 		NSString FullscreenAnimationDurationUserInfoKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerFullscreenAnimationCurveUserInfoKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerFullscreenAnimationCurveUserInfoKey")]
 		NSString FullscreenAnimationCurveUserInfoKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMovieMediaTypesAvailableNotification")]
 		[Notification]
 		NSString TypesAvailableNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMovieSourceTypeAvailableNotification")]
 		[Notification]
 		NSString SourceTypeAvailableNotification { get; }
 
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMovieDurationAvailableNotification")]
 		[Notification]
-		NSString DurationAvailableNotification { get;  }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		NSString DurationAvailableNotification { get; }
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMovieNaturalSizeAvailableNotification")]
 		[Notification]
-		NSString NaturalSizeAvailableNotification { get;  }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		NSString NaturalSizeAvailableNotification { get; }
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerThumbnailImageRequestDidFinishNotification")]
 		[Notification (typeof (MPMoviePlayerThumbnailEventArgs))]
 		NSString ThumbnailImageRequestDidFinishNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerThumbnailImageKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerThumbnailImageKey")]
 		NSString ThumbnailImageKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerThumbnailTimeKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerThumbnailTimeKey")]
 		NSString ThumbnailTimeKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerThumbnailErrorKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerThumbnailErrorKey")]
 		NSString ThumbnailErrorKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataUpdatedNotification")]
 		[Notification (typeof (MPMoviePlayerTimedMetadataEventArgs))]
 		NSString TimedMetadataUpdatedNotification { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataUserInfoKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataUserInfoKey")]
 		NSString TimedMetadataUserInfoKey { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataKeyName</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataKeyName")]
 		NSString TimedMetadataKeyName { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataKeyInfo</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataKeyInfo")]
 		NSString TimedMetadataKeyInfo { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataKeyMIMEType</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataKeyMIMEType")]
 		NSString TimedMetadataKeyMIMEType { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataKeyDataType</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataKeyDataType")]
 		NSString TimedMetadataKeyDataType { get; }
-		
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+
+		/// <summary>Represents the value associated with the constant MPMoviePlayerTimedMetadataKeyLanguageCode</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerTimedMetadataKeyLanguageCode")]
 		NSString TimedMetadataKeyLanguageCode { get; }
 
-		[Watch (5,0)]
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMediaPlaybackIsPreparedToPlayDidChangeNotification")]
 		[Notification]
 		NSString MediaPlaybackIsPreparedToPlayDidChangeNotification { get; }
 
-		[iOS (6,0)]
-		[NoWatch]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("readyForDisplay")]
-		bool ReadyForDisplay { get;  }
+		bool ReadyForDisplay { get; }
 
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
-		[iOS (6,0)]
-		[NoWatch]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerReadyForDisplayDidChangeNotification")]
 		[Notification]
 		NSString MoviePlayerReadyForDisplayDidChangeNotification { get; }
 
-		[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
-		[NoWatch]
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 		[Field ("MPMoviePlayerIsAirPlayVideoActiveDidChangeNotification")]
 		[Notification]
 		NSString MPMoviePlayerIsAirPlayVideoActiveDidChangeNotification { get; }
 	}
-#endif
 
+	/// <summary>Encapsulates timed metadata for use with time-based HTTP media streams.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPTimedMetadata_Class/index.html">Apple documentation for <c>MPTimedMetadata</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[Availability (Deprecated = Platform.iOS_9_0)]
+	[Deprecated (PlatformName.iOS, 9, 0)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 	[BaseType (typeof (NSObject))]
 	// Objective-C exception thrown.  Name: NSGenericException Reason: MPTimedMetadata cannot be created directly
 	[DisableDefaultCtor]
 	interface MPTimedMetadata {
+		/// <summary>A key that identifies a piece of timed metadata.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("key")]
-		string Key { get;  }
+		string Key { get; }
 
+		/// <summary>The namespace of the <see cref="MediaPlayer.MPTimedMetadata" />.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keyspace")]
-		string Keyspace { get;  }
+		string Keyspace { get; }
 
+		/// <summary>The timed metadata.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Export ("value")]
-#if XAMCORE_3_0
-		NSObject Value { get;  }
-#else
-		NSObject value { get;  }
-#endif
+		NSObject Value { get; }
 
+		/// <summary>The timestamp of the metadata, in the timebase of the media.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("timestamp")]
-		double Timestamp { get;  }
+		double Timestamp { get; }
 
+		/// <summary>All of the metadata.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("allMetadata")]
-		NSDictionary AllMetadata { get;  }
+		NSDictionary AllMetadata { get; }
 	}
 
-#if !MONOMAC && !WATCH
+	/// <summary>A subclass of <see cref="UIKit.UIViewController" /> that can present and play a movie.</summary>
+	///     
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMoviePlayerViewController_class/index.html">Apple documentation for <c>MPMoviePlayerViewController</c></related>
 	[NoTV]
+	[NoMac]
 	[BaseType (typeof (UIViewController))]
-	[Availability (Deprecated = Platform.iOS_9_0, Message = "Use 'AVPlayerViewController' (AVKit) instead.")]
+	[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
+	[MacCatalyst (14, 0)] // docs says 13.0 but this throws: NSInvalidArgumentException Reason: MPMoviePlayerViewController is no longer available. Use AVPlayerViewController in AVKit.
+	[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayerViewController' (AVKit) instead.")]
 	interface MPMoviePlayerViewController {
+		/// <param name="url">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithContentURL:")]
-		IntPtr Constructor (NSUrl url);
+		NativeHandle Constructor (NSUrl url);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("moviePlayer")]
 		MPMoviePlayerController MoviePlayer { get; }
-
-		// Directly removed, shows up in iOS 6.1 SDK, but not any later SDKs.
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_7_0, Message = "Do not use; this API was removed.")]
-		[Export ("shouldAutorotateToInterfaceOrientation:")]
-		bool ShouldAutorotateToInterfaceOrientation (UIInterfaceOrientation orientation);
 	}
-#endif
 
+	/// <summary>A class that plays media items from the device's <see cref="MediaPlayer.MPMediaLibrary" />.</summary>
+	/// <remarks>
+	///       <para>This class may only be used from the application's main thread.</para>
+	///     </remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPMusicPlayerController_ClassReference/index.html">Apple documentation for <c>MPMusicPlayerController</c></related>
 	[NoMac]
-	[NoTV]
-	[NoWatch]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPMusicPlayerController : MPMediaPlayback {
 
+		/// <summary>Default constructor that initializes a new instance of this class with no parameters.</summary>
+		/// <remarks>
+		///         </remarks>
 		[Export ("init")]
-		[Deprecated (PlatformName.iOS, 11,3)]
-		IntPtr Constructor ();
+		[Deprecated (PlatformName.iOS, 11, 3)]
+		[NoTV]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
+		NativeHandle Constructor ();
 
+		/// <summary>Gets the music player for the application queue.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("applicationMusicPlayer")]
 		MPMusicPlayerController ApplicationMusicPlayer { get; }
 
-		[iOS (10,3)]
+		/// <summary>Gets the music player for the application queue.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("applicationQueuePlayer")]
 		MPMusicPlayerApplicationController ApplicationQueuePlayer { get; }
 
+		/// <summary>Developers should not use this deprecated property. Developers should use 'SystemMusicPlayer' instead.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static, Export ("iPodMusicPlayer")]
-		[Availability (Deprecated = Platform.iOS_8_0, Message="Use 'SystemMusicPlayer' instead.")]
+		[Deprecated (PlatformName.iOS, 8, 0, message: "Use 'SystemMusicPlayer' instead.")]
+		[NoTV]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'SystemMusicPlayer' instead.")]
 		MPMusicPlayerController iPodMusicPlayer { get; }
 
-		[iOS (8,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static, Export ("systemMusicPlayer")]
 		MPMusicPlayerController SystemMusicPlayer { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackState")]
 		MPMusicPlaybackState PlaybackState { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("repeatMode")]
 		MPMusicRepeatMode RepeatMode { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("shuffleMode")]
 		MPMusicShuffleMode ShuffleMode { get; set; }
 
-		[Availability (Deprecated = Platform.iOS_7_0, Message = "Use 'MPVolumeView' for volume control instead.")]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 7, 0, message: "Use 'MPVolumeView' for volume control instead.")]
+		[Deprecated (PlatformName.TvOS, 9, 0, message: "Use 'MPVolumeView' for volume control instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'MPVolumeView' for volume control instead.")]
 		[Export ("volume")]
 		float Volume { get; set; } // nfloat, not CGFloat
 
+		/// <summary>Gets the index of the currently playing item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("indexOfNowPlayingItem")]
 		nuint IndexOfNowPlayingItem { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[ForcedType]
 		[Export ("nowPlayingItem", ArgumentSemantic.Copy), NullAllowed]
 		MPMediaItem NowPlayingItem { get; set; }
 
+		/// <param name="query">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[NoTV]
+		[MacCatalyst (13, 1)]
 		[Export ("setQueueWithQuery:")]
 		void SetQueue (MPMediaQuery query);
 
+		/// <param name="collection">To be added.</param>
+		///         <summary>Sets the queue to the provided <paramref name="collection" />.</summary>
+		///         <remarks>To be added.</remarks>
+		[NoTV]
+		[MacCatalyst (13, 1)]
 		[Export ("setQueueWithItemCollection:")]
 		void SetQueue (MPMediaItemCollection collection);
 
-		[iOS (9,3)]
+		/// <param name="storeIDs">To be added.</param>
+		///         <summary>Assigns the player queue to <paramref name="storeIDs" />.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("setQueueWithStoreIDs:")]
-		void SetQueue (string[] storeIDs);
+		void SetQueue (string [] storeIDs);
 
-		[iOS (10,1)]
+		/// <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("setQueueWithDescriptor:")]
 		void SetQueue (MPMusicPlayerQueueDescriptor descriptor);
 
-		[iOS (10,3)]
+		/// <param name="descriptor">The queue with the items to prepend.</param>
+		///         <summary>Inserts the items that are described by the supplied descriptor immediately after the currently playing item.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("prependQueueDescriptor:")]
 		void Prepend (MPMusicPlayerQueueDescriptor descriptor);
 
-		[iOS (10,3)]
+		/// <param name="descriptor">The queue with the items to append.</param>
+		///         <summary>Appends the items that are described by <paramref name="descriptor" /> to the current queue.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("appendQueueDescriptor:")]
 		void Append (MPMusicPlayerQueueDescriptor descriptor);
 
-		[iOS (10,1)]
-		[Async]
+		/// <param name="completionHandler">A handler to run after the first item in the queue is buffered.</param>
+		///         <summary>Puts the first item in the queue into the buffer and runs a handler after the item has been buffered.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Async (XmlDocs = """
+			<summary>Puts the first item in the queue into the buffer and runs a handler after the item has been buffered.</summary>
+			<returns>A task that represents the asynchronous PrepareToPlay operation</returns>
+			<remarks>
+			          <para copied="true">The PrepareToPlayAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("prepareToPlayWithCompletionHandler:")]
 		void PrepareToPlay (Action<NSError> completionHandler);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("skipToNextItem")]
 		void SkipToNextItem ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("skipToBeginning")]
 		void SkipToBeginning ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("skipToPreviousItem")]
 		void SkipToPreviousItem ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("beginGeneratingPlaybackNotifications")]
 		void BeginGeneratingPlaybackNotifications ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("endGeneratingPlaybackNotifications")]
 		void EndGeneratingPlaybackNotifications ();
 
@@ -1268,290 +2239,512 @@ namespace MediaPlayer {
 		[Notification]
 		NSString NowPlayingItemDidChangeNotification { get; }
 
+		[NoTV]
+		[MacCatalyst (13, 1)]
 		[Field ("MPMusicPlayerControllerVolumeDidChangeNotification")]
 		[Notification]
 		NSString VolumeDidChangeNotification { get; }
 	}
 
-#if !MONOMAC && !WATCH
-	[NoTV]
+	/// <summary>A <see cref="UIKit.UIView" /> that presents a slider control used to set the system output volume.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPVolumeView_Class/index.html">Apple documentation for <c>MPVolumeView</c></related>
+	[NoMac]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (UIView))]
 	interface MPVolumeView {
+		/// <param name="frame">Frame used by the view, expressed in iOS points.</param>
+		/// <summary>Initializes the MPVolumeView with the specified frame.</summary>
+		/// <remarks>
+		///           <para>This constructor is used to programmatically create a new instance of MPVolumeView with the specified dimension in the frame.   The object will only be displayed once it has been added to a view hierarchy by calling AddSubview in a containing view.</para>
+		///           <para>This constructor is not invoked when deserializing objects from storyboards or XIB files; instead, the constructor that takes an NSCoder parameter is invoked.</para>
+		///         </remarks>
 		[Export ("initWithFrame:")]
-		IntPtr Constructor (CGRect frame);
+		NativeHandle Constructor (CGRect frame);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVRoutePickerView' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVRoutePickerView' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVRoutePickerView' instead.")]
 		[Export ("showsRouteButton")]
 		bool ShowsRouteButton { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
 		[Export ("showsVolumeSlider")]
 		bool ShowsVolumeSlider { get; set; }
 
-		[iOS (6,0)]
+		/// <param name="image">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
 		[Export ("setMinimumVolumeSliderImage:forState:")]
 		void SetMinimumVolumeSliderImage ([NullAllowed] UIImage image, UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="image">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setMaximumVolumeSliderImage:forState:")]
 		void SetMaximumVolumeSliderImage ([NullAllowed] UIImage image, UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="image">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setVolumeThumbImage:forState:")]
 		void SetVolumeThumbImage ([NullAllowed] UIImage image, UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[return: NullAllowed]
 		[Export ("minimumVolumeSliderImageForState:")]
 		UIImage GetMinimumVolumeSliderImage (UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[return: NullAllowed]
 		[Export ("maximumVolumeSliderImageForState:")]
 		UIImage GetMaximumVolumeSliderImage (UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[return: NullAllowed]
 		[Export ("volumeThumbImageForState:")]
 		UIImage GetVolumeThumbImage (UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="bounds">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("volumeSliderRectForBounds:")]
 		CGRect GetVolumeSliderRect (CGRect bounds);
 
-		[iOS (6,0)]
+		/// <param name="bounds">To be added.</param>
+		///         <param name="columeSliderRect">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("volumeThumbRectForBounds:volumeSliderRect:value:")]
 		CGRect GetVolumeThumbRect (CGRect bounds, CGRect columeSliderRect, float /* float, not CGFloat */ value);
 
-		[iOS (6,0)]
+		/// <param name="image">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVRoutePickerView.RoutePickerButtonStyle' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVRoutePickerView.RoutePickerButtonStyle' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVRoutePickerView.RoutePickerButtonStyle' instead.")]
 		[Export ("setRouteButtonImage:forState:")]
 		void SetRouteButtonImage ([NullAllowed] UIImage image, UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "See 'AVRoutePickerView' for possible replacements.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "See 'AVRoutePickerView' for possible replacements.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "See 'AVRoutePickerView' for possible replacements.")]
+		[return: NullAllowed]
 		[Export ("routeButtonImageForState:")]
 		UIImage GetRouteButtonImage (UIControlState state);
 
-		[iOS (6,0)]
+		/// <param name="bounds">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "See 'AVRoutePickerView' for possible replacements.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "See 'AVRoutePickerView' for possible replacements.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "See 'AVRoutePickerView' for possible replacements.")]
 		[Export ("routeButtonRectForBounds:")]
 		CGRect GetRouteButtonRect (CGRect bounds);
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVRouteDetector.MultipleRoutesDetected' instead.")]
 		[Export ("wirelessRoutesAvailable")]
 		bool AreWirelessRoutesAvailable { [Bind ("areWirelessRoutesAvailable")] get; }
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayer.ExternalPlaybackActive' instead.")]
 		[Export ("wirelessRouteActive")]
 		bool IsWirelessRouteActive { [Bind ("isWirelessRouteActive")] get; }
 
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 17, 0)]
+		[Deprecated (PlatformName.TvOS, 17, 0)]
+		[Deprecated (PlatformName.MacCatalyst, 17, 0)]
 		[NullAllowed] // by default this property is null
 		[Export ("volumeWarningSliderImage", ArgumentSemantic.Retain)]
 		UIImage VolumeWarningSliderImage { get; set; }
 
-		[iOS (7,0)]
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetectedDidChange' instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVRouteDetector.MultipleRoutesDetectedDidChange' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVRouteDetector.MultipleRoutesDetectedDidChange' instead.")]
 		[Notification]
 		[Field ("MPVolumeViewWirelessRoutesAvailableDidChangeNotification")]
 		NSString WirelessRoutesAvailableDidChangeNotification { get; }
 
-		[iOS (7,0)]
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' KVO instead.")]
+		[Deprecated (PlatformName.TvOS, 13, 0, message: "Use 'AVPlayer.ExternalPlaybackActive' KVO instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'AVPlayer.ExternalPlaybackActive' KVO instead.")]
 		[Notification]
 		[Field ("MPVolumeViewWirelessRouteActiveDidChangeNotification")]
 		NSString WirelessRouteActiveDidChangeNotification { get; }
-	}	
-#endif
+	}
 
+	/// <include file="../docs/api/MediaPlayer/MPMediaQuerySection.xml" path="/Documentation/Docs[@DocId='T:MediaPlayer.MPMediaQuerySection']/*" />
 	[NoMac]
 	[NoTV]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	// Objective-C exception thrown.  Name: NSInvalidArgumentException Reason: MPMediaQuerySection is a read-only object
 	[DisableDefaultCtor]
 	interface MPMediaQuerySection : NSSecureCoding, NSCopying {
-		[Export ("range", ArgumentSemantic.Assign)]	
+		/// <summary>The location and length, inside the originating <see cref="MediaPlayer.MPMediaQuery" />, of this section.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("range", ArgumentSemantic.Assign)]
 		NSRange Range { get; }
 
-		[Export ("title", ArgumentSemantic.Copy)]	
+		/// <summary>The identifier of this section.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("title", ArgumentSemantic.Copy)]
 		string Title { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true), Watch (5,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	// Objective-C exception thrown.  Name: NSInvalidArgumentException Reason: -init is not supported, use +defaultCenter
 	[DisableDefaultCtor]
 	interface MPNowPlayingInfoCenter {
 		[Export ("nowPlayingInfo", ArgumentSemantic.Copy), NullAllowed, Internal]
-		NSDictionary _NowPlayingInfo { get; set;  }
+		NSDictionary _NowPlayingInfo { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("defaultCenter")]
 		MPNowPlayingInfoCenter DefaultCenter { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NoiOS]
 		[NoTV]
+		[NoMacCatalyst]
 		[Export ("playbackState")]
 		MPNowPlayingPlaybackState PlaybackState { get; set; }
 
+		[MacCatalyst (26, 0), TV (26, 0), Mac (26, 0), iOS (26, 0)]
+		[Static]
+		[Export ("supportedAnimatedArtworkKeys")]
+		string [] SupportedAnimatedArtworkKeys { get; }
+
 		[Internal]
- 		[Field ("MPNowPlayingInfoPropertyElapsedPlaybackTime")]
+		[Field ("MPNowPlayingInfoPropertyElapsedPlaybackTime")]
 		NSString PropertyElapsedPlaybackTime { get; }
-			
+
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyPlaybackRate")]
 		NSString PropertyPlaybackRate { get; }
-		
+
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyPlaybackQueueIndex")]
 		NSString PropertyPlaybackQueueIndex { get; }
-		
+
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyPlaybackQueueCount")]
 		NSString PropertyPlaybackQueueCount { get; }
-		
+
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyChapterNumber")]
 		NSString PropertyChapterNumber { get; }
-		
+
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyChapterCount")]
 		NSString PropertyChapterCount { get; }
 
-		[iOS (8,0)]
+		[MacCatalyst (13, 1)]
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyDefaultPlaybackRate")]
 		NSString PropertyDefaultPlaybackRate { get; }
 
-		[iOS (9,0)]
-		[TV (10,0)]
+		[MacCatalyst (13, 1)]
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyAvailableLanguageOptions")]
 		NSString PropertyAvailableLanguageOptions { get; }
 
-		[iOS (9,0)]
+		[MacCatalyst (13, 1)]
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyCurrentLanguageOptions")]
 		NSString PropertyCurrentLanguageOptions { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoCollectionIdentifier")]
 		NSString PropertyCollectionIdentifier { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyExternalContentIdentifier")]
 		NSString PropertyExternalContentIdentifier { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyExternalUserProfileIdentifier")]
 		NSString PropertyExternalUserProfileIdentifier { get; }
 
-		[iOS (11,0)]
-		[TV (11,0)]
-		[Mac (10,13, onlyOn64: true)]
-		[Watch (5,0)]
+		/// <summary>Gets the identifier for the property that specifies the service provider for the currently playing item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyServiceIdentifier")]
 		NSString PropertyServiceIdentifier { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyPlaybackProgress")]
 		NSString PropertyPlaybackProgress { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyMediaType")]
 		NSString PropertyMediaType { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyIsLiveStream")]
 		NSString PropertyIsLiveStream { get; }
 
-		[iOS (10,3)]
-		[TV (10,2)]
-		[Mac (10,12,3, onlyOn64: true)]
+		/// <summary>Represents the value that is associated with the MPNowPlayingInfoPropertyAssetURL constant.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("MPNowPlayingInfoPropertyAssetURL")]
 		NSString PropertyAssetUrl { get; }
 
-		[iOS (11,1), TV (11,1), Mac (10,13,1, onlyOn64: true)]
+		[MacCatalyst (13, 1)]
 		[Internal]
 		[Field ("MPNowPlayingInfoPropertyCurrentPlaybackDate")]
 		NSString PropertyCurrentPlaybackDate { get; }
+
+		[TV (16, 0), iOS (16, 0), MacCatalyst (16, 0)]
+		[Field ("MPNowPlayingInfoPropertyAdTimeRanges")]
+		NSString PropertyAdTimeRanges { get; }
+
+		[TV (16, 0), iOS (16, 0), MacCatalyst (16, 0)]
+		[Field ("MPNowPlayingInfoPropertyCreditsStartTime")]
+		NSString PropertyCreditsStartTime { get; }
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Field ("MPNowPlayingInfoPropertyInternationalStandardRecordingCode")]
+		NSString PropertyInternationalStandardRecordingCode { get; }
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Field ("MPNowPlayingInfoPropertyExcludeFromSuggestions")]
+		NSString PropertyExcludeFromSuggestions { get; }
+
+		[MacCatalyst (26, 0), TV (26, 0), Mac (26, 0), iOS (26, 0)]
+		[Field ("MPNowPlayingInfoProperty1x1AnimatedArtwork")]
+		NSString Property1x1AnimatedArtwork { get; }
+
+		[MacCatalyst (26, 0), TV (26, 0), Mac (26, 0), iOS (26, 0)]
+		[Field ("MPNowPlayingInfoProperty3x4AnimatedArtwork")]
+		NSString Property3x4AnimatedArtwork { get; }
+
+		[MacCatalyst (27, 0), TV (27, 0), Mac (27, 0), iOS (27, 0)]
+		[Field ("MPNowPlayingInfoPropertyAppEntityIdentifiers")]
+		NSString PropertyAppEntityIdentifiers { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1)]
-	[NoWatch]
+	/// <summary>User-meaningful information about an <see cref="MediaPlayer.MPMediaItem" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPContentItem_Ref/index.html">Apple documentation for <c>MPContentItem</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // crash if used
 	interface MPContentItem {
 
+		/// <param name="identifier">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithIdentifier:")]
-		IntPtr Constructor (string identifier);
+		NativeHandle Constructor (string identifier);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("artwork")]
 		MPMediaItemArtwork Artwork { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("identifier")]
 		string Identifier { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackProgress")]
 		float PlaybackProgress { get; set; } // float, not CGFloat
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("subtitle")]
 		string Subtitle { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("title")]
 		string Title { get; set; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("streamingContent")]
 		bool StreamingContent { [Bind ("isStreamingContent")] get; set; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("explicitContent")]
 		bool ExplicitContent { [Bind ("isExplicitContent")] get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("container")]
 		bool Container { [Bind ("isContainer")] get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playable")]
 		bool Playable { [Bind ("isPlayable")] get; set; }
 	}
 
+	/// <summary>Provides media metadata information to external media players.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPPlayableContentDataSource_Ref/index.html">Apple documentation for <c>MPPlayableContentDataSource</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[iOS (7,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface MPPlayableContentDataSource {
 
-#if XAMCORE_2_0
 		[Abstract]
-#endif
 		[Export ("contentItemAtIndexPath:")]
-#if XAMCORE_4_0
+		[return: NullAllowed]
 		MPContentItem GetContentItem (NSIndexPath indexPath);
-#else
-		MPContentItem ContentItem (NSIndexPath indexPath);
-#endif
 
+		/// <param name="indexPath">To be added.</param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("beginLoadingChildItemsAtIndexPath:completionHandler:")]
 		void BeginLoadingChildItems (NSIndexPath indexPath, Action<NSError> completionHandler);
 
+		/// <param name="indexPath">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("childItemsDisplayPlaybackProgressAtIndexPath:")]
 		bool ChildItemsDisplayPlaybackProgress (NSIndexPath indexPath);
 
-#if XAMCORE_2_0
+		/// <param name="indexPath">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
-#endif
 		[Export ("numberOfChildItemsAtIndexPath:")]
 		nint NumberOfChildItems (NSIndexPath indexPath);
 
+		/// <param name="identifier">To be added.</param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[NoMac]
-		[iOS (10,0)]
-		[Async]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'CarPlay' API instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'CarPlay' API instead.")]
+		[Async (XmlDocs = """
+			<param name="identifier">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous GetContentItem operation.  The value of the TResult parameter is of type System.Action&lt;MediaPlayer.MPContentItem,Foundation.NSError&gt;.</para>
+			        </returns>
+			<remarks>
+			          <para copied="true">The GetContentItemAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("contentItemForIdentifier:completionHandler:")]
 		void GetContentItem (string identifier, Action<MPContentItem, NSError> completionHandler);
 	}
@@ -1559,653 +2752,1150 @@ namespace MediaPlayer {
 	interface IMPPlayableContentDataSource {
 	}
 
+	interface IMPPlayableContentDelegate { }
+
+	/// <summary>Delegate object providing methods for external media players to send playback commands to the app.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPPlayableContentDelegate_Ref/index.html">Apple documentation for <c>MPPlayableContentDelegate</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[iOS (7,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface MPPlayableContentDelegate {
+
+		/// <param name="contentManager">To be added.</param>
+		///         <param name="indexPath">To be added.</param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>Method that is called to request item playback.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'CarPlay' API instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'CarPlay' API instead.")]
 		[Export ("playableContentManager:initiatePlaybackOfContentItemAtIndexPath:completionHandler:")]
 		void InitiatePlaybackOfContentItem (MPPlayableContentManager contentManager, NSIndexPath indexPath, Action<NSError> completionHandler);
 
-		[iOS (8,4)]
+		/// <param name="contentManager">To be added.</param>
+		///         <param name="context">To be added.</param>
+		///         <summary>Method that is called after the context changes.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'CarPlay' API instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'CarPlay' API instead.")]
 		[Export ("playableContentManager:didUpdateContext:")]
 		void ContextUpdated (MPPlayableContentManager contentManager, MPPlayableContentManagerContext context);
 
-		[iOS (9,0)]
+		/// <param name="contentManager">To be added.</param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>Developers should not use this deprecated method. Developers should use 'InitializePlaybackQueue (MPPlayableContentManager, MPContentItem[], Action&lt;NSError&gt;)' instead.</summary>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.iOS, 9, 3, message: "Use 'InitializePlaybackQueue (MPPlayableContentManager, MPContentItem[], Action<NSError>)' instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'InitializePlaybackQueue (MPPlayableContentManager, MPContentItem[], Action<NSError>)' instead.")]
 		[Export ("playableContentManager:initializePlaybackQueueWithCompletionHandler:")]
 		void InitializePlaybackQueue (MPPlayableContentManager contentManager, Action<NSError> completionHandler);
 
-		[iOS (9,3)]
+		/// <param name="contentManager">To be added.</param>
+		///         <param name="contentItems">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="completionHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Use the Intents framework API instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use the Intents framework API instead.")]
 		[Export ("playableContentManager:initializePlaybackQueueWithContentItems:completionHandler:")]
-		void InitializePlaybackQueue (MPPlayableContentManager contentManager, [NullAllowed] MPContentItem[] contentItems, Action<NSError> completionHandler);
+		void InitializePlaybackQueue (MPPlayableContentManager contentManager, [NullAllowed] MPContentItem [] contentItems, Action<NSError> completionHandler);
 	}
 
+	/// <summary>Controls interactions between the app and external media players.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPPlayableContentManager_Ref/index.html">Apple documentation for <c>MPPlayableContentManager</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[iOS (7,1)]
+	[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'CarPlay' API instead.")]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'CarPlay' API instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSInvalidArgumentException Reason: -init is invalid. Use +sharedManager. <- [sic]
 	interface MPPlayableContentManager {
 
+		/// <summary>Gets the shared data source instance.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("sharedContentManager")]
 		MPPlayableContentManager Shared { get; }
 
-		[Export ("dataSource", ArgumentSemantic.Weak)][NullAllowed]
+		/// <summary>Gets or sets a weak reference to the application data source.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Export ("dataSource", ArgumentSemantic.Weak)]
+		[NullAllowed]
 		NSObject WeakDataSource { get; set; }
 
+		/// <summary>Gets or sets the application data source.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Wrap ("WeakDataSource")]
-		[Protocolize]
-		MPPlayableContentDataSource DataSource { get; set; }
+		IMPPlayableContentDataSource DataSource { get; set; }
 
-		[Export ("delegate", ArgumentSemantic.Weak)][NullAllowed]
+		/// <summary>An object that can respond to the delegate protocol for this type</summary>
+		///         <value>The instance that will respond to events and data requests.</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>   Methods must be decorated with the [Export ("selectorName")] attribute to respond to each method from the protocol.   Alternatively use the Delegate method which is strongly typed and does not require the [Export] attributes on methods.</para>
+		///         </remarks>
+		[Export ("delegate", ArgumentSemantic.Weak)]
+		[NullAllowed]
 		NSObject WeakDelegate { get; set; }
 
+		/// <summary>An instance of the MediaPlayer.IMPPlayableContentDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the MediaPlayer.IMPPlayableContentDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		MPPlayableContentDelegate Delegate { get; set; }
+		IMPPlayableContentDelegate Delegate { get; set; }
 
+		/// <summary>Begins simultanewously updating multiple Media Player content items.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("beginUpdates")]
 		void BeginUpdates ();
 
+		/// <summary>Ends updates.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("endUpdates")]
 		void EndUpdates ();
 
+		/// <summary>Reloads the source data.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("reloadData")]
 		void ReloadData ();
 
-		[iOS (8,4)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("context")]
 		MPPlayableContentManagerContext Context { get; }
 
-		[iOS (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("nowPlayingIdentifiers", ArgumentSemantic.Copy)]
-		string[] NowPlayingIdentifiers { get; set; }
+		string [] NowPlayingIdentifiers { get; set; }
 	}
 
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPPlayableContentManagerContext">Apple documentation for <c>MPPlayableContentManagerContext</c></related>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[iOS (8,4)]
-	[BaseType (typeof(NSObject))]
+	[Deprecated (PlatformName.iOS, 14, 0, message: "Use 'CarPlay' API instead.")]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use 'CarPlay' API instead.")]
+	[BaseType (typeof (NSObject))]
 	interface MPPlayableContentManagerContext {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("enforcedContentItemsCount")]
 		nint EnforcedContentItemsCount { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("enforcedContentTreeDepth")]
 		nint EnforcedContentTreeDepth { get; }
 
 		// iOS 9 beta 2 changed this from contentLimitsEnabled - but the final iOS8.4 release used contentLimitsEnabled
-		[iOS (9,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("contentLimitsEnforced")]
 		bool ContentLimitsEnforced { get; }
 
-		[Availability (Introduced = Platform.iOS_8_4, Deprecated = Platform.iOS_9_0, Message = "Replaced by 'ContentLimitsEnforced'.")]
+		/// <summary>Developers should not use this deprecated property. Replaced by 'ContentLimitsEnforced'.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 9, 0, message: "Replaced by 'ContentLimitsEnforced'.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Replaced by 'ContentLimitsEnforced'.")]
 		[Export ("contentLimitsEnabled")]
 		bool ContentLimitsEnabled { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("endpointAvailable")]
 		bool EndpointAvailable { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Class that app developers can use to add and remove actions (commands) on targets (players).</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPRemoteCommand_Ref/index.html">Apple documentation for <c>MPRemoteCommand</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPRemoteCommands cannot be initialized externally.
 	interface MPRemoteCommand {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("enabled")]
 		bool Enabled { [Bind ("isEnabled")] get; set; }
 
+		/// <param name="target">To be added.</param>
+		///         <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("addTarget:action:")]
 		void AddTarget (NSObject target, Selector action);
 
+		/// <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("addTargetWithHandler:")]
-		NSObject AddTarget (Func<MPRemoteCommandEvent,MPRemoteCommandHandlerStatus> handler);
+		NSObject AddTarget (Func<MPRemoteCommandEvent, MPRemoteCommandHandlerStatus> handler);
 
+		/// <param name="target">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeTarget:")]
-		void RemoveTarget (NSObject target);
+		void RemoveTarget ([NullAllowed] NSObject target);
 
+		/// <param name="target">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeTarget:action:")]
-		void RemoveTarget ([NullAllowed] NSObject target, Selector action);
+		void RemoveTarget ([NullAllowed] NSObject target, [NullAllowed] Selector action);
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>A <see cref="MediaPlayer.MPRemoteCommand" /> that alters the playback rate.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPChangePlaybackRateCommand_Ref/index.html">Apple documentation for <c>MPChangePlaybackRateCommand</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangePlaybackRateCommands cannot be initialized externally.
 	interface MPChangePlaybackRateCommand {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("supportedPlaybackRates")]
-		NSNumber[] SupportedPlaybackRates { get; set; }
+		NSNumber [] SupportedPlaybackRates { get; set; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (8,0), Watch (5,0)]
-	[BaseType (typeof(MPRemoteCommand))]
+	/// <summary>Holds the current <see cref="MediaPlayer.MPShuffleType" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangeShuffleModeCommand">Apple documentation for <c>MPChangeShuffleModeCommand</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangeShuffleModeCommand cannot be initialized externally.
-	interface MPChangeShuffleModeCommand
-	{
+	interface MPChangeShuffleModeCommand {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("currentShuffleType", ArgumentSemantic.Assign)]
 		MPShuffleType CurrentShuffleType { get; set; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (8,0), Watch (5,0)]
-	[BaseType (typeof(MPRemoteCommand))]
+	/// <summary>Holds the current <see cref="MediaPlayer.MPRepeatType" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangeRepeatModeCommand">Apple documentation for <c>MPChangeRepeatModeCommand</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangeRepeatModeCommand cannot be initialized externally.
-	interface MPChangeRepeatModeCommand
-	{
+	interface MPChangeRepeatModeCommand {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("currentRepeatType", ArgumentSemantic.Assign)]
 		MPRepeatType CurrentRepeatType { get; set; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Additional information for feedback commands defined in <see cref="MediaPlayer.MPRemoteCommandCenter" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPFeedbackCommand/index.html">Apple documentation for <c>MPFeedbackCommand</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPFeedbackCommands cannot be initialized externally.
 	interface MPFeedbackCommand {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("active")]
 		bool Active { [Bind ("isActive")] get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("localizedTitle")]
 		string LocalizedTitle { get; set; }
 
-		[iOS (8,2)] // added in 8.2, shown as NS_AVAILABLE_IOS(8_0)
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("localizedShortTitle")]
 		string LocalizedShortTitle { get; set; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Additional information for rating commands defined in <see cref="MediaPlayer.MPRemoteCommandCenter" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPRatingCommand_Ref/index.html">Apple documentation for <c>MPRatingCommand</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPRatingCommands cannot be initialized externally.
 	interface MPRatingCommand {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumRating")]
 		float MaximumRating { get; set; } /* float, not CGFloat */
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("minimumRating")]
 		float MinimumRating { get; set; } /* float, not CGFloat */
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPSkipIntervalCommands cannot be initialized externally.
 	interface MPSkipIntervalCommand {
 
-#if XAMCORE_2_0
 		[Internal] // -> we can't do double[] for an NSArray of NSTimeInterval
-#endif
 		[Export ("preferredIntervals")]
 		NSArray _PreferredIntervals { get; set; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Class that handles events from external media players.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPRemoteCommandCenter_Ref/index.html">Apple documentation for <c>MPRemoteCommandCenter</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPRemoteCommandCenter {
-		[Mac (10,12,2, onlyOn64: true)]
+
+		/// <summary>Gets the shared command center object.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("sharedCommandCenter")]
 		MPRemoteCommandCenter Shared { get; }
 
+		/// <summary>Gets the bookmarking command.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bookmarkCommand")]
 		MPFeedbackCommand BookmarkCommand { get; }
 
+		/// <summary>Gets the command that is used to change the playback rate.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("changePlaybackRateCommand")]
 		MPChangePlaybackRateCommand ChangePlaybackRateCommand { get; }
 
-		[iOS (8,0)]
+		/// <summary>Gets the command that is used to change the repeat mode.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("changeRepeatModeCommand")]
 		MPChangeRepeatModeCommand ChangeRepeatModeCommand { get; }
 
-		[iOS (8,0)]
+		/// <summary>Gets the command that is used to change the shuffle mode.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("changeShuffleModeCommand")]
 		MPChangeShuffleModeCommand ChangeShuffleModeCommand { get; }
 
+		/// <summary>Gets the command that is used to dislike the currently playing item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dislikeCommand")]
 		MPFeedbackCommand DislikeCommand { get; }
 
+		/// <summary>Gets the command that is used to like the currently playing item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("likeCommand")]
 		MPFeedbackCommand LikeCommand { get; }
 
+		/// <summary>Gets the command that is used to play the next track.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("nextTrackCommand")]
 		MPRemoteCommand NextTrackCommand { get; }
 
+		/// <summary>Gets the command that is used to pause playback.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pauseCommand")]
 		MPRemoteCommand PauseCommand { get; }
 
+		/// <summary>Gets the command that is used to begin or resume playback.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playCommand")]
 		MPRemoteCommand PlayCommand { get; }
 
+		/// <summary>Gets the command that is used to play the previous track.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("previousTrackCommand")]
 		MPRemoteCommand PreviousTrackCommand { get; }
 
+		/// <summary>Gets the command that is used to rate the currently playing item.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("ratingCommand")]
 		MPRatingCommand RatingCommand { get; }
 
+		/// <summary>Gets the command that is used to seek backward.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seekBackwardCommand")]
 		MPRemoteCommand SeekBackwardCommand { get; }
 
+		/// <summary>Gets the command that is used to seek forward.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seekForwardCommand")]
 		MPRemoteCommand SeekForwardCommand { get; }
 
+		/// <summary>Gets the command that is used to skip backward.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("skipBackwardCommand")]
 		MPSkipIntervalCommand SkipBackwardCommand { get; }
 
+		/// <summary>Gets the command that is used to skip forward.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("skipForwardCommand")]
 		MPSkipIntervalCommand SkipForwardCommand { get; }
 
+		/// <summary>Gets the command that is used to stop playback.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("stopCommand")]
 		MPRemoteCommand StopCommand { get; }
 
+		/// <summary>Gets the command that is used to toggle the paused/playing state.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("togglePlayPauseCommand")]
 		MPRemoteCommand TogglePlayPauseCommand { get; }
 
-		[iOS (9,0)]
+		/// <summary>Gets the command that is used to enable language options.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("enableLanguageOptionCommand")]
 		MPRemoteCommand EnableLanguageOptionCommand { get; }
 
-		[iOS (9,0)]
+		/// <summary>Gets the command that is used to disable language options.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("disableLanguageOptionCommand")]
 		MPRemoteCommand DisableLanguageOptionCommand { get; }
 
-		[iOS (9,1)]
+		/// <summary>Gets the command that is used to change the playback position.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("changePlaybackPositionCommand")]
 		MPChangePlaybackPositionCommand ChangePlaybackPositionCommand { get; }
 	}
-	
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+
+	/// <summary>Class that provides information about a player command.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPRemoteCommandEvent_Ref/index.html">Apple documentation for <c>MPRemoteCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPRemoteCommandEvents cannot be initialized externally.
 	interface MPRemoteCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("command")]
 		MPRemoteCommand Command { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("timestamp")]
 		double /* NSTimeInterval */ Timestamp { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Provides the playback rate for a media item.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPChangePlaybackRateCommandEvent_Ref/index.html">Apple documentation for <c>MPChangePlaybackRateCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangePlaybackRateCommandEvents cannot be initialized externally.
 	interface MPChangePlaybackRateCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playbackRate")]
 		float PlaybackRate { get; } // float, not CGFloat
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Additional information for the rating properties defined in <see cref="MediaPlayer.MPRemoteCommandCenter" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPRatingCommandEvent_Ref/index.html">Apple documentation for <c>MPRatingCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPRatingCommandEvents cannot be initialized externally.
 	interface MPRatingCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rating")]
 		float Rating { get; } // float, not CGFloat
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Additional information for the seek properties defined in <see cref="MediaPlayer.MPRemoteCommandCenter" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPSeekCommandEvent_Ref/index.html">Apple documentation for <c>MPSeekCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // Name: NSGenericException Reason: MPSeekCommandEvents cannot be initialized externally.
 	interface MPSeekCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("type")]
 		MPSeekCommandEventType Type { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>The time interval rate of an external media player.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPSkipIntervalCommandEvent_Ref/index.html">Apple documentation for <c>MPSkipIntervalCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPSkipIntervalCommandEvents cannot be initialized externally.
 	interface MPSkipIntervalCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("interval")]
 		double /* NSTimeInterval */ Interval { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (7,1), Watch (5,0)]
+	/// <summary>Additional information for the feedback properties defined in <see cref="MediaPlayer.MPRemoteCommandCenter" />.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MediaPlayer/Reference/MPFeedbackCommandEvent_Ref/index.html">Apple documentation for <c>MPFeedbackCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor]
 	interface MPFeedbackCommandEvent {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("negative")]
 		bool Negative { [Bind ("isNegative")] get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangeLanguageOptionCommandEvent">Apple documentation for <c>MPChangeLanguageOptionCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangeLanguageOptionCommandEvents cannot be initialized externally.
 	interface MPChangeLanguageOptionCommandEvent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("languageOption")]
 		MPNowPlayingInfoLanguageOption LanguageOption { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("setting")]
 		MPChangeLanguageOptionSetting Setting { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (8,0), Watch (5,0)]
-	[BaseType (typeof(MPRemoteCommandEvent))]
+	/// <summary>Associates a <see cref="MediaPlayer.MPShuffleType" /> and a boolean specifying whether the shuffle mode should be preserved.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangeShuffleModeCommandEvent">Apple documentation for <c>MPChangeShuffleModeCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangeShuffleModeCommandEvent cannot be initialized externally.
-	interface MPChangeShuffleModeCommandEvent
-	{
+	interface MPChangeShuffleModeCommandEvent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("shuffleType")]
 		MPShuffleType ShuffleType { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("preservesShuffleMode")]
 		bool PreservesShuffleMode { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (8,0), Watch (5,0)]
-	[BaseType (typeof(MPRemoteCommandEvent))]
+	/// <summary>Associates a <see cref="MediaPlayer.MPRepeatType" /> and a boolean specifying whether the repeat mode should be preserved.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangeRepeatModeCommandEvent">Apple documentation for <c>MPChangeRepeatModeCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // NSGenericException Reason: MPChangeRepeatModeCommandEvent cannot be initialized externally.
-	interface MPChangeRepeatModeCommandEvent
-	{
+	interface MPChangeRepeatModeCommandEvent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("repeatType")]
 		MPRepeatType RepeatType { get; }
 
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("preservesRepeatMode")]
 		bool PreservesRepeatMode { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPNowPlayingInfoLanguageOption">Apple documentation for <c>MPNowPlayingInfoLanguageOption</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // pre-emptive
 	interface MPNowPlayingInfoLanguageOption {
+		/// <param name="languageOptionType">To be added.</param>
+		/// <param name="languageTag">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="languageOptionCharacteristics">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="displayName">To be added.</param>
+		/// <param name="identifier">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithType:languageTag:characteristics:displayName:identifier:")]
-		IntPtr Constructor (MPNowPlayingInfoLanguageOptionType languageOptionType, string languageTag, [NullAllowed] NSString[] languageOptionCharacteristics, string displayName, string identifier);
+		NativeHandle Constructor (MPNowPlayingInfoLanguageOptionType languageOptionType, string languageTag, [NullAllowed] NSString [] languageOptionCharacteristics, string displayName, string identifier);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("languageOptionType")]
 		MPNowPlayingInfoLanguageOptionType LanguageOptionType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("languageTag")]
 		string LanguageTag { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("languageOptionCharacteristics")]
-		NSString[] LanguageOptionCharacteristics { get; }
+		NSString [] LanguageOptionCharacteristics { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed]
 		[Export ("displayName")]
 		string DisplayName { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed]
 		[Export ("identifier")]
 		string Identifier { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isAutomaticLegibleLanguageOption")]
 		bool IsAutomaticLegibleLanguageOption { get; }
 
-		[iOS (9,1)][TV (9,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isAutomaticAudibleLanguageOption")]
 		bool IsAutomaticAudibleLanguageOption { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,0), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPNowPlayingInfoLanguageOptionGroup">Apple documentation for <c>MPNowPlayingInfoLanguageOptionGroup</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // pre-emptive
 	interface MPNowPlayingInfoLanguageOptionGroup {
+		/// <param name="languageOptions">To be added.</param>
+		/// <param name="defaultLanguageOption">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="allowEmptySelection">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLanguageOptions:defaultLanguageOption:allowEmptySelection:")]
-		IntPtr Constructor (MPNowPlayingInfoLanguageOption[] languageOptions, [NullAllowed] MPNowPlayingInfoLanguageOption defaultLanguageOption, bool allowEmptySelection);
+		NativeHandle Constructor (MPNowPlayingInfoLanguageOption [] languageOptions, [NullAllowed] MPNowPlayingInfoLanguageOption defaultLanguageOption, bool allowEmptySelection);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("languageOptions")]
-		MPNowPlayingInfoLanguageOption[] LanguageOptions { get; }
+		MPNowPlayingInfoLanguageOption [] LanguageOptions { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("defaultLanguageOption")]
 		MPNowPlayingInfoLanguageOption DefaultLanguageOption { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("allowEmptySelection")]
 		bool AllowEmptySelection { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,0)]
-	[Watch (5,0)]
+	[MacCatalyst (13, 1)]
 	[Static]
 	// not [Internal] since they are exposed as an NSString[] property in MPNowPlayingInfoLanguageOption
 	interface MPLanguageOptionCharacteristics {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicIsMainProgramContent")]
 		NSString IsMainProgramContent { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicIsAuxiliaryContent")]
 		NSString IsAuxiliaryContent { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicContainsOnlyForcedSubtitles")]
 		NSString ContainsOnlyForcedSubtitles { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicTranscribesSpokenDialog")]
 		NSString TranscribesSpokenDialog { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicDescribesMusicAndSound")]
 		NSString DescribesMusicAndSound { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicEasyToRead")]
 		NSString EasyToRead { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicDescribesVideo")]
 		NSString DescribesVideo { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicLanguageTranslation")]
 		NSString LanguageTranslation { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicDubbedTranslation")]
 		NSString DubbedTranslation { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Field ("MPLanguageOptionCharacteristicVoiceOverTranslation")]
 		NSString VoiceOverTranslation { get; }
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,1), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangePlaybackPositionCommand">Apple documentation for <c>MPChangePlaybackPositionCommand</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommand))]
 	[DisableDefaultCtor] // Objective-C exception thrown.  Name: NSGenericException Reason: MPChangePlaybackPositionCommands cannot be initialized externally.
 	interface MPChangePlaybackPositionCommand {
 	}
 
-	[Mac (10,12,2, onlyOn64: true)]
-	[iOS (9,1), Watch (5,0)]
+	/// <summary>To be added.</summary>
+	/// <remarks>To be added.</remarks>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPChangePlaybackPositionCommandEvent">Apple documentation for <c>MPChangePlaybackPositionCommandEvent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPRemoteCommandEvent))]
 	[DisableDefaultCtor] // Objective-C exception thrown.  Name: NSGenericException Reason: MPChangePlaybackPositionCommandEvents cannot be initialized externally.
 	interface MPChangePlaybackPositionCommandEvent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("positionTime")]
 		double PositionTime { get; }
 	}
 
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/MediaPlayer/MPMediaPlaylistCreationMetadata">Apple documentation for <c>MPMediaPlaylistCreationMetadata</c></related>
 	[NoMac]
-	[NoTV][iOS (9,3)]
-	[NoWatch]
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPMediaPlaylistCreationMetadata {
+		/// <param name="name">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithName:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (string name);
+		NativeHandle Constructor (string name);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("name")]
 		string Name { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed] // null_resettable
 		[Export ("authorDisplayName")]
 		string AuthorDisplayName { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("descriptionText")]
 		string DescriptionText { get; set; }
 	}
 
+	/// <summary>Base class for descriptors for store and audio item queues.</summary>
+	/// <remarks>To be added.</remarks>
 	[NoMac]
-	[NoTV]
-	[NoWatch]
-	[iOS (10,1)]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	[DisableDefaultCtor]
 	[BaseType (typeof (NSObject))]
 	interface MPMusicPlayerQueueDescriptor : NSSecureCoding {
 
+		/// <summary>Default constructor, initializes a new instance of this class.</summary>
+		/// <remarks />
 		[Export ("init")]
-		[Deprecated (PlatformName.iOS, 11,3)]
-		IntPtr Constructor ();
+		[Deprecated (PlatformName.iOS, 11, 3)]
+		[Deprecated (PlatformName.TvOS, 11, 3)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
+		NativeHandle Constructor ();
 	}
 
+	/// <summary>Operates on media player queues.</summary>
 	[NoMac]
 	[NoTV]
-	[NoWatch]
-	[iOS (10,1)]
-	[BaseType (typeof(MPMusicPlayerQueueDescriptor))]
-	interface MPMusicPlayerMediaItemQueueDescriptor
-	{
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPMusicPlayerQueueDescriptor))]
+	interface MPMusicPlayerMediaItemQueueDescriptor {
+		/// <param name="query">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithQuery:")]
-		IntPtr Constructor (MPMediaQuery query);
+		NativeHandle Constructor (MPMediaQuery query);
 
+		/// <param name="itemCollection">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithItemCollection:")]
-		IntPtr Constructor (MPMediaItemCollection itemCollection);
+		NativeHandle Constructor (MPMediaItemCollection itemCollection);
 
+		/// <summary>Gets a query that returns the items that were used to create this media item queue descriptor.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("query", ArgumentSemantic.Copy)]
 		MPMediaQuery Query { get; }
 
+		/// <summary>Gets the collection of media items that was used to create this media item queue descriptor.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("itemCollection", ArgumentSemantic.Strong)]
 		MPMediaItemCollection ItemCollection { get; }
 
+		/// <summary>Gets or sets which item will be played first.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("startItem", ArgumentSemantic.Strong)]
 		MPMediaItem StartItem { get; set; }
 
+		/// <param name="startTime">The time at which the media will start playing.</param>
+		///         <param name="mediaItem">The media item to modify.</param>
+		///         <summary>Sets the time that the media item will start playing.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setStartTime:forItem:")]
 		void SetStartTime (double startTime, MPMediaItem mediaItem);
 
+		/// <param name="endTime">The time at which the media will stop playing.</param>
+		///         <param name="mediaItem">The media item to modify.</param>
+		///         <summary>Sets the time that the media item will stop playing.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setEndTime:forItem:")]
 		void SetEndTime (double endTime, MPMediaItem mediaItem);
 	}
 
+	/// <summary>Implements modification of media items in a player queue, selecting them by their store identifier.s</summary>
+	/// <remarks>To be added.</remarks>
 	[NoMac]
-	[NoTV]
-	[NoWatch]
-	[iOS (10,1)]
-	[BaseType (typeof(MPMusicPlayerQueueDescriptor))]
-	interface MPMusicPlayerStoreQueueDescriptor
-	{
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPMusicPlayerQueueDescriptor))]
+	interface MPMusicPlayerStoreQueueDescriptor {
+		/// <param name="storeIDs">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithStoreIDs:")]
-		IntPtr Constructor (string[] storeIDs);
+		NativeHandle Constructor (string [] storeIDs);
 
+		/// <summary>Gets or sets the store identifiers for the items in the queue descriptor.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("storeIDs", ArgumentSemantic.Copy)]
-		string[] StoreIDs { get; set; }
+		string [] StoreIDs { get; set; }
 
+		/// <summary>Gets the ID of the start item.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("startItemID")]
 		string StartItemID { get; set; }
 
+		/// <param name="startTime">The time at which the item will start playing.</param>
+		///         <param name="storeID">The store ID of the item to start.</param>
+		///         <summary>Sets the time that the media item will start playing.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setStartTime:forItemWithStoreID:")]
 		void SetStartTime (double startTime, string storeID);
 
+		/// <param name="endTime">The time at which the item will stop playing.</param>
+		///         <param name="storeID">The store ID of the item to stop.</param>
+		///         <summary>Sets the time that the media item will stop playing.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setEndTime:forItemWithStoreID:")]
 		void SetEndTime (double endTime, string storeID);
 	}
 
-	[NoTV]
+	/// <summary>An immutable queue of media items for playing..</summary>
+	/// <remarks>To be added.</remarks>
 	[NoMac]
-	[NoWatch]
-	[iOS (10,3)]
-	[BaseType (typeof(NSObject))]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
-	interface MPMusicPlayerControllerQueue
-	{
+	interface MPMusicPlayerControllerQueue {
+		/// <summary>Gets the array of media items that are contained in the queue.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("items", ArgumentSemantic.Copy)]
-		MPMediaItem[] Items { get; }
+		MPMediaItem [] Items { get; }
 
 		[Field ("MPMusicPlayerControllerQueueDidChangeNotification")]
 		[Notification]
 		NSString DidChangeNotification { get; }
 	}
 
-	[NoTV]
+	/// <summary>A mutable queue of media items for playing.</summary>
+	/// <remarks>To be added.</remarks>
 	[NoMac]
-	[NoWatch]
-	[iOS (10,3)]
-	[BaseType (typeof(MPMusicPlayerControllerQueue))]
-	interface MPMusicPlayerControllerMutableQueue
-	{
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPMusicPlayerControllerQueue))]
+	interface MPMusicPlayerControllerMutableQueue {
+		/// <param name="queueDescriptor">The queue descriptor with the items to insert.</param>
+		///         <param name="item">The item after which to insert the queued items. May be <see langword="null" />.<para tool="nullallowed">This parameter can be <see langword="null" />.</para></param>
+		///         <summary>Inserts the queue that is identified by <paramref name="queueDescriptor" /> after <paramref name="item" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("insertQueueDescriptor:afterItem:")]
 		void InsertAfter (MPMusicPlayerQueueDescriptor queueDescriptor, [NullAllowed] MPMediaItem item);
 
+		/// <param name="item">The item to remove.</param>
+		///         <summary>Removes the specified <paramref name="item" /> from the queue.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeItem:")]
 		void RemoveItem (MPMediaItem item);
 	}
 
-	[NoTV]
+	/// <summary>An application controller for changing the currently playing queue.</summary>
+	/// <remarks>To be added.</remarks>
 	[NoMac]
-	[NoWatch]
-	[iOS (10,3)]
-	[BaseType (typeof(MPMusicPlayerController))]
-	interface MPMusicPlayerApplicationController
-	{
-		[Async]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPMusicPlayerController))]
+	interface MPMusicPlayerApplicationController {
+		/// <param name="queueTransaction">The action to perform while the queue is created.</param>
+		///         <param name="completionHandler">A handler to run when the operation completes.</param>
+		///         <summary>Performs the requested queue transformation and runs a handler when the operation is complete.</summary>
+		///         <remarks>To be added.</remarks>
+		[Async (XmlDocs = """
+			<param name="queueTransaction">The action to perform while the queue is created.</param>
+			<summary>Performs the requested queue transformation and runs a handler when the operation is complete.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous Perform operation.  The value of the TResult parameter is of type System.Action&lt;MediaPlayer.MPMusicPlayerControllerQueue,Foundation.NSError&gt;.</para>
+			        </returns>
+			<remarks>
+			          <para copied="true">The PerformAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""")]
 		[Export ("performQueueTransaction:completionHandler:")]
 		void Perform (Action<MPMusicPlayerControllerMutableQueue> queueTransaction, Action<MPMusicPlayerControllerQueue, NSError> completionHandler);
 	}
 
-	[NoTV][NoMac]
-	[iOS (11,0)]
-	[NoWatch]
+	/// <summary>Contains a dictionary of Music Kit parameters for items to play.</summary>
+	/// <remarks>To be added.</remarks>
+	[NoMac]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPMusicPlayerPlayParameters : NSSecureCoding {
+		/// <param name="dictionary">To be added.</param>
+		/// <summary>Creates a new music player play parameters object with the provided dictionary of parameters.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDictionary:")]
-		IntPtr Constructor (NSDictionary dictionary);
+		NativeHandle Constructor (NSDictionary dictionary);
 
+		/// <summary>Gets the dictionary of parameters.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dictionary", ArgumentSemantic.Copy)]
 		NSDictionary Dictionary { get; }
 	}
 
-	[NoTV][NoMac]
-	[NoWatch]
-	[iOS (11,0)]
+	/// <summary>Class for manipulating start times and play order based on the play parameter results of MusicKit APIs.</summary>
+	/// <remarks>To be added.</remarks>
+	[NoMac]
+	[TV (14, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPMusicPlayerQueueDescriptor))]
 	[DisableDefaultCtor]
 	interface MPMusicPlayerPlayParametersQueueDescriptor {
+		/// <param name="playParametersQueue">To be added.</param>
+		/// <summary>Creates a new queue descriptor from the specified queue.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithPlayParametersQueue:")]
-		IntPtr Constructor (MPMusicPlayerPlayParameters[] playParametersQueue);
+		NativeHandle Constructor (MPMusicPlayerPlayParameters [] playParametersQueue);
 
+		/// <summary>Gets or sets the play parameters queue</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("playParametersQueue", ArgumentSemantic.Copy)]
-		MPMusicPlayerPlayParameters[] PlayParametersQueue { get; set; }
+		MPMusicPlayerPlayParameters [] PlayParametersQueue { get; set; }
 
+		/// <summary>Gets or sets the the play parameters that identify the item that will be played first.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("startItemPlayParameters", ArgumentSemantic.Strong)]
 		MPMusicPlayerPlayParameters StartItemPlayParameters { get; set; }
 
+		/// <param name="startTime">The time at which the described item will start playing.</param>
+		///         <param name="playParameters">The parameters that describe the item.</param>
+		///         <summary>Sets the start time for the item that is described by the provided play parameters.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setStartTime:forItemWithPlayParameters:")]
 		void SetStartTime (/* NSTimeInterval */ double startTime, MPMusicPlayerPlayParameters playParameters);
 
+		/// <param name="endTime">The time at which the described item will stop playing.</param>
+		///         <param name="playParameters">The parameters that describe the item.</param>
+		///         <summary>Sets the end time for the item that is described by the provided play parameters.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setEndTime:forItemWithPlayParameters:")]
 		void SetEndTime (/* NSTimeInterval */ double endTime, MPMusicPlayerPlayParameters playParameters);
 	}
 
-	interface IMPSystemMusicPlayerController {}
+	interface IMPSystemMusicPlayerController { }
 
-	[NoTV][NoMac]
-	[iOS (11,0), Watch (5,0)]
+	/// <summary>Protocol for playing videos with the Music app.</summary>
+	[NoTV]
+	[NoMac] // headers have no availability macros on the protocol itself but the only member is not available on macOS
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSystemMusicPlayerController {
-		[NoWatch]
+		/// <param name="queueDescriptor">The queue descriptor for the media items to play.</param>
+		/// <summary>Opens the Music app and plays the specified items.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Abstract]
 		[Export ("openToPlayQueueDescriptor:")]
 		void OpenToPlay (MPMusicPlayerQueueDescriptor queueDescriptor);
@@ -2213,33 +3903,130 @@ namespace MediaPlayer {
 
 	[Category]
 	[BaseType (typeof (NSUserActivity))]
-	[TV (10,0,1)][iOS (10,1)]
-	[NoWatch][NoMac]
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	interface NSUserActivity_MediaPlayerAdditions {
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[return: NullAllowed]
 		[Export ("externalMediaContentIdentifier")]
 		NSString GetExternalMediaContentIdentifier ();
 
+		/// <param name="identifier">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("setExternalMediaContentIdentifier:")]
 		void SetExternalMediaContentIdentifier ([NullAllowed] NSString identifier);
 	}
-#endif
-	[iOS (9,0)][TV (9,0)]
-	[Mac (10,12,1, onlyOn64: true)]
-	[NoWatch]
+
+	[MacCatalyst (13, 1)]
 	[Category]
 	[BaseType (typeof (AVMediaSelectionOption))]
 	interface AVMediaSelectionOption_MPNowPlayingInfoLanguageOptionAdditions {
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("makeNowPlayingInfoLanguageOption")]
+		[return: NullAllowed]
 		MPNowPlayingInfoLanguageOption CreateNowPlayingInfoLanguageOption ();
 	}
 
-	[iOS (9,0)][TV (9,0)]
-	[Mac (10,12,1, onlyOn64: true)]
-	[NoWatch]
+	[MacCatalyst (13, 1)]
 	[Category]
 	[BaseType (typeof (AVMediaSelectionGroup))]
 	interface AVMediaSelectionGroup_MPNowPlayingInfoLanguageOptionAdditions {
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("makeNowPlayingInfoLanguageOptionGroup")]
 		MPNowPlayingInfoLanguageOptionGroup CreateNowPlayingInfoLanguageOptionGroup ();
 	}
+
+	interface IMPNowPlayingSessionDelegate { }
+
+	[TV (14, 0), iOS (16, 0)]
+	[NoMac, MacCatalyst (18, 4)]
+	[Protocol, Model]
+	[BaseType (typeof (NSObject))]
+	interface MPNowPlayingSessionDelegate {
+
+		[Export ("nowPlayingSessionDidChangeActive:")]
+		void DidChangeActive (MPNowPlayingSession nowPlayingSession);
+
+		[Export ("nowPlayingSessionDidChangeCanBecomeActive:")]
+		void DidChangeCanBecomeActive (MPNowPlayingSession nowPlayingSession);
+	}
+
+	[TV (14, 0), iOS (16, 0)]
+	[NoMac, MacCatalyst (18, 4)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPNowPlayingSession {
+
+		[Export ("initWithPlayers:")]
+		NativeHandle Constructor (AVPlayer [] players);
+
+		[Export ("players", ArgumentSemantic.Strong)]
+		AVPlayer [] Players { get; }
+
+		[Wrap ("WeakDelegate")]
+		[NullAllowed]
+		IMPNowPlayingSessionDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Export ("nowPlayingInfoCenter", ArgumentSemantic.Strong)]
+		MPNowPlayingInfoCenter NowPlayingInfoCenter { get; }
+
+		[Export ("remoteCommandCenter", ArgumentSemantic.Strong)]
+		MPRemoteCommandCenter RemoteCommandCenter { get; }
+
+		[Export ("canBecomeActive")]
+		bool CanBecomeActive { get; }
+
+		[Export ("active")]
+		bool Active { [Bind ("isActive")] get; }
+
+		[Async]
+		[Export ("becomeActiveIfPossibleWithCompletion:")]
+		void BecomeActiveIfPossible ([NullAllowed] Action<bool> completion);
+
+		[Export ("addPlayer:")]
+		void AddPlayer (AVPlayer player);
+
+		[Export ("removePlayer:")]
+		void RemovePlayer (AVPlayer player);
+
+		[TV (16, 0), MacCatalyst (18, 4), NoMac]
+		[Export ("automaticallyPublishesNowPlayingInfo")]
+		bool AutomaticallyPublishesNowPlayingInfo { get; set; }
+	}
+
+	[TV (16, 0), MacCatalyst (18, 4), NoMac, iOS (16, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPAdTimeRange : NSCopying {
+		[Export ("timeRange", ArgumentSemantic.Assign)]
+		CMTimeRange TimeRange { get; set; }
+
+		[Export ("initWithTimeRange:")]
+		NativeHandle Constructor (CMTimeRange timeRange);
+	}
+
+	[MacCatalyst (26, 0), TV (26, 0), Mac (26, 0), iOS (26, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPMediaItemAnimatedArtwork {
+		[Export ("initWithArtworkID:previewImageRequestHandler:videoAssetFileURLRequestHandler:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (string artworkId, MPMediaItemAnimatedArtworkPreviewImageRequestHandler previewImageRequestHandler, MPMediaItemAnimatedArtworkVideoAssetFileUrlRequestHandler videoAssetFileUrlRequestHandler);
+	}
+
+	delegate void MPMediaItemAnimatedArtworkPreviewImageRequestCallback ([NullAllowed] UIImage image);
+	delegate void MPMediaItemAnimatedArtworkPreviewImageRequestHandler (CGSize size, [BlockCallback] MPMediaItemAnimatedArtworkPreviewImageRequestCallback completionHandler);
+
+	delegate void MPMediaItemAnimatedArtworkVideoAssetFileUrlRequestCallback ([NullAllowed] NSUrl image);
+	delegate void MPMediaItemAnimatedArtworkVideoAssetFileUrlRequestHandler (CGSize size, [BlockCallback] MPMediaItemAnimatedArtworkVideoAssetFileUrlRequestCallback completionHandler);
 }

@@ -7,23 +7,12 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
 using AVFoundation;
-#else
-using MonoTouch.AVFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.AVFoundation {
 
@@ -36,11 +25,11 @@ namespace MonoTouchFixtures.AVFoundation {
 		public void Defaults ()
 		{
 			using (var i = new AVVideoCompositionInstruction ()) {
-				Assert.Null (i.BackgroundColor, "BackgroundColor");
-				Assert.True (i.EnablePostProcessing, "EnablePostProcessing");
-				Assert.Null (i.LayerInstructions, "LayerInstructions");
-				Assert.True (i.TimeRange.Start.IsInvalid, "TimeRange.Start");
-				Assert.True (i.TimeRange.Duration.IsInvalid, "TimeRange.Duration");
+				Assert.That (i.BackgroundColor, Is.Null, "BackgroundColor");
+				Assert.That (i.EnablePostProcessing, Is.True, "EnablePostProcessing");
+				Assert.That (i.LayerInstructions, Is.Null, "LayerInstructions");
+				Assert.That (i.TimeRange.Start.IsInvalid, Is.True, "TimeRange.Start");
+				Assert.That (i.TimeRange.Duration.IsInvalid, Is.True, "TimeRange.Duration");
 			}
 		}
 
@@ -50,12 +39,10 @@ namespace MonoTouchFixtures.AVFoundation {
 			TestRuntime.AssertXcodeVersion (5, 0, 1);
 
 			using (var i = new AVVideoCompositionInstruction ()) {
-				Assert.False (i.ContainsTweening, "ContainsTweening");
+				Assert.That (i.ContainsTweening, Is.False, "ContainsTweening");
 				Assert.That (i.PassthroughTrackID, Is.EqualTo (0), "PassthroughTrackID");
 				Assert.That (i.RequiredSourceTrackIDs.Length, Is.EqualTo (0), "RequiredSourceTrackIDs");
 			}
 		}
 	}
 }
-
-#endif // !__WATCHOS__

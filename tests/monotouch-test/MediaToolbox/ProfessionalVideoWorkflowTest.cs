@@ -1,14 +1,6 @@
-﻿#if MONOMAC
-using System;
-#if XAMCORE_2_0
-using Foundation;
+#if MONOMAC
 using MediaToolbox;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaToolbox;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.MediaToolbox {
 
@@ -19,7 +11,7 @@ namespace MonoTouchFixtures.MediaToolbox {
 		[Test]
 		public void RegisterFormatReaders ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
 			MTProfessionalVideoWorkflow.RegisterFormatReaders ();
 		}
 	}

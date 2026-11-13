@@ -27,37 +27,51 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
-namespace AudioToolbox
-{
+namespace AudioToolbox {
+	/// <include file="../../docs/api/AudioToolbox/AudioBuffers.xml" path="/Documentation/Docs[@DocId='T:AudioToolbox.AudioBuffers']/*" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CoreAudio.framework - CoreAudioTypes.h
-	public class AudioBuffers : IDisposable, INativeObject
-	{
+	public class AudioBuffers : IDisposable, INativeObject {
 		IntPtr address;
 		readonly bool owns;
 
+		/// <param name="address">Pointer to an existing C-based AudioBufferList.</param>
+		///         <summary>Creates an AudioBuffers object that can be used to query and manipulate a native AudioBuffersList structure.</summary>
 		public AudioBuffers (IntPtr address)
 			: this (address, false)
 		{
 		}
 
+		/// <param name="address">Pointer to an existing C-based AudioBufferList.</param>
+		///         <param name="owns">Determines whether the user code owns the buffer pointed to by address, in that case, calling Dispose will release the buffer.</param>
+		///         <summary>Creates an AudioBuffers object that can be used to query and manipulate a native AudioBuffersList structure.</summary>
+		///         <remarks>
+		/// 	  If you set owns to true, the structure pointed to by
+		/// 	  "address" will be released when you call <see cref="AudioToolbox.AudioBuffers.Dispose(System.Boolean)" />.
+		/// 	</remarks>
 		public AudioBuffers (IntPtr address, bool owns)
 		{
 			if (address == IntPtr.Zero)
-				throw new ArgumentException ("address");
+				throw new ArgumentException (nameof (address));
 
 			this.address = address;
 			this.owns = owns;
 		}
 
+		/// <param name="count">Number of buffers to create for this AudioBuffer.</param>
+		///         <summary>Creates an AudioBuffers structure that can hold a fixed number of <see cref="AudioToolbox.AudioBuffer" /> structures.</summary>
+		///         <remarks>
+		/// 	  The allocated structure will be released when you call <see cref="AudioToolbox.AudioBuffers.Dispose(System.Boolean)" />.
+		/// 	</remarks>
 		public unsafe AudioBuffers (int count)
 		{
 			if (count < 0)
-				throw new ArgumentOutOfRangeException ("count");
+				throw new ArgumentOutOfRangeException (nameof (count));
 
 			//
 			// AudioBufferList is a int + array of AudioBuffer (int + int + intptr).
@@ -71,8 +85,8 @@ namespace AudioToolbox
 			owns = true;
 
 			Marshal.WriteInt32 (address, 0, count);
-			AudioBuffer *ptr = (AudioBuffer *) (((byte *) address) + IntPtr.Size);
-			for (int i = 0; i < count; i++){
+			AudioBuffer* ptr = (AudioBuffer*) (((byte*) address) + IntPtr.Size);
+			for (int i = 0; i < count; i++) {
 				ptr->NumberChannels = 0;
 				ptr->DataByteSize = 0;
 				ptr->Data = IntPtr.Zero;
@@ -85,16 +99,21 @@ namespace AudioToolbox
 			Dispose (false);
 		}
 
+		/// <summary>Returns the number of buffers managed.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
 		public unsafe int Count {
 			get {
-				return *(int *) address;
+				return *(int*) address;
 			}
 		}
 
 		public AudioBuffer this [int index] {
 			get {
 				if (index >= Count)
-					throw new ArgumentOutOfRangeException ("index");
+					throw new ArgumentOutOfRangeException (nameof (index));
 
 				//
 				// Decodes
@@ -106,25 +125,28 @@ namespace AudioToolbox
 				// }
 				//
 				unsafe {
-					byte *baddress = (byte *) address;
-					
+					byte* baddress = (byte*) address;
+
 					var ptr = baddress + IntPtr.Size + index * sizeof (AudioBuffer);
-					return *(AudioBuffer *) ptr;
+					return *(AudioBuffer*) ptr;
 				}
 			}
 			set {
 				if (index >= Count)
-					throw new ArgumentOutOfRangeException ("index");
+					throw new ArgumentOutOfRangeException (nameof (index));
 
 				unsafe {
-					byte *baddress = (byte *) address;
-					var ptr = (AudioBuffer *) (baddress + IntPtr.Size + index * sizeof (AudioBuffer));
+					byte* baddress = (byte*) address;
+					var ptr = (AudioBuffer*) (baddress + IntPtr.Size + index * sizeof (AudioBuffer));
 					*ptr = value;
 				}
 			}
 		}
 
-		public IntPtr Handle {
+		/// <summary>Handle (pointer) to the unmanaged object representation.</summary>
+		///         <value>A pointer</value>
+		///         <remarks>This IntPtr is a handle to the underlying unmanaged representation for this object.</remarks>
+		public NativeHandle Handle {
 			get { return address; }
 		}
 
@@ -133,39 +155,105 @@ namespace AudioToolbox
 			return audioBuffers.address;
 		}
 
+		/// <param name="index">Index of the buffer to access.</param>
+		///         <param name="data">Pointer to the data to set for the specified buffer.</param>
+		///         <summary>Sets the data buffer for one of the audio buffers, without updating the buffer size.</summary>
+		///         <remarks>
+		///           <para>
+		/// 	    You can use this method to swap out one of the buffers, without updating the size of the buffer. 
+		/// 	  </para>
+		///           <example>
+		///             <code lang="c#"><![CDATA[
+		/// //
+		/// // Creating an AudioBuffers structure 
+		/// //
+		/// AudioBuffers SetupBuffers (int n = 2, int size = 4096)
+		/// {
+		///     var buffers = new AudioBuffers (n);
+		///     for (int i = 0; i < n; i++)
+		/// 	buffers.SetData (i, MyBuffers [0][i], size);
+		///     return buffers;
+		/// }
+		///
+		/// //
+		/// // Swap the buffers
+		/// //
+		/// void SwapBuffers (AudioBuffers buffers, int bufferGroup)
+		/// {
+		///     for (int i = 0; i < buffers.Count; i++)
+		///     	buffers.SetData (i, MyBuffers [bufferGroup][i]);
+		/// }]]></code>
+		///           </example>
+		///         </remarks>
 		public void SetData (int index, IntPtr data)
 		{
 			if (index >= Count)
-				throw new ArgumentOutOfRangeException ("index");
+				throw new ArgumentOutOfRangeException (nameof (index));
 
 			unsafe {
-				byte * baddress = (byte *) address;
-				var ptr = (IntPtr *)(baddress + IntPtr.Size + index * sizeof (AudioBuffer) + sizeof (int) + sizeof (int));
+				byte* baddress = (byte*) address;
+				var ptr = (IntPtr*) (baddress + IntPtr.Size + index * sizeof (AudioBuffer) + sizeof (int) + sizeof (int));
 				*ptr = data;
 			}
 		}
 
+		/// <param name="index">Index of the buffer to access.</param>
+		///         <param name="data">Pointer to the data to set for the specified buffer.</param>
+		///         <param name="dataByteSize">Size of the buffer.</param>
+		///         <summary>Sets the data buffer for one of the audio buffers.</summary>
+		///         <remarks>
+		///           <example>
+		///             <code lang="c#"><![CDATA[
+		/// //
+		/// // Creating an AudioBuffers structure 
+		/// //
+		/// AudioBuffers SetupBuffers (int n = 2, int size = 4096)
+		/// {
+		///     var buffers = new AudioBuffers (n);
+		///     for (int i = 0; i < n; i++){
+		///         var buffer = Marshal.AllocHGlobal (size);
+		/// 	buffers.SetData (i, buffer, size);
+		///     }
+		///     return buffers;
+		/// }
+		///
+		/// void ReleaseBuffers (AudioBuffers buffers)
+		/// {
+		///     for (int i = 0; i < buffers.Count; i++){
+		///         var buf = buffers [i];
+		///         Marshal.ReleaseHGlobal (buf.Data);                
+		///     }
+		///     buffers.Dispose ();
+		/// }]]></code>
+		///           </example>
+		///         </remarks>
 		public void SetData (int index, IntPtr data, int dataByteSize)
 		{
 			if (index >= Count)
-				throw new ArgumentOutOfRangeException ("index");
+				throw new ArgumentOutOfRangeException (nameof (index));
 
 			unsafe {
-				byte *baddress = (byte *) address;
-				var ptr = (int *)(baddress + IntPtr.Size + index * sizeof (AudioBuffer) + sizeof (int));
+				byte* baddress = (byte*) address;
+				var ptr = (int*) (baddress + IntPtr.Size + index * sizeof (AudioBuffer) + sizeof (int));
 				*ptr = dataByteSize;
 				ptr++;
-				IntPtr *iptr = (IntPtr *) ptr;
+				IntPtr* iptr = (IntPtr*) ptr;
 				*iptr = data;
 			}
 		}
 
+		/// <summary>Releases the resources used by the AudioBuffers object.</summary>
+		///         <remarks>
+		///           <para>The Dispose method releases the resources used by the AudioBuffers class.</para>
+		///           <para>Calling the Dispose method when the application is finished using the AudioBuffers ensures that all external resources used by this managed object are released as soon as possible.  Once developers have invoked the Dispose method, the object is no longer useful and developers should no longer make any calls to it.  For more information on releasing resources see ``Cleaning up Unmananaged Resources'' at https://msdn.microsoft.com/en-us/library/498928w2.aspx</para>
+		///         </remarks>
 		public void Dispose ()
 		{
 			Dispose (true);
 			GC.SuppressFinalize (this);
 		}
 
+		/// <include file="../../docs/api/AudioToolbox/AudioBuffers.xml" path="/Documentation/Docs[@DocId='M:AudioToolbox.AudioBuffers.Dispose(System.Boolean)']/*" />
 		protected virtual void Dispose (bool disposing)
 		{
 			if (owns && address != IntPtr.Zero) {

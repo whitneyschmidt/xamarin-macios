@@ -1,0 +1,33 @@
+#if MONOMAC || IOS
+
+#nullable enable
+
+using System.ComponentModel;
+
+namespace FileProvider {
+
+#if !(XAMCORE_5_0 && __MACCATALYST__)
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios16.0")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+#if __MACCATALYST__
+	[EditorBrowsable (EditorBrowsableState.Never)]
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct NSFileProviderTypeAndCreator {
+		public uint Type;
+		public uint Creator;
+
+#if !COREBUILD
+		public string GetTypeAsFourCC ()
+			=> Runtime.ToFourCCString (Type);
+
+		public string GetCreatorAsFourCC ()
+			=> Runtime.ToFourCCString (Creator);
+#endif
+	}
+
+#endif // !(XAMCORE_5_0 && __MACCATALYST__)
+
+}
+#endif

@@ -1,0 +1,37 @@
+name: Update single-platform release tests branches
+
+on:
+  # allow triggering this action manually
+  workflow_dispatch:
+  # run every saturday (at noon UTC), so the builds occur during the weekend during lower CI load
+  schedule:
+  - cron:  '0 12 * * 6'
+
+jobs:
+  updateSinglePlatformBranches:
+    name: Merge main into single-platform release test branches
+    runs-on: ubuntu-latest
+    # GITHUB_TOKEN change from read-write to read-only on 2024-02-01 requires permissions block
+    # https://docs.opensource.microsoft.com/github/apps/permission-changes/
+    # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true # need to push changes
+
+      - name: 'Update branches'
+        run: |
+          set -ex
+          git config user.email "github-actions-single-platform-branch-updater@xamarin.com"
+          git config user.name "GitHub Actions Single Platform Branch Updater"
+          for platform in dotnet-iOS dotnet-tvOS dotnet-MacCatalyst dotnet-macOS; do
+            git checkout -b release-test/only-$platform origin/release-test/only-$platform
+            git merge origin/main
+            git push
+          done
+

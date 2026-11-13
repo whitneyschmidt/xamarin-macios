@@ -16,20 +16,54 @@
 #define PRINT(...) do { xamarin_printf (__VA_ARGS__); } while (0);
 #define LOG(...) do { if (xamarin_log_level > 0) xamarin_printf (__VA_ARGS__); } while (0);
 
-// #define DEBUG_LAUNCH_TIME
+void xamarin_launch_time_print (const char *msg);
+#define XAMARIN_LAUNCH_TIME_PRINT(msg) \
+	xamarin_launch_time_print (msg);
 
-#ifdef DEBUG_LAUNCH_TIME
-#define DEBUG_LAUNCH_TIME_PRINT(msg) \
-	debug_launch_time_print (msg);
-#else
-#define DEBUG_LAUNCH_TIME_PRINT(...)
-#endif
+// Uncomment the TRACK_MONOOBJECTS define to show a summary at process exit of
+// the MonoObjects that were created, and if any were not freed. If there are
+// leaked MonoObjects, a list of them will be printed.
+// This has an equivalent variable in src/ObjCRuntime/Runtime.CoreCLR.cs,
+// which must be set for tracking to work.
+//#define TRACK_MONOOBJECTS
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void *xamarin_marshal_return_value (SEL sel, MonoType *mtype, const char *type, MonoObject *retval, bool retain, MonoMethod *method, MethodDescription *desc, guint32 *exception_gchandle);
+void *xamarin_marshal_return_value (SEL sel, MonoType *mtype, const char *type, MonoObject *retval, bool retain, MonoMethod *method, MethodDescription *desc, GCHandle *exception_gchandle);
+
+void xamarin_dyn_objc_msgSend ();
+void xamarin_dyn_objc_msgSendSuper ();
+void xamarin_dyn_objc_msgSend_stret ();
+void xamarin_dyn_objc_msgSendSuper_stret ();
+void xamarin_add_internal_call (const char *name, const void *method);
+
+static inline size_t align_size (size_t target, uint64_t alignment)
+{
+	target = (target + (alignment - 1)) & ~(alignment - 1);
+	return target;
+}
+
+static inline unsigned long align_ulong (unsigned long target, unsigned long alignment)
+{
+	target = (target + (alignment - 1)) & ~(alignment - 1);
+	return target;
+}
+
+static inline int32_t align_int32 (int32_t target, int32_t alignment)
+{
+	target = (target + (alignment - 1)) & ~(alignment - 1);
+	return target;
+}
+
+static inline void* align_ptr (void* target, uint64_t alignment)
+{
+	uint64_t ptr = (uint64_t) target;
+	ptr = (ptr + (alignment - 1)) & ~(alignment - 1);
+	return (void *) ptr;
+}
+
 
 #ifdef __cplusplus
 }
@@ -42,11 +76,11 @@ void *xamarin_marshal_return_value (SEL sel, MonoType *mtype, const char *type, 
  */
 @interface XamarinGCHandle : NSObject {
 @public
-	int handle;
+	GCHandle handle;
 }
-+(XamarinGCHandle *) createWithHandle: (int) handle;
++(XamarinGCHandle *) createWithHandle: (GCHandle) handle;
 -(void) dealloc;
--(int) getHandle;
+-(GCHandle) getHandle;
 @end
 
 #endif /* __RUNTIME_INTERNAL_H__ */

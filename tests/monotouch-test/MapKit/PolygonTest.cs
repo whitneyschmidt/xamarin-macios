@@ -1,37 +1,27 @@
 // Copyright 2011 Xamarin Inc. All rights reserved
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using CoreLocation;
 using MapKit;
-using ObjCRuntime;
-#else
-using MonoTouch.CoreLocation;
-using MonoTouch.Foundation;
-using MonoTouch.MapKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.MapKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class PolygonTest {
 		[SetUp]
 		public void Setup ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
 		}
-		
+
 		[Test]
-		[ExpectedException (typeof (ArgumentNullException))]
 		public void FromPoints_Null ()
 		{
-			MKPolygon.FromPoints (null);
+			Assert.Throws<ArgumentNullException> (() => MKPolygon.FromPoints (null));
 		}
 
 		[Test]
@@ -40,26 +30,26 @@ namespace MonoTouchFixtures.MapKit {
 			MKPolygon pg = MKPolygon.FromPoints (new MKMapPoint [] { }, null);
 			CheckEmpty (pg);
 		}
-		
+
 		void CheckEmpty (MKPolygon pg)
 		{
 			// MKAnnotation
 			Assert.That (pg.Coordinate.Longitude, Is.NaN, "Coordinate.Longitude");
 			Assert.That (pg.Coordinate.Latitude, Is.NaN, "Coordinate.Latitude");
-			Assert.Null (pg.Title, "Title");
-			Assert.Null (pg.Subtitle, "Subtitle");
+			Assert.That (pg.Title, Is.Null, "Title");
+			Assert.That (pg.Subtitle, Is.Null, "Subtitle");
 			// MKOverlay
-			Assert.True (Double.IsPositiveInfinity (pg.BoundingMapRect.Origin.X), "BoundingMapRect.Origin.X");
-			Assert.True (Double.IsPositiveInfinity (pg.BoundingMapRect.Origin.Y), "BoundingMapRect.Origin.Y");
-			Assert.True (Double.IsNegativeInfinity (pg.BoundingMapRect.Size.Height), "BoundingMapRect.Size.Height");
-			Assert.True (Double.IsNegativeInfinity (pg.BoundingMapRect.Size.Width), "BoundingMapRect.Size.Width");
-			Assert.False (pg.Intersects (pg.BoundingMapRect), "Intersect/Self");
+			Assert.That (Double.IsPositiveInfinity (pg.BoundingMapRect.Origin.X), Is.True, "BoundingMapRect.Origin.X");
+			Assert.That (Double.IsPositiveInfinity (pg.BoundingMapRect.Origin.Y), Is.True, "BoundingMapRect.Origin.Y");
+			Assert.That (Double.IsNegativeInfinity (pg.BoundingMapRect.Size.Height), Is.True, "BoundingMapRect.Size.Height");
+			Assert.That (Double.IsNegativeInfinity (pg.BoundingMapRect.Size.Width), Is.True, "BoundingMapRect.Size.Width");
+			Assert.That (pg.Intersects (pg.BoundingMapRect), Is.False, "Intersect/Self");
 			MKMapRect rect = new MKMapRect (0, 0, 0, 0);
-			Assert.False (pg.Intersects (rect), "Intersect/Empty");
-			
+			Assert.That (pg.Intersects (rect), Is.False, "Intersect/Empty");
+
 			ShapeTest.CheckShape (pg);
 		}
-		
+
 		[Test]
 		public void FromPoints_Empty ()
 		{
@@ -73,12 +63,11 @@ namespace MonoTouchFixtures.MapKit {
 			MKPolygon pg = MKPolygon.FromPoints (new MKMapPoint [] { }, new MKPolygon [] { });
 			CheckEmpty (pg);
 		}
-		
+
 		[Test]
-		[ExpectedException (typeof (ArgumentNullException))]
 		public void FromCoordinates_Null ()
 		{
-			MKPolygon.FromCoordinates (null);
+			Assert.Throws<ArgumentNullException> (() => MKPolygon.FromCoordinates (null));
 		}
 
 		[Test]
@@ -87,7 +76,7 @@ namespace MonoTouchFixtures.MapKit {
 			MKPolygon pg = MKPolygon.FromCoordinates (new CLLocationCoordinate2D [] { }, null);
 			CheckEmpty (pg);
 		}
-		
+
 		[Test]
 		public void FromCoordinates_Empty ()
 		{
@@ -101,7 +90,7 @@ namespace MonoTouchFixtures.MapKit {
 			MKPolygon pg = MKPolygon.FromCoordinates (new CLLocationCoordinate2D [] { }, new MKPolygon [] { });
 			CheckEmpty (pg);
 		}
-		
+
 #if false
 		// Annotations that support dragging should implement this method to update the position of the annotation.
 		// keyword is SHOULD - it's not working for MKPolygon
@@ -113,8 +102,8 @@ namespace MonoTouchFixtures.MapKit {
 			try {
 				pg.Coordinate = new CLLocationCoordinate2D (10, 20);
 			}
-			catch (MonoTouchException mte) {
-				Assert.True (mte.Message.Contains ("unrecognized selector sent to instance"));
+			catch (ObjCException mte) {
+				Assert.That (mte.Message.Contains ("unrecognized selector sent to instance"), Is.True);
 			}
 			catch {
 				Assert.Fail ("API could be working/implemented");
@@ -124,4 +113,4 @@ namespace MonoTouchFixtures.MapKit {
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

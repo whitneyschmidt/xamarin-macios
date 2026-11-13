@@ -1,0 +1,24 @@
+// Copyright 2022 Microsoft Corporation.
+
+#nullable enable
+
+using CoreGraphics;
+
+namespace CoreFoundation {
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	[StructLayout (LayoutKind.Sequential)]
+	// The name prefix suggests CoreGraphics and based on CF_DEFINES_CGAFFINETRANSFORMCOMPONENTS
+	// it could be defined in CoreGraphics but documented as CoreFoundation type
+	public struct CGAffineTransformComponents {
+		public CGSize Scale;
+
+		public nfloat HorizontalShear;
+
+		public nfloat Rotation;
+
+		public CGVector Translation;
+	}
+}

@@ -1,18 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLArgumentDescriptorTest {
 		MTLArgumentDescriptor descriptor = null;
 
@@ -26,7 +18,7 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (descriptor != null)
+			if (descriptor is not null)
 				descriptor.Dispose ();
 			descriptor = null;
 		}
@@ -35,44 +27,42 @@ namespace MonoTouchFixtures.Metal {
 		public void GetSetAccessTest ()
 		{
 			descriptor.Access = MTLArgumentAccess.ReadWrite;
-			Assert.AreEqual (MTLArgumentAccess.ReadWrite, descriptor.Access);
+			Assert.That (descriptor.Access, Is.EqualTo (MTLArgumentAccess.ReadWrite));
 		}
 
 		[Test]
 		public void GetSetArrayLengthTest ()
 		{
 			descriptor.ArrayLength = 1;
-			Assert.AreEqual (1, descriptor.ArrayLength);
+			Assert.That (descriptor.ArrayLength, Is.EqualTo ((nuint) 1));
 		}
 
 		[Test]
 		public void GetSetConstantBlockAlignmentTest ()
 		{
 			descriptor.ConstantBlockAlignment = 1;
-			Assert.AreEqual (1, descriptor.ConstantBlockAlignment);
+			Assert.That (descriptor.ConstantBlockAlignment, Is.EqualTo ((nuint) 1));
 		}
 
 		[Test]
 		public void GetSetDataTypeTest ()
 		{
 			descriptor.DataType = MTLDataType.Half4;
-			Assert.AreEqual (MTLDataType.Half4, descriptor.DataType);
+			Assert.That (descriptor.DataType, Is.EqualTo (MTLDataType.Half4));
 		}
 
 		[Test]
 		public void GetSetIndexTest ()
 		{
 			descriptor.Index = 1;
-			Assert.AreEqual (1, descriptor.Index);
+			Assert.That (descriptor.Index, Is.EqualTo ((nuint) 1));
 		}
 
 		[Test]
 		public void GetSetTextureTypeTest ()
 		{
 			descriptor.TextureType = MTLTextureType.k2DArray;
-			Assert.AreEqual (MTLTextureType.k2DArray, descriptor.TextureType);
+			Assert.That (descriptor.TextureType, Is.EqualTo (MTLTextureType.k2DArray));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

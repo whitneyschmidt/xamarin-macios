@@ -7,51 +7,47 @@
 // Copyright 2014 Xamarin Inc. All Rights Reserved.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace Xamarin.Utils
-{
-	public enum ApplePlatform {
-		None,
-		MacOSX,
-		iOS,
-		WatchOS,
-		TVOS,
-	}
+#nullable enable
 
-	public struct TargetFramework : IEquatable<TargetFramework>
-	{
+namespace Xamarin.Utils {
+	public struct TargetFramework : IEquatable<TargetFramework> {
+		const string TFMVersion = Xamarin.DotNetVersions.Version;
+		public const string DotNet_iOS_String = ".NETCoreApp,Version=" + TFMVersion + ",Profile=ios"; // Short form: netX.Y-ios
+		public const string DotNet_tvOS_String = ".NETCoreApp,Version=" + TFMVersion + ",Profile=tvos"; // Short form: netX.Y-tvos
+		public const string DotNet_macOS_String = ".NETCoreApp,Version=" + TFMVersion + ",Profile=macos"; // Short form: netX.Y-macos
+		public const string DotNet_MacCatalyst_String = ".NETCoreApp,Version=" + TFMVersion + ",Profile=maccatalyst"; // Short form: netX.Y-maccatalyst
+
 		public static readonly TargetFramework Empty = new TargetFramework ();
-		public static readonly TargetFramework Default = 
-#if MONOMAC
-			Parse ("4.0");
-#else
-			Parse ("MonoTouch,v1.0");	
-#endif
-		public static readonly TargetFramework Net_2_0 = Parse ("2.0");
-		public static readonly TargetFramework Net_3_0 = Parse ("3.0");
-		public static readonly TargetFramework Net_3_5 = Parse ("3.5");
-		public static readonly TargetFramework Net_4_0 = Parse ("4.0");
-		public static readonly TargetFramework Net_4_5 = Parse ("4.5");
-		public static readonly TargetFramework Xamarin_Mac_2_0 = Parse ("Xamarin.Mac,v2.0");
 
-		public static readonly TargetFramework MonoTouch_1_0 = Parse ("MonoTouch,v1.0");
-		public static readonly TargetFramework Xamarin_iOS_1_0 = Parse ("Xamarin.iOS,v1.0");
-		public static readonly TargetFramework Xamarin_WatchOS_1_0 = Parse ("Xamarin.WatchOS,v1.0");
-		public static readonly TargetFramework Xamarin_TVOS_1_0 = Parse ("Xamarin.TVOS,v1.0");
+		public static readonly TargetFramework DotNet_iOS = Parse (DotNet_iOS_String);
+		public static readonly TargetFramework DotNet_tvOS = Parse (DotNet_tvOS_String);
+		public static readonly TargetFramework DotNet_macOS = Parse (DotNet_macOS_String);
+		public static readonly TargetFramework DotNet_MacCatalyst = Parse (DotNet_MacCatalyst_String);
 
-		public static readonly TargetFramework XamMac_1_0 = Parse ("XamMac,v1.0");
-		public static readonly TargetFramework Xamarin_Mac_2_0_Mobile = Parse ("Xamarin.Mac,Version=v2.0,Profile=Mobile");
-		public static readonly TargetFramework Xamarin_Mac_4_5_Full = Parse ("Xamarin.Mac,Version=v4.5,Profile=Full");
-		public static readonly TargetFramework Xamarin_Mac_4_5_System = Parse ("Xamarin.Mac,Version=v4.5,Profile=System");
-#if MTOUCH
-		public static readonly TargetFramework [] ValidFrameworks = new TargetFramework[] { Xamarin_iOS_1_0, Xamarin_WatchOS_1_0, Xamarin_TVOS_1_0 };
-#elif BGENERATOR
-		public static readonly TargetFramework [] ValidFrameworks = new TargetFramework[]
-		{
-			MonoTouch_1_0, Xamarin_iOS_1_0, Xamarin_TVOS_1_0, Xamarin_WatchOS_1_0,
-			XamMac_1_0, Xamarin_Mac_2_0_Mobile, Xamarin_Mac_4_5_Full, Xamarin_Mac_4_5_System
+		public static readonly TargetFramework [] ValidFrameworksMac = new [] {
+			DotNet_macOS,
 		};
-#endif
+
+		public static readonly TargetFramework [] ValidFrameworksiOS = new [] {
+			DotNet_iOS, DotNet_tvOS, DotNet_MacCatalyst,
+		};
+
+		public static IEnumerable<TargetFramework> AllValidFrameworks {
+			get { return ValidFrameworksMac.Union (ValidFrameworksiOS); }
+		}
+
+		public static IEnumerable<TargetFramework> ValidFrameworks { get { return AllValidFrameworks; } }
+
+		public static bool IsValidFramework (TargetFramework framework)
+		{
+			foreach (var tf in ValidFrameworks)
+				if (tf == framework)
+					return true;
+			return false;
+		}
 
 		public static TargetFramework Parse (string targetFrameworkString)
 		{
@@ -72,9 +68,9 @@ namespace Xamarin.Utils
 
 			s = s.Trim ();
 
-			string identifier = null;
-			string version = null;
-			string profile = null;
+			string? identifier = null;
+			string? version = null;
+			string? profile = null;
 
 			var fields = targetFrameworkString.Split (new char [] { ',' });
 			switch (fields.Length) {
@@ -96,6 +92,12 @@ namespace Xamarin.Utils
 				throw new Exception ();
 			}
 
+			if (identifier is null)
+				return false;
+
+			if (version is null)
+				return false;
+
 			identifier = identifier.Trim ();
 			version = version.Trim ();
 			profile = profile?.Trim ();
@@ -106,12 +108,11 @@ namespace Xamarin.Utils
 				version = version.Substring ("Version=".Length);
 			if (version.StartsWith ("v", StringComparison.OrdinalIgnoreCase))
 				version = version.Substring (1);
-			Version parsed_version;
-			if (!Version.TryParse (version, out parsed_version))
+			if (!Version.TryParse (version, out var parsed_version))
 				return false;
 
 			// If we got a profile, then the 'Profile=' part is mandatory.
-			if (profile != null) {
+			if (profile is not null) {
 				if (!profile.StartsWith ("Profile=", StringComparison.Ordinal))
 					return false;
 
@@ -132,14 +133,14 @@ namespace Xamarin.Utils
 			get { return version; }
 		}
 
-		readonly string profile;
-		public string Profile {
+		readonly string? profile;
+		public string? Profile {
 			get { return profile; }
 		}
 
-		public TargetFramework (string identifier, Version version, string profile = null)
+		public TargetFramework (string identifier, Version version, string? profile = null)
 		{
-			this.identifier = identifier != null ? identifier.Trim () : null;
+			this.identifier = identifier;
 			this.version = version;
 			this.profile = profile;
 		}
@@ -161,19 +162,19 @@ namespace Xamarin.Utils
 				&& other.Profile == Profile;
 		}
 
-		public override bool Equals (object obj)
+		public override bool Equals (object? obj)
 		{
-			return obj is TargetFramework ? Equals ((TargetFramework)obj) : false;
+			return obj is TargetFramework tf && Equals (tf);
 		}
 
 		public override int GetHashCode ()
 		{
 			var hash = 0;
-			if (Identifier != null)
+			if (Identifier is not null)
 				hash ^= Identifier.ToLowerInvariant ().GetHashCode ();
-			if (Version != null)
+			if (Version is not null)
 				hash ^= Version.GetHashCode ();
-			if (Profile != null)
+			if (Profile is not null)
 				hash ^= Profile.GetHashCode ();
 			return hash;
 		}
@@ -183,37 +184,45 @@ namespace Xamarin.Utils
 			var id = Identifier;
 			if (String.Equals (id, ".NETFramework", StringComparison.OrdinalIgnoreCase))
 				id = ".NETFramework";
-			else if (String.Equals (id, "Xamarin.Mac", StringComparison.OrdinalIgnoreCase))
-				id = "Xamarin.Mac";
 
-			return String.Format ("{0},Version=v{1}{2}", id, Version == null ? "0.0" : Version.ToString (), Profile == null ? string.Empty : (",Profile=" + Profile));
-		}
-
-		public string MonoFrameworkDirectory {
-			get {
-				if (Identifier == "Xamarin.Mac")
-					return Identifier;
-
-				if (Version == null)
-					return null;
-
-				return Version.ToString ();
-			}
+			return String.Format ("{0},Version=v{1}{2}", id, Version is null ? "0.0" : Version.ToString (), Profile is null ? string.Empty : (",Profile=" + Profile));
 		}
 
 		public ApplePlatform Platform {
 			get {
 				switch (Identifier) {
-				case "MonoTouch":
-				case "Xamarin.iOS":
-					return ApplePlatform.iOS;
-				case "Xamarin.WatchOS":
-					return ApplePlatform.WatchOS;
-				case "Xamarin.TVOS":
-					return ApplePlatform.TVOS;
+				case ".NETCoreApp":
+					switch (Profile) {
+					case "ios":
+						return ApplePlatform.iOS;
+					case "tvos":
+						return ApplePlatform.TVOS;
+					case "macos":
+						return ApplePlatform.MacOSX;
+					case "maccatalyst":
+						return ApplePlatform.MacCatalyst;
+					default:
+						throw new InvalidOperationException (string.Format ("Invalid .NETCoreApp Profile for Apple platforms: {0}", Profile));
+					}
 				default:
 					return ApplePlatform.MacOSX;
 				}
+			}
+		}
+
+		public static TargetFramework GetTargetFramework (ApplePlatform platform)
+		{
+			switch (platform) {
+			case ApplePlatform.iOS:
+				return DotNet_iOS;
+			case ApplePlatform.TVOS:
+				return DotNet_tvOS;
+			case ApplePlatform.MacCatalyst:
+				return DotNet_MacCatalyst;
+			case ApplePlatform.MacOSX:
+				return DotNet_macOS;
+			default:
+				throw new ArgumentOutOfRangeException (nameof (platform), string.Format ("Unknown platform: {0}", platform.ToString ()));
 			}
 		}
 	}

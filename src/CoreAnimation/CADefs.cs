@@ -29,76 +29,51 @@
 //
 //
 
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreAnimation {
 
 	partial class CAAnimation {
-		[DllImport(Constants.QuartzLibrary, EntryPoint="CACurrentMediaTime")]
+		/// <summary>The current animation time.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[DllImport (Constants.QuartzLibrary, EntryPoint = "CACurrentMediaTime")]
 		public extern static /* CFTimeInterval */ double CurrentMediaTime ();
 	}
 
 	public partial class CAGradientLayer {
-		public CGColor CreateColor (IntPtr p)
+		CGColor CreateColor (NativeHandle p)
 		{
-			return new CGColor (p);
+			return new CGColor (p, false);
 		}
-		
-		public CGColor [] Colors {
+
+		/// <summary>An array of colors defining the gradient.   These values can be animated.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CGColor []? Colors {
 			get {
-				return NSArray.ArrayFromHandle<CGColor> (_Colors, CreateColor);
+				return NSArray.ArrayFromHandleDropNullElements<CGColor> (_Colors, CreateColor);
 			}
 
 			set {
-				if (value == null) {
-					_Colors = IntPtr.Zero;
-					return;
-				}
-
-				IntPtr [] ptrs = new IntPtr [value.Length];
-				for (int i = 0; i < ptrs.Length; i++)
-					ptrs [i] = value [i].Handle;
-				
-				using (NSArray array = NSArray.FromIntPtrs (ptrs)){
-					_Colors = array.Handle;
-				}
+				using var array = NSArray.FromIntPtrs (value, NativeObjectExtensions.GetHandle);
+				_Colors = array.GetHandle ();
 			}
 		}
 	}
 
-#if XAMCORE_2_0
 	public partial class CAKeyFrameAnimation {
 
 		// For compatibility, as we told users to explicitly use this method before, or get a warning
+		/// <param name="path">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static CAKeyFrameAnimation GetFromKeyPath (string path)
 		{
 			return FromKeyPath (path);
 		}
 	}
-#else
-	// CoreAudioClock.h (inside AudioToolbox)
-	// It was a confusion between CA (CoreAudio) and CA (CoreAnimation)
-	[StructLayout (LayoutKind.Sequential)]
-	public struct CABarBeatTime {
-		public /* SInt32 */ int Bar;
-		public /* UInt16 */ ushort Beat;
-		public /* UInt16 */ ushort Subbeat;
-		public /* UInt16 */ ushort SubbeatDivisor;
-		public /* UInt16 */ ushort Reserved;
-	}
-
-	public partial class CAKeyFrameAnimation {
-
-		[Obsolete ("This method in the future will return a 'CAKeyFrameAnimation', update your source, or use 'GetFromKeyPath' to avoid this warning for now.")]
-		public static CAPropertyAnimation FromKeyPath (string path)
-		{
-			return GetFromKeyPath (path);
-		}
-	}
-#endif
 }

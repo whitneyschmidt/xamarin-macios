@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKNoiseMap
 //
 // Authors:
@@ -8,14 +8,10 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && XAMCORE_2_0
-
-using System;
-using OpenTK;
-using NUnit.Framework;
-
-using Foundation;
 using GameplayKit;
+
+using Vector2d = global::CoreGraphics.NVector2d;
+using Vector2i = global::CoreGraphics.NVector2i;
 
 namespace MonoTouchFixtures.GamePlayKit {
 	[TestFixture]
@@ -27,7 +23,7 @@ namespace MonoTouchFixtures.GamePlayKit {
 		{
 			if (!TestRuntime.CheckXcodeVersion (8, 0))
 				Assert.Ignore ("Ignoring GameplayKit tests: Requires iOS10+");
-			
+
 			var size = new Vector2d (1.0, 1.0);
 			var origin = new Vector2d (0, 0);
 			var sample = new Vector2i (100, 100);
@@ -35,17 +31,16 @@ namespace MonoTouchFixtures.GamePlayKit {
 			using (var noise = new GKNoise (GKCylindersNoiseSource.Create (1)))
 			using (var baseMap = new GKNoiseMap (noise))
 			using (var map = new GKNoiseMap (noise, size, origin, sample, false)) {
-				Assert.NotNull (baseMap, "baseMap is null");
-				Assert.NotNull (map, "baseMap is null");
+				Assert.That (baseMap, Is.Not.Null, "baseMap is null");
+				Assert.That (map, Is.Not.Null, "baseMap is null");
 
-				Assert.AreEqual (size, map.Size, "map size is different");
-				Assert.AreEqual (size, baseMap.Size, "baseMap size is different");
-				Assert.AreEqual (origin, map.Origin, "map origin is different");
-				Assert.AreEqual (origin, baseMap.Origin, "baseMap origin is different");
-				Assert.AreEqual (sample, map.SampleCount, "map sample is different");
-				Assert.AreEqual (sample, baseMap.SampleCount, "baseMap sample is different");
+				Assert.That (map.Size, Is.EqualTo (size), "map size is different");
+				Assert.That (baseMap.Size, Is.EqualTo (size), "baseMap size is different");
+				Assert.That (map.Origin, Is.EqualTo (origin), "map origin is different");
+				Assert.That (baseMap.Origin, Is.EqualTo (origin), "baseMap origin is different");
+				Assert.That (map.SampleCount, Is.EqualTo (sample), "map sample is different");
+				Assert.That (baseMap.SampleCount, Is.EqualTo (sample), "baseMap sample is different");
 			}
 		}
 	}
 }
-#endif

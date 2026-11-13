@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKGridGraph
 //
 // Authors:
@@ -8,20 +8,9 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using System.Collections.Generic;
-using OpenTK;
-
-#if XAMCORE_2_0
-using Foundation;
 using GameplayKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.GameplayKit;
-#endif
-using NUnit.Framework;
+
+using Vector2i = global::CoreGraphics.NVector2i;
 
 namespace MonoTouchFixtures.GamePlayKit {
 
@@ -36,7 +25,7 @@ namespace MonoTouchFixtures.GamePlayKit {
 			Start
 		}
 
-		int[] maze = {
+		int [] maze = {
 			1,1,1,1,1,1,1,1,1,1,
 			1,3,0,0,1,1,1,1,1,1,
 			1,0,1,0,2,0,0,0,0,1,
@@ -55,7 +44,7 @@ namespace MonoTouchFixtures.GamePlayKit {
 			TestRuntime.AssertXcodeVersion (7, 0);
 
 			var graph = GKGridGraph.FromGridStartingAt (Vector2i.Zero, 10, 10, false);
-			Assert.NotNull (graph, "GKGridGraph.FromGridStartingAt should not be null");
+			Assert.That (graph, Is.Not.Null, "GKGridGraph.FromGridStartingAt should not be null");
 
 			var walls = new List<GKGridGraphNode> (10 * 10);
 			var spawnPoints = new List<GKGridGraphNode> ();
@@ -63,16 +52,16 @@ namespace MonoTouchFixtures.GamePlayKit {
 
 			for (int i = 0; i < 10; i++) {
 				for (int j = 0; j < 10; j++) {
-					var tile = maze[i * 10 + j];
-					switch ((TileType)tile) {
+					var tile = maze [i * 10 + j];
+					switch ((TileType) tile) {
 					case TileType.Wall:
-						walls.Add (graph.GetNodeAt (new Vector2i (i, j)));
+						walls.Add (graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j)));
 						break;
 					case TileType.Portal:
-						spawnPoints.Add (graph.GetNodeAt (new Vector2i (i, j)));
+						spawnPoints.Add (graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j)));
 						break;
 					case TileType.Start:
-						startPosition = graph.GetNodeAt (new Vector2i (i, j));
+						startPosition = graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j));
 						break;
 					default:
 						break;
@@ -86,8 +75,8 @@ namespace MonoTouchFixtures.GamePlayKit {
 			if (TestRuntime.CheckXcodeVersion (7, 3))
 				graph.RemoveNodes (walls.ToArray ());
 
-			Assert.NotNull (startPosition, "startPosition must not be null");
-			Assert.AreEqual (new Vector2i (1, 1), startPosition.GridPosition, "GridPosition must be (1,1)");
+			Assert.That (startPosition, Is.Not.Null, "startPosition must not be null");
+			Assert.That (startPosition.GridPosition, Is.EqualTo (new Vector2i (1, 1)), "GridPosition must be (1,1)");
 			Assert.That (walls.Count > 0, "walls list must be higher than zero");
 			Assert.That (spawnPoints.Count > 0, "spawnPoints list must be higher than zero");
 		}
@@ -98,7 +87,7 @@ namespace MonoTouchFixtures.GamePlayKit {
 			TestRuntime.AssertXcodeVersion (7, 0);
 
 			var graph = new GKGridGraph (Vector2i.Zero, 10, 10, false);
-			Assert.NotNull (graph, "GKGridGraph.FromGridStartingAt should not be null");
+			Assert.That (graph, Is.Not.Null, "GKGridGraph.FromGridStartingAt should not be null");
 
 			var walls = new List<GKGridGraphNode> (10 * 10);
 			var spawnPoints = new List<GKGridGraphNode> ();
@@ -106,16 +95,16 @@ namespace MonoTouchFixtures.GamePlayKit {
 
 			for (int i = 0; i < 10; i++) {
 				for (int j = 0; j < 10; j++) {
-					var tile = maze[i * 10 + j];
-					switch ((TileType)tile) {
+					var tile = maze [i * 10 + j];
+					switch ((TileType) tile) {
 					case TileType.Wall:
-						walls.Add (graph.GetNodeAt (new Vector2i (i, j)));
+						walls.Add (graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j)));
 						break;
 					case TileType.Portal:
-						spawnPoints.Add (graph.GetNodeAt (new Vector2i (i, j)));
+						spawnPoints.Add (graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j)));
 						break;
 					case TileType.Start:
-						startPosition = graph.GetNodeAt (new Vector2i (i, j));
+						startPosition = graph.GetNodeAt<GKGridGraphNode> (new Vector2i (i, j));
 						break;
 					default:
 						break;
@@ -129,12 +118,10 @@ namespace MonoTouchFixtures.GamePlayKit {
 			if (TestRuntime.CheckXcodeVersion (7, 3))
 				graph.RemoveNodes (walls.ToArray ());
 
-			Assert.NotNull (startPosition, "startPosition must not be null");
-			Assert.AreEqual (new Vector2i (1,1), startPosition.GridPosition, "GridPosition must be (1,1)");
+			Assert.That (startPosition, Is.Not.Null, "startPosition must not be null");
+			Assert.That (startPosition.GridPosition, Is.EqualTo (new Vector2i (1, 1)), "GridPosition must be (1,1)");
 			Assert.That (walls.Count > 0, "walls list must be higher than zero");
 			Assert.That (spawnPoints.Count > 0, "spawnPoints list must be higher than zero");
 		}
 	}
 }
-
-#endif // __WATCHOS__

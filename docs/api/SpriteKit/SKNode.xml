@@ -1,0 +1,55 @@
+<Documentation>
+  <Docs DocId="T:SpriteKit.SKNode">
+    <summary>The building block out of which scene-graphs are made. The root of the tree is an <see cref="SpriteKit.SKScene" />.</summary>
+    <remarks>
+      <para>
+        <img href="~/xml/SpriteKit/_images/SKNode.Hierarchy.png" alt="Class diagram of the SKNode hierarchy" />
+      </para>
+      <para>
+        <list type="table">
+          <listheader>
+            <term>Class</term>
+            <description>Description</description>
+          </listheader>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKCropNode" />
+            </term>
+            <description>Uses a mask to crop its children.</description>
+          </item>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKEffectNode" />
+            </term>
+            <description>Applies a <see cref="CoreImage.CIFilter" /> to its children.</description>
+          </item>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKEmitterNode" />
+            </term>
+            <description>Produces and displays particles.</description>
+          </item>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKLabelNode" />
+            </term>
+            <description>Displays text.</description>
+          </item>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKShapeNode" />
+            </term>
+            <description>Displays a <see cref="CoreGraphics.CGPath" />-based shape.</description>
+          </item>
+          <item>
+            <term>
+              <see cref="SpriteKit.SKSpriteNode" />
+            </term>
+            <description>Displays a textured sprite.</description>
+          </item>
+        </list>
+      </para>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/SpriteKit/Reference/SKNode_Ref/index.html">Apple documentation for <c>SKNode</c></related>
+  </Docs>
+</Documentation>

@@ -1,0 +1,145 @@
+# Main template that contains all the jobs that are required to run the device tests.
+#
+# The stage contains a single job to run the tests on a pool that is capable to run them.
+
+parameters:
+
+# string that is used to identify the status to be used to expose the result on GitHub
+- name: statusContext
+  type: string
+  default: 'iOS Device Tests' # default context, since we started dealing with iOS devices.
+
+# name of the pool that contains the iOS devices
+- name: testPool
+  type: string
+  default: ''
+
+# demand that has to be matched by a bot to be able to run the tests.
+- name: extraBotDemands
+  type: object
+  default: []
+
+- name: vsdropsPrefix
+  type: string
+
+- name: stageName
+  type: string
+
+- name: displayName
+  type: string
+
+- name: keyringPass
+  type: string
+
+- name: gitHubToken
+  type: string
+
+- name: xqaCertPass
+  type: string
+
+- name: condition
+  type: boolean
+  default: true
+
+- name: parseLabels
+  type: boolean
+  default: true
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: XcodeChannel
+  type: string
+
+- name: macOSName
+  type: string
+
+- name: postPipeline
+  type: boolean
+  default: false
+
+- name: useACES
+  type: boolean
+  default: false
+
+stages:
+- stage: ${{ parameters.stageName }}
+  displayName: ${{ parameters.displayName }}
+  dependsOn:
+  - ${{ if eq(parameters.postPipeline, false) }}:
+    - build_packages
+  - configure_build
+  # we need to have the pkgs built and the device sets to be ran, that is decided via the labels or type of build during the build_packages stage
+  condition: and(succeeded(), ${{ parameters.condition }})
+
+  jobs:
+  - job: "tests"
+    displayName: 'T:' 
+    timeoutInMinutes: 180
+    variables:
+      # disable governance checks in the tests 
+      skipComponentGovernanceDetection: true
+      # old and ugly env var use by jenkins, we do have parts of the code that use it, contains the PR number
+      PR_ID: $[ stageDependencies.configure_build.configure.outputs['labels.pr_number'] ]
+      # set the branch variable name, this is required by jenkins and we have a lot of scripts that depend on it
+      BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+      XHARNESS_LABELS: $[ stageDependencies.configure_build.configure.outputs['labels.xharness_labels'] ]
+      DOTNET_PLATFORMS: $[ stageDependencies.configure_build.configure.outputs['configure_platforms.DOTNET_PLATFORMS'] ]
+      # The ACES pool is a virtual-machine pool; expose VM_VENDOR so tests
+      # gated by TestRuntime.AssertNotVirtualMachine get ignored there.
+      ${{ if parameters.useACES }}:
+        VM_VENDOR: ACES
+    ${{ if parameters.useACES }}:
+      pool:
+        name: $(CIBuildPoolACES)
+        demands:
+        - ImageOverride -equals $(CIBuildPoolACESImage)
+        workspace:
+          clean: all
+    ${{ else }}:
+      pool:
+        name: ${{ parameters.testPool }}
+        demands:
+        - Agent.OS -equals Darwin
+        - macOS.Name -equals ${{ parameters.macOSName }}
+        - macOS.Architecture -equals arm64
+        - XcodeChannel -equals ${{ parameters.XcodeChannel }}
+        - ${{ each demand in parameters.extraBotDemands }}:
+          - demand
+        workspace:
+          clean: all
+    strategy:
+      matrix: $[ stageDependencies.configure_build.configure.outputs['test_matrix.SIMULATOR_TEST_MATRIX'] ]
+    condition: ne(stageDependencies.configure_build.configure.outputs['labels.skip_all_tests'], 'True')
+    steps:
+
+    - bash: |
+        set +x
+        env -0 | sort -z | tr '\0' '\n'
+        ifconfig | grep 'inet '
+      displayName: 'Dump env'
+      name: DumpEnv
+    - template: build.yml
+      parameters:
+        isPR: ${{ parameters.isPR }}
+        repositoryAlias: ${{ parameters.repositoryAlias }}
+        commit: ${{ parameters.commit }}
+        label: $(LABEL)
+        labelWithPlatform: $(LABEL_WITH_PLATFORM)
+        testsLabels: $(TESTS_LABELS)
+        statusContext: $(STATUS_CONTEXT)
+        testPlatform:  $(TEST_PLATFORM)
+        vsdropsPrefix: ${{ parameters.vsdropsPrefix }}
+        keyringPass: ${{ parameters.keyringPass }}
+        testPrefix: $(TEST_PREFIX)
+        gitHubToken: ${{ parameters.gitHubToken }}
+        xqaCertPass: ${{ parameters.xqaCertPass }}
+        XcodeChannel: ${{ parameters.XcodeChannel }}

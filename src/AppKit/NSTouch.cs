@@ -1,12 +1,14 @@
-using System;
+using System.ComponentModel;
+
+#nullable enable
+
+#if !XAMCORE_5_0 && __MACCATALYST__
 
 namespace AppKit {
+	[EditorBrowsable (EditorBrowsableState.Never)]
+	[Obsolete ("This type is does not exist on this platform.")]
 	public partial class NSTouch {
-#if !XAMCORE_4_0
-		[Obsolete ("This type is not meant to be user-created")]
-		public NSTouch ()
-		{
-		}
-#endif
 	}
 }
+
+#endif // !XAMCORE_5_0

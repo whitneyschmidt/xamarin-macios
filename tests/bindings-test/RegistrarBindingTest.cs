@@ -1,24 +1,13 @@
-﻿using System;
 using System.Threading;
-
-#if __UNIFIED__
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-
-using NUnit.Framework;
 
 using Bindings.Test;
 
-namespace Xamarin.BindingTests
-{
+#nullable enable
+
+namespace Xamarin.BindingTests {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class RegistrarBindingTest
-	{
+	public class RegistrarBindingTest {
 		[Test]
 		public void BlockCallback ()
 		{
@@ -41,8 +30,7 @@ namespace Xamarin.BindingTests
 			}
 		}
 
-		class BlockCallbackClass : NSObject, IObjCProtocolBlockTest
-		{
+		class BlockCallbackClass : NSObject, IObjCProtocolBlockTest {
 			public void RequiredCallback (Action<int> completionHandler)
 			{
 				completionHandler (42);
@@ -69,7 +57,7 @@ namespace Xamarin.BindingTests
 			public Action<int> RequiredReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -77,7 +65,7 @@ namespace Xamarin.BindingTests
 			public Action<int> OptionalReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -85,7 +73,7 @@ namespace Xamarin.BindingTests
 			public static Action<int> RequiredStaticReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -93,13 +81,98 @@ namespace Xamarin.BindingTests
 			public static Action<int> OptionalStaticReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 		}
 
-		class BlockCallbackClassExplicit : NSObject, IObjCProtocolBlockTest
+		[Test]
+		public void DerivedClassBlockCallback ()
 		{
+			using (var obj = new BlockCallbackTester ()) {
+				DerivedBlockCallbackClass.Answer = 42;
+				obj.TestObject = new DerivedBlockCallbackClass ();
+				obj.CallOptionalCallback ();
+				// obj.CallRequiredCallback ();
+				ObjCBlockTester.TestClass = new Class (typeof (DerivedBlockCallbackClass));
+				ObjCBlockTester.CallRequiredStaticCallback ();
+				ObjCBlockTester.CallOptionalStaticCallback ();
+				DerivedBlockCallbackClass.Answer = 2;
+
+				Assert.That (obj.InvokeNullableCallbackNatively (null), Is.False, "NullableCallback A rv");
+				int nullableResult = -1;
+				Assert.That (obj.InvokeNullableCallbackNatively ((v) => nullableResult = v), Is.True, "NullableCallback B rv");
+				Assert.That (nullableResult, Is.EqualTo (24), "NullableCallback result");
+			}
+		}
+
+		abstract class BaseBlockCallbackClass : NSObject, IObjCProtocolBlockTest {
+			public abstract void RequiredCallback (Action<int> completionHandler);
+			public abstract Action<int> RequiredReturnValue ();
+		}
+
+		class DerivedBlockCallbackClass : BaseBlockCallbackClass {
+			public static int Answer = 42;
+			public override void RequiredCallback (Action<int> completionHandler)
+			{
+				completionHandler (Answer);
+			}
+
+			[Export ("optionalCallback:")]
+			public void OptionalCallback (Action<int> completionHandler)
+			{
+				Console.WriteLine ("OptionalCallback");
+				completionHandler (Answer);
+			}
+
+			[Export ("requiredStaticCallback:")]
+			public static void RequiredStaticCallback (Action<int> completionHandler)
+			{
+				completionHandler (Answer);
+			}
+
+			[Export ("optionalStaticCallback:")]
+			public static void OptionalStaticCallback (Action<int> completionHandler)
+			{
+				Console.WriteLine ("OptionalStaticCallback");
+				completionHandler (Answer);
+			}
+
+			public override Action<int> RequiredReturnValue ()
+			{
+				return new Action<int> ((v) => {
+					Assert.That (v, Is.EqualTo (Answer), "RequiredReturnValue");
+				});
+			}
+
+			[Export ("optionalReturnValue")]
+			public Action<int> OptionalReturnValue ()
+			{
+				return new Action<int> ((v) => {
+					Console.WriteLine ("OptionalReturnValue");
+					Assert.That (v, Is.EqualTo (Answer), "RequiredReturnValue");
+				});
+			}
+
+			[Export ("requiredStaticReturnValue")]
+			public static Action<int> RequiredStaticReturnValue ()
+			{
+				return new Action<int> ((v) => {
+					Assert.That (v, Is.EqualTo (Answer), "RequiredReturnValue");
+				});
+			}
+
+			[Export ("optionalStaticReturnValue")]
+			public static Action<int> OptionalStaticReturnValue ()
+			{
+				return new Action<int> ((v) => {
+					Console.WriteLine ("OptionalStaticReturnValue");
+					Assert.That (v, Is.EqualTo (Answer), "RequiredReturnValue");
+				});
+			}
+		}
+
+		class BlockCallbackClassExplicit : NSObject, IObjCProtocolBlockTest {
 			// Explicitly implemented interface member
 			void IObjCProtocolBlockTest.RequiredCallback (Action<int> completionHandler)
 			{
@@ -128,7 +201,7 @@ namespace Xamarin.BindingTests
 			Action<int> IObjCProtocolBlockTest.RequiredReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -136,7 +209,7 @@ namespace Xamarin.BindingTests
 			public Action<int> OptionalReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -144,7 +217,7 @@ namespace Xamarin.BindingTests
 			public static Action<int> RequiredStaticReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 
@@ -152,30 +225,64 @@ namespace Xamarin.BindingTests
 			public static Action<int> OptionalStaticReturnValue ()
 			{
 				return new Action<int> ((v) => {
-					Assert.AreEqual (42, v, "RequiredReturnValue");
+					Assert.That (v, Is.EqualTo (42), "RequiredReturnValue");
 				});
 			}
 		}
 
-		public class BlockCallbackTester : ObjCBlockTester
-		{
+		public class BlockCallbackTester : ObjCBlockTester {
 			public override void ClassCallback (Action<int> completionHandler)
 			{
 				completionHandler (42);
+			}
+
+			public override bool NullableCallback (Action<int>? completionHandler)
+			{
+				if (completionHandler is not null) {
+					completionHandler (24);
+					return true;
+				}
+				return false;
+			}
+
+			[BindingImpl (BindingImplOptions.Optimizable)]
+			public bool InvokeNullableCallbackNatively (Action<int>? completionHandler)
+			{
+				byte rv;
+				if (completionHandler is null) {
+					rv = Messaging.byte_objc_msgSend_IntPtr (Handle, Selector.GetHandle ("nullableCallback:"), IntPtr.Zero);
+				} else {
+					unsafe {
+						delegate* unmanaged<IntPtr, int, void> trampoline = &NullableCallbackHandler;
+						using var block = new BlockLiteral (trampoline, completionHandler, typeof (BlockCallbackTester), nameof (NullableCallbackHandler));
+						BlockLiteral* block_ptr = &block;
+						rv = Messaging.byte_objc_msgSend_IntPtr (Handle, Selector.GetHandle ("nullableCallback:"), (IntPtr) block_ptr);
+					}
+				}
+				return rv != 0;
+			}
+
+			[UnmanagedCallersOnly]
+			static void NullableCallbackHandler (IntPtr block, int magicNumber)
+			{
+				var del = BlockLiteral.GetTarget<Action<int>> (block);
+				if (del is not null) {
+					del (magicNumber);
+				}
 			}
 		}
 
 		public class PropertyBlock : NSObject, IProtocolWithBlockProperties {
 			[Export ("myOptionalProperty")]
-			public SimpleCallback MyOptionalProperty { get; set; }
+			public SimpleCallback MyOptionalProperty { get; set; } = () => { Assert.Fail ("No block set?"); };
 
-			public SimpleCallback MyRequiredProperty { get; set; }
+			public SimpleCallback MyRequiredProperty { get; set; } = () => { Assert.Fail ("No block set?"); };
 
 			[Export ("myOptionalStaticProperty")]
-			public static SimpleCallback MyOptionalStaticProperty { get; set; }
+			public static SimpleCallback? MyOptionalStaticProperty { get; set; }
 
 			[Export ("myRequiredStaticProperty")]
-			public static SimpleCallback MyRequiredStaticProperty { get; set; }
+			public static SimpleCallback? MyRequiredStaticProperty { get; set; }
 		}
 
 		[Test]
@@ -204,7 +311,7 @@ namespace Xamarin.BindingTests
 					}
 				}
 				ObjCBlockTester.CallProtocolWithBlockProperties (pb, required, instance);
-				Assert.IsTrue (callbackCalled, "Callback");
+				Assert.That (callbackCalled, Is.True, "Callback");
 			}
 		}
 
@@ -220,18 +327,18 @@ namespace Xamarin.BindingTests
 				ObjCBlockTester.SetProtocolWithBlockProperties (pb, required, instance);
 				if (required) {
 					if (instance) {
-						pb.MyRequiredProperty ();
+						pb.MyRequiredProperty! ();
 					} else {
-						PropertyBlock.MyRequiredStaticProperty ();
+						PropertyBlock.MyRequiredStaticProperty! ();
 					}
 				} else {
 					if (instance) {
-						pb.MyOptionalProperty ();
+						pb.MyOptionalProperty! ();
 					} else {
-						PropertyBlock.MyOptionalStaticProperty ();
+						PropertyBlock.MyOptionalStaticProperty! ();
 					}
 				}
-				Assert.AreEqual (calledCounter + 1, ObjCBlockTester.CalledBlockCount, "Blocks called");
+				Assert.That (ObjCBlockTester.CalledBlockCount, Is.EqualTo (calledCounter + 1), "Blocks called");
 			}
 		}
 		[Test]
@@ -261,8 +368,12 @@ namespace Xamarin.BindingTests
 					Messaging.void_objc_msgSend_IntPtr_bool_bool (Class.GetHandle (typeof (ObjCBlockTester)), Selector.GetHandle ("setProtocolWithBlockProperties:required:instance:"), pb.Handle, required, instance);
 					Assert.Fail ("Expected an MT8028 error");
 				} catch (RuntimeException re) {
-					Assert.AreEqual (8028, re.Code, "Code");
-					Assert.AreEqual ("The runtime function get_block_wrapper_creator has been linked away.", re.Message, "Message");
+					Assert.That (re.Code, Is.EqualTo (8009).Or.EqualTo (8028), "Code");
+					if (re.Code == 8009) {
+						Assert.That (re.Message, Does.StartWith ("Unable to locate the block to delegate conversion method for the method Xamarin.BindingTests.RegistrarBindingTest+FakePropertyBlock.set_"), re.Message, "Message");
+					} else {
+						Assert.That (re.Message, Is.EqualTo ("The runtime function get_block_wrapper_creator has been linked away."), "Message");
+					}
 				}
 			}
 		}
@@ -278,16 +389,16 @@ namespace Xamarin.BindingTests
 		// have been linked away (which happen when _forcing_ the dynamic registrar to be linked away).
 		public class FakePropertyBlock : NSObject {
 			[Export ("myOptionalProperty")]
-			public SimpleCallback MyOptionalProperty { get; set; }
+			public SimpleCallback? MyOptionalProperty { get; set; }
 
 			[Export ("myRequiredProperty")]
-			public SimpleCallback MyRequiredProperty { get; set; }
+			public SimpleCallback? MyRequiredProperty { get; set; }
 
 			[Export ("myOptionalStaticProperty")]
-			public static SimpleCallback MyOptionalStaticProperty { get; set; }
+			public static SimpleCallback? MyOptionalStaticProperty { get; set; }
 
 			[Export ("myRequiredStaticProperty")]
-			public static SimpleCallback MyRequiredStaticProperty { get; set; }
+			public static SimpleCallback? MyRequiredStaticProperty { get; set; }
 		}
 	}
 }

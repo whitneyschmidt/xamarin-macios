@@ -1,33 +1,28 @@
-﻿#if !__WATCHOS__
 
-using System;
-using Foundation;
-
-#if XAMCORE_2_0
 using Metal;
 using MetalPerformanceShaders;
-#else
-using MonoTouch.Metal;
-using MonoTouch.MetalPerformanceShaders;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.MetalPerformanceShaders {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class ImageScaleTest {
 
 		IMTLDevice device;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Metal ()
 		{
-			TestRuntime.AssertXcodeVersion (9,0);
+			TestRuntime.AssertXcodeVersion (9, 0);
+
+#if !MONOMAC && !__MACCATALYST__
+			if (Runtime.Arch == Arch.SIMULATOR)
+				Assert.Inconclusive ("Metal Performance Shaders is not supported in the simulator");
+#endif
 
 			device = MTLDevice.SystemDefault;
 			// some older hardware won't have a default
-			if (device == null || !MPSKernel.Supports (device))
+			if (device is null || !MPSKernel.Supports (device))
 				Assert.Inconclusive ("Metal is not supported");
 		}
 
@@ -52,5 +47,3 @@ namespace MonoTouchFixtures.MetalPerformanceShaders {
 		}
 	}
 }
-
-#endif

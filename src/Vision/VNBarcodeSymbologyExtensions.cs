@@ -1,4 +1,4 @@
-﻿//
+//
 // VNBarcodeSymbologyExtensions.cs
 //
 // Authors:
@@ -7,27 +7,33 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-using System;
-using Foundation;
+#nullable enable
 
 namespace Vision {
 	public static partial class VNBarcodeSymbologyExtensions {
+		/// <param name="self">The instance on which this method operates.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static NSString [] GetConstants (this VNBarcodeSymbology [] self)
 		{
-			if (self == null)
-				throw new ArgumentNullException (nameof (self));
+			if (self is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (self));
 
 			var array = new NSString [self.Length];
 			for (int n = 0; n < self.Length; n++)
-				array [n] = self [n].GetConstant ();
+				array [n] = self [n].GetConstant ()!;
 			return array;
 		}
 
-		public static VNBarcodeSymbology [] GetValues (NSString [] constants)
+		/// <param name="constants">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static VNBarcodeSymbology [] GetValues (NSString []? constants)
 		{
-			if (constants == null)
-				throw new ArgumentNullException (nameof (constants));
+			if (constants is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (constants));
 
 			var array = new VNBarcodeSymbology [constants.Length];
 			for (int n = 0; n < constants.Length; n++)
@@ -36,4 +42,3 @@ namespace Vision {
 		}
 	}
 }
-#endif

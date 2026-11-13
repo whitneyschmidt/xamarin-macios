@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NSDimension
 //
 // Authors:
@@ -7,21 +7,11 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Foundation {
 
@@ -32,7 +22,7 @@ namespace MonoTouchFixtures.Foundation {
 		[SetUp]
 		public void Setup ()
 		{
-			TestRuntime.AssertXcodeVersion (8,0);
+			TestRuntime.AssertXcodeVersion (8, 0);
 		}
 
 		[Test]
@@ -45,8 +35,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitAcceleration_BaseUnit ()
 		{
 			using (var bu = NSUnitAcceleration.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitAcceleration), bu, "type");
-				Assert.That ("m/s²", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitAcceleration)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("m/s²"), "Symbol");
 			}
 		}
 
@@ -54,8 +44,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitAngle_BaseUnit ()
 		{
 			using (var bu = NSUnitAngle.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitAngle), bu, "type");
-				Assert.That ("°", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitAngle)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("°"), "Symbol");
 			}
 		}
 
@@ -63,8 +53,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitArea_BaseUnit ()
 		{
 			using (var bu = NSUnitArea.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitArea), bu, "type");
-				Assert.That ("m²", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitArea)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("m²"), "Symbol");
 			}
 		}
 
@@ -72,8 +62,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitConcentrationMass_BaseUnit ()
 		{
 			using (var bu = NSUnitConcentrationMass.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitConcentrationMass), bu, "type");
-				Assert.That ("g/L", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitConcentrationMass)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("g/L"), "Symbol");
 			}
 		}
 
@@ -81,8 +71,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitDispersion_BaseUnit ()
 		{
 			using (var bu = NSUnitDispersion.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitDispersion), bu, "type");
-				Assert.That ("ppm", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitDispersion)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("ppm"), "Symbol");
 			}
 		}
 
@@ -90,8 +80,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitDuration_BaseUnit ()
 		{
 			using (var bu = NSUnitDuration.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitDuration), bu, "type");
-				Assert.That ("s", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitDuration)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("s"), "Symbol");
 			}
 		}
 
@@ -99,8 +89,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitElectricCharge_BaseUnit ()
 		{
 			using (var bu = NSUnitElectricCharge.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitElectricCharge), bu, "type");
-				Assert.That ("C", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitElectricCharge)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("C"), "Symbol");
 			}
 		}
 
@@ -108,8 +98,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitElectricCurrent_BaseUnit ()
 		{
 			using (var bu = NSUnitElectricCurrent.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitElectricCurrent), bu, "type");
-				Assert.That ("A", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitElectricCurrent)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("A"), "Symbol");
 			}
 		}
 
@@ -117,8 +107,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitElectricPotentialDifference_BaseUnit ()
 		{
 			using (var bu = NSUnitElectricPotentialDifference.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitElectricPotentialDifference), bu, "type");
-				Assert.That ("V", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitElectricPotentialDifference)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("V"), "Symbol");
 			}
 		}
 
@@ -126,8 +116,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitElectricResistance_BaseUnit ()
 		{
 			using (var bu = NSUnitElectricResistance.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitElectricResistance), bu, "type");
-				Assert.That ("Ω", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitElectricResistance)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("Ω"), "Symbol");
 			}
 		}
 
@@ -135,8 +125,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitEnergy_BaseUnit ()
 		{
 			using (var bu = NSUnitEnergy.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitEnergy), bu, "type");
-				Assert.That ("J", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitEnergy)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("J"), "Symbol");
 			}
 		}
 
@@ -144,8 +134,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitFrequency_BaseUnit ()
 		{
 			using (var bu = NSUnitFrequency.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitFrequency), bu, "type");
-				Assert.That ("Hz", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitFrequency)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("Hz"), "Symbol");
 			}
 		}
 
@@ -153,8 +143,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitFuelEfficiency_BaseUnit ()
 		{
 			using (var bu = NSUnitFuelEfficiency.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitFuelEfficiency), bu, "type");
-				Assert.That ("L/100km", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitFuelEfficiency)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("L/100km"), "Symbol");
 			}
 		}
 
@@ -162,8 +152,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitIlluminance_BaseUnit ()
 		{
 			using (var bu = NSUnitIlluminance.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitIlluminance), bu, "type");
-				Assert.That ("lx", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitIlluminance)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("lx"), "Symbol");
 			}
 		}
 
@@ -171,8 +161,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitLength_BaseUnit ()
 		{
 			using (var bu = NSUnitLength.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitLength), bu, "type");
-				Assert.That ("m", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitLength)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("m"), "Symbol");
 			}
 		}
 
@@ -180,8 +170,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitMass_BaseUnit ()
 		{
 			using (var bu = NSUnitMass.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitMass), bu, "type");
-				Assert.That ("kg", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitMass)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("kg"), "Symbol");
 			}
 		}
 
@@ -189,8 +179,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitPower_BaseUnit ()
 		{
 			using (var bu = NSUnitPower.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitPower), bu, "type");
-				Assert.That ("W", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitPower)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("W"), "Symbol");
 			}
 		}
 
@@ -198,8 +188,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitPressure_BaseUnit ()
 		{
 			using (var bu = NSUnitPressure.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitPressure), bu, "type");
-				Assert.That ("N/m²", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitPressure)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("N/m²"), "Symbol");
 			}
 		}
 
@@ -207,8 +197,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitSpeed_BaseUnit ()
 		{
 			using (var bu = NSUnitSpeed.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitSpeed), bu, "type");
-				Assert.That ("m/s", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitSpeed)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("m/s"), "Symbol");
 			}
 		}
 
@@ -216,8 +206,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitTemperature_BaseUnit ()
 		{
 			using (var bu = NSUnitTemperature.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitTemperature), bu, "type");
-				Assert.That ("K", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitTemperature)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("K"), "Symbol");
 			}
 		}
 
@@ -225,8 +215,8 @@ namespace MonoTouchFixtures.Foundation {
 		public void NSUnitVolume_BaseUnit ()
 		{
 			using (var bu = NSUnitVolume.BaseUnit) {
-				Assert.IsInstanceOfType (typeof (NSUnitVolume), bu, "type");
-				Assert.That ("L", Is.EqualTo (bu.Symbol), "Symbol");
+				Assert.That (bu, Is.InstanceOf (typeof (NSUnitVolume)), "type");
+				Assert.That (bu.Symbol, Is.EqualTo ("L"), "Symbol");
 			}
 		}
 	}

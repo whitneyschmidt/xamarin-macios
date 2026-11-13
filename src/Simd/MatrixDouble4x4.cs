@@ -10,15 +10,18 @@
 // Copyright (c) 2017 Microsoft Inc
 //
 
+#nullable enable
 
-using System;
-using System.Runtime.InteropServices;
+using Vector4d = global::CoreGraphics.NVector4d;
 
-namespace OpenTK
-{
+// This type does not come from the CoreGraphics framework; it's defined in /usr/include/simd/matrix_types.h
+namespace CoreGraphics {
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	[StructLayout (LayoutKind.Sequential)]
-	public struct NMatrix4d : IEquatable<NMatrix4d>
-	{
+	public struct NMatrix4d : IEquatable<NMatrix4d> {
 		public double M11;
 		public double M21;
 		public double M31;
@@ -46,7 +49,7 @@ namespace OpenTK
 			M44 = 1,
 		};
 
-		public NMatrix4d (global::OpenTK.Vector4d row0, global::OpenTK.Vector4d row1, global::OpenTK.Vector4d row2, global::OpenTK.Vector4d row3)
+		public NMatrix4d (Vector4d row0, Vector4d row1, Vector4d row2, Vector4d row3)
 		{
 			M11 = row0.X;
 			M21 = row1.X;
@@ -283,20 +286,6 @@ namespace OpenTK
 			return !left.Equals (right);
 		}
 
-		public static explicit operator global::OpenTK.Matrix4d (NMatrix4d value)
-		{
-			return new global::OpenTK.Matrix4d (
-				value.M11, value.M12, value.M13, value.M14,
-				value.M21, value.M22, value.M23, value.M24,
-				value.M31, value.M32, value.M33, value.M34,
-				value.M41, value.M42, value.M43, value.M44);
-		}
-
-		public static explicit operator NMatrix4d (global::OpenTK.Matrix4d value)
-		{
-			return new NMatrix4d (value.Row0, value.Row1, value.Row2, value.Row3);
-		}
-
 		public override string ToString ()
 		{
 			return
@@ -308,19 +297,32 @@ namespace OpenTK
 
 		public override int GetHashCode ()
 		{
-			return
-				M11.GetHashCode () ^ M12.GetHashCode () ^ M13.GetHashCode () ^ M14.GetHashCode () ^
-				M21.GetHashCode () ^ M22.GetHashCode () ^ M23.GetHashCode () ^ M24.GetHashCode () ^
-				M31.GetHashCode () ^ M32.GetHashCode () ^ M33.GetHashCode () ^ M34.GetHashCode () ^
-				M41.GetHashCode () ^ M42.GetHashCode () ^ M43.GetHashCode () ^ M44.GetHashCode ();
+			var hash = new HashCode ();
+			hash.Add (M11);
+			hash.Add (M12);
+			hash.Add (M13);
+			hash.Add (M14);
+			hash.Add (M21);
+			hash.Add (M22);
+			hash.Add (M23);
+			hash.Add (M24);
+			hash.Add (M31);
+			hash.Add (M32);
+			hash.Add (M33);
+			hash.Add (M34);
+			hash.Add (M41);
+			hash.Add (M42);
+			hash.Add (M43);
+			hash.Add (M44);
+			return hash.ToHashCode ();
 		}
 
-		public override bool Equals (object obj)
+		public override bool Equals (object? obj)
 		{
-			if (!(obj is NMatrix4d))
+			if (!(obj is NMatrix4d matrix))
 				return false;
 
-			return Equals ((NMatrix4d) obj);
+			return Equals (matrix);
 		}
 
 		public bool Equals (NMatrix4d other)

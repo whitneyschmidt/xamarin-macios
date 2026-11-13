@@ -6,250 +6,100 @@
  *
  */
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
+using Xamarin.Bundler;
 using Xamarin.MacDev;
 using Xamarin.Utils;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Xamarin.Bundler {
 	public partial class Driver {
-		static void AddSharedOptions (Application app, Mono.Options.OptionSet options)
+#if LEGACY_TOOLS
+		public static int Main (string [] args)
 		{
-			options.Add ("sdkroot=", "Specify the location of Apple SDKs, default to 'xcode-select' value.", v => sdk_root = v);
-			options.Add ("no-xcode-version-check", "Ignores the Xcode version check.", v => { min_xcode_version = null; }, true /* This is a non-documented option. Please discuss any customers running into the xcode version check on the maciosdev@ list before giving this option out to customers. */);
-			options.Add ("warnaserror:", "An optional comma-separated list of warning codes that should be reported as errors (if no warnings are specified all warnings are reported as errors).", v =>
-			{
+			try {
+				Console.OutputEncoding = new UTF8Encoding (false, false);
+				SetCurrentLanguage (ConsoleLog.Instance);
+				return Main2 (args);
+			} catch (Exception e) {
+				ErrorHelper.Show (ConsoleLog.Instance, e);
+			}
+			return 0;
+		}
+
+		// Returns true if the process should exit (with a 0 exit code; failures are propagated using exceptions)
+		static void ParseOptions (Application app, Mono.Options.OptionSet options, string [] args)
+		{
+			options.Add ("v|verbose", "Specify how verbose the output should be. This can be passed multiple times to increase the verbosity.", v => app.Verbosity++);
+			options.Add ("q|quiet", "Specify how quiet the output should be. This can be passed multiple times to increase the silence.", v => app.Verbosity--);
+			options.Add ("reference=", "Add an assembly to be processed.", v => app.References.Add (v));
+			options.Add ("sdkroot=", "Specify the location of Apple SDKs, default to 'xcode-select' value.", v => app.SdkRoot = v);
+			options.Add ("sdk=", "Specifies the SDK version to compile against (version, for example \"10.9\"). For Mac Catalyst, this is the macOS version of the SDK.", v => {
 				try {
-					if (!string.IsNullOrEmpty (v)) {
-						foreach (var code in v.Split (new char [] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-							ErrorHelper.SetWarningLevel (ErrorHelper.WarningLevel.Error, int.Parse (code));
-					} else {
-						ErrorHelper.SetWarningLevel (ErrorHelper.WarningLevel.Error);
-					}
+					app.SdkVersion = StringUtils.ParseVersion (v);
+					app.NativeSdkVersion = app.SdkVersion;
 				} catch (Exception ex) {
-					ErrorHelper.Error (26, ex, "Could not parse the command line argument '{0}': {1}", "--warnaserror", ex.Message);
+					throw ErrorHelper.CreateError (26, ex, Errors.MX0026, $"sdk:{v}", ex.Message);
 				}
 			});
-			options.Add ("nowarn:", "An optional comma-separated list of warning codes to ignore (if no warnings are specified all warnings are ignored).", v =>
-			{
-				try {
-					if (!string.IsNullOrEmpty (v)) {
-						foreach (var code in v.Split (new char [] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-							ErrorHelper.SetWarningLevel (ErrorHelper.WarningLevel.Disable, int.Parse (code));
-					} else {
-						ErrorHelper.SetWarningLevel (ErrorHelper.WarningLevel.Disable);
-					}
-				} catch (Exception ex) {
-					ErrorHelper.Error (26, ex, "Could not parse the command line argument '{0}': {1}", "--nowarn", ex.Message);
+			options.Add ("target-framework=", "Specify target framework to use. Currently supported: '" + string.Join ("', '", TargetFramework.ValidFrameworks.Select ((v) => v.ToString ())) + "'.", v => {
+				app.TargetFramework = TargetFramework.Parse (v);
+			});
+			options.Add ("abi=", "Comma-separated list of ABIs to target.", v => app.ParseAbi (v));
+			options.Add ("runregistrar:", "Runs the registrar on the input assembly and outputs a corresponding native library.",
+				v => {
+					app.RegistrarOutputLibrary = v;
 				}
+			);
+			options.Add ("xamarin-runtime=", "Which runtime to use (MonoVM or CoreCLR).", v => {
+				if (!Enum.TryParse<XamarinRuntime> (v, out var rv))
+					throw new InvalidOperationException ($"Invalid XamarinRuntime '{v}'");
+				app.XamarinRuntime = rv;
 			});
-			options.Add ("coop:", "If the GC should run in cooperative mode.", v => { app.EnableCoopGC = ParseBool (v, "coop"); }, hidden: true);
-			options.Add ("sgen-conc", "Enable the *experimental* concurrent garbage collector.", v => { app.EnableSGenConc = true; });
-			options.Add ("marshal-objectivec-exceptions:", "Specify how Objective-C exceptions should be marshalled. Valid values: default, unwindmanagedcode, throwmanagedexception, abort and disable. The default depends on the target platform (on watchOS the default is 'throwmanagedexception', while on all other platforms it's 'disable').", v => {
-				switch (v) {
-				case "default":
-					app.MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.Default;
-					break;
-				case "unwindmanaged":
-				case "unwindmanagedcode":
-					app.MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.UnwindManagedCode;
-					break;
-				case "throwmanaged":
-				case "throwmanagedexception":
-					app.MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.ThrowManagedException;
-					break;
-				case "abort":
-					app.MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.Abort;
-					break;
-				case "disable":
-					app.MarshalObjectiveCExceptions = MarshalObjectiveCExceptionMode.Disable;
-					break;
-				default:
-					throw ErrorHelper.CreateError (26, "Could not parse the command line argument '{0}': {1}", "--marshal-objective-exceptions", $"Invalid value: {v}. Valid values are: default, unwindmanagedcode, throwmanagedexception, abort and disable.");
-				}
+			options.Add ("rid=", "The runtime identifier we're building for", v => {
+				app.RuntimeIdentifier = v;
 			});
-			options.Add ("marshal-managed-exceptions:", "Specify how managed exceptions should be marshalled. Valid values: default, unwindnativecode, throwobjectivecexception, abort and disable. The default depends on the target platform (on watchOS the default is 'throwobjectivecexception', while on all other platform it's 'disable').", v => {
-				switch (v) {
-				case "default":
-					app.MarshalManagedExceptions = MarshalManagedExceptionMode.Default;
-					break;
-				case "unwindnative":
-				case "unwindnativecode":
-					app.MarshalManagedExceptions = MarshalManagedExceptionMode.UnwindNativeCode;
-					break;
-				case "throwobjectivec":
-				case "throwobjectivecexception":
-					app.MarshalManagedExceptions = MarshalManagedExceptionMode.ThrowObjectiveCException;
-					break;
-				case "abort":
-					app.MarshalManagedExceptions = MarshalManagedExceptionMode.Abort;
-					break;
-				case "disable":
-					app.MarshalManagedExceptions = MarshalManagedExceptionMode.Disable;
-					break;
-				default:
-					throw ErrorHelper.CreateError (26, "Could not parse the command line argument '{0}': {1}", "--marshal-managed-exceptions", $"Invalid value: {v}. Valid values are: default, unwindnativecode, throwobjectivecexception, abort and disable.");
-				}
+			options.Add ("xcode-version=", "The Xcode version we're building with", v => {
+				if (!Version.TryParse (v, out var xcodeVersion))
+					throw ErrorHelper.CreateError (26, Errors.MX0026, $"xcode-version:{v}", "Expected a valid version string.");
+				app.XcodeVersion = xcodeVersion;
 			});
-			options.Add ("j|jobs=", "The level of concurrency. Default is the number of processors.", v => {
-				Jobs = int.Parse (v);
-			});
-			options.Add ("embeddinator", "Enables Embeddinator targetting mode.", v => {
-				app.Embeddinator = true;
-			}, true);
-			options.Add ("dynamic-symbol-mode:", "Specify how dynamic symbols are treated so that they're not linked away by the native linker. Valid values: linker (pass \"-u symbol\" to the native linker), code (generate native code that uses the dynamic symbol), ignore (do nothing and hope for the best). The default is 'code' when using bitcode, and 'linker' otherwise.", (v) => {
-				switch (v.ToLowerInvariant ()) {
-				case "default":
-					app.SymbolMode = SymbolMode.Default;
-					break;
-				case "linker":
-					app.SymbolMode = SymbolMode.Linker;
-					break;
-				case "code":
-					app.SymbolMode = SymbolMode.Code;
-					break;
-				case "ignore":
-					app.SymbolMode = SymbolMode.Ignore;
-					break;
-				default:
-					throw ErrorHelper.CreateError (26, "Could not parse the command line argument '{0}': {1}", "--dynamic-symbol-mode", $"Invalid value: {v}. Valid values are: default, linker, code and ignore.");
-				}
-			});
-			options.Add ("ignore-dynamic-symbol:", "Specify that Xamarin.iOS/Xamarin.Mac should not try to prevent the linker from removing the specified symbol.", (v) => {
-				app.IgnoredSymbols.Add (v);
-			});
-			options.Add ("root-assembly=", "Specifies any root assemblies. There must be at least one root assembly, usually the main executable.", (v) => {
-				app.RootAssemblies.Add (v);
-			});
-			options.Add ("optimize=", "A comma-delimited list of optimizations to enable/disable. To enable an optimization, use --optimize=[+]remove-uithread-checks. To disable an optimizations: --optimize=-remove-uithread-checks. Use '+all' to enable or '-all' disable all optimizations. Only compiler-generated code or code otherwise marked as safe to optimize will be optimized.\n" +
-					"Available optimizations:\n" +
-					"    dead-code-elimination: By default always enabled (requires the linker). Removes IL instructions the linker can determine will never be executed. This is most useful in combination with the inline-* optimizations, since inlined conditions almost always also results in blocks of code that will never be executed.\n" +
-					"    remove-uithread-checks: By default enabled for release builds (requires the linker). Remove all UI Thread checks (makes the app smaller, and slightly faster at runtime).\n" +
-#if MONOTOUCH
-					"    inline-isdirectbinding: By default enabled unless the interpreter is enabled (requires the linker). Tries to inline calls to NSObject.IsDirectBinding to load a constant value. Makes the app smaller, and slightly faster at runtime.\n" +
-#else
-					"    inline-isdirectbinding: By default disabled, because it may require the linker. Tries to inline calls to NSObject.IsDirectBinding to load a constant value. Makes the app smaller, and slightly faster at runtime.\n" +
-#endif
-#if MONOTOUCH
-					"    remove-dynamic-registrar: By default enabled when the static registrar is enabled and the interpreter is not used. Removes the dynamic registrar (makes the app smaller).\n" +
-					"    inline-runtime-arch: By default always enabled (requires the linker). Inlines calls to ObjCRuntime.Runtime.Arch to load a constant value. Makes the app smaller, and slightly faster at runtime.\n" +
-#endif
-					"    blockliteral-setupblock: By default enabled when using the static registrar. Optimizes calls to BlockLiteral.SetupBlock to avoid having to calculate the block signature at runtime.\n" +
-					"    inline-intptr-size: By default enabled for builds that target a single architecture (requires the linker). Inlines calls to IntPtr.Size to load a constant value. Makes the app smaller, and slightly faster at runtime.\n" +
-					"    inline-dynamic-registration-supported: By default always enabled (requires the linker). Optimizes calls to Runtime.DynamicRegistrationSupported to be a constant value. Makes the app smaller, and slightly faster at runtime.\n" +
-#if !MONOTOUCH
-					"    register-protocols: Remove unneeded metadata for protocol support. Makes the app smaller and reduces memory requirements. Disabled when the interpreter is used or when the static registrar is not enabled.\n" +
-					"    trim-architectures: Remove unneeded architectures from bundled native libraries. Makes the app smaller and is required for macOS App Store submissions.\n" +
-#else
-					"    register-protocols: Remove unneeded metadata for protocol support. Makes the app smaller and reduces memory requirements. Disabled, by default, to allow dynamic code loading.\n" +
-					"    remove-unsupported-il-for-bitcode: Remove IL that is not supported when compiling to bitcode, and replace with a NotSupportedException.\n" +
-#endif
-					"",
-					(v) => {
-						app.Optimizations.Parse (v);
-					});
-			options.Add (new Mono.Options.ResponseFileSource ());
-		}
 
-		static int Jobs;
-		public static int Concurrency {
-			get {
-				return Jobs == 0 ? Environment.ProcessorCount : Jobs;
+			try {
+				app.RootAssemblies.AddRange (options.Parse (args));
+			} catch (ProductException) {
+				throw;
+			} catch (Exception e) {
+				throw ErrorHelper.CreateError (10, e, Errors.MX0010, e);
 			}
 		}
+#endif // !LEGACY_TOOLS
 
-		public static bool SupportsModernObjectiveC {
-			get {
-#if MONOMAC || MMP
-				return Is64Bit;
-#else
-				return true;
-#endif
+		public static int GetDefaultVerbosity (string toolName)
+		{
+			var v = 0;
+			var fn = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), $".{toolName}-verbosity");
+			if (File.Exists (fn)) {
+				v = (int) new FileInfo (fn).Length;
+				if (v == 0)
+					v = 4; // this is the magic verbosity level we give everybody if the file exists, but has no size.
 			}
+			return v;
 		}
 
-		public static int Verbosity {
-			get { return verbose; }
-		}
-
-		public const bool IsXAMCORE_4_0 = false;
-
-#if MONOMAC
-#pragma warning disable 0414
-		static string userTargetFramework = TargetFramework.Default.ToString ();
-#pragma warning restore 0414
-#endif
-
-		static TargetFramework? targetFramework;
-		public static bool HasTargetFramework {
-			get { return targetFramework.HasValue; }
-		}
-
-		public static TargetFramework TargetFramework {
-			get { return targetFramework.Value; }
-			set { targetFramework = value; }
-		}
-
-		static void SetTargetFramework (string fx)
-		{
-#if MONOMAC
-			userTargetFramework = fx;
-#endif
-
-			switch (fx.Trim ().ToLowerInvariant ()) {
-#if MONOMAC
-			case "xammac":
-			case "mobile":
-			case "xamarin.mac":
-				targetFramework = TargetFramework.Xamarin_Mac_2_0;
-				break;
-#endif
-			default:
-				TargetFramework parsedFramework;
-				if (!Xamarin.Utils.TargetFramework.TryParse (fx, out parsedFramework))
-					throw ErrorHelper.CreateError (68, "Invalid value for target framework: {0}.", fx);
-#if MONOMAC
-				if (parsedFramework == TargetFramework.Net_3_0 || parsedFramework == TargetFramework.Net_3_5)
-					parsedFramework = TargetFramework.Net_2_0;
-#endif
-
-				targetFramework = parsedFramework;
-
-				break;
-			}
-
-#if MTOUCH
-			if (Array.IndexOf (TargetFramework.ValidFrameworks, targetFramework.Value) == -1)
-				throw ErrorHelper.CreateError (70, "Invalid target framework: {0}. Valid target frameworks are: {1}.", targetFramework.Value, string.Join (" ", TargetFramework.ValidFrameworks.Select ((v) => v.ToString ()).ToArray ()));
-#endif
-		}
-
-		public static int RunCommand (string path, string args, string [] env = null, StringBuilder output = null, bool suppressPrintOnErrors = false)
-		{
-			return RunCommand (path, args, env, output, suppressPrintOnErrors, verbose);
-		}
-
-		public static Task<int> RunCommandAsync (string path, string args, string [] env = null, StringBuilder output = null, bool suppressPrintOnErrors = false)
-		{
-			return RunCommandAsync (path, args, env, output, suppressPrintOnErrors, verbose);
-		}
-
-#if !MMP_TEST
 		static void FileMove (string source, string target)
 		{
-			Application.TryDelete (target);
+			File.Delete (target);
 			File.Move (source, target);
 		}
 
-		static void MoveIfDifferent (string path, string tmp, bool use_stamp = false)
+		static void MoveIfDifferent (IToolLog log, string path, string tmp, bool use_stamp = false)
 		{
 			// Don't read the entire file into memory, it can be quite big in certain cases.
 
@@ -258,10 +108,10 @@ namespace Xamarin.Bundler {
 			using (var fs1 = new FileStream (path, FileMode.Open, FileAccess.Read)) {
 				using (var fs2 = new FileStream (tmp, FileMode.Open, FileAccess.Read)) {
 					if (fs1.Length != fs2.Length) {
-						Log (3, "New file '{0}' has different length, writing new file.", path);
+						log.Log (3, "New file '{0}' has different length, writing new file.", path);
 						move = true;
 					} else {
-						move = !Cache.CompareStreams (fs1, fs2);
+						move = !Cache.CompareStreams (log, fs1, fs2);
 					}
 				}
 			}
@@ -269,77 +119,64 @@ namespace Xamarin.Bundler {
 			if (move) {
 				FileMove (tmp, path);
 			} else {
-				Log (3, "Target {0} is up-to-date.", path);
+				log.Log (3, "Target {0} is up-to-date.", path);
 				if (use_stamp)
-					Driver.Touch (path + ".stamp");
+					Driver.Touch (log, path + ".stamp");
 			}
 		}
 
-		public static void WriteIfDifferent (string path, string contents, bool use_stamp = false)
+		public static void WriteIfDifferent (IToolLog log, string path, string contents, bool use_stamp = false)
 		{
 			var tmp = path + ".tmp";
 
 			try {
 				if (!File.Exists (path)) {
-					Directory.CreateDirectory (Path.GetDirectoryName (path));
+					var dir = Path.GetDirectoryName (path);
+					if (!string.IsNullOrEmpty (dir))
+						Directory.CreateDirectory (dir);
 					File.WriteAllText (path, contents);
-					Log (3, "File '{0}' does not exist, creating it.", path);
+					log.Log (3, "File '{0}' does not exist, creating it.", path);
 					return;
 				}
 
 				File.WriteAllText (tmp, contents);
-				MoveIfDifferent (path, tmp, use_stamp);
+				MoveIfDifferent (log, path, tmp, use_stamp);
 			} catch (Exception e) {
 				File.WriteAllText (path, contents);
-				ErrorHelper.Warning (1014, e, "Failed to re-use cached version of '{0}': {1}.", path, e.Message);
+				ErrorHelper.Warning (log, 1014, e, Errors.MT1014, path, e.Message);
 			} finally {
-				Application.TryDelete (tmp);
+				File.Delete (tmp);
 			}
 		}
 
-		public static void WriteIfDifferent (string path, byte[] contents, bool use_stamp = false)
+		public static void WriteIfDifferent (IToolLog log, string path, byte [] contents, bool use_stamp = false)
 		{
 			var tmp = path + ".tmp";
 
 			try {
 				if (!File.Exists (path)) {
 					File.WriteAllBytes (path, contents);
-					Log (3, "File '{0}' does not exist, creating it.", path);
+					log.Log (3, "File '{0}' does not exist, creating it.", path);
 					return;
 				}
 
 				File.WriteAllBytes (tmp, contents);
-				MoveIfDifferent (path, tmp, use_stamp);
+				MoveIfDifferent (log, path, tmp, use_stamp);
 			} catch (Exception e) {
 				File.WriteAllBytes (path, contents);
-				ErrorHelper.Warning (1014, e, "Failed to re-use cached version of '{0}': {1}.", path, e.Message);
+				ErrorHelper.Warning (log, 1014, e, Errors.MT1014, path, e.Message);
 			} finally {
-				Application.TryDelete (tmp);
+				File.Delete (tmp);
 			}
 		}
-#endif
-
 
 		internal static string GetFullPath ()
 		{
 			return System.Reflection.Assembly.GetExecutingAssembly ().Location;
 		}
 
-		static string xcode_product_version;
-		public static string XcodeProductVersion {
-			get {
-				return xcode_product_version;
-			}
-		}
-
-		static Version xcode_version;
-		public static Version XcodeVersion {
-			get {
-				return xcode_version;
-			}
-		}
-
-		static void SetCurrentLanguage ()
+#if LEGACY_TOOLS
+		static void SetCurrentLanguage (IToolLog log)
 		{
 			// There's no way to change the current culture from the command-line
 			// without changing the system settings, so honor LANG if set.
@@ -362,40 +199,19 @@ namespace Xamarin.Bundler {
 			lang = lang.Replace ('_', '-');
 			try {
 				var culture = CultureInfo.GetCultureInfo (lang);
-				if (culture != null) {
+				if (culture is not null) {
 					CultureInfo.DefaultThreadCurrentCulture = culture;
-					Log (2, $"The current language was set to '{culture.DisplayName}' according to the LANG environment variable (LANG={lang_variable}).");
+					log.Log (2, $"The current language was set to '{culture.DisplayName}' according to the LANG environment variable (LANG={lang_variable}).");
 				}
 			} catch (Exception e) {
-				ErrorHelper.Warning (124, e, $"Could not set the current language to '{lang}' (according to LANG={lang_variable}): {e.Message}");
+				ErrorHelper.Warning (log, 124, e, Errors.MT0124, lang, lang_variable, e.Message);
 			}
 		}
+#endif
 
-		static void LogArguments (string [] arguments)
+		public static void Touch (IToolLog log, IEnumerable<string> filenames, DateTime? timestamp = null)
 		{
-			if (Verbosity < 1)
-				return;
-			if (!arguments.Any ((v) => v.Length > 0 && v [0] == '@'))
-				return; // no need to print arguments unless we get response files
-			LogArguments (arguments, 1);
-		}
-
-		static void LogArguments (string [] arguments, int indentation)
-		{
-			Log ("Provided arguments:");
-			var indent = new string (' ', indentation * 4);
-			foreach (var arg in arguments) {
-				Log (indent + StringUtils.Quote (arg));
-				if (arg.Length > 0 && arg [0] == '@') {
-					var fn = arg.Substring (1);
-					LogArguments (File.ReadAllLines (fn), indentation + 1);
-				}
-			}
-		}
-
-		public static void Touch (IEnumerable<string> filenames, DateTime? timestamp = null)
-		{
-			if (timestamp == null)
+			if (timestamp is null)
 				timestamp = DateTime.Now;
 			foreach (var filename in filenames) {
 				try {
@@ -407,131 +223,181 @@ namespace Xamarin.Bundler {
 					}
 					fi.LastWriteTime = timestamp.Value;
 				} catch (Exception e) {
-					ErrorHelper.Warning (128, "Could not touch the file '{0}': {1}", filename, e.Message);
+					ErrorHelper.Warning (log, 128, Errors.MT0128, filename, e.Message);
 				}
 			}
 		}
 
-		public static void Touch (params string [] filenames)
+		public static void Touch (IToolLog log, params string [] filenames)
 		{
-			Touch ((IEnumerable<string>) filenames);
-		}
-
-		static int watch_level;
-		static Stopwatch watch;
-
-		public static int WatchLevel {
-			get { return watch_level; }
-			set {
-				watch_level = value;
-				if ((watch_level > 0) && (watch == null)) {
-					watch = new Stopwatch ();
-					watch.Start ();
-				}
-			}
-		}
-
-		public static void Watch (string msg, int level)
-		{
-			if ((watch == null) || (level > WatchLevel))
-				return;
-			for (int i = 0; i < level; i++)
-				Console.Write ("!");
-			Console.WriteLine ("Timestamp {0}: {1} ms", msg, watch.ElapsedMilliseconds);
+			Touch (log, (IEnumerable<string>) filenames);
 		}
 
 		internal static PDictionary FromPList (string name)
 		{
 			if (!File.Exists (name))
-				throw ErrorHelper.CreateError (24, "Could not find required file '{0}'.", name);
-			return PDictionary.FromFile (name);
+				throw ErrorHelper.CreateError (24, Errors.MT0024, name);
+			return PDictionary.OpenFile (name);
 		}
 
 		const string XcodeDefault = "/Applications/Xcode.app";
 
-		static string FindSystemXcode ()
+		static string? FindSystemXcode (IToolLog log)
 		{
 			var output = new StringBuilder ();
-			if (Driver.RunCommand ("xcode-select", "-p", output: output) != 0) {
-				ErrorHelper.Warning (59, "Could not find the currently selected Xcode on the system: {0}", output.ToString ());
+			if (Driver.RunCommand (log, "xcode-select", new [] { "-p" }, output: output) != 0) {
+				ErrorHelper.Warning (log, 59, Errors.MX0059, output.ToString ());
 				return null;
 			}
 			return output.ToString ().Trim ();
 		}
 
-		static string sdk_root;
-		static string developer_directory;
-
-		public static string DeveloperDirectory {
-			get {
-				return developer_directory;
+		// This returns the platform to use in /Applications/Xcode*.app/Contents/Developer/Platforms/*.platform
+		public static string GetPlatform (Application app)
+		{
+			switch (app.Platform) {
+			case ApplePlatform.iOS:
+				return app.IsDeviceBuild ? "iPhoneOS" : "iPhoneSimulator";
+			case ApplePlatform.TVOS:
+				return app.IsDeviceBuild ? "AppleTVOS" : "AppleTVSimulator";
+			case ApplePlatform.MacOSX:
+			case ApplePlatform.MacCatalyst:
+				return "MacOSX";
+			default:
+				throw ErrorHelper.CreateError (71, Errors.MX0071, app.Platform, app.ProductName);
 			}
 		}
 
-		static void ValidateXcode (bool accept_any_xcode_version, bool warn_if_not_found)
+		// This returns the correct /Applications/Xcode*.app/Contents/Developer/Platforms/*.platform/Developer/SDKs/*X.Y.sdk directory
+		public static string GetFrameworkDirectory (Application app)
 		{
-			if (sdk_root == null) {
-				sdk_root = FindSystemXcode ();
-				if (sdk_root == null) {
+			var platform = GetPlatform (app);
+			var sdkVersion = app.NativeSdkVersion?.ToString () ?? "";
+			return Path.Combine (app.PlatformsDirectory, platform + ".platform", "Developer", "SDKs", platform + sdkVersion + ".sdk");
+		}
+
+		public static string GetProductAssembly (Application app)
+		{
+			switch (app.Platform) {
+			case ApplePlatform.iOS:
+				return "Microsoft.iOS";
+			case ApplePlatform.TVOS:
+				return "Microsoft.tvOS";
+			case ApplePlatform.MacOSX:
+				return "Microsoft.macOS";
+			case ApplePlatform.MacCatalyst:
+				return "Microsoft.MacCatalyst";
+			default:
+				throw ErrorHelper.CreateError (71, Errors.MX0071, app.Platform, app.ProductName);
+			}
+		}
+
+		public static void ValidateXcode (Application app, bool accept_any_xcode_version, bool warn_if_not_found)
+		{
+			var sdk_root = app.SdkRoot;
+
+			if (sdk_root is null) {
+				sdk_root = FindSystemXcode (app);
+				if (sdk_root is null) {
 					// FindSystemXcode showed a warning in this case. In particular do not use 'string.IsNullOrEmpty' here,
 					// because FindSystemXcode may return an empty string (with no warning printed) if the xcode-select command
 					// succeeds, but returns nothing.
 					sdk_root = null;
 				} else if (!Directory.Exists (sdk_root)) {
-					ErrorHelper.Warning (60, "Could not find the currently selected Xcode on the system. 'xcode-select --print-path' returned '{0}', but that directory does not exist.", sdk_root);
+					ErrorHelper.Warning (app, 60, Errors.MX0060, sdk_root);
 					sdk_root = null;
 				} else {
 					if (!accept_any_xcode_version)
-						ErrorHelper.Warning (61, "No Xcode.app specified (using --sdkroot), using the system Xcode as reported by 'xcode-select --print-path': {0}", sdk_root);
+						ErrorHelper.Warning (app, 61, Errors.MT0061, sdk_root);
 				}
-				if (sdk_root == null) {
+				if (sdk_root is null) {
 					sdk_root = XcodeDefault;
 					if (!Directory.Exists (sdk_root)) {
 						if (warn_if_not_found) {
 							// mmp: and now we give up, but don't throw like mtouch, because we don't want to change behavior (this sometimes worked it appears)
-							ErrorHelper.Warning (56, "Cannot find Xcode in any of our default locations. Please install Xcode, or pass a custom path using --sdkroot=<path>.");
+							ErrorHelper.Warning (app, 56, Errors.MX0056);
 							return; // Can't validate the version below if we can't even find Xcode...
 						}
 
-						throw ErrorHelper.CreateError (56, "Cannot find Xcode in the default location (/Applications/Xcode.app). Please install Xcode, or pass a custom path using --sdkroot <path>.");
+						throw ErrorHelper.CreateError (56, Errors.MX0056);
 					}
-					ErrorHelper.Warning (62, "No Xcode.app specified (using --sdkroot or 'xcode-select --print-path'), using the default Xcode instead: {0}", sdk_root);
+					ErrorHelper.Warning (app, 62, Errors.MT0062, sdk_root);
 				}
 			} else if (!Directory.Exists (sdk_root)) {
-				throw ErrorHelper.CreateError (55, "The Xcode path '{0}' does not exist.", sdk_root);
+				throw ErrorHelper.CreateError (55, Errors.MT0055, sdk_root);
 			}
 
 			// Check what kind of path we got
 			if (File.Exists (Path.Combine (sdk_root, "Contents", "MacOS", "Xcode"))) {
 				// path to the Xcode.app
-				developer_directory = Path.Combine (sdk_root, "Contents", "Developer");
+				app.DeveloperDirectory = Path.Combine (sdk_root, "Contents", "Developer");
 			} else if (File.Exists (Path.Combine (sdk_root, "..", "MacOS", "Xcode"))) {
 				// path to Contents/Developer
-				developer_directory = Path.GetFullPath (Path.Combine (sdk_root, "..", "..", "Contents", "Developer"));
+				app.DeveloperDirectory = Path.GetFullPath (Path.Combine (sdk_root, "..", "..", "Contents", "Developer"));
 			} else {
-				throw ErrorHelper.CreateError (57, "Cannot determine the path to Xcode.app from the sdk root '{0}'. Please specify the full path to the Xcode.app bundle.", sdk_root);
+				throw ErrorHelper.CreateError (57, Errors.MT0057, sdk_root);
 			}
-			
-			var plist_path = Path.Combine (Path.GetDirectoryName (DeveloperDirectory), "version.plist");
+
+			var plist_path = Path.Combine (Path.GetDirectoryName (app.DeveloperDirectory)!, "version.plist");
 
 			if (File.Exists (plist_path)) {
 				var plist = FromPList (plist_path);
 				var version = plist.GetString ("CFBundleShortVersionString");
-				xcode_version = new Version (version);
-				xcode_product_version = plist.GetString ("ProductBuildVersion");
+				if (version is null)
+					throw ErrorHelper.CreateError (58, Errors.MT0058, Path.GetDirectoryName (Path.GetDirectoryName (app.DeveloperDirectory)), plist_path);
+				app.XcodeVersion = new Version (version);
+				app.XcodeProductVersion = plist.GetString ("ProductBuildVersion");
 			} else {
-				throw ErrorHelper.CreateError (58, "The Xcode.app '{0}' is invalid (the file '{1}' does not exist).", Path.GetDirectoryName (Path.GetDirectoryName (DeveloperDirectory)), plist_path);
+				throw ErrorHelper.CreateError (58, Errors.MT0058, Path.GetDirectoryName (Path.GetDirectoryName (app.DeveloperDirectory)), plist_path);
 			}
 
-			if (!accept_any_xcode_version) {
-				if (min_xcode_version != null && XcodeVersion < min_xcode_version)
-					throw ErrorHelper.CreateError (51, "{3} {0} requires Xcode {4} or later. The current Xcode version (found in {2}) is {1}.", Constants.Version, XcodeVersion.ToString (), sdk_root, PRODUCT, min_xcode_version);
+			app.Log (1, "Using Xcode {0} ({2}) found in {1}", app.XcodeVersion, sdk_root, app.XcodeProductVersion);
+		}
 
-				if (XcodeVersion < SdkVersions.XcodeVersion)
-					ErrorHelper.Warning (79, "The recommended Xcode version for {4} {0} is Xcode {3} or later. The current Xcode version (found in {2}) is {1}.", Constants.Version, XcodeVersion.ToString (), sdk_root, SdkVersions.Xcode, PRODUCT);
+		internal static bool TryParseBool (string value, out bool result)
+		{
+			if (string.IsNullOrEmpty (value)) {
+				result = true;
+				return true;
 			}
 
-			Driver.Log (1, "Using Xcode {0} ({2}) found in {1}", XcodeVersion, sdk_root, XcodeProductVersion);
+			switch (value.ToLowerInvariant ()) {
+			case "1":
+			case "yes":
+			case "true":
+			case "enable":
+				result = true;
+				return true;
+			case "0":
+			case "no":
+			case "false":
+			case "disable":
+				result = false;
+				return true;
+			default:
+				return bool.TryParse (value, out result);
+			}
+		}
+
+		internal static bool ParseBool (string value, string name, bool show_error = true)
+		{
+			bool result;
+			if (!TryParseBool (value, out result))
+				throw ErrorHelper.CreateError (26, Errors.MX0026, name, value);
+			return result;
+		}
+
+		public static string CorlibName {
+			get {
+				return "System.Private.CoreLib";
+			}
+		}
+
+		public static Frameworks GetFrameworks (Application app)
+		{
+			if (!Frameworks.TryGetFrameworks (app.Platform, out var rv))
+				throw ErrorHelper.CreateError (71, Errors.MX0071, app.Platform, app.ProductName);
+			return rv;
 		}
 	}
 }

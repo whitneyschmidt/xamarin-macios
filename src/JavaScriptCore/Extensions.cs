@@ -6,15 +6,13 @@
 //
 // Copyright 2013 Xamarin, Inc.
 
-using System;
-using Foundation;
+#nullable enable
 
 namespace JavaScriptCore {
 
-#if !MONOMAC || XAMCORE_2_0
 	public partial class JSContext {
-		
-		public JSValue this[NSObject key] {
+
+		public JSValue this [NSObject key] {
 			get { return _GetObject (key); }
 			set { _SetObject (value, key); }
 		}
@@ -22,27 +20,44 @@ namespace JavaScriptCore {
 
 	public partial class JSValue {
 
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public override string ToString ()
 		{
 			return _ToString ();
 		}
 
+		/// <param name="value">To be added.</param>
+		///         <param name="context">To be added.</param>
+		///         <summary>Creates a JavaScript string from the provided string.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		static public JSValue From (string value, JSContext context)
 		{
 			using (var str = new NSString (value)) {
-				return From ((NSObject)str, context);
+				return From ((NSObject) str, context);
 			}
 		}
 
-		public JSValue this[nuint index] {
+		/// <param name="index">To be added.</param>
+		/// <summary>Gets or sets the item that is indexed by the provided <paramref name="index" />.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
+		public JSValue this [nuint index] {
 			get { return _ObjectAtIndexedSubscript (index); }
 			set { _SetObject (value, index); }
 		}
 
-		public JSValue this[NSObject key] {
+		/// <param name="key">To be added.</param>
+		/// <summary>Gets or sets the item that is indexed by the provided <paramref name="key" />.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
+		public JSValue this [NSObject key] {
 			get { return _ObjectForKeyedSubscript (key); }
 			set { _SetObject (value, key); }
 		}
 	}
-#endif
 }

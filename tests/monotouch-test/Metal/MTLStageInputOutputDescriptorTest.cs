@@ -1,53 +1,45 @@
-#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
-	
+
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLStageInputOutputDescriptorTest {
-		MTLStageInputOutputDescriptor descriptor  = null;
-		
+		MTLStageInputOutputDescriptor descriptor = null;
+
 		[SetUp]
 		public void SetUp ()
 		{
 			TestRuntime.AssertXcodeVersion (8, 0);
 			descriptor = MTLStageInputOutputDescriptor.Create ();
 		}
-		
+
 		[TearDown]
 		public void TearDown ()
 		{
-			if (descriptor != null)
+			if (descriptor is not null)
 				descriptor.Dispose ();
 			descriptor = null;
 		}
-		
+
 		[Test]
 		public void GetLayoutsTest ()
 		{
-			Assert.NotNull (descriptor.Layouts); // default value
+			Assert.That (descriptor.Layouts, Is.Not.Null); // default value
 		}
 
 		[Test]
 		public void GetAttributesTest ()
 		{
-			Assert.NotNull (descriptor.Attributes); // default value
+			Assert.That (descriptor.Attributes, Is.Not.Null); // default value
 		}
 
 		[Test]
 		public void GetSetIndexType ()
 		{
 			descriptor.IndexType = MTLIndexType.UInt32;
-			Assert.AreEqual (MTLIndexType.UInt32, descriptor.IndexType);
+			Assert.That (descriptor.IndexType, Is.EqualTo (MTLIndexType.UInt32));
 		}
 
 		[Test]
@@ -55,9 +47,7 @@ namespace MonoTouchFixtures.Metal {
 		{
 			uint index = 5;
 			descriptor.IndexBufferIndex = 5;
-			Assert.AreEqual (descriptor.IndexBufferIndex, index);
+			Assert.That ((nuint) index, Is.EqualTo (descriptor.IndexBufferIndex));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

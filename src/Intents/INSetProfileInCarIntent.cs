@@ -1,28 +1,25 @@
-#if XAMCORE_2_0 && IOS
-
-using Foundation;
+#if IOS
 using Intents;
-using ObjCRuntime;
 using UIKit;
+
+#nullable enable
 
 namespace Intents {
 
 	public partial class INSetProfileInCarIntent {
-
-		[Deprecated (PlatformName.iOS, 12, 0, message: "Use the overload that takes 'INSpeakableString carName'.")]
+		/// <summary>Creates a new intent to set a car profile with the specified parameters.</summary>
+		/// <param name="profileNumber">The number identifying the car profile.</param>
+		/// <param name="profileLabel">The display label for the car profile.</param>
+		/// <param name="defaultProfile">Whether this is the default car profile.</param>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("ios12.0", "Use the overload that takes 'INSpeakableString carName'.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use the overload that takes 'INSpeakableString carName'.")]
+		[UnsupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
 		public INSetProfileInCarIntent (NSNumber profileNumber, string profileLabel, bool? defaultProfile) :
 			this (profileNumber, profileLabel, defaultProfile.HasValue ? new NSNumber (defaultProfile.Value) : null)
 		{
-		}
-
-		[Deprecated (PlatformName.iOS, 12, 0, message: "Use the overload that takes 'INSpeakableString carName'.")]
-		protected INSetProfileInCarIntent (NSNumber profileNumber, string profileLabel, NSNumber defaultProfile)
-		{
-			// Apple created this change in 10,2
-			if (UIDevice.CurrentDevice.CheckSystemVersion (10, 2))
-				InitializeHandle (InitWithProfileNumberName (profileNumber, profileLabel, defaultProfile));
-			else
-				InitializeHandle (InitWithProfileNumberLabel (profileNumber, profileLabel, defaultProfile));
 		}
 	}
 }

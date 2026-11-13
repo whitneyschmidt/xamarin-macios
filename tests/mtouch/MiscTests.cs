@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -6,31 +6,28 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using Xamarin.Tests;
+using Xamarin.Utils;
 
 using NUnit.Framework;
 
-namespace Xamarin.Tests
-{
+namespace Xamarin.Tests {
 	[TestFixture]
-	public class Misc
-	{
+	public class Misc {
 		[Test]
 		public void InvalidStructOffset ()
 		{
-			MTouch.AssertDeviceAvailable ();
-
 			var str = "invalid struct offset";
 			var contents = ASCIIEncoding.ASCII.GetBytes (str);
 
-			foreach (var sdk in new string [] { "iphoneos", "iphonesimulator"}) {
+			foreach (var sdk in new string [] { "iphoneos", "iphonesimulator" }) {
 				foreach (var ext in new string [] { "dylib", "a" }) {
-					var fn = Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "usr", "lib", "libmonosgen-2.0." + ext);
+					var fn = Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "lib", "libmonosgen-2.0." + ext);
 					Assert.IsFalse (Contains (fn, contents), "Found \"{0}\" in {1}", str, fn);
 				}
 			}
 		}
 
-		bool Contains (string file, byte[] contents)
+		bool Contains (string file, byte [] contents)
 		{
 			var pagesize = 4096;
 			var buffer = new byte [pagesize * 1024];
@@ -63,14 +60,12 @@ namespace Xamarin.Tests
 		[Test]
 		public void VerifySymbols ()
 		{
-			MTouch.AssertDeviceAvailable ();
-
 			var prohibited_symbols = new string [] { "_NSGetEnviron", "PKService", "SPPluginDelegate" };
 
 			foreach (var symbol in prohibited_symbols) {
 				var contents = ASCIIEncoding.ASCII.GetBytes (symbol);
 				var sdk = "iphoneos"; // we don't care about private symbols for simulator builds
-				foreach (var static_lib in Directory.EnumerateFiles (Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "usr", "lib"), "*.a")) {
+				foreach (var static_lib in Directory.EnumerateFiles (Path.Combine (Configuration.MonoTouchRootDirectory, "SDKs", "MonoTouch." + sdk + ".sdk", "lib"), "*.a")) {
 					Assert.IsFalse (Contains (static_lib, contents), "Found \"{0}\" in {1}", symbol, static_lib);
 				}
 			}
@@ -83,9 +78,9 @@ namespace Xamarin.Tests
 		[TestCase (Profile.macOSMobile)]
 		public void PublicSymbols (Profile profile)
 		{
+			Configuration.IgnoreIfIgnoredPlatform (profile.AsPlatform ());
 			var paths = new HashSet<string> ();
-			if (Configuration.include_device)
-				paths.UnionWith (Directory.GetFileSystemEntries (Configuration.GetSdkPath (profile, true), "*.a", SearchOption.AllDirectories));
+			paths.UnionWith (Directory.GetFileSystemEntries (Configuration.GetSdkPath (profile, true), "*.a", SearchOption.AllDirectories));
 			paths.UnionWith (Directory.GetFileSystemEntries (Configuration.GetSdkPath (profile, false), "*.a", SearchOption.AllDirectories));
 			var failed = new StringBuilder ();
 
@@ -108,6 +103,10 @@ namespace Xamarin.Tests
 				"__Z7isdigiti",
 				"__Z8__istypeim",
 				"__Z9__isctypeim",
+				"__Z15__libcpp_strchr",
+				"__Z16__libcpp_strrchr",
+				"__Z6strchr",
+				"__Z7strrchr",
 				// mono
 				"_mono_",
 				"_monoeg_",
@@ -119,17 +118,26 @@ namespace Xamarin.Tests
 				"_sdb_options",
 				"_SystemNative_",
 				"_NetSecurityNative_",
+				"_Brotli",
+				"_kStaticDictionaryHash",
 				"_MapHardwareType",
 				"_gateway_from_rtm",
 				"_sgen_",
 				"_arm_patch",
-				// These two aren't public in a way we care about
+				// These aren't public in a way we care about
 				"l_OBJC_LABEL_PROTOCOL_$_",
+				"__OBJC_LABEL_PROTOCOL_$_", // Xcode 11 b1 format
 				"l_OBJC_PROTOCOL_$_",
+				"__OBJC_PROTOCOL_$_",  // Xcode 11 b1 format
 				// block stuff, automatically exported by clang
 				"___block_descriptor_",
 				"___copy_helper_block_",
 				"___destroy_helper_block_",
+				// compiler-generated helper methods
+				"___os_log_helper_",
+				// Brotli compression symbols
+				"_kBrotli",
+				"__kBrotli",
 			};
 
 			paths.RemoveWhere ((v) => {
@@ -195,6 +203,66 @@ namespace Xamarin.Tests
 
 			Assert.IsEmpty (failed.ToString (), "Failed libraries");
 		}
+
+		[TestCase (ApplePlatform.iOS)]
+		[TestCase (ApplePlatform.TVOS)]
+		[TestCase (ApplePlatform.MacCatalyst)]
+		[TestCase (ApplePlatform.MacOSX)]
+		public void NoBannedApi (ApplePlatform platform)
+		{
+			Configuration.IgnoreIfIgnoredPlatform (platform);
+			Configuration.AssertDotNetAvailable ();
+
+			// we should not p/invoke into API that are banned (by MS) from the C runtime
+			// list is copied from binscope for mac (not all of them actually exists on macOS)
+			var bannedCApi = new HashSet<string> () {
+				"_alloca", "_ftcscat", "_ftcscpy", "_getts", "_gettws", "_i64toa",
+				"_i64tow", "_itoa", "_itow", "_makepath", "_mbccat", "_mbccpy",
+				"_mbscat", "_mbscpy", "_mbslen", "_mbsnbcat", "_mbsnbcpy", "_mbsncat",
+				"_mbsncpy", "_mbstok", "_mbstrlen", "_snprintf", "_sntprintf",
+				"_sntscanf", "_snwprintf", "_splitpath", "_stprintf", "_stscanf",
+				"_tccat", "_tccpy", "_tcscat", "_tcscpy", "_tcsncat", "_tcsncpy",
+				"_tcstok", "_tmakepath", "_tscanf", "_tsplitpath", "_ui64toa",
+				"_ui64tot", "_ui64tow", "_ultoa", "_ultot", "_ultow", "_vsnprintf",
+				"_vsntprintf", "_vsnwprintf", "_vstprintf", "_wmakepath", "_wsplitpath",
+				"alloca", "changewindowmessagefilter", "chartooem", "chartooema",
+				"chartooembuffa", "chartooembuffw", "chartooemw", "copymemory", "gets",
+				"isbadcodeptr", "isbadhugereadptr", "isbadhugewriteptr", "isbadreadptr",
+				"isbadstringptr", "isbadwriteptr", "lstrcat", "lstrcata", "lstrcatn",
+				"lstrcatna", "lstrcatnw", "lstrcatw", "lstrcpy", "lstrcpya", "lstrcpyn",
+				"lstrcpyna", "lstrcpynw", "lstrcpyw", "lstrlen", "lstrncat", "makepath",
+				/* "memcpy", */ "oemtochar", "oemtochara", "oemtocharw", "rtlcopymemory", "scanf", // memcpy is banned, but we use it a bunch, and so does dotnet/runtime
+				"snscanf", "snwscanf", "sprintf", "sprintfa", "sprintfw", "sscanf", "strcat",
+				"strcata", "strcatbuff", "strcatbuffa", "strcatbuffw", "strcatchainw",
+				"strcatn", "strcatna", "strcatnw", "strcatw", "strcpy", "strcpya", "strcpyn",
+				"strcpyna", "strcpynw", "strcpyw", "strlen", "strncat", "strncata", "strncatw",
+				"strncpy", "strncpya", "strncpyw", "strtok", "swprintf", "swscanf", "vsnprintf",
+				"vsprintf", "vswprintf", "wcscat", "wcscpy", "wcslen", "wcsncat", "wcsncpy",
+				"wcstok", "wmemcpy", "wnsprintf", "wnsprintfa", "wnsprintfw", "wscanf", "wsprintf",
+				"wsprintfa", "wsprintfw", "wvnsprintf", "wvnsprintfa", "wvnsprintfw", "wvsprintf",
+				"wvsprintfa", "wvsprintfw",
+				"malloc", // not banned by binscope, but we want to use calloc instead
+				// keep up-to-date with the 'BannedCApi' list in tests/cecil-tests/Test.cs
+			};
+
+			var runtimeIdentifiers = Configuration.GetRuntimeIdentifiers (platform);
+			var failed = new HashSet<string> ();
+			foreach (var rid in runtimeIdentifiers) {
+				var nativedir = Path.Combine (Configuration.GetRuntimeDirectory (platform, rid), "native");
+				var paths = new HashSet<string> ();
+				paths.UnionWith (Directory.GetFileSystemEntries (nativedir, "*.a", SearchOption.AllDirectories));
+				paths.UnionWith (Directory.GetFileSystemEntries (nativedir, "*.dylib", SearchOption.AllDirectories));
+
+				foreach (var path in paths) {
+					var symbols = Configuration.GetUndefinedNativeSymbols (path, arch: "all");
+
+					var bannedSymbols = symbols.Intersect (bannedCApi.Select (v => "_" + v));
+					if (bannedSymbols.Any ())
+						failed.Add ($"{path}:\n\t{string.Join ("\n\t", bannedSymbols.ToArray ())}");
+				}
+
+			}
+			Assert.IsEmpty (string.Join ("\n", failed.OrderBy (v => v)), "Libraries referencing banned symbols");
+		}
 	}
 }
-

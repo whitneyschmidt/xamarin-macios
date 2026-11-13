@@ -6,126 +6,153 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 using Security;
-using OS_nw_protocol_definition=System.IntPtr;
-using OS_nw_protocol_metadata=System.IntPtr;
-using nw_service_class_t=System.IntPtr;
+using OS_nw_protocol_definition = System.IntPtr;
+using OS_nw_protocol_metadata = System.IntPtr;
+using nw_service_class_t = System.IntPtr;
 
 namespace Network {
-
-	public enum NWServiceClass {
-		BestEffort = 0,
-		Background = 1,
-		InteractiveVideo = 2,
-		InteractiveVoice = 3,
-		ResponsiveData = 4,
-		Signaling = 5,
-	}
-
-	public enum NWIPEcnFlag {
-		NonEct = 0,
-		Ect = 2,
-		Ect1 = 1,
-		Ce = 3,
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class NWProtocolMetadata : NativeObject {
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern OS_nw_protocol_metadata nw_ip_create_metadata ();
-
-		public static NWProtocolMetadata CreateIPMetadata ()
-		{
-			return new NWProtocolMetadata (nw_ip_create_metadata (), owns: true);
-		}
+		internal static extern OS_nw_protocol_metadata nw_ip_create_metadata ();
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern OS_nw_protocol_metadata nw_udp_create_metadata ();
-		public static NWProtocolMetadata CreateUdpMetadata ()
-		{
-			return new NWProtocolMetadata (nw_udp_create_metadata (), owns: true);
-		}
+		internal static extern OS_nw_protocol_metadata nw_udp_create_metadata ();
 
-		public NWProtocolMetadata (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal NWProtocolMetadata (NativeHandle handle, bool owns) : base (handle, owns) { }
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern OS_nw_protocol_definition nw_protocol_metadata_copy_definition (OS_nw_protocol_metadata metadata);
+		internal static extern OS_nw_protocol_definition nw_protocol_metadata_copy_definition (OS_nw_protocol_metadata metadata);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NWProtocolDefinition ProtocolDefinition => new NWProtocolDefinition (nw_protocol_metadata_copy_definition (GetCheckedHandle ()), owns: true);
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		static extern bool nw_protocol_metadata_is_ip (OS_nw_protocol_metadata metadata);
+		internal static extern byte nw_protocol_metadata_is_ip (OS_nw_protocol_metadata metadata);
 
-		public bool IsIP => nw_protocol_metadata_is_ip (GetCheckedHandle ());
-
-		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		static extern bool nw_protocol_metadata_is_udp (OS_nw_protocol_metadata metadata);
-
-		public bool IsUdp => nw_protocol_metadata_is_udp (GetCheckedHandle ());
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool IsIP => nw_protocol_metadata_is_ip (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		static extern bool nw_protocol_metadata_is_tls (OS_nw_protocol_metadata metadata);
+		internal static extern byte nw_protocol_metadata_is_udp (OS_nw_protocol_metadata metadata);
 
-		public bool IsTls => nw_protocol_metadata_is_tls (GetCheckedHandle ());
-
-		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		static extern bool nw_protocol_metadata_is_tcp (OS_nw_protocol_metadata metadata);
-
-		public bool IsTcp => nw_protocol_metadata_is_tcp (GetCheckedHandle ());
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool IsUdp => nw_protocol_metadata_is_udp (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern IntPtr nw_tls_copy_sec_protocol_metadata (IntPtr handle);
+		internal static extern byte nw_protocol_metadata_is_tls (OS_nw_protocol_metadata metadata);
 
-		public SecProtocolMetadata SecProtocolMetadata => new SecProtocolMetadata (nw_tls_copy_sec_protocol_metadata (GetCheckedHandle ()), owns: true);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool IsTls => nw_protocol_metadata_is_tls (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern void nw_ip_metadata_set_ecn_flag (OS_nw_protocol_metadata metadata, NWIPEcnFlag ecn_flag);
+		internal static extern byte nw_protocol_metadata_is_tcp (OS_nw_protocol_metadata metadata);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool IsTcp => nw_protocol_metadata_is_tcp (GetCheckedHandle ()) != 0;
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern byte nw_protocol_metadata_is_quic (OS_nw_protocol_metadata metadata);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public bool IsQuic => nw_protocol_metadata_is_quic (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern NWIPEcnFlag nw_ip_metadata_get_ecn_flag (OS_nw_protocol_metadata metadata);
+		internal static extern IntPtr nw_tls_copy_sec_protocol_metadata (IntPtr handle);
 
-		public NWIPEcnFlag IPMetadataEcnFlag {
-			get => nw_ip_metadata_get_ecn_flag (GetCheckedHandle ());
-			set => nw_ip_metadata_set_ecn_flag (GetCheckedHandle (), value);
+		void CheckIsIP ()
+		{
+			if (!IsIP)
+				throw new InvalidOperationException ("This metadata is not IP metadata.");
+		}
+
+		void CheckIsTcp ()
+		{
+			if (!IsTcp)
+				throw new InvalidOperationException ("This metadata is not TCP metadata.");
+		}
+
+		void CheckIsTls ()
+		{
+			if (!IsTls)
+				throw new InvalidOperationException ("This metadata is not TLS metadata.");
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern /* uint64_t */ ulong nw_ip_metadata_get_receive_time (OS_nw_protocol_metadata metadata);
-
-		public ulong IPMetadataReceiveTime {
-			get => nw_ip_metadata_get_receive_time (GetCheckedHandle ());
-		}
+		internal static extern void nw_ip_metadata_set_ecn_flag (OS_nw_protocol_metadata metadata, NWIPEcnFlag ecn_flag);
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern void nw_ip_metadata_set_service_class (OS_nw_protocol_metadata metadata, NWServiceClass service_class);
+		internal static extern NWIPEcnFlag nw_ip_metadata_get_ecn_flag (OS_nw_protocol_metadata metadata);
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern NWServiceClass nw_ip_metadata_get_service_class (OS_nw_protocol_metadata metadata);
-
-		public NWServiceClass ServiceClass {
-			get => nw_ip_metadata_get_service_class (GetCheckedHandle ());
-			set => nw_ip_metadata_set_service_class (GetCheckedHandle (), value);
-		}
+		internal static extern /* uint64_t */ ulong nw_ip_metadata_get_receive_time (OS_nw_protocol_metadata metadata);
 
 		[DllImport (Constants.NetworkLibrary)]
-		extern static /* uint32_t */ uint nw_tcp_get_available_receive_buffer (IntPtr handle);
-
-		public uint TcpGetAvailableReceiveBuffer () => nw_tcp_get_available_receive_buffer (GetCheckedHandle ());
+		internal static extern void nw_ip_metadata_set_service_class (OS_nw_protocol_metadata metadata, NWServiceClass service_class);
 
 		[DllImport (Constants.NetworkLibrary)]
-		extern static /* uint32_t */ uint nw_tcp_get_available_send_buffer (IntPtr handle);
+		internal static extern NWServiceClass nw_ip_metadata_get_service_class (OS_nw_protocol_metadata metadata);
 
-		public uint TcpGetAvailableSendBuffer () => nw_tcp_get_available_send_buffer (GetCheckedHandle ());
+		[DllImport (Constants.NetworkLibrary)]
+		internal extern static /* uint32_t */ uint nw_tcp_get_available_receive_buffer (IntPtr handle);
+
+		[DllImport (Constants.NetworkLibrary)]
+		internal extern static /* uint32_t */ uint nw_tcp_get_available_send_buffer (IntPtr handle);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		internal static extern byte nw_protocol_metadata_is_framer_message (OS_nw_protocol_metadata metadata);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public bool IsFramerMessage => nw_protocol_metadata_is_framer_message (GetCheckedHandle ()) != 0;
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		internal static extern byte nw_protocol_metadata_is_ws (OS_nw_protocol_metadata metadata);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public bool IsWebSocket => nw_protocol_metadata_is_ws (GetCheckedHandle ()) != 0;
 	}
 }

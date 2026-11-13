@@ -20,14 +20,15 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using Foundation;
-using ObjCRuntime;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSBitmapImageRep {
-		static IntPtr selInitForIncrementalLoad = Selector.GetHandle ("initForIncrementalLoad");
+		static string selInitForIncrementalLoad = "initForIncrementalLoad";
 
 		// Do not actually export because NSObjectFlag is not exportable.
 		// The Objective C method already exists. This is just to allow
@@ -36,21 +37,29 @@ namespace AppKit {
 		private NSBitmapImageRep (NSObjectFlag a, NSObjectFlag b) : base (a)
 		{
 			if (IsDirectBinding) {
-				Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, selInitForIncrementalLoad);
+				InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, Selector.GetHandle (selInitForIncrementalLoad)), selInitForIncrementalLoad);
 			} else {
-				Handle = ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (this.SuperHandle, selInitForIncrementalLoad);
+				unsafe {
+					var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+					InitializeHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (&__objc_super__, Selector.GetHandle (selInitForIncrementalLoad)), selInitForIncrementalLoad);
+					GC.KeepAlive (this);
+				}
 			}
 		}
 
-		public NSData RepresentationUsingTypeProperties (NSBitmapImageFileType storageType)
+		/// <summary>Convert the bitmap to a specific file format.</summary>
+		/// <param name="storageType">The target filetype for the bitmap image.</param>
+		/// <returns>An <see cref="NSData" /> with the data of the bitmap stored as the specified file type.</returns>
+		public NSData? RepresentationUsingTypeProperties (NSBitmapImageFileType storageType)
 		{
-			return RepresentationUsingTypeProperties (storageType, null);
+			return RepresentationUsingTypeProperties (storageType, new NSDictionary ());
 		}
 
+		/// <summary>Create a new <see cref="NSBitmapImageRep" /> that for incremental loading.</summary>
 		public static NSBitmapImageRep IncrementalLoader ()
 		{
 			return new NSBitmapImageRep (NSObjectFlag.Empty, NSObjectFlag.Empty);
 		}
 	}
 }
-
+#endif // !__MACCATALYST__

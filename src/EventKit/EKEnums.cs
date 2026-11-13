@@ -1,6 +1,3 @@
-using System;
-using ObjCRuntime;
-using Foundation;
 using CoreGraphics;
 using CoreLocation;
 
@@ -12,213 +9,390 @@ namespace EventKit {
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>Specifies the type of a calendar.</summary>
 	[Native]
 	public enum EKCalendarType : long {
-		Local, CalDav, Exchange, Subscription, Birthday
+		/// <summary>The calendar is stored locally.</summary>
+		Local,
+		/// <summary>The calendar is being accessed via the CalDAV protocol.</summary>
+		CalDav,
+		/// <summary>The calendar is being accessed via Microsoft Exchange Server protocols.</summary>
+		Exchange,
+		/// <summary>The calendar is being accessed via subscription (iCal).</summary>
+		Subscription,
+		/// <summary>The calendar is a birthday calendar.</summary>
+		Birthday,
 	}
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>The kind of participant to the event.</summary>
 	[Native]
 	public enum EKParticipantType : long {
-		Unknown, Person, Room, Resource, Group
+		/// <summary>The participant type is unknown.</summary>
+		Unknown,
+		/// <summary>A person.</summary>
+		Person,
+		/// <summary>Use to book a room.</summary>
+		Room,
+		/// <summary>Use to book resources (photocopier, company limo or private jets).</summary>
+		Resource,
+		/// <summary>Groups of people.</summary>
+		Group,
 	}
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>The role of an <see cref="EventKit.EKParticipant" /></summary>
 	[Native]
 	public enum EKParticipantRole : long {
-		Unknown, Required, Optional, Chair, NonParticipant
+		/// <summary>Uknonwn role.   The participant might want to consider his role in the group.</summary>
+		Unknown,
+		/// <summary>Attendance is required.</summary>
+		Required,
+		/// <summary>Attendance is optional.   This means that you can get away by not showing up at the meeting.   Or you can use this to politely invite someone, hoping they wont show up.</summary>
+		Optional,
+		/// <summary>Chairing the meeting.</summary>
+		Chair,
+		/// <summary>Not a participant.</summary>
+		NonParticipant,
 	}
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>The status of a participant.</summary>
 	[Native]
 	public enum EKParticipantStatus : long {
-		Unknown, Pending, Accepted, Declined,
-		Tentative, Delegated, Completed, InProcess
+		/// <summary>We do not know what the participant's intentions are at this point.</summary>
+		Unknown,
+		/// <summary>The participant has not yet responded to this event.   Probably trying to find someone he can EKParticipantStatus.Delegate this too.   If you know what I mean.</summary>
+		Pending,
+		/// <summary>The participant has expressed his commitment to this meeting by accepting your invitation.</summary>
+		Accepted,
+		/// <summary>The participant has declined to participate in this event.</summary>
+		Declined,
+		/// <summary>The participant will tentatively will join this event.</summary>
+		Tentative,
+		/// <summary>The participant delegate this event to someone else.</summary>
+		Delegated,
+		/// <summary>The event has completed.</summary>
+		Completed,
+		/// <summary>In process.   </summary>
+		InProcess,
 	}
 
 	// untyped enum -> EKError.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>Errors returned by Event Kit.</summary>
 	[Native]
 	[ErrorDomain ("EKErrorDomain")]
 	public enum EKErrorCode : long {
+		/// <summary>The event cannot be modified.</summary>
 		EventNotMutable,
+		/// <summary>The event does not have an associated calendar.</summary>
 		NoCalendar,
+		/// <summary>The StartDate property has not been set for the event.</summary>
 		NoStartDate,
+		/// <summary>The EndDate property has not been set for the event.</summary>
 		NoEndDate,
+		/// <summary>The event EndDate cannot occur before the event StartDate</summary>
 		DatesInverted,
+		/// <summary>An internal error has occurred.</summary>
 		InternalFailure,
+		/// <summary>The calendar cannot be modified.</summary>
 		CalendarReadOnly,
+		/// <summary>The event duration is too large for the interval specified by the event's recurrence rule.</summary>
 		DurationGreaterThanRecurrence,
+		/// <summary>The alarm's RelativeOffset is too large for the interval specified by the event's recurrence rule.</summary>
 		AlarmGreaterThanRecurrence,
+		/// <summary>The event's StartDate is beyond the end of the calendar.</summary>
 		StartDateTooFarInFuture,
+		/// <summary>The event's StartDate is set to collide with other occurrences of the same event.</summary>
 		StartDateCollidesWithOtherOccurrence,
+		/// <summary>The object is not stored in the same event store.</summary>
 		ObjectBelongsToDifferentStore,
+		/// <summary>Invites cannot be modified.</summary>
 		InvitesCannotBeMoved,
+		/// <summary>The time span for the event was invalid.</summary>
 		InvalidSpan,
+		/// <summary>The calendar could not be saved because its source was not set.</summary>
 		CalendarHasNoSource,
+		/// <summary>The calendar source can not be modified.</summary>
 		CalendarSourceCannotBeModified,
+		/// <summary>The calendar is immutable.</summary>
 		CalendarIsImmutable,
+		/// <summary>The source will not allow the developer to add or delete calendars.</summary>
 		SourceDoesNotAllowCalendarAddDelete,
+		/// <summary>A recurring reminder's due date was missing.</summary>
 		RecurringReminderRequiresDueDate,
+		/// <summary>The source does not support structured locations.</summary>
 		StructuredLocationsNotSupported,
- 		ReminderLocationsNotSupported,
+		/// <summary>Locations are not supported for reminders on the source.</summary>
+		ReminderLocationsNotSupported,
+		/// <summary>Geofenced alarms are not supported.</summary>
 		AlarmProximityNotSupported,
+		/// <summary>The calendar does not allow events.</summary>
 		CalendarDoesNotAllowEvents,
+		/// <summary>The calendar does not allow reminders.</summary>
 		CalendarDoesNotAllowReminders,
+		/// <summary>The source does not allow reminders.</summary>
 		SourceDoesNotAllowReminders,
+		/// <summary>The source does not allow events.</summary>
 		SourceDoesNotAllowEvents,
+		/// <summary>The priority value is invalid.</summary>
 		PriorityIsInvalid,
+		/// <summary>The entity type is invalid.</summary>
 		InvalidEntityType,
+		/// <summary>Procedure alarms cannot be modified.</summary>
 		ProcedureAlarmsNotMutable,
+		/// <summary>The event store is not authorized to perform the operation.</summary>
 		EventStoreNotAuthorized,
+		/// <summary>The operating system does not support this operation.</summary>
 		OSNotSupported,
+		InvalidInviteReplyCalendar,
+		NotificationsCollectionFlagNotSet,
+		SourceMismatch,
+		NotificationCollectionMismatch,
+		NotificationSavedWithoutCollection,
+		ReminderAlarmContainsEmailOrUrl,
 	}
 
 	// untyped enum -> EKTypes.h
 	// Special note: some API (like `dayOfWeek:` and `dayOfWeek:weekNumber:` use an `NSInteger` instead of the enum
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use 'EKWeekday'.")]
-	[Deprecated (PlatformName.MacOSX, 10, 11, message : "Use 'EKWeekday'.")]
+	/// <summary>Enumeration of the days of the week.</summary>
+	[Deprecated (PlatformName.iOS, 9, 0, message: "Use 'EKWeekday'.")]
+	[Deprecated (PlatformName.MacOSX, 10, 11, message: "Use 'EKWeekday'.")]
+	[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'EKWeekday'.")]
 	public enum EKDay {
+		/// <summary>Not set</summary>
 		NotSet = 0,
+		/// <summary>Sunday</summary>
 		Sunday = 1,
-		Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+		/// <summary>Monday</summary>
+		Monday,
+		/// <summary>Tuesday</summary>
+		Tuesday,
+		/// <summary>Wednesday</summary>
+		Wednesday,
+		/// <summary>Thursday</summary>
+		Thursday,
+		/// <summary>Friday</summary>
+		Friday,
+		/// <summary>Saturday</summary>
+		Saturday,
 	}
 
-	[iOS (9,0)][Mac (10,11)]
+	/// <summary>Enumerates the days of the week.</summary>
+	[MacCatalyst (13, 1)]
 	[Native] // NSInteger (size change from previously untyped enum)
 	public enum EKWeekday : long {
+		/// <summary>Not set.</summary>
 		NotSet = 0,
+		/// <summary>Sunday.</summary>
 		Sunday = 1,
+		/// <summary>Monday.</summary>
 		Monday,
+		/// <summary>Tuesday.</summary>
 		Tuesday,
+		/// <summary>Wednesday.</summary>
 		Wednesday,
+		/// <summary>Thursday.</summary>
 		Thursday,
+		/// <summary>Friday.</summary>
 		Friday,
+		/// <summary>Saturday.</summary>
 		Saturday,
 	}
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>The recurring frequency for the event.</summary>
 	[Native]
 	public enum EKRecurrenceFrequency : long {
-		Daily, Weekly, Monthly, Yearly
+		/// <summary>Recurs daily.</summary>
+		Daily,
+		/// <summary>Recurs weekly.</summary>
+		Weekly,
+		/// <summary>Recurs monthly.</summary>
+		Monthly,
+		/// <summary>Recurs yearly.</summary>
+		Yearly,
 	}
 
 	// untyped enum -> EKEventStore.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>Determines how changes to an event will be applied, either it affects a single instance or affects all instances.</summary>
 	[Native]
 	public enum EKSpan : long {
-		ThisEvent, FutureEvents
+		/// <summary>The change only affects a particular instance of the event.</summary>
+		ThisEvent,
+		/// <summary>The change affects all future events.</summary>
+		FutureEvents,
 	}
-
-	// note: old binding mistakes - they should have been in EventKitUI (not EventKit)
-#if !XAMCORE_2_0
-	// untyped enum -> EKEventViewController.h
-	public enum EKEventViewAction {
-		Done, Responded, Deleted
-	}
-
-	// untyped enum -> EKEventEditViewController.h
-	public enum EKEventEditViewAction {
-		Canceled, Saved, Deleted
-	}
-#endif
 
 	// NSUInteger -> EKTypes.h
-	[Native]
+	/// <summary>Specifies the types of availability information the calendar is capable of providing for its associated events.</summary>
+	[Native ("EKCalendarEventAvailabilityMask")]
 	[Flags]
 	public enum EKCalendarEventAvailability : ulong {
+		/// <summary>The calendar cannot provide availability status for its associated events.</summary>
 		None = 0,
+		/// <summary>The calendar can provide busy status for its associated events.</summary>
 		Busy = 1,
+		/// <summary>The calendar can provide free status for its associated events.</summary>
 		Free = 2,
+		/// <summary>The calendar can provide tentative status for its associated events.</summary>
 		Tentative = 4,
-		Unavailable = 8
+		/// <summary>The calendar can provide unavailable status for its associated events.</summary>
+		Unavailable = 8,
 	}
 
 	// untyped enum -> EKEvent.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>Types of availability </summary>
 	[Native]
 	public enum EKEventAvailability : long {
+		/// <summary>Calendar does not provide availability information for events.</summary>
 		NotSupported = -1,
-		Busy = 0, Free, Tentative, Unavailable,
+		/// <summary>Duration of event is reported as busy.</summary>
+		Busy = 0,
+		/// <summary>Duration of event is reported as free.</summary>
+		Free,
+		/// <summary>Duration of event is reported as tentative.</summary>
+		Tentative,
+		/// <summary>Duration of event is reported as unavailable.</summary>
+		Unavailable,
 	}
 
 	// untyped enum -> EKEvent.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>The event status.</summary>
 	[Native]
 	public enum EKEventStatus : long {
-		None, Confirmed, Tentative, Cancelled
+		/// <summary>This event has no status set.</summary>
+		None,
+		/// <summary>The event has been confirmed.</summary>
+		Confirmed,
+		/// <summary>The event is flagged as tentative.</summary>
+		Tentative,
+		/// <summary>The event has been cancelled.</summary>
+		Cancelled,
 	}
 
 	// untyped enum -> EKTypes.h
 	// iOS 9 promoted this to an NSInteger - which breaks compatibility
+	/// <summary>An enumeration whose values indicate the type of a <see cref="EventKit.EKSource" /> object.</summary>
 	[Native]
 	public enum EKSourceType : long {
-		Local, Exchange, CalDav, MobileMe, Subscribed, Birthdays
+		/// <summary>The source is stored locally on the device.</summary>
+		Local,
+		/// <summary>The source is a Microsoft Exchange server.</summary>
+		Exchange,
+		/// <summary>The source is a CalDAV server.</summary>
+		CalDav,
+		/// <summary>The source is the legacy MobileMe service (now iCloud).</summary>
+		MobileMe,
+		/// <summary>The source is a subscribed calendar.</summary>
+		Subscribed,
+		/// <summary>The source provides birthday events.</summary>
+		Birthdays,
 	}
 
 	// NSInteger -> EKTypes.h
+	/// <summary>An enumeration whose values specify whether an alarm fires when entering or leaving a region.</summary>
 	[Native]
 	public enum EKAlarmProximity : long {
-		None, Enter, Leave
+		/// <summary>No proximity alarm.</summary>
+		None,
+		/// <summary>The alarm fires when entering the region.</summary>
+		Enter,
+		/// <summary>The alarm fires when leaving the region.</summary>
+		Leave,
 	}
 
 	// NSUInteger -> EKTypes.h
+	/// <summary>An enumeration whose values represent the allowed entity types for a <see cref="EventKit.EKCalendar" />.</summary>
 	[Native]
 	[Flags]
 	public enum EKEntityMask : ulong {
+		/// <summary>The calendar supports events.</summary>
 		Event = 1 << (int) EKEntityType.Event,
-		Reminder = 1 << (int) EKEntityType.Reminder
+		/// <summary>The calendar supports reminders.</summary>
+		Reminder = 1 << (int) EKEntityType.Reminder,
 	}
 
 	// NSUInteger -> EKTypes.h
+	/// <summary>An enumeration that specifies whether an entity is an event or a reminder.</summary>
 	[Native]
 	public enum EKEntityType : ulong {
+		/// <summary>The entity is a calendar event.</summary>
 		Event,
-		Reminder
+		/// <summary>The entity is a reminder.</summary>
+		Reminder,
 	}
 
-#if MONOMAC || WATCH
+#if MONOMAC
 	// untyped enum -> EKTypes.h (but not in the iOS SDK, only OSX)
 	// turned into a typed (NSInteger) enum in El Capitan (and also an NSInteger in watchOS)
 	[Native]
 	public enum EKAlarmType : long {
-		Display, Audio, Procedure, Email
+		/// <summary>A display alarm that shows a visual notification.</summary>
+		Display,
+		/// <summary>An audio alarm that plays a sound.</summary>
+		Audio,
+		/// <summary>A procedure alarm that runs a script or application.</summary>
+		Procedure,
+		/// <summary>An email alarm that sends an email.</summary>
+		Email,
 	}
 #endif
 	// NSInteger -> EKEventStore.h
+	/// <summary>An enumeration whose values specify the restrictions on access to the <see cref="EventKit.EKEventStore" />. Retrieved by calling the <see cref="EventKit.EKEventStore.GetAuthorizationStatus(EventKit.EKEntityType)" /> method.</summary>
 	[Native]
 	public enum EKAuthorizationStatus : long {
+		/// <summary>The user has not interacted with the permissions dialog.</summary>
 		NotDetermined = 0,
+		/// <summary>Access is denied and the user cannot change permission.</summary>
 		Restricted,
+		/// <summary>The user has denied access.</summary>
 		Denied,
+		/// <summary>The user has granted access.</summary>
 		Authorized,
+		WriteOnly,
 	}
 
 	[Native]
-	public enum EKParticipantScheduleStatus : long
-	{
+	public enum EKParticipantScheduleStatus : long {
+		/// <summary>No scheduling status.</summary>
 		None,
+		/// <summary>The schedule request is pending.</summary>
 		Pending,
+		/// <summary>The schedule request has been sent.</summary>
 		Sent,
+		/// <summary>The schedule request was delivered successfully.</summary>
 		Delivered,
+		/// <summary>The recipient was not recognized.</summary>
 		RecipientNotRecognized,
+		/// <summary>The sender does not have sufficient privileges.</summary>
 		NoPrivileges,
+		/// <summary>The delivery of the schedule request failed.</summary>
 		DeliveryFailed,
+		/// <summary>The schedule request cannot be delivered.</summary>
 		CannotDeliver,
-		RecipientNotAllowed
+		/// <summary>The recipient is not allowed to receive schedule requests.</summary>
+		RecipientNotAllowed,
 	}
 
 	[Native]
-	public enum EKReminderPriority : ulong
-	{
+	public enum EKReminderPriority : ulong {
+		/// <summary>No priority set.</summary>
 		None = 0,
+		/// <summary>High priority.</summary>
 		High = 1,
+		/// <summary>Medium priority.</summary>
 		Medium = 5,
-		Low = 9
+		/// <summary>Low priority.</summary>
+		Low = 9,
 	}
-	
+
 }

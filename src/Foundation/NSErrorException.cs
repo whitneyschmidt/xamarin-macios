@@ -23,39 +23,70 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
 namespace Foundation {
+	/// <summary>Exception that wraps an Objective-C NSError.</summary>
+	///     <remarks>
+	///       The exception wraps an Objective-C NSError.  These are created
+	///       when using Async programming to set the Task's exception to the
+	///       resulting error, they are not thrown by any APIs in MonoTouch.
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class NSErrorException : Exception {
 		NSError error;
 
+		/// <param name="error">The NSError to wrap.</param>
+		///         <summary>Creates an NSErrorException that encapsulates an NSError.</summary>
+		///         <remarks>
+		///         </remarks>
 		public NSErrorException (NSError error)
 		{
-			if (error == null)
-				throw new ArgumentNullException (nameof(error));
+			if (error is null)
+				throw new ArgumentNullException (nameof (error));
 			this.error = error;
 		}
-		
-		public NSError Error
-		{
+
+		/// <summary>The underlying NSError that is being wrapped.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		public NSError Error {
 			get { return error; }
 		}
 
-		public string Domain
-		{
+		/// <summary>The NSError's Domain property.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		public string Domain {
 			get { return error.Domain; }
 		}
 
-		public nint Code
-		{
+		/// <summary>The NSError.Code property</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		public nint Code {
 			get { return error.Code; }
 		}
 
-		public NSDictionary UserInfo
-		{
-			get {return error.UserInfo; }
+		/// <summary>The NSError's UserInfo.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		///         </remarks>
+		public NSDictionary UserInfo {
+			get { return error.UserInfo; }
 		}
 
+		/// <summary>Gets a message that describes the error.</summary>
+		/// <value>The error description from the underlying <see cref="NSError" />.</value>
 		public override string Message {
 			get {
 				return error.Description;

@@ -1,0 +1,50 @@
+# contains the stage used to run all governance related jobs
+
+parameters:
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: stageDisplayNamePrefix
+  type: string
+  default: ''
+
+- name: dependsOn
+  type: object
+  default: [configure_build, build_packages]
+
+- name: use1ES
+  type: boolean
+
+stages:
+- stage: governance_checks
+  displayName: '${{ parameters.stageDisplayNamePrefix }}API Scan'
+  dependsOn: ${{ parameters.dependsOn }}
+  condition: and(succeeded(), ne(dependencies.configure_build.outputs['configure.configure_platforms.DOTNET_PLATFORMS'], ''))
+
+  jobs:
+  - job: apiscan
+    displayName: 'APIScan:' 
+    timeoutInMinutes: 1000
+    pool:
+      name: MAUI-1ESPT
+      demands:
+      - ImageOverride -equals 1ESPT-Windows2022
+
+    strategy:
+      matrix: $[ stageDependencies.configure_build.configure.outputs['apiscan_matrix.APISCAN_MATRIX'] ]
+
+    steps:
+    - template: ./apiscan.yml
+      parameters:
+        isPR: ${{ parameters.isPR }}
+        repositoryAlias: ${{ parameters.repositoryAlias }}
+        commit: ${{ parameters.commit }}
+        use1ES: ${{ parameters.use1ES }}

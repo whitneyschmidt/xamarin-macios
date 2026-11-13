@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKEntity
 //
 // Authors:
@@ -8,19 +8,7 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using OpenTK;
-
-#if XAMCORE_2_0
-using Foundation;
 using GameplayKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.GameplayKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.GamePlayKit {
 
@@ -36,43 +24,41 @@ namespace MonoTouchFixtures.GamePlayKit {
 			var entity = GKEntity.GetEntity ();
 			entity.AddComponent (new NumberComponent (10));
 			entity.AddComponent (new NameComponent ("Ten"));
-			Assert.IsTrue (entity.Components.Length == 2, "entity.Components length must be 2");
+			Assert.That (entity.Components.Length == 2, Is.True, "entity.Components length must be 2");
 
 			// Test component retrieval by type
-			var component = entity.GetComponent (typeof(NumberComponent)) as NumberComponent;
-			Assert.NotNull (component, "Component must not be null");
-			Assert.IsTrue (component.Id == 10, "Component Id must be 10");
+			var component = entity.GetComponent (typeof (NumberComponent)) as NumberComponent;
+			Assert.That (component, Is.Not.Null, "Component must not be null");
+			Assert.That (component.Id == 10, Is.True, "Component Id must be 10");
 
 			// Test component removal by type
-			Assert.NotNull (entity.GetComponent (typeof (NameComponent)), "Component typeof NameComponent must not be null");
-			entity.RemoveComponent (typeof(NameComponent));
-			Assert.IsTrue (entity.Components.Length == 1, "entity.Components length must be 1");
-			Assert.IsNull (entity.GetComponent (typeof (NameComponent)), "Component typeof NameComponent must be null");
+			Assert.That (entity.GetComponent (typeof (NameComponent)), Is.Not.Null, "Component typeof NameComponent must not be null");
+			entity.RemoveComponent (typeof (NameComponent));
+			Assert.That (entity.Components.Length == 1, Is.True, "entity.Components length must be 1");
+			Assert.That (entity.GetComponent (typeof (NameComponent)), Is.Null, "Component typeof NameComponent must be null");
 		}
 
-		[ExpectedException (typeof (ArgumentNullException))]
 		[Test]
 		public void BadGetComponent ()
 		{
 			TestRuntime.AssertXcodeVersion (7, 0);
 
 			var entity = GKEntity.GetEntity ();
-			entity.GetComponent (null);
+			Assert.Throws<ArgumentNullException> (() => entity.GetComponent (null));
 		}
 
-		[ExpectedException (typeof (ArgumentNullException))]
 		[Test]
 		public void BadRemoval ()
 		{
 			TestRuntime.AssertXcodeVersion (7, 0);
 
 			var entity = GKEntity.GetEntity ();
-			entity.RemoveComponent (null);
+			Assert.Throws<ArgumentNullException> (() => entity.RemoveComponent (null));
 		}
 	}
 
 	[Preserve (AllMembers = true)]
-	class NameComponent : GKComponent { 
+	class NameComponent : GKComponent {
 
 		public string Name { get; private set; }
 
@@ -85,17 +71,15 @@ namespace MonoTouchFixtures.GamePlayKit {
 	}
 
 	[Preserve (AllMembers = true)]
-	class NumberComponent : GKComponent { 
+	class NumberComponent : GKComponent {
 
 		public int Id { get; private set; }
 
 		public NumberComponent (int id)
 		{
-			Id = id;;
+			Id = id; ;
 		}
 
 		public NumberComponent (IntPtr handle) : base (handle) { }
 	}
 }
-
-#endif // __WATCHOS__

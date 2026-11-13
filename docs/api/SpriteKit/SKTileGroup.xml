@@ -1,0 +1,11 @@
+<Documentation>
+  <Docs DocId="T:SpriteKit.SKTileGroup">
+    <summary>A collection of related <see cref="SpriteKit.SKTileDefinition" /> objects.</summary>
+    <remarks>
+      <para>
+      A <see cref="SpriteKit.SKTileSet" /> contains one or more <see cref="SpriteKit.SKTileGroup" /> objects. An <see cref="SpriteKit.SKTileGroup" /> may contain a single <see cref="SpriteKit.SKTileDefinition" /> (use <see cref="SpriteKit.SKTileGroup.SKTileGroup (SpriteKit.SKTileDefinition)" /> or <see cref="SpriteKit.SKTileGroup.Create(SKTileDefinition)" />) or may contain an array of <see cref="SpriteKit.SKTileGroupRule" /> objects that define placement rules for tiles.
+      </para>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/reference/SpriteKit/SKTileGroup">Apple documentation for <c>SKTileGroup</c></related>
+  </Docs>
+</Documentation>

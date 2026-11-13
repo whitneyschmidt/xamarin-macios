@@ -1,30 +1,32 @@
-﻿//
+//
 // IdentityLookupUI C# bindings
 //
 // Authors:
 //	Alex Soto  <alexsoto@microsoft.com>
 //
-// Copyright 2018 Microsoft Corporation.
+// Copyright 2018-2019 Microsoft Corporation.
 //
 
-#if XAMCORE_2_0
-using System;
-using Foundation;
-using ObjCRuntime;
 using UIKit;
 using IdentityLookup;
 
 namespace IdentityLookupUI {
 
-	[iOS (12,0)]
+	/// <summary>Extension context for reporting unwanted communication.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSExtensionContext))]
 	interface ILClassificationUIExtensionContext {
 
+		/// <summary>Gets or sets a Boolean value that tells whether the report is ready to be submitted.</summary>
+		///         <value>A Boolean value that tells whether the report is ready to be submitted.</value>
 		[Export ("readyForClassificationResponse")]
 		bool ReadyForClassificationResponse { [Bind ("isReadyForClassificationResponse")] get; set; }
 	}
 
-	[iOS (12,0)]
+	/// <summary>Base class for view controllers for Unwanted Communication Reporting extensions.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/documentation/sms_and_call_reporting/sms_and_call_spam_reporting?language=objc">SMS and Call Spam Reporting</related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (UIViewController))]
 	interface ILClassificationUIExtensionViewController {
 
@@ -38,4 +40,3 @@ namespace IdentityLookupUI {
 		ILClassificationResponse GetClassificationResponse (ILClassificationRequest request);
 	}
 }
-#endif

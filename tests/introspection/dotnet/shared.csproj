@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <DefineConstants>$(DefineConstants);NET</DefineConstants>
+    <RootNamespace>Introspection</RootNamespace>
+    <AssemblyName>introspection</AssemblyName>
+    <MtouchLink>None</MtouchLink>
+
+    <RootTestsDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)\..\..'))</RootTestsDirectory>
+    <TestLibrariesDirectory>$(RootTestsDirectory)\test-libraries</TestLibrariesDirectory>
+    <IntrospectionTestDirectory>$(RootTestsDirectory)\introspection</IntrospectionTestDirectory>
+
+    <!-- Don't remove native symbols, because it makes debugging native crashes harder -->
+    <MtouchNoSymbolStrip>true</MtouchNoSymbolStrip>
+
+    <DefineConstants Condition="'$(Configuration)' == 'Debug'">$(DefineConstants);DEBUG</DefineConstants>
+
+    <!-- warnings IL2026;IL2057;IL2059;IL2070;IL2075;IL2096: trimmability warnings. The introspection tests aren't trimmable (we set MtouchLink=None), so just ignore these -->
+    <NoWarn>$(NoWarn);IL2026;IL2057;IL2059;IL2070;IL2075;IL2096</NoWarn>
+
+    <!-- warning CA1422: This call site is reachable on: '...': we use APIs that aren't available on a certain OS platform all the time (in some cases to verify any broken behavior), so ignore such warnings -->
+    <NoWarn>$(NoWarn);CA1422</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="$(RootTestsDirectory)/common/shared-dotnet.csproj" />
+
+  <ItemGroup Condition="$(TargetFramework.EndsWith('-macos'))">
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiCtorInitTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiFieldTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiSelectorTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiProtocolTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiSignatureTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacCoreImageFiltersTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiPInvokeTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\MacApiWeakPropertyTest.cs" />
+    <Compile Include="$(RootTestsDirectory)\common\mac\MacMain.cs">
+      <Link>MacMain.cs</Link>
+    </Compile>
+    <Compile Include="$(RootTestsDirectory)\common\mac\Mac.cs">
+      <Link>Mac.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.EndsWith('-macos'))">
+    <Compile Include="$(RootTestsDirectory)\common\AppDelegate.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiCtorInitTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiFieldTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiSelectorTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiSignatureTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiProtocolTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiWeakPropertyTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiPInvokeTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiSimulatorAvailabilityTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSApiClassPtrTest.cs" />
+    <Compile Include="$(IntrospectionTestDirectory)\iOSCoreImageFiltersTest.cs" />
+
+    <Compile Include="$(IntrospectionTestDirectory)\ApiCMAttachmentTest.cs">
+      <Link>ApiCMAttachmentTest.cs</Link>
+    </Compile>
+
+    <InterfaceDefinition Include="$(IntrospectionTestDirectory)\LaunchScreen.storyboard" Condition="'$(_PlatformName)' != 'tvOS' And '$(_PlatformName)' != 'MacCatalyst' And '$(_PlatformName)' != 'macOS'" />
+
+    <ImageAsset Include="$(IntrospectionTestDirectory)\Assets.xcassets\AppIcons.appiconset\Contents.json" />
+    <ImageAsset Include="$(IntrospectionTestDirectory)\Assets.xcassets\AppIcons.appiconset\icon-1024.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiBaseTest.cs">
+      <Link>ApiBaseTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiClassPtrTest.cs">
+      <Link>ApiClassPtrTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiCoreImageFiltersTest.cs">
+      <Link>ApiCoreImageFiltersTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiCtorInitTest.cs">
+      <Link>ApiCtorInitTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiFieldTest.cs">
+      <Link>ApiFieldTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiPInvokeTest.cs">
+      <Link>ApiPInvokeTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiSimulatorAvailabilityTest.cs">
+      <Link>ApiSimulatorAvailabilityTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiProtocolTest.cs">
+      <Link>ApiProtocolTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiSelectorTest.cs">
+      <Link>ApiSelectorTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiSignatureTest.cs">
+      <Link>ApiSignatureTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiStructTest.cs">
+      <Link>ApiStructTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiTypoTest.cs">
+      <Link>ApiTypoTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiWeakPropertyTest.cs">
+      <Link>ApiWeakPropertyTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\CoreSelectorTest.cs">
+      <Link>CoreSelectorTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\EnvironmentVariable.cs">
+      <Link>EnvironmentVariable.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\common\PlatformInfo.cs">
+      <Link>PlatformInfo.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\common\TestRuntime.cs">
+      <Link>TestRuntime.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\common\TestRuntime.LinkAll.cs">
+      <Link>TestRuntime.LinkAll.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\..\tools\common\Frameworks.cs">
+      <Link>Frameworks.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\..\tools\common\ApplePlatform.cs">
+      <Link>ApplePlatform.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\..\tools\common\OSPlatformAttributeExtensions.cs">
+      <Link>OSPlatformAttributeExtensions.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\..\tools\common\SdkVersions.cs">
+      <Link>SdkVersions.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\..\..\tests\common\TestAssemblyLoader.cs">
+      <Link>TestAssemblyLoader.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiFrameworkTest.cs">
+      <Link>ApiFrameworkTest.cs</Link>
+    </Compile>
+    <Compile Include="$(IntrospectionTestDirectory)\ApiTypeTest.cs">
+      <Link>ApiTypeTest.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Info.plist" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <BundleResource Include="$(IntrospectionTestDirectory)\xamarin1.png">
+      <Link>xamarin1.png</Link>
+    </BundleResource>
+  </ItemGroup>
+</Project>

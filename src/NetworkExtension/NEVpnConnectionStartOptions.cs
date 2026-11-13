@@ -1,16 +1,27 @@
-#if XAMCORE_2_0 || !MONOMAC
-
-using Foundation;
+#nullable enable
 
 namespace NetworkExtension {
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos17.0")]
 	public class NEVpnConnectionStartOptions : DictionaryContainer {
 
 #if !COREBUILD
-		public NEVpnConnectionStartOptions () : base (new NSMutableDictionary ()) {}
-		public NEVpnConnectionStartOptions (NSDictionary dictionary) : base (dictionary) {}
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public NEVpnConnectionStartOptions () : base (new NSMutableDictionary ()) { }
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public NEVpnConnectionStartOptions (NSDictionary dictionary) : base (dictionary) { }
 
-		public NSString Username {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSString? Username {
 			get {
 				return GetNSStringValue (NEVpnConnectionStartOptionInternal.Username);
 			}
@@ -19,7 +30,10 @@ namespace NetworkExtension {
 			}
 		}
 
-		public NSString Password {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSString? Password {
 			get {
 				return GetNSStringValue (NEVpnConnectionStartOptionInternal.Password);
 			}
@@ -30,5 +44,3 @@ namespace NetworkExtension {
 #endif
 	}
 }
-
-#endif

@@ -28,19 +28,21 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
 using System.Collections.Generic;
 
 using Mono.Cecil;
 using Mono.Linker;
 using Mono.Tuner;
+using Mono.Linker.Steps;
+
+using Xamarin.Bundler;
+using Xamarin.Tuner;
+
+#nullable enable
 
 namespace Xamarin.Linker.Steps {
-
-	public class MarkNSObjects : ExceptionalSubStep {
-
-		static string ProductAssembly;
-
+#if !ASSEMBLY_PREPARER
+	public class MarkNSObjects : ExceptionalSubStep, IMarkNSObjects {
 		protected override string Name { get; } = "MarkNSObjects";
 		protected override int ErrorCode { get; } = 2080;
 
@@ -48,114 +50,183 @@ namespace Xamarin.Linker.Steps {
 			get { return SubStepTargets.Type; }
 		}
 
+		AnnotationStore IMarkNSObjects.Annotations => Annotations;
+		public Application App => base.LinkContext.App;
+		DerivedLinkContext IMarkNSObjects.Context => Configuration.DerivedLinkContext;
+
+		public override bool IsActiveFor (AssemblyDefinition assembly)
+		{
+			if (Configuration.DerivedLinkContext.DidRunMarkNSObjectsStep)
+				return false;
+
+			return base.IsActiveFor (assembly);
+		}
+
 		protected override void Process (TypeDefinition type)
 		{
-			if (ProductAssembly == null)
-				ProductAssembly = (Profile.Current as BaseProfile).ProductAssembly;
+			MarkNSObjectsImpl.ProcessType (this, type);
+		}
 
-			bool nsobject = type.IsNSObject (LinkContext);
+		public bool PreserveType (TypeDefinition type, bool allMembers)
+		{
+			Annotations.Mark (type);
+			if (allMembers)
+				Annotations.SetPreserve (type, TypePreserve.All);
+			return true;
+		}
+
+		public bool PreserveType (TypeDefinition onType, TypeDefinition type)
+		{
+			return PreserveType (type, allMembers: false);
+		}
+
+		public bool PreserveMethod (TypeDefinition onType, MethodDefinition method)
+		{
+			Annotations.AddPreservedMethod (onType, method);
+			return true;
+		}
+	}
+#endif
+
+	public interface IMarkNSObjects {
+		bool PreserveType (TypeDefinition type, bool allMembers);
+		// Preserve 'type' if 'onType' is marked.
+		bool PreserveType (TypeDefinition onType, TypeDefinition type);
+		// Preserve 'method' if 'onType' is marked.
+		bool PreserveMethod (TypeDefinition onType, MethodDefinition method);
+		AnnotationStore Annotations { get; }
+		Application App { get; }
+		DerivedLinkContext Context { get; }
+	}
+
+	public class MarkNSObjectsImpl {
+
+		public static bool ProcessType (IMarkNSObjects marker, TypeDefinition type)
+		{
+			var modified = false;
+
+			bool nsobject = type.IsNSObject (marker.Context);
 			if (!nsobject && !type.IsNativeObject ())
-				return;
+				return modified;
 
-			if (!IsProductType (type)) {
+			if (!IsProductType (marker, type)) {
 				// we need to annotate the parent type(s) of a nested type
-				// otherwise the sweeper will not keep the parents (nor the childs)
+				// otherwise the sweeper will not keep the parents (nor the children)
 				if (type.IsNested) {
 					var parent = type.DeclaringType;
-					while (parent != null) {
-						Annotations.Mark (parent);
+					while (parent is not null) {
+						marker.PreserveType (type, parent);
 						parent = parent.DeclaringType;
 					}
 				}
-				Annotations.Mark (type);
-				Annotations.SetPreserve (type, TypePreserve.All);
-			} else {
-				PreserveIntPtrConstructor (type);
-				if (nsobject)
-					PreserveExportedMethods (type);
+				marker.PreserveType (type, allMembers: true);
+			} else if (type.HasMethods) {
+				modified |= PreserveIntPtrConstructor (marker, type);
+				if (nsobject) {
+					modified |= PreserveExportedMethods (marker, type);
+					if (marker.App.Registrar == RegistrarMode.TrimmableStatic)
+						modified |= PreserveVirtualOverrides (marker, type);
+				}
 			}
+
+			return modified;
 		}
 
-		void PreserveExportedMethods (TypeDefinition type)
+		static bool PreserveExportedMethods (IMarkNSObjects marker, TypeDefinition type)
 		{
-			if (!type.HasMethods)
-				return;
-
+			var modified = false;
 			foreach (var method in type.Methods) {
 				if (!IsExportedMethod (method))
 					continue;
 
-				if (!IsOverridenInUserCode (method))
+				// not optimal if "Link all" is used as the override might be removed later
+				if (!IsOverridenInUserCode (marker, method))
 					continue;
 
-				PreserveMethod (type, method);
+				modified |= marker.PreserveMethod (type, method);
 			}
+			return modified;
 		}
 
-		bool IsOverridenInUserCode (MethodDefinition method)
+		static bool IsOverridenInUserCode (IMarkNSObjects marker, MethodDefinition method)
 		{
 			if (!method.IsVirtual)
 				return false;
 
-			var overrides = Annotations.GetOverrides (method);
-			if (overrides == null || overrides.Count == 0)
+			var overrides = marker.Annotations.GetOverrides (method);
+			if (overrides is null)
 				return false;
 
 			foreach (var @override in overrides)
-				if (!IsProductMethod (@override.Override))
+				if (!IsProductMethod (marker, @override.Override))
 					return true;
 
 			return false;
 		}
 
-		bool IsExportedMethod (MethodDefinition method)
+		static bool IsExportedMethod (MethodDefinition method)
 		{
-			return HasExportAttribute (method);
-		}
-
-		bool HasExportAttribute (ICustomAttributeProvider provider)
-		{
-			if (!provider.HasCustomAttributes)
+			if (!method.HasCustomAttributes)
 				return false;
 
-			foreach (CustomAttribute attribute in provider.CustomAttributes)
+			foreach (CustomAttribute attribute in method.CustomAttributes)
 				if (attribute.Constructor.DeclaringType.Inherits (Namespaces.Foundation, "ExportAttribute"))
 					return true;
 
 			return false;
 		}
 
-		void PreserveIntPtrConstructor (TypeDefinition type)
+		static bool PreserveIntPtrConstructor (IMarkNSObjects marker, TypeDefinition type)
 		{
-			if (!type.HasMethods)
-				return;
-
+			var modified = false;
 			foreach (MethodDefinition constructor in type.GetConstructors ()) {
 				if (!constructor.HasParameters)
 					continue;
 
-				if (constructor.Parameters.Count != 1 || !constructor.Parameters [0].ParameterType.Is ("System", "IntPtr"))
+				if (constructor.Parameters.Count != 1 || !constructor.Parameters [0].ParameterType.Is ("ObjCRuntime", "NativeHandle"))
 					continue;
 
-				PreserveMethod (type, constructor);
+				modified |= marker.PreserveMethod (type, constructor);
 				break; // only one .ctor can match this
 			}
+			return modified;
 		}
 
-		void PreserveMethod (TypeDefinition type, MethodDefinition method)
+		static bool PreserveVirtualOverrides (IMarkNSObjects marker, TypeDefinition type)
 		{
-			Annotations.AddPreservedMethod (type, method);
+			// Preserve all virtual method overrides for product NSObject types.
+			// When TrimMode=full, the trimmer may remove virtual overrides from
+			// product types (like ClassHandle, ToString, Dispose, etc.), causing
+			// incorrect base class behavior at runtime. These overrides are called
+			// through virtual dispatch and must be preserved.
+			// Collect first to avoid modifying the collection while iterating.
+			List<MethodDefinition>? overrides = null;
+			foreach (var method in type.Methods) {
+				if (!method.IsVirtual || method.IsNewSlot || method.IsAbstract)
+					continue;
+				overrides ??= new List<MethodDefinition> ();
+				overrides.Add (method);
+			}
+			if (overrides is null)
+				return false;
+			var modified = false;
+			foreach (var method in overrides)
+				modified |= marker.PreserveMethod (type, method);
+			return modified;
 		}
 
-		static bool IsProductMethod (MethodDefinition method)
+		static bool IsProductMethod (IMarkNSObjects marker, MethodDefinition method)
 		{
-			return (method.DeclaringType.Module.Assembly.Name.Name == ProductAssembly);
+			return method.DeclaringType.Module.Assembly.Name.Name == marker.App.Configuration.PlatformAssembly;
 		}
 
-		static bool IsProductType (TypeDefinition type)
+		static bool IsProductType (IMarkNSObjects marker, TypeDefinition type)
 		{
+			if (marker.App.SkipMarkingNSObjectsInUserAssemblies)
+				return true;
+
 			var name = type.Module.Assembly.Name.Name;
-			return name == ProductAssembly || name == "System.Net.Http";
+			return name == marker.App.Configuration.PlatformAssembly;
 		}
 	}
 }

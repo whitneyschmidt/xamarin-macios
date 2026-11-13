@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for MPSImageNormalizedHistogram
 //
 // Authors:
@@ -8,30 +8,27 @@
 // Copyright 2019 Microsoft Corporation.
 //
 
-#if !__WATCHOS__
-
-using System;
-
 using Metal;
 using MetalPerformanceShaders;
-using ObjCRuntime;
 
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.MetalPerformanceShaders {
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MPSImageNormalizedHistogramTests {
 		IMTLDevice device;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void Metal ()
 		{
 			TestRuntime.AssertDevice ();
 			TestRuntime.AssertXcodeVersion (10, 0);
+			TestRuntime.AssertNotVirtualMachine ();
 
 			device = MTLDevice.SystemDefault;
 			// some older hardware won't have a default
-			if (device == null || !MPSKernel.Supports (device))
+			if (device is null || !MPSKernel.Supports (device))
 				Assert.Inconclusive ("Metal is not supported.");
 		}
 
@@ -45,31 +42,24 @@ namespace MonoTouchFixtures.MetalPerformanceShaders {
 			MPSImageNormalizedHistogram obj = null;
 			try {
 				obj = new MPSImageNormalizedHistogram (MTLDevice.SystemDefault, ref info);
-			}
-			catch (Exception ex) {
-				// This test fails on 10.13 bots but not on a local computer with 10.13. Must work on 10.14+.
-				// there is no a good way to tell if MPSImageNormalizedHistogram will work or not...
-				if (TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 14))
-					Assert.Fail (ex.Message);
-				Assert.Inconclusive ("In 10.13 this can fail in some hardware.");
+			} catch (Exception ex) {
+				Assert.Fail (ex.Message);
 			}
 #endif
-			Assert.NotNull (obj, "MPSImageNormalizedHistogram obj");
+			Assert.That (obj, Is.Not.Null, "MPSImageNormalizedHistogram obj");
 			var rv = obj.HistogramInfo;
 			Asserts.AreEqual (info, rv, "HistogramInfo");
 
-			Assert.IsTrue (obj.ZeroHistogram, "ZeroHistogram");
-			Assert.AreEqual (3072, obj.GetHistogramSize (MTLPixelFormat.RGBA16Sint), "HistogramSizeForSourceFormat");
+			Assert.That (obj.ZeroHistogram, Is.True, "ZeroHistogram");
+			Assert.That (obj.GetHistogramSize (MTLPixelFormat.RGBA16Sint), Is.EqualTo ((nuint) 3072), "HistogramSizeForSourceFormat");
 
 			var crs = obj.ClipRectSource;
-			Assert.AreEqual (0, crs.Origin.X, "ClipRectSource.Origin.X");
-			Assert.AreEqual (0, crs.Origin.Y, "ClipRectSource.Origin.Y");
-			Assert.AreEqual (0, crs.Origin.Z, "ClipRectSource.Origin.Z");
-			Assert.AreEqual (nuint.MaxValue, (nuint) crs.Size.Depth, "ClipRectSource.Size.Depth");
-			Assert.AreEqual (nuint.MaxValue, (nuint) crs.Size.Height, "ClipRectSource.Size.Height");
-			Assert.AreEqual (nuint.MaxValue, (nuint) crs.Size.Width, "ClipRectSource.Size.Width");
+			Assert.That (crs.Origin.X, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.X");
+			Assert.That (crs.Origin.Y, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.Y");
+			Assert.That (crs.Origin.Z, Is.EqualTo ((nint) 0), "ClipRectSource.Origin.Z");
+			Assert.That ((nuint) crs.Size.Depth, Is.EqualTo (nuint.MaxValue), "ClipRectSource.Size.Depth");
+			Assert.That ((nuint) crs.Size.Height, Is.EqualTo (nuint.MaxValue), "ClipRectSource.Size.Height");
+			Assert.That ((nuint) crs.Size.Width, Is.EqualTo (nuint.MaxValue), "ClipRectSource.Size.Width");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

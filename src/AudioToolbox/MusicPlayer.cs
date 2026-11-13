@@ -8,233 +8,336 @@
 //
 //
 
-#if !WATCH
+#nullable enable
 
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
+using System.Runtime.CompilerServices;
 
 namespace AudioToolbox {
 
 	// untyped enum (used as an OSStatus in the API) -> MusicPlayer.h
+	/// <summary>An enumeration whose values describe the status of a <see cref="AudioToolbox.MusicPlayer" />.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum MusicPlayerStatus {
+		/// <summary>To be added.</summary>
 		Success = 0,
+		/// <summary>To be added.</summary>
 		InvalidSequenceType = -10846,
+		/// <summary>To be added.</summary>
 		TrackIndexError = -10859,
+		/// <summary>To be added.</summary>
 		TrackNotFound = -10858,
+		/// <summary>To be added.</summary>
 		EndOfTrack = -10857,
+		/// <summary>To be added.</summary>
 		StartOfTrack = -10856,
+		/// <summary>To be added.</summary>
 		IllegalTrackDestination = -10855,
+		/// <summary>To be added.</summary>
 		NoSequence = -10854,
+		/// <summary>To be added.</summary>
 		InvalidEventType = -10853,
+		/// <summary>To be added.</summary>
 		InvalidPlayerState = -10852,
+		/// <summary>To be added.</summary>
 		CannotDoInCurrentContext = -10863,
-		NoTrackDestination = -66720
+		/// <summary>To be added.</summary>
+		NoTrackDestination = -66720,
 	}
 
 	// typedef UInt32 -> MusicPlayer.h
+	/// <summary>An enumeration whose values describe various music event types.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum MusicEventType : uint {
+		/// <summary>To be added.</summary>
 		Null,
+		/// <summary>To be added.</summary>
 		ExtendedNote = 1,
+		/// <summary>To be added.</summary>
 		ExtendedTempo = 3,
+		/// <summary>To be added.</summary>
 		User = 4,
+		/// <summary>To be added.</summary>
 		Meta = 5,
+		/// <summary>To be added.</summary>
 		MidiNoteMessage = 6,
+		/// <summary>To be added.</summary>
 		MidiChannelMessage = 7,
+		/// <summary>To be added.</summary>
 		MidiRawData = 8,
+		/// <summary>To be added.</summary>
 		Parameter = 9,
-		AUPreset = 10
+		/// <summary>To be added.</summary>
+		AUPreset = 10,
 	}
 
 	// typedef UInt32 -> MusicPlayer.h
+	/// <summary>An enumeration that specifies the <c>loadFlags</c> values in the <see cref="AudioToolbox.MusicSequence.LoadData(Foundation.NSData,AudioToolbox.MusicSequenceFileTypeID,AudioToolbox.MusicSequenceLoadFlags)" /> and <see cref="AudioToolbox.MusicSequence.LoadFile(Foundation.NSUrl,AudioToolbox.MusicSequenceFileTypeID,AudioToolbox.MusicSequenceLoadFlags)" /> methods.</summary>
+	///     <remarks>To be added.</remarks>
 	[Flags]
 	public enum MusicSequenceLoadFlags {
+		/// <summary>Indicates that the input tracks will be preserved in the output.</summary>
 		PreserveTracks = 0,
-		ChannelsToTracks = 1 << 0
+		/// <summary>Indicates that the output will contain a tempo track, a track for each SMF MIDI channel, and a track for SysEx or MetaEvents.</summary>
+		ChannelsToTracks = 1 << 0,
 	}
 
 	// typedef UInt32 -> MusicPlayer.h
+	/// <summary>An enumeration that specifies the type of a music sequence file.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum MusicSequenceFileTypeID : uint {
+		/// <summary>Indicates that the type is not specified.</summary>
 		Any = 0,
+		/// <summary>Indicates a MIDI file.</summary>
 		Midi = 0x6d696469, // 'midi'
+		/// <summary>Indicates an iMelody file.</summary>
 		iMelody = 0x696d656c, // 'imel'
 	}
 
 	// typedef UInt32 -> MusicPlayer.h
+	/// <summary>Can be used to specify that an existing file should be erased when creating a new file. Used with the <see cref="AudioToolbox.MusicSequence.CreateFile(Foundation.NSUrl,AudioToolbox.MusicSequenceFileTypeID,AudioToolbox.MusicSequenceFileFlags,System.UInt16)" /> method.</summary>
+	///     <remarks>To be added.</remarks>
 	[Flags]
 	public enum MusicSequenceFileFlags {
+		/// <summary>Indicates that the existing file should not be erased.</summary>
 		Default = 0,
-		EraseFile = 1
+		/// <summary>Indicates that the existing file should be erased.</summary>
+		EraseFile = 1,
 	}
 
-	// MusicPlayer.h
-	public class MusicPlayer : INativeObject, IDisposable {
-		IntPtr handle;
 
+	/// <summary>An object that plays a <see cref="AudioToolbox.MusicSequence" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	// MusicPlayer.h
+	public class MusicPlayer : DisposableObject {
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus NewMusicPlayer (/* MusicPlayer* */ out IntPtr outPlayer);
+		unsafe extern static /* OSStatus */ MusicPlayerStatus NewMusicPlayer (/* MusicPlayer* */ IntPtr* outPlayer);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus DisposeMusicPlayer (/* MusicPlayer */ IntPtr inPlayer);
-							      
-		private MusicPlayer (IntPtr handle) {
-			this.handle = handle;
+
+		[Preserve (Conditional = true)]
+		MusicPlayer (NativeHandle handle, bool owns)
+			: base (handle, owns)
+		{
 		}
 
-		~MusicPlayer ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-	
-		protected virtual void Dispose (bool disposing)
+		/// <inheritdoc />
+		protected override void Dispose (bool disposing)
 		{
 			currentSequence = null;
-			if (handle != IntPtr.Zero){
-				DisposeMusicPlayer (handle);
-				handle = IntPtr.Zero;
-			}
+			if (Owns && Handle != IntPtr.Zero)
+				DisposeMusicPlayer (Handle);
+			base.Dispose (disposing);
 		}
 
-		public MusicPlayer ()
+		unsafe static IntPtr Create ()
 		{
-			var result = NewMusicPlayer (out handle);
+			IntPtr handle;
+			var result = NewMusicPlayer (&handle);
 			if (result == MusicPlayerStatus.Success)
-				return;
+				return handle;
 			throw new Exception ("Unable to create MusicPlayer: " + result);
 		}
 
-		static public MusicPlayer Create (out MusicPlayerStatus OSstatus)
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public MusicPlayer ()
+			: base (Create (), true)
+		{
+		}
+
+		/// <param name="OSstatus">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		static public MusicPlayer? Create (out MusicPlayerStatus OSstatus)
 		{
 			IntPtr handle;
-			OSstatus = NewMusicPlayer (out handle);
+			unsafe {
+				OSstatus = NewMusicPlayer (&handle);
+			}
 			if (OSstatus == 0)
-				return new MusicPlayer (handle);
+				return new MusicPlayer (handle, true);
 			return null;
 		}
 
-		MusicSequence currentSequence;
+		MusicSequence? currentSequence;
 #if !COREBUILD
 		// note: MusicTimeStamp -> Float64
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetTime (/* MusicPlayer */ IntPtr inPlayer, /* MusicTimeStamp* */ out double outTime);
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetTime (/* MusicPlayer */ IntPtr inPlayer, /* MusicTimeStamp* */ double* outTime);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerSetTime (/* MusicPlayer */ IntPtr inPlayer, /* MusicTimeStamp* */ double inTime);
-		
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double Time {
 			get {
 				double time;
-				MusicPlayerGetTime (handle, out time);
+				unsafe {
+					MusicPlayerGetTime (Handle, &time);
+				}
 				return time;
 			}
 			set {
-				MusicPlayerSetTime (handle, value);
+				MusicPlayerSetTime (Handle, value);
 			}
+		}
+
+		public MusicPlayerStatus GetTime (out double time)
+		{
+			time = 0;
+			unsafe {
+				fixed (double* timePtr = &time)
+					return MusicPlayerGetTime (Handle, timePtr);
+			}
+		}
+
+		public MusicPlayerStatus SetTime (double time)
+		{
+			return MusicPlayerSetTime (Handle, time);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerPreroll (/* MusicPlayer */ IntPtr inPlayer);
-		
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public MusicPlayerStatus Preroll ()
 		{
-			return MusicPlayerPreroll (handle);
+			return MusicPlayerPreroll (Handle);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerStart (/* MusicPlayer */ IntPtr inPlayer);
-		
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public MusicPlayerStatus Start ()
 		{
-			return MusicPlayerStart (handle);
+			return MusicPlayerStart (Handle);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerStop (/* MusicPlayer */ IntPtr inPlayer);
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public MusicPlayerStatus Stop ()
 		{
-			return MusicPlayerStop (handle);
+			return MusicPlayerStop (Handle);
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerIsPlaying (/* MusicPlayer */ IntPtr inPlayer, /* Boolean* */ out bool outIsPlaying);
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerIsPlaying (/* MusicPlayer */ IntPtr inPlayer, /* Boolean* */ byte* outIsPlaying);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool IsPlaying {
 			get {
-				bool res;
-				MusicPlayerIsPlaying (handle, out res);
-				return res;
+				byte res;
+				unsafe {
+					MusicPlayerIsPlaying (Handle, &res);
+				}
+				return res != 0;
 			}
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerSetPlayRateScalar (/* MusicPlayer */ IntPtr inPlayer, /* Float64 */ double inScaleRate);
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetPlayRateScalar (/* MusicPlayer */ IntPtr inPlayer, /* Float64* */ out double outScaleRate);
-		
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetPlayRateScalar (/* MusicPlayer */ IntPtr inPlayer, /* Float64* */ double* outScaleRate);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double PlayRateScalar {
 			get {
 				double rate;
-				MusicPlayerGetPlayRateScalar (handle, out rate);
+				unsafe {
+					MusicPlayerGetPlayRateScalar (Handle, &rate);
+				}
 				return rate;
 			}
 			set {
-				MusicPlayerSetPlayRateScalar (handle, value);
+				MusicPlayerSetPlayRateScalar (Handle, value);
 			}
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetHostTimeForBeats (/* MusicPlayer */ IntPtr inPlayer, /* MusicTimeStamp */ double inBeats, /* UInt64* */ out long outHostTime);
-		
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetHostTimeForBeats (/* MusicPlayer */ IntPtr inPlayer, /* MusicTimeStamp */ double inBeats, /* UInt64* */ long* outHostTime);
+
+		/// <param name="beats">To be added.</param>
+		///         <param name="hostTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public MusicPlayerStatus GetHostTimeForBeats (double beats, out long hostTime)
 		{
-			return MusicPlayerGetHostTimeForBeats (handle, beats, out hostTime);
+			hostTime = 0;
+			unsafe {
+				fixed (long* hostTimePtr = &hostTime) {
+					return MusicPlayerGetHostTimeForBeats (Handle, beats, hostTimePtr);
+				}
+			}
 		}
 
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetBeatsForHostTime (/* MusicPlayer */ IntPtr inPlayer, /* UInt64 */ long inHostTime, /* MusicTimeStamp* */ out double outBeats);
-		
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetBeatsForHostTime (/* MusicPlayer */ IntPtr inPlayer, /* UInt64 */ long inHostTime, /* MusicTimeStamp* */ double* outBeats);
+
+		/// <param name="hostTime">To be added.</param>
+		///         <param name="beats">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public MusicPlayerStatus GetBeatsForHostTime (long hostTime, out double beats)
 		{
-			return MusicPlayerGetBeatsForHostTime (handle, hostTime, out beats);
+			beats = 0;
+			unsafe {
+				fixed (double* beatsPtr = &beats) {
+					return MusicPlayerGetBeatsForHostTime (Handle, hostTime, beatsPtr);
+				}
+			}
 		}
 
-		
+
 		[DllImport (Constants.AudioToolboxLibrary)]
-		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetSequence (/* MusicPlayer */ IntPtr inPlayer, /* MusicSequence* */ out IntPtr outSequence);
+		unsafe extern static /* OSStatus */ MusicPlayerStatus MusicPlayerGetSequence (/* MusicPlayer */ IntPtr inPlayer, /* MusicSequence* */ IntPtr* outSequence);
 
 		[DllImport (Constants.AudioToolboxLibrary)]
 		extern static /* OSStatus */ MusicPlayerStatus MusicPlayerSetSequence (/* MusicPlayer */ IntPtr inPlayer, IntPtr inSequence);
-		
-		public MusicSequence MusicSequence {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public MusicSequence? MusicSequence {
 			get {
 				IntPtr seqHandle;
-				if (MusicPlayerGetSequence (handle, out seqHandle) == MusicPlayerStatus.Success)
-					return MusicSequence.Lookup (seqHandle);
-				else
-					return null;
+				unsafe {
+					if (MusicPlayerGetSequence (Handle, &seqHandle) == MusicPlayerStatus.Success)
+						return MusicSequence.Lookup (seqHandle);
+				}
+
+				return null;
 			}
 			set {
 				currentSequence = value;
-				MusicPlayerSetSequence (handle, value == null ? IntPtr.Zero : value.Handle);
+				MusicPlayerSetSequence (Handle, value.GetHandle ());
+				GC.KeepAlive (value);
 			}
 		}
 #endif
 	}
 }
-
-#endif // IOS || TVOS

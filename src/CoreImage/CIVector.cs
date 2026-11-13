@@ -26,9 +26,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreImage {
 	public partial class CIVector {
@@ -38,39 +37,51 @@ namespace CoreImage {
 			}
 		}
 
+		/// <summary>Creates a new vector from the array of values.</summary>
+		/// <param name="values">The values.</param>
 		public CIVector (nfloat [] values) :
-			this (values, values == null ? 0 : values.Length)
+			this (values, values?.Length ?? 0)
 		{
 		}
 
+		/// <summary>Creates a new vector from the specified number of values in the array.</summary>
+		/// <param name="values">The values.</param>
+		/// <param name="count">The number of values to use from the array.</param>
 		[DesignatedInitializer]
 		[Export ("initWithValues:count:")]
 		public unsafe CIVector (nfloat [] values, nint count) : base (NSObjectFlag.Empty)
 		{
-			if (values == null)
-				throw new ArgumentNullException (nameof (values));
+			if (values is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (values));
 			if (count > values.Length)
 				throw new ArgumentOutOfRangeException (nameof (count));
 
-			fixed (nfloat *ptr = values) {
+			fixed (nfloat* ptr = values) {
 				var handle = IntPtr.Zero;
 				if (IsDirectBinding) {
-					handle = Messaging.IntPtr_objc_msgSend_IntPtr_nint (Handle, Selector.GetHandle ("initWithValues:count:"), (IntPtr) ptr, count);
+					handle = Messaging.IntPtr_objc_msgSend_IntPtr_IntPtr (Handle, Selector.GetHandle ("initWithValues:count:"), (IntPtr) ptr, (IntPtr) count);
 				} else {
-					handle = Messaging.IntPtr_objc_msgSendSuper_IntPtr_nint (SuperHandle, Selector.GetHandle ("initWithValues:count:"), (IntPtr) ptr, count);
+					unsafe {
+						var __objc_super__ = new global::ObjCRuntime.ObjCSuper (this);
+						handle = Messaging.IntPtr_objc_msgSendSuper_IntPtr_IntPtr (&__objc_super__, Selector.GetHandle ("initWithValues:count:"), (IntPtr) ptr, (IntPtr) count);
+						GC.KeepAlive (this);
+					}
 				}
 				InitializeHandle (handle, "initWithValues:count:");
 			}
 		}
 
+		/// <summary>Creates a vector from an array of values.</summary>
+		/// <param name="values">The values.</param>
 		public unsafe static CIVector FromValues (nfloat [] values)
 		{
-			if (values == null)
-				throw new ArgumentNullException ("values");
-			fixed (nfloat *ptr = values)
+			if (values is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (values));
+			fixed (nfloat* ptr = values)
 				return _FromValues ((IntPtr) ptr, values.Length);
 		}
-		
+
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
 		public override string ToString ()
 		{
 			return StringRepresentation ();

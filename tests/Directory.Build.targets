@@ -1,0 +1,25 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup Condition="'$(CUSTOM_DOTNET_VERSION)' != ''">
+		<FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(CUSTOM_DOTNET_VERSION)" />
+		<KnownFrameworkReference Update="Microsoft.NETCore.App" TargetingPackVersion="$(CUSTOM_DOTNET_VERSION)" />
+		<KnownFrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(CUSTOM_DOTNET_VERSION)" />
+
+		<FrameworkReference Update="Microsoft.NETCore.App.Mono" RuntimeFrameworkVersion="$(CUSTOM_DOTNET_VERSION)" />
+		<KnownFrameworkReference Update="Microsoft.NETCore.App.Mono" TargetingPackVersion="$(CUSTOM_DOTNET_VERSION)" />
+		<KnownFrameworkReference Update="Microsoft.NETCore.App.Mono" RuntimeFrameworkVersion="$(CUSTOM_DOTNET_VERSION)" />
+	</ItemGroup>
+
+	<Target
+			Name="UpdateKnownRuntimePackWithCustomRuntime"
+			Condition="'$(TRACKING_DOTNET_RUNTIME_SEPARATELY)' != ''"
+			BeforeTargets="ProcessFrameworkReferences">
+		<ItemGroup>
+			<KnownFrameworkReference Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net$(BundledNETCoreAppTargetFrameworkVersion)'">
+				<RuntimeFrameworkVersion>$(MicrosoftNETCoreAppRefPackageVersion)</RuntimeFrameworkVersion>
+			</KnownFrameworkReference>
+			<KnownRuntimePack Update="Microsoft.NETCore.App"  Condition="'%(TargetFramework)' == 'net$(BundledNETCoreAppTargetFrameworkVersion)'">
+				<LatestRuntimeFrameworkVersion>$(MicrosoftNETCoreAppRefPackageVersion)</LatestRuntimeFrameworkVersion>
+			</KnownRuntimePack>
+		</ItemGroup>
+	</Target>
+</Project>

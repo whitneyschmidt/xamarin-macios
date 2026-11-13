@@ -26,95 +26,94 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
-using Foundation;
+using CoreFoundation;
 
 namespace CoreGraphics {
-
+	/// <summary>A hardware accelerated context.</summary>
+	///     <remarks>
+	///       <para>CGLayers can be hardware accelerated and developers are
+	///       encouraged to use this instead of CGBitmaps for off-screen
+	///       rendering operations.</para>
+	///       <para>
+	/// 	To create CGLayers, use the <see cref="CoreGraphics.CGLayer.Create(CoreGraphics.CGContext,CoreGraphics.CGSize)" /> method.
+	///       </para>
+	///       <para>
+	/// 	Once you create a CGLayer, you extract the CGContext instance by accessing the Context property.
+	///       </para>
+	///     </remarks>
+	///     <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/Drawing/">Example_Drawing</related>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CGLayer.h
-	public class CGLayer : INativeObject
+	public class CGLayer : NativeObject {
 #if !COREBUILD
-		, IDisposable
-#endif
-	{
-#if !COREBUILD
-		IntPtr handle;
-
-		internal CGLayer (IntPtr handle)
+		[Preserve (Conditional = true)]
+		internal CGLayer (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			if (handle == IntPtr.Zero)
-				throw new Exception ("Invalid parameters to layer creation");
-					
-			this.handle = handle;
-			CGLayerRetain (handle);
 		}
 
-		[Preserve (Conditional=true)]
-		internal CGLayer (IntPtr handle, bool owns)
-		{
-			if (!owns)
-				CGLayerRetain (handle);
-
-			this.handle = handle;
-		}
-
-		~CGLayer ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-	
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static void CGLayerRelease (/* CGLayerRef */ IntPtr layer);
-		
+
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGLayerRef */ IntPtr CGLayerRetain (/* CGLayerRef */ IntPtr layer);
-		
-		protected virtual void Dispose (bool disposing)
+
+		protected internal override void Retain ()
 		{
-			if (handle != IntPtr.Zero){
-				CGLayerRelease (handle);
-				handle = IntPtr.Zero;
-			}
+			CGLayerRetain (GetCheckedHandle ());
+		}
+
+		protected internal override void Release ()
+		{
+			CGLayerRelease (GetCheckedHandle ());
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static CGSize CGLayerGetSize (/* CGLayerRef */ IntPtr layer);
 
+		/// <summary>The size of the CGLayer</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>Returns the size that was used to create this CGLayer.</remarks>
 		public CGSize Size {
 			get {
-				return CGLayerGetSize (handle);
+				return CGLayerGetSize (Handle);
 			}
 		}
-		
+
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGContextRef */ IntPtr CGLayerGetContext (/* CGLayerRef */ IntPtr layer);
 
+		/// <summary>Returns the graphics context associated with this layer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		/// 	  Use this graphics context to perform drawing operations on the layer.
+		/// 	</remarks>
 		public CGContext Context {
 			get {
-				return new CGContext (CGLayerGetContext (handle));
+				return new CGContext (CGLayerGetContext (Handle), false);
 			}
 		}
 
 		[DllImport (Constants.CoreGraphicsLibrary)]
 		extern static /* CGLayerRef */ IntPtr CGLayerCreateWithContext (/* CGContextRef */ IntPtr context, CGSize size, /* CFDictionaryRef */ IntPtr auxiliaryInfo);
 
-		public static CGLayer Create (CGContext context, CGSize size)
+		/// <summary>Creates a new CGLayer object with the specified graphics context and size.</summary>
+		/// <param name="context">The source context, or <see langword="null" />.</param>
+		/// <param name="size">The size for the CGLayer.</param>
+		/// <returns>A new <see cref="CGLayer" /> instance.</returns>
+		public static CGLayer Create (CGContext? context, CGSize size)
 		{
 			// note: auxiliaryInfo is reserved and should be null
-			return new CGLayer (CGLayerCreateWithContext (context == null ? IntPtr.Zero : context.Handle, size, IntPtr.Zero), true);
+			CGLayer result = new CGLayer (CGLayerCreateWithContext (context.GetHandle (), size, IntPtr.Zero), true);
+			GC.KeepAlive (context);
+			return result;
 		}
 #endif
 	}

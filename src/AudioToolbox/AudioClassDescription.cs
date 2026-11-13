@@ -26,22 +26,37 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
+
 using CoreFoundation;
-using Foundation;
 using AudioUnit;
 
 namespace AudioToolbox {
 
 	// CoreAudio.framework - CoreAudioTypes.h
+	/// <summary>A class that describes an installed codec.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	[StructLayout (LayoutKind.Sequential)]
-	public struct AudioClassDescription
-	{
+	public struct AudioClassDescription {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioCodecComponentType Type;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioFormatType SubType;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioCodecManufacturer Manufacturer;
 
+		/// <param name="type">To be added.</param>
+		///         <param name="subType">To be added.</param>
+		///         <param name="manufacturer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public AudioClassDescription (AudioCodecComponentType type, AudioFormatType subType, AudioCodecManufacturer manufacturer)
 		{
 			Type = type;
@@ -49,37 +64,45 @@ namespace AudioToolbox {
 			Manufacturer = manufacturer;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool IsHardwareCodec {
 			get {
 				return Manufacturer == AudioCodecManufacturer.AppleHardware;
 			}
 		}
 
-/*
-		// TODO: Fails with 'prop', so probably Apple never implemented it
-		// The documentation is wrong too
-		public unsafe static uint? HardwareCodecCapabilities (AudioClassDescription[] descriptions)
-		{
-			if (descriptions == null)
-				throw new ArgumentNullException ("descriptions");
+		/*
+				// TODO: Fails with 'prop', so probably Apple never implemented it
+				// The documentation is wrong too
+				public unsafe static uint? HardwareCodecCapabilities (AudioClassDescription[] descriptions)
+				{
+					if (descriptions is null)
+						ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (descriptions));
 
-			fixed (AudioClassDescription* item = &descriptions[0]) {
-				uint successfulCodecs;
-				int size = sizeof (uint);
-				var ptr_size = Marshal.SizeOf (typeof (AudioClassDescription)) * descriptions.Length;
-				var res = AudioFormatPropertyNative.AudioFormatGetProperty (AudioFormatProperty.HardwareCodecCapabilities, ptr_size, item, ref size, out successfulCodecs);
-				if (res != 0)
-					return null;
+					fixed (AudioClassDescription* item = descriptions) {
+						uint successfulCodecs;
+						int size = sizeof (uint);
+						var ptr_size = Marshal.SizeOf<AudioClassDescription> () * descriptions.Length;
+						var res = AudioFormatPropertyNative.AudioFormatGetProperty (AudioFormatProperty.HardwareCodecCapabilities, ptr_size, item, ref size, out successfulCodecs);
+						if (res != 0)
+							return null;
 
-				return successfulCodecs;
-			}
-		}
-*/
+						return successfulCodecs;
+					}
+				}
+		*/
 	}
 
+	/// <summary>Enumeration of values used to specify linear PCM conversions.</summary>
+	///     <remarks>
+	///     </remarks>
 	public enum AudioCodecComponentType // Implictly cast to OSType in CoreAudio.framework - CoreAudioTypes.h
 	{
-		Decoder	= 0x61646563,	// 'adec'	
-		Encoder	= 0x61656e63,	// 'aenc'
+		/// <summary>Value identifies decoders to linear PCM.</summary>
+		Decoder = 0x61646563,   // 'adec'	
+		/// <summary>Value identifies encoders from linear PCM.</summary>
+		Encoder = 0x61656e63,   // 'aenc'
 	}
 }

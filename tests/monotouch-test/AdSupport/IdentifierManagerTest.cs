@@ -7,33 +7,24 @@
 // Copyright 2012,2015 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
 using AdSupport;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.AdSupport;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.AdSupport {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class IdentifierManagerTest {
-		
+
 		[Test]
 		public void SharedManager ()
 		{
 			// IsAdvertisingTrackingEnabled - device specific config
-			Assert.NotNull (ASIdentifierManager.SharedManager.AdvertisingIdentifier, "AdvertisingIdentifier");
+			Assert.That (ASIdentifierManager.SharedManager.AdvertisingIdentifier, Is.Not.Null, "AdvertisingIdentifier");
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

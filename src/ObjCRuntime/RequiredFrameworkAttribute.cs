@@ -23,21 +23,19 @@
 
 #if MONOMAC
 
-using System;
-using System.Runtime.InteropServices;
 using System.IO;
 
-#if XAMCORE_2_0
 namespace ObjCRuntime {
-#else
-namespace MonoMac {
-#endif
 
-	[AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-	public class RequiredFrameworkAttribute : Attribute
-	{
+	/// <summary>Specifies a native framework required by an assembly.</summary>
+	[AttributeUsage (AttributeTargets.Assembly, AllowMultiple = true)]
+	public class RequiredFrameworkAttribute : Attribute {
+		/// <summary>Gets the name of the required framework.</summary>
+		/// <value>The framework name.</value>
 		public string Name { get; private set; }
-	
+
+		/// <summary>Creates an attribute for the specified required framework.</summary>
+		/// <param name="name">The framework name.</param>
 		public RequiredFrameworkAttribute (string name)
 		{
 			Name = name;

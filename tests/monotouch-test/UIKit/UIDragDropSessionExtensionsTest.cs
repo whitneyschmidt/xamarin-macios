@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for UIDragDropSessionExtensionsTest
 //
 // Authors:
@@ -8,21 +8,10 @@
 // Copyright 2017 Microsoft.
 //
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
-#if XAMCORE_2_0
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
 using UIKit;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
 	[TestFixture]
@@ -32,16 +21,34 @@ namespace MonoTouchFixtures.UIKit {
 		[Test]
 		public void LoadObjectsTest ()
 		{
-			if (!TestRuntime.CheckXcodeVersion (9,0))
+			if (!TestRuntime.CheckXcodeVersion (9, 0))
 				Assert.Ignore ("Ignoring tests: Requires iOS11+");
 
 			var test = new DropSession ();
+			Assert.That (test.CalledCanLoadObjects, Is.False, "CalledCanLoadObjects #1");
 			test.CanLoadObjects (typeof (UIImage));
+			Assert.That (test.CalledCanLoadObjects, Is.True, "CalledCanLoadObjects #2");
+
+			Assert.That (test.CalledLoadObjects, Is.False, "CalledLoadObjects #1");
 			test.LoadObjects<UIImage> (null);
+			Assert.That (test.CalledLoadObjects, Is.True, "CalledLoadObjects #2");
+
+			test.CalledLoadObjects = false;
+			Assert.That (test.CalledLoadObjects, Is.False, "CalledLoadObjects #1");
+			var calledCallback = false;
+			test.LoadObjects<UIImage> ((arr) => {
+				calledCallback = true;
+			});
+			Assert.That (calledCallback, Is.True, "calledCallback");
+			Assert.That (test.CalledLoadObjects, Is.True, "CalledLoadObjects #2");
+
 		}
 	}
 
 	class DropSession : NSObject, IUIDropSession {
+		public bool CalledLoadObjects;
+		public bool CalledCanLoadObjects;
+
 		public IUIDragSession LocalDragSession => throw new NotImplementedException ();
 
 		public UIDropSessionProgressIndicatorStyle ProgressIndicatorStyle { get => throw new NotImplementedException (); set => throw new NotImplementedException (); }
@@ -54,6 +61,7 @@ namespace MonoTouchFixtures.UIKit {
 
 		public bool CanLoadObjects (Class itemProviderReadingClass)
 		{
+			CalledCanLoadObjects = true;
 			Assert.That (itemProviderReadingClass.Handle, Is.EqualTo (new Class (typeof (UIImage)).Handle), "UIDragDropSessionExtensionsTest did not convert the type properly for 'CanLoadObjects'.");
 			return true;
 		}
@@ -65,7 +73,9 @@ namespace MonoTouchFixtures.UIKit {
 
 		public NSProgress LoadObjects (Class itemProviderReadingClass, Action<INSItemProviderReading []> completion)
 		{
+			CalledLoadObjects = true;
 			Assert.That (itemProviderReadingClass.Handle, Is.EqualTo (new Class (typeof (UIImage)).Handle), "UIDragDropSessionExtensionsTest did not convert the type properly for 'LoadObjects'.");
+			completion (Array.Empty<INSItemProviderReading> ());
 			return new NSProgress ();
 		}
 
@@ -73,7 +83,9 @@ namespace MonoTouchFixtures.UIKit {
 		{
 			throw new NotImplementedException ();
 		}
+
+		public NSProgress Progress { get { throw new NotImplementedException (); } }
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !MONOMAC

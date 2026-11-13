@@ -1,74 +1,139 @@
-using System;
-using ObjCRuntime;
-using Foundation;
-
 namespace LocalAuthentication {
 
-	[iOS (8,0)]
-	[Mac (10, 10)]
+	/// <summary>Authentication policies.</summary>
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum LAPolicy : long {
-		[Mac (10,12,2)]
+		/// <summary>Use the TouchID sensor to authenticate the user.</summary>
+		[MacCatalyst (13, 1)]
 		DeviceOwnerAuthenticationWithBiometrics = 1,
-		DeviceOwnerAuthentication = 2
+		/// <summary>Use the Touch ID sensor or the device password to authenticate the user.</summary>
+		DeviceOwnerAuthentication = 2,
+		[Deprecated (PlatformName.MacOSX, 15, 0, message: "Use 'DeviceOwnerAuthenticationWithCompanion' instead.")]
+		[NoiOS]
+		[NoMacCatalyst]
+		DeviceOwnerAuthenticationWithWatch = 3,
+
+#if XAMCORE_5_0
+		[NoiOS]
+#else
+		[iOS (18, 0)]
+#if __IOS__ && !__MACCATALYST__
+		[Obsolete ("This value is not available on this platform.")]
+#endif
+#endif
+		[NoTV, MacCatalyst (18, 0), Mac (15, 0)]
+		DeviceOwnerAuthenticationWithCompanion = 3,
+
+		[Deprecated (PlatformName.MacOSX, 15, 0, message: "Use 'DeviceOwnerAuthenticationWithBiometricsOrCompanion' instead.")]
+		[NoiOS]
+		[NoMacCatalyst]
+		DeviceOwnerAuthenticationWithBiometricsOrWatch = 4,
+
+#if XAMCORE_5_0
+		[NoiOS]
+#else
+		[iOS (18, 0)]
+#if __IOS__ && !__MACCATALYST__
+		[Obsolete ("This value is not available on this platform.")]
+#endif
+#endif
+		[NoTV, MacCatalyst (18, 0), Mac (15, 0)]
+		DeviceOwnerAuthenticationWithBiometricsOrCompanion = 4,
+
+		[Obsolete ("Use DeviceOwnerAuthenticationWithBiometricsOrWatch enum value instead.")]
+		[NoiOS]
+		[NoMacCatalyst]
+		OwnerAuthenticationWithBiometricsOrWatch = DeviceOwnerAuthenticationWithBiometricsOrWatch,
+		[NoMac, NoiOS, NoMacCatalyst]
+		DeviceOwnerAuthenticationWithWristDetection = 5,
 	}
 
-	[iOS (8,0)]
-	[Mac (10, 10)]
-	[Native]
+	/// <summary>Status and error codes returned by methods in LocalAuthentication.</summary>
+	[NoTV]
+	[MacCatalyst (13, 1)]
+	[Native ("LAError")]
 	[ErrorDomain ("LAErrorDomain")]
 	public enum LAStatus : long {
+		/// <summary>Authentication succeeded.</summary>
 		Success = 0,
-		/// Authentication was not successful, because user failed to provide valid credentials.
+		/// <summary>Authentication was not successful, because user failed to provide valid credentials.</summary>
 		AuthenticationFailed = -1,
-		/// Authentication was canceled by user (e.g. tapped Cancel button).
-		UserCancel           = -2,	    
-		/// Authentication was canceled, because the user tapped the fallback button (Enter Password).
-		UserFallback         = -3,	    
-		/// Authentication was canceled by system (e.g. another application went to foreground).
-		SystemCancel         = -4,	    
-		/// Authentication could not start, because passcode is not set on the device.
-		PasscodeNotSet       = -5,
-		/// Authentication could not start, because Touch ID is not available on the device.
-		[Deprecated (PlatformName.iOS, 11,0, message: "Use 'BiometryNotAvailable' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10,13, message: "Use 'BiometryNotAvailable' instead.")]
-		TouchIDNotAvailable  = -6,	    
-
-		/// Authentication could not start, because Touch ID has no enrolled fingers.
-		[Deprecated (PlatformName.iOS, 11,0, message: "Use 'BiometryNotEnrolled' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10,13, message: "Use 'BiometryNotEnrolled' instead.")]
-		TouchIDNotEnrolled   = -7,
-
-		[Deprecated (PlatformName.iOS, 11,0, message: "Use 'BiometryLockout' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10,13, message: "Use 'BiometryLockout' instead.")]
-		TouchIDLockout       = -8,
-		AppCancel            = -9,
-		InvalidContext       = -10,
-
-		BiometryNotAvailable = TouchIDNotAvailable,
-		BiometryNotEnrolled = TouchIDNotEnrolled,
-		BiometryLockout = TouchIDLockout,
-
-		NotInteractive       = -1004,
+		/// <summary>Authentication was canceled by user (e.g. tapped Cancel button).</summary>
+		UserCancel = -2,
+		/// <summary>Authentication was canceled, because the user tapped the fallback button (Enter Password).</summary>
+		UserFallback = -3,
+		/// <summary>Authentication was canceled by system (e.g. another application went to foreground).</summary>
+		SystemCancel = -4,
+		/// <summary>Authentication could not start, because passcode is not set on the device.</summary>
+		PasscodeNotSet = -5,
+		/// <summary>Authentication was canceled by the application.</summary>
+		AppCancel = -9,
+		/// <summary>The authentication context was invalidated.</summary>
+		InvalidContext = -10,
+		[Deprecated (PlatformName.MacOSX, 15, 0, message: "Use 'CompanionNotAvailable' instead.")]
+		[NoiOS, NoMacCatalyst]
+		WatchNotAvailable = -11,
+		[NoiOS, NoMacCatalyst]
+		BiometryNotPaired = -12,
+		[NoiOS, NoMacCatalyst]
+		BiometryDisconnected = -13,
+		[NoiOS, NoMacCatalyst]
+		InvalidDimension = -14,
+		/// <summary>Indicates that biometric authentication is not supported on the device.</summary>
+		[MacCatalyst (13, 1)]
+		BiometryNotAvailable = -6,
+		/// <summary>Indicates that the user has not enrolled for biometric authentication.</summary>
+		[MacCatalyst (13, 1)]
+		BiometryNotEnrolled = -7,
+		/// <summary>Indicates that biometric authentication has failed too many times, and the user is now locked out.</summary>
+		[MacCatalyst (13, 1)]
+		BiometryLockout = -8,
+		/// <summary>Authentication failed because the user interface was not allowed to be presented.</summary>
+		NotInteractive = -1004,
+		CompanionNotAvailable = -11,
 	}
 
-	[iOS (9,0), Mac (10,11), Watch (3,0), TV (11,0)]
+	/// <summary>Enumerates local authentication credential types.</summary>
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum LACredentialType : long {
-		ApplicationPassword = 0
+		/// <summary>Indicates that an application provided a password.</summary>
+		ApplicationPassword = 0,
+		[iOS (13, 4), NoTV]
+		[MacCatalyst (13, 1)]
+		SmartCardPin = -3,
 	}
 
-	[iOS (9,0)]
-	[Mac (10,11)]
+	/// <summary>Enumerates access control operations for the <see cref="LocalAuthentication.LAContext.EvaluateAccessControl(Security.SecAccessControl,LocalAuthentication.LAAccessControlOperation,System.String,System.Action{System.Boolean,Foundation.NSError})" /> method.</summary>
+	[NoTV]
+	[MacCatalyst (13, 1)]
 	[Native]
 	public enum LAAccessControlOperation : long {
+		/// <summary>Indicates an item creation operation.</summary>
 		CreateItem,
+		/// <summary>Indicates an item use operation.</summary>
 		UseItem,
+		/// <summary>Indicates a key creation operation.</summary>
 		CreateKey,
+		/// <summary>Indicates an key signing operation.</summary>
 		UseKeySign,
-		[iOS (10,0)][Mac (10,12)]
+		/// <summary>Indicates a decryption operation with a key.</summary>
+		[MacCatalyst (13, 1)]
 		UseKeyDecrypt,
-		[iOS (10,0)][Mac (10,12)]
+		/// <summary>Indicates an key exchange operation.</summary>
+		[MacCatalyst (13, 1)]
 		UseKeyKeyExchange,
+	}
+
+	[iOS (16, 0), MacCatalyst (16, 0), NoTV]
+	[Native]
+	public enum LARightState : long {
+		Unknown = 0,
+		Authorizing = 1,
+		Authorized = 2,
+		NotAuthorized = 3,
 	}
 }

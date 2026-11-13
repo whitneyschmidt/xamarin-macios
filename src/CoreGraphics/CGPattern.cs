@@ -25,20 +25,22 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
 
 using CoreFoundation;
-using ObjCRuntime;
-using Foundation;
 
 namespace CoreGraphics {
 
 	// untyped enum -> CGPattern.h
+	/// <summary>Specifies the tiling mode for a pattern.</summary>
 	public enum CGPatternTiling {
+		/// <summary>No distortion.</summary>
 		NoDistortion,
+		/// <summary>Constant spacing with minimal distortion.</summary>
 		ConstantSpacingMinimalDistortion,
-		ConstantSpacing
+		/// <summary>Constant spacing.</summary>
+		ConstantSpacing,
 	}
 
 	// CGPattern.h
@@ -48,67 +50,71 @@ namespace CoreGraphics {
 	[StructLayout (LayoutKind.Sequential)]
 	struct CGPatternCallbacks {
 		internal /* unsigned int */ uint version;
-		internal DrawPatternCallback draw;
-		internal ReleaseInfoCallback release;
+		internal unsafe delegate* unmanaged<IntPtr, IntPtr, void> draw;
+		internal unsafe delegate* unmanaged<IntPtr, void> release;
 	}
 
-	// CGPattern.h
-	public class CGPattern : NativeObject
-	{
-#if !COREBUILD
-		/* invoked by marshallers */
-		public CGPattern (IntPtr handle)
-			: base (handle, false)
-		{
-		}
 
-		[Preserve (Conditional=true)]
-		internal CGPattern (IntPtr handle, bool owns)
+	/// <summary>A pattern to draw in a CGContext.</summary>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/Drawing/">Example_Drawing</related>
+	/// <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/QuartzSample/">QuartzSample</related>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	// CGPattern.h
+	public class CGPattern : NativeObject {
+#if !COREBUILD
+		[Preserve (Conditional = true)]
+		internal CGPattern (NativeHandle handle, bool owns)
 			: base (handle, owns)
 		{
 		}
 
-		protected override void Retain () => CGPatternRetain (Handle);
-		protected override void Release () => CGPatternRelease (Handle);
-		
+		protected internal override void Retain () => CGPatternRetain (Handle);
+		protected internal override void Release () => CGPatternRelease (Handle);
+
 		// This is what we expose on the API
+		/// <param name="ctx">The CGContext on which the pattern is being drawn.</param>
+		///     <summary>Callback signature used to draw patterns on the screen.</summary>
+		///     <remarks>This is the delegate that is passed to the CGPattern method.</remarks>
 		public delegate void DrawPattern (CGContext ctx);
 
-		[DllImport(Constants.CoreGraphicsLibrary)]
-		extern static IntPtr CGPatternCreate (/* void* */ IntPtr info, CGRect bounds, CGAffineTransform matrix,
-			/* CGFloat */ nfloat xStep, /* CGFloat */ nfloat yStep, CGPatternTiling tiling, bool isColored,
-			/* const CGPatternCallbacks* */ ref CGPatternCallbacks callbacks);
+		[DllImport (Constants.CoreGraphicsLibrary)]
+		unsafe extern static IntPtr CGPatternCreate (/* void* */ IntPtr info, CGRect bounds, CGAffineTransform matrix,
+			/* CGFloat */ nfloat xStep, /* CGFloat */ nfloat yStep, CGPatternTiling tiling, byte isColored,
+			/* const CGPatternCallbacks* */ CGPatternCallbacks* callbacks);
 
-		static CGPatternCallbacks callbacks = new CGPatternCallbacks () {
+		unsafe static CGPatternCallbacks callbacks = new CGPatternCallbacks {
 			version = 0,
-			draw = DrawCallback,
-			release = ReleaseCallback,
+			draw = &DrawCallback,
+			release = &ReleaseCallback,
 		};
 		GCHandle gch;
-		
+
 		public CGPattern (CGRect bounds, CGAffineTransform matrix, nfloat xStep, nfloat yStep, CGPatternTiling tiling, bool isColored, DrawPattern drawPattern)
 		{
-			if (drawPattern == null)
-				throw new ArgumentNullException (nameof (drawPattern));
+			if (drawPattern is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (drawPattern));
 
 			gch = GCHandle.Alloc (drawPattern);
-			Handle = CGPatternCreate (GCHandle.ToIntPtr (gch), bounds, matrix, xStep, yStep, tiling, isColored, ref callbacks);
+			unsafe {
+				fixed (CGPatternCallbacks* callbacksptr = &callbacks)
+					InitializeHandle (CGPatternCreate (GCHandle.ToIntPtr (gch), bounds, matrix, xStep, yStep, tiling, isColored.AsByte (), callbacksptr));
+			}
 		}
 
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (DrawPatternCallback))]
-#endif
+		[UnmanagedCallersOnly]
 		static void DrawCallback (IntPtr voidptr, IntPtr cgcontextptr)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (voidptr);
-			DrawPattern draw_pattern = (DrawPattern) gch.Target;
-			using (var ctx = new CGContext (cgcontextptr))
-				draw_pattern (ctx);
+			if (gch.Target is DrawPattern draw_pattern) {
+				using (var ctx = new CGContext (cgcontextptr, false))
+					draw_pattern (ctx);
+			}
 		}
 
-#if !MONOMAC
-		[MonoPInvokeCallback (typeof (ReleaseInfoCallback))]
-#endif
+		[UnmanagedCallersOnly]
 		static void ReleaseCallback (IntPtr voidptr)
 		{
 			GCHandle gch = GCHandle.FromIntPtr (voidptr);

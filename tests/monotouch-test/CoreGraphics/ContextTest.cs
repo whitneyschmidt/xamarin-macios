@@ -7,26 +7,9 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
-using CoreGraphics;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
+using System.IO;
 
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using CoreGraphics;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
@@ -69,6 +52,51 @@ namespace MonoTouchFixtures.CoreGraphics {
 				c.ResetClip ();
 				Assert.That (original, Is.EqualTo (c.GetClipBoundingBox ()));
 			}
+		}
+
+		[Test]
+		public void EdrHeadroom ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			using var context = Create ();
+			if (TestRuntime.CheckXcodeVersion (26, 0)) {
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (1.0f), "a");
+				Assert.That (context.SetEdrTargetHeadroom (2.0f), Is.False, "b");
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (1.0f), "c");
+				Assert.That (context.SetEdrTargetHeadroom (-2.0f), Is.False, "d");
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (1.0f), "e");
+			} else {
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (0.0f), "a");
+				Assert.That (context.SetEdrTargetHeadroom (2.0f), Is.True, "b");
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (2.0f), "c");
+				Assert.That (context.SetEdrTargetHeadroom (-2.0f), Is.False, "d");
+				Assert.That (context.GetEdrTargetHeadroom (), Is.EqualTo (2.0f), "e");
+			}
+		}
+
+		[Test]
+		public void DrawImageApplyingToneMapping ()
+		{
+			TestRuntime.AssertXcodeVersion (16, 0);
+
+			var imageFile = Path.Combine (NSBundle.MainBundle.ResourcePath, "basn3p08.png");
+			using var dp = new CGDataProvider (imageFile);
+			using var img = CGImage.FromPNG (dp, null, false, CGColorRenderingIntent.Default);
+			var mapping = new CGToneMappingOptions () { Use100nitsHlgOotf = true, ExrToneMappingGammaExposure = 3.14f };
+
+			using (var context = Create ()) {
+				Assert.That (context.DrawImageApplyingToneMapping (new CGRect (0, 0, 10, 10), img, CGToneMapping.IturRecommended, (NSDictionary?) null), Is.False, "DrawImageApplyingToneMapping A");
+			}
+
+			using (var context = Create ()) {
+				Assert.That (context.DrawImageApplyingToneMapping (new CGRect (0, 0, 10, 10), img, CGToneMapping.IturRecommended, mapping), Is.False, "DrawImageApplyingToneMapping B");
+			}
+
+			using (var context = Create ()) {
+				Assert.That (context.DrawImageApplyingToneMapping (new CGRect (0, 0, 10, 10), img, CGToneMapping.IturRecommended, mapping.Dictionary), Is.False, "DrawImageApplyingToneMapping C");
+			}
+
 		}
 	}
 }

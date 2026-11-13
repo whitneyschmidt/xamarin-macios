@@ -1,87 +1,127 @@
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreMedia {
 	// keys names got changed at some point, but they all refer to a CMSampleBuffer (there is not CMSample obj)
-	enum CMSampleBufferAttachmentKey { 
+	[MacCatalyst (13, 1)]
+	enum CMSampleBufferAttachmentKey {
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_NotSync")]
 		NotSync,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_PartialSync")]
 		PartialSync,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_HasRedundantCoding")]
 		HasRedundantCoding,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_IsDependedOnByOthers")]
 		IsDependedOnByOthers,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_DependsOnOthers")]
 		DependsOnOthers,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_EarlierDisplayTimesAllowed")]
 		EarlierDisplayTimesAllowed,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_DisplayImmediately")]
 		DisplayImmediately,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleAttachmentKey_DoNotDisplay")]
 		DoNotDisplay,
-		[iOS (11,0), Mac (10,13), TV (11,0)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleAttachmentKey_HEVCTemporalLevelInfo")]
 		HevcTemporalLevelInfo,
-		[iOS (11,0), Mac (10,13), TV (11,0)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleAttachmentKey_HEVCTemporalSubLayerAccess")]
 		HevcTemporalSubLayerAccess,
-		[iOS (11,0), Mac (10,13), TV (11,0)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleAttachmentKey_HEVCStepwiseTemporalSubLayerAccess")]
 		HevcStepwiseTemporalSubLayerAccess,
-		[iOS (11,0), Mac (10,13), TV (11,0)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleAttachmentKey_HEVCSyncSampleNALUnitType")]
 		HevcSyncSampleNalUnitType,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding")]
 		ResetDecoderBeforeDecoding,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_DrainAfterDecoding")]
 		DrainAfterDecoding,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_PostNotificationWhenConsumed")]
 		PostNotificationWhenConsumed,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_ResumeOutput")]
 		ResumeOutput,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_TransitionID")]
 		TransitionId,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_TrimDurationAtStart")]
 		TrimDurationAtStart,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_TrimDurationAtEnd")]
 		TrimDurationAtEnd,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_SpeedMultiplier")]
 		SpeedMultiplier,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_Reverse")]
 		Reverse,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_FillDiscontinuitiesWithSilence")]
 		FillDiscontinuitiesWithSilence,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_EmptyMedia")]
 		EmptyMedia,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_PermanentEmptyMedia")]
 		PermanentEmptyMedia,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_DisplayEmptyMediaImmediately")]
 		DisplayEmptyMediaImmediately,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration")]
 		EndsPreviousSampleDuration,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_SampleReferenceURL")]
 		SampleReferenceUrl,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_SampleReferenceByteOffset")]
-		SampleReferenceByteOffset, 
+		SampleReferenceByteOffset,
+		/// <summary>To be added.</summary>
 		[Field ("kCMSampleBufferAttachmentKey_GradualDecoderRefresh")]
 		GradualDecoderRefresh,
-		[iOS (6,0)][Mac (10,14, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleBufferAttachmentKey_DroppedFrameReason")]
 		DroppedFrameReason,
-		[iOS (9,0)][Mac (10,14, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleBufferAttachmentKey_StillImageLensStabilizationInfo")]
 		StillImageLensStabilizationInfo,
-		[iOS (11,0), Mac (10,13), TV (11,0)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix")]
 		CameraIntrinsicMatrix,
-		[Mac (10,14, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleBufferAttachmentKey_DroppedFrameReasonInfo")]
 		DroppedFrameReasonInfo,
-		[Mac (10,10)]
+		/// <summary>To be added.</summary>
+		[MacCatalyst (13, 1)]
 		[Field ("kCMSampleBufferAttachmentKey_ForceKeyFrame")]
 		ForceKeyFrame,
+		[TV (16, 0), iOS (16, 0)]
+		[MacCatalyst (16, 0)]
+		// Declared available at iOS/tvOS 16.0 but only added to the simulator runtimes in a later release.
+		[SupportedSimulator ("ios16.1")]
+		[SupportedSimulator ("tvos16.1")]
+		[Field ("kCMSampleAttachmentKey_HDR10PlusPerFrameData")]
+		Hdr10PlusPerFrameData,
 	}
 }

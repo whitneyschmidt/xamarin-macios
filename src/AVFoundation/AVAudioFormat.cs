@@ -4,38 +4,58 @@
 // Authors:
 //   Miguel de Icaza (miguel@xamarin.com)
 //
-using Foundation;
-using ObjCRuntime;
-using System;
+
+// 'AVAudioFormat' defines operator == or operator != but does not override Object.Equals(object o)
+#pragma warning disable 0660
+// 'AVAudioFormat' defines operator == or operator != but does not override Object.GetHashCode()
+#pragma warning disable 0661
+// In both of these cases, the NSObject Equals/GetHashCode implementation works fine, so we can ignore these warnings.
+
+using AudioToolbox;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace AVFoundation {
-	public partial class AVAudioFormat {
-		public override bool Equals (object  obj)
-		{
-			if (this == null){
-				return (obj == null);
-			}
-			if (!(obj is NSObject))
-				return false;
-			return IsEqual ((NSObject)obj);
-		}
+#nullable enable
 
+namespace AVFoundation {
+	/// <summary>Corresponds to a Core Audio AudioStreamBasicDescription struct.</summary>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/avfaudio/avaudioformat">Apple documentation for <c>AVAudioFormat</c></related>
+	public partial class AVAudioFormat {
 		public static bool operator == (AVAudioFormat a, AVAudioFormat b)
 		{
+			if ((object) a == (object) b)
+				return true;
+			if (a is null || b is null)
+				return false;
 			return a.Equals (b);
 		}
-		
+
 		public static bool operator != (AVAudioFormat a, AVAudioFormat b)
 		{
-			return !a.Equals (b);
+			return !(a == b);
 		}
 
-		public override int GetHashCode ()
-		{
-			return (int) ChannelCount;
+		/// <summary>Gets the audio stream description.</summary>
+		/// <value>The <see cref="AudioStreamBasicDescription" /> for this audio format.</value>
+		[Export ("StreamDescription")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public virtual AudioStreamBasicDescription StreamDescription {
+			[SupportedOSPlatform ("ios")]
+			[SupportedOSPlatform ("macos")]
+			[SupportedOSPlatform ("tvos")]
+			[SupportedOSPlatform ("maccatalyst")]
+			get {
+				var ptr = _StreamDescription;
+				if (ptr == IntPtr.Zero)
+					return default (AudioStreamBasicDescription);
+				unsafe {
+					AudioStreamBasicDescription* p = (AudioStreamBasicDescription*) ptr;
+					return *p;
+				}
+			}
 		}
-		
 	}
 }

@@ -1,0 +1,425 @@
+<#
+Github interaction unit tests.
+#>
+
+Import-Module ./GitHub -Force
+
+Describe 'New-GitHubComment' {
+    Context 'with all env variables present' -Skip {
+
+        BeforeAll {
+            $Script:envVariables = @{
+                "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI" = "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI";
+                "SYSTEM_TEAMPROJECT" = "SYSTEM_TEAMPROJECT";
+                "BUILD_BUILDID" = "BUILD_BUILDID";
+                "SYSTEM_JOBNAME" = "SYSTEM_JOBNAME";
+                "SYSTEM_STAGEDISPLAYNAME" = "SYSTEM_STAGEDISPLAYNAME"
+                "BUILD_SOURCEVERSION" = "BUILD_SOURCEVERSION";
+                "GITHUB_TOKEN" = "GITHUB_TOKEN";
+                "BUILD_DEFINITIONNAME" = "BUILD_DEFINITIONNAME"
+            }
+
+            $Script:envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Set-Item -Path "Env:$key" -Value $_.Value
+            }
+        }
+
+        It 'calls the method succesfully' {
+            Mock Invoke-RestMethod {
+                return @{"status"=200;}
+            }
+            $header = "The header"
+            $description = "Testing Comments API"
+            $message = "This is a test"
+            $emoji = ":tada:"
+
+            New-GitHubComment -Header $header -Description $description -Message $message -Emoji $emoji
+
+            # assert the call and compare the expected parameters to the received ones
+            Assert-MockCalled -CommandName Invoke-RestMethod -Times 1 -Scope It -ParameterFilter {
+                # validate each of the params and the payload
+                if ($Uri -ne "https://api.github.com/repos/$Env:BUILD_REPOSITORY_NAME/commits/BUILD_SOURCEVERSION/comments") {
+                    return $False
+                }
+                if ($Headers.Authorization -ne ("token {0}" -f $envVariables["GITHUB_TOKEN"])) {
+                    return $False
+                }
+                if ($Method -ne "POST") {
+                    return $False
+                }
+                if ($ContentType -ne "application/json") {
+                    return $False
+                }
+                # compare the payload
+                $bodyObj = ConvertFrom-Json $Body
+                $body = $bodyObj.body
+                if ($bodyObj.body -eq $null) {
+                    return $False
+                }
+
+                return $True
+            }
+
+        }
+
+        It 'calls the method with an error and throws' {
+            Mock Invoke-RestMethod {
+                throw [System.Exception]::("Test")
+            }
+            $header = "The header"
+            $description = "Testing Comments API"
+            $message = "This is a test"
+            $emoji = ":tada:"
+
+            { New-GitHubComment -Header $header -Description $description -Message $message -Emoji $emoji } | Should -Throw
+        }
+
+    }
+    Context 'without an env variable' -Skip {
+        BeforeAll {
+            # clear the env vars
+            $envVariables = @{
+                "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI" = "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI";
+                "SYSTEM_TEAMPROJECT" = "SYSTEM_TEAMPROJECT";
+                "BUILD_BUILDID" = "BUILD_BUILDID";
+                "SYSTEM_JOBNAME" = "SYSTEM_JOBNAME";
+                "SYSTEM_STAGEDISPLAYNAME" = "SYSTEM_STAGEDISPLAYNAME"
+                "BUILD_SOURCEVERSION" = "BUILD_SOURCEVERSION";
+                "GITHUB_TOKEN" = "GITHUB_TOKEN";
+                "BUILD_DEFINITIONNAME" = "BUILD_DEFINITIONNAME"
+            }
+            $envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Remove-Item -Path "Env:$key"
+            }
+        }
+        It 'throws and error' {
+
+            Mock Invoke-RestMethod {
+                return @{"status"=200;}
+            }
+
+            $header = "The header"
+            $description = "Testing Comments API"
+            $message = "This is a test"
+            $emoji = ":tada:"
+
+            { New-GitHubComment -Header $header -Description $description -Message $message -Emoji $emoji } | Should -Throw
+            Assert-MockCalled -CommandName Invoke-RestMethod -Times 0 -Scope It 
+        }
+    }
+}
+
+Describe 'Get-GitHubPRInfo' {
+    Context 'with all env variables present' -Skip {
+
+        BeforeAll {
+            $Script:envVariables = @{
+                "GITHUB_TOKEN" = "GITHUB_TOKEN";
+            }
+
+            $Script:envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Set-Item -Path "Env:$key" -Value $_.Value
+            }
+        }
+
+        It 'calls the method succesfully' {
+            Mock Invoke-RestMethod {
+                return @{"status"=200;}
+            }
+            $changeId = "ChangeId"
+
+            Get-GitHubPRInfo -ChangeId $changeId
+
+            # assert the call and compare the expected parameters to the received ones
+            Assert-MockCalled -CommandName Invoke-RestMethod -Times 1 -Scope It -ParameterFilter {
+                # validate each of the params and the payload
+                if ($Uri -ne "https://api.github.com/repos/$Env:BUILD_REPOSITORY_NAME/pulls/$changeId") {
+                    return $False
+                }
+                if ($Headers.Authorization -ne ("token {0}" -f $envVariables["GITHUB_TOKEN"])) {
+                    return $False
+                }
+                if ($Method -ne "POST") {
+                    return $False
+                }
+                if ($ContentType -ne "application/json") {
+                    return $False
+                }
+
+                return $True
+            }
+
+        }
+
+        It 'calls the method with an error and throws' {
+            Mock Invoke-RestMethod {
+                throw [System.Exception]::("Test")
+            }
+
+            $changeId = "ChangeId"
+
+            { Get-GitHubPRInfo -ChangeId $changeId } | Should -Throw
+        }
+
+    }
+    Context 'without an env variable' -Skip {
+        BeforeAll {
+            # clear the env vars
+            $envVariables = @{
+                "GITHUB_TOKEN" = "GITHUB_TOKEN";
+            }
+            $envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Remove-Item -Path "Env:$key"
+            }
+        }
+        It 'throws and error' {
+
+            Mock Invoke-RestMethod {
+                return @{"status"=200;}
+            }
+
+            $changeId = "ChangeId"
+
+            { Get-GitHubPRInfo -ChangeId $changeId } | Should -Throw
+            Assert-MockCalled -CommandName Invoke-RestMethod -Times 0 -Scope It 
+        }
+    }
+}
+
+
+Describe 'Convert-Markdown' {
+    Context 'with all env variables present' {
+        BeforeAll {
+            $Script:envVariables = @{
+                "GITHUB_TOKEN" = "GITHUB_TOKEN";
+            }
+
+            $Script:envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Set-Item -Path "Env:$key" -Value $_.Value
+            }
+        }
+
+        It 'calls the method successfully' {
+            Mock New-GistWithFiles {
+                return "https://gist.github.com/somethingsomething"
+            } -ModuleName 'GitHub'
+            $rootDirectory = "root"
+            $inputContents = "[vsdrops](whatever) --- [gist](subdir/file) === [gist](inexistent/file)"
+
+            $fullDirectory = Join-Path $rootDirectory "subdir"
+            $fullPath = Join-Path $fullDirectory "file"
+            New-Item -Path "." -Name $fullDirectory -ItemType "directory" -Force
+            Set-Content -Path $fullPath -Value "content"
+
+            $converted = Convert-Markdown -RootDirectory $rootDirectory -InputContents $inputContents -VSDropsPrefix "vsdropsprefix/"
+
+            $converted | Should -BeExactly "[vsdrops](vsdropsprefix/whatever) --- [gist](https://gist.github.com/somethingsomething) === (could not create gist: file 'root/inexistent/file' does not exist)"
+
+            Remove-Item -Path $rootDirectory -Recurse
+        }
+    }
+}
+
+Describe 'Test-GitIsAncestor' {
+    It 'returns true and does not leak a non-zero exit code when the commit is an ancestor' {
+        InModuleScope 'GitHub' {
+            $head = (& git rev-parse HEAD).Trim()
+            $parent = (& git rev-parse HEAD~1).Trim()
+            $global:LASTEXITCODE = 0
+            $result = Test-GitIsAncestor -Commit $parent -Branch $head
+            $result | Should -Be $true
+            $global:LASTEXITCODE | Should -Be 0
+        }
+    }
+
+    It 'returns false and does not leak a non-zero exit code when the commit is not an ancestor' {
+        InModuleScope 'GitHub' {
+            $head = (& git rev-parse HEAD).Trim()
+            $parent = (& git rev-parse HEAD~1).Trim()
+            $global:LASTEXITCODE = 0
+            $result = Test-GitIsAncestor -Commit $head -Branch $parent
+            $result | Should -Be $false
+            $global:LASTEXITCODE | Should -Be 0
+        }
+    }
+
+    It 'does not leak a non-zero exit code when the branch cannot be resolved' {
+        InModuleScope 'GitHub' {
+            $head = (& git rev-parse HEAD).Trim()
+            $global:LASTEXITCODE = 0
+            { Test-GitIsAncestor -Commit $head -Branch "origin/this-branch-does-not-exist-26107" } | Should -Throw
+            $global:LASTEXITCODE | Should -Be 0
+        }
+    }
+}
+
+Describe 'Get-GitCommitParents' {
+    It 'returns the parents and does not leak a non-zero exit code for a valid commit' {
+        InModuleScope 'GitHub' {
+            $head = (& git rev-parse HEAD).Trim()
+            $parent = (& git rev-parse HEAD~1).Trim()
+            $global:LASTEXITCODE = 0
+            $result = Get-GitCommitParents -Commit $head
+            $result | Should -Contain $parent
+            $global:LASTEXITCODE | Should -Be 0
+        }
+    }
+
+    It 'does not leak a non-zero exit code when the commit cannot be resolved' {
+        InModuleScope 'GitHub' {
+            $global:LASTEXITCODE = 0
+            { Get-GitCommitParents -Commit "this-commit-does-not-exist-26107" } | Should -Throw
+            $global:LASTEXITCODE | Should -Be 0
+        }
+    }
+}
+
+Describe 'IsCurrentCommitLatestInPR' {
+    Context 'when in PR context' {
+        BeforeAll {
+            $Script:envVariables = @{
+                "GITHUB_TOKEN" = "test-token";
+            }
+
+            $Script:envVariables.GetEnumerator() | ForEach-Object { 
+                $key = $_.Key
+                Set-Item -Path "Env:$key" -Value $_.Value
+            }
+        }
+
+        It 'returns true when current commit matches head commit' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "abc123def456"
+                    }
+                }
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "abc123def456" -PrIDs @("123")
+            $result | Should -Be $true
+        }
+
+        It 'returns false when current commit does not match head commit' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "different123hash"
+                    }
+                    "base" = @{
+                        "ref" = "main"
+                    }
+                }
+            } -ModuleName 'GitHub'
+            Mock Test-GitIsAncestor {
+                return $false
+            } -ModuleName 'GitHub'
+            Mock Get-GitCommitParents {
+                return @("basebranch123")
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "abc123def456" -PrIDs @("123")
+            $result | Should -Be $false
+        }
+
+        It 'returns true when not in PR context' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "different123hash"
+                    }
+                }
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "abc123def456" -PrIDs @() # Empty array means not in PR
+            $result | Should -Be $true
+        }
+
+        It 'returns true when the current commit is a synthetic merge commit for the latest PR head' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "abc123def456"
+                    }
+                    "base" = @{
+                        "ref" = "main"
+                    }
+                }
+            } -ModuleName 'GitHub'
+            Mock Test-GitIsAncestor {
+                return $false
+            } -ModuleName 'GitHub'
+            Mock Get-GitCommitParents {
+                return @("basebranch123", "abc123def456")
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "merge123456" -PrIDs @("123")
+            $result | Should -Be $true
+        }
+
+        It 'returns false when commit is in the base branch despite having the PR head as a parent' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "prhead123"
+                    }
+                    "base" = @{
+                        "ref" = "main"
+                    }
+                }
+            } -ModuleName 'GitHub'
+            Mock Test-GitIsAncestor {
+                param ($Commit, $Branch)
+                # The commit is in the base branch
+                return $Branch -eq "origin/main"
+            } -ModuleName 'GitHub'
+            Mock Get-GitCommitParents {
+                return @("prhead123", "someothercommit")
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "mergecommit456" -PrIDs @("123")
+            $result | Should -Be $false
+        }
+
+        It 'returns false when commit is in the PR branch despite having the PR head as a parent' {
+            Mock Invoke-Request {
+                return @{
+                    "head" = @{
+                        "sha" = "prhead123"
+                    }
+                    "base" = @{
+                        "ref" = "main"
+                    }
+                }
+            } -ModuleName 'GitHub'
+            Mock Test-GitIsAncestor {
+                param ($Commit, $Branch)
+                # The commit is in the PR branch (ancestor of PR head)
+                return $Branch -eq "prhead123"
+            } -ModuleName 'GitHub'
+            Mock Get-GitCommitParents {
+                return @("prhead123", "someothercommit")
+            } -ModuleName 'GitHub'
+
+            $result = Get-IsCurrentCommitLatestInPR -Org "testorg" -Repo "testrepo" -Token "test-token" -Hash "mergecommit456" -PrIDs @("123")
+            $result | Should -Be $false
+        }
+    }
+}
+
+Describe 'IsPR' {
+    It 'returns true for manual builds that use a PR merge ref' {
+        Set-Item -Path "Env:BUILD_REASON" -Value "Manual"
+        Set-Item -Path "Env:BUILD_SOURCEBRANCH" -Value "refs/pull/123/merge"
+
+        $githubComments = New-GitHubCommentsObject -Org "testorg" -Repo "testrepo" -Token "test-token"
+
+        $githubComments.IsPR() | Should -Be $true
+        $githubComments.PRIds | Should -Contain "123"
+    }
+}

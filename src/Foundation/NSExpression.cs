@@ -1,16 +1,13 @@
-// TODO: The NSExpression class is a cluster class in cococa. This means that now all the properties are supported by all the types of NSExpressions.
+// TODO: The NSExpression class is a cluster class in cocoa. This means that now all the properties are supported by all the types of NSExpressions.
 //       At the point of this written all the properties have been tested with all types EXCEPT NSExpressionType.Subquery and NSExpressionType.Conditional because writting
-//       tests for those was not possible. The properties for these two types have been deduced from the other types yet bugs are possible and an objc excection will be thrown.
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
+//       tests for those was not possible. The properties for these two types have been deduced from the other types yet bugs are possible and an objc exception will be thrown.
 
 namespace Foundation {
 
 	public partial class NSExpression {
 
 		[Export ("arguments")]
-		public virtual NSExpression[] Arguments {
+		public virtual NSExpression [] Arguments {
 			get {
 				var type = ExpressionType;
 				if (type != NSExpressionType.Function && type != NSExpressionType.Block && type != NSExpressionType.KeyPath)
@@ -35,7 +32,7 @@ namespace Foundation {
 		}
 
 		[Export ("predicate")]
-		public virtual NSPredicate Predicate { 
+		public virtual NSPredicate Predicate {
 			get {
 				var type = ExpressionType;
 				if (type != NSExpressionType.Conditional && type != NSExpressionType.Subquery)
@@ -55,8 +52,8 @@ namespace Foundation {
 						+ "are created via the FromFunction (NSExpressionHandler target, NSExpression[] parameters) method.");
 				return _Block;
 			}
-		} 
-		
+		}
+
 		[Export ("constantValue")]
 		public virtual NSObject ConstantValue {
 			get {
@@ -91,8 +88,11 @@ namespace Foundation {
 				return _LeftExpression;
 			}
 		}
-		
-		[Mac(10,11),iOS(9,0)]
+
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[Export ("trueExpression")]
 		public virtual NSExpression TrueExpression {
 			get {
@@ -105,7 +105,10 @@ namespace Foundation {
 			}
 		}
 
-		[Mac(10,11),iOS(9,0)]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[Export ("falseExpression")]
 		public virtual NSExpression FalseExpression {
 			get {
@@ -152,7 +155,7 @@ namespace Foundation {
 				return _Variable;
 			}
 		}
-		
+
 		[Export ("operand")]
 		public virtual NSExpression Operand {
 			get {
@@ -164,14 +167,5 @@ namespace Foundation {
 				return _Operand;
 			}
 		}
-		
-#if !XAMCORE_4_0 && !WATCH
-		[Obsolete("Use 'EvaluateWith' instead.")]
-		public virtual NSExpression ExpressionValueWithObject (NSObject obj, NSMutableDictionary context) {
-			var result = EvaluateWith (obj, context);
-			// if it can be casted, do return an NSEXpression else null
-			return result as NSExpression;
-		}
-#endif
 	}
 }

@@ -25,17 +25,20 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using ObjCRuntime;
-using Foundation;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSPopUpButton {
+		/// <summary>Gets or sets the pop-up button cell associated with this control.</summary>
+		/// <value>The <see cref="NSPopUpButtonCell" /> used by this control.</value>
 		public new NSPopUpButtonCell Cell {
-			get { return (NSPopUpButtonCell)base.Cell; }
+			get { return (NSPopUpButtonCell) base.Cell; }
 			set { base.Cell = value; }
 		}
 	}
 }
-
+#endif // !__MACCATALYST__

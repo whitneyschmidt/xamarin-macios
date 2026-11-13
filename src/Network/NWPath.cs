@@ -6,67 +6,80 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
 namespace Network {
-
-	// this maps to `nw_path_status_t` in Network/Headers/path.h (and not the enum from NetworkExtension)
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	public enum NWPathStatus {
-		Invalid = 0,
-		Satisfied = 1,
-		Unsatisfied = 2,
-		Satisfiable = 3,
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class NWPath : NativeObject {
-		public NWPath (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal NWPath (NativeHandle handle, bool owns) : base (handle, owns) { }
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static NWPathStatus nw_path_get_status (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NWPathStatus Status => nw_path_get_status (GetCheckedHandle ());
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_is_expensive (IntPtr handle);
+		extern static byte nw_path_is_expensive (IntPtr handle);
 
-		public bool IsExpensive => nw_path_is_expensive (GetCheckedHandle ());
-
-		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_has_ipv4 (IntPtr handle);
-
-		public bool HasIPV4 => nw_path_has_ipv4 (GetCheckedHandle ());
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool IsExpensive => nw_path_is_expensive (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_has_ipv6 (IntPtr handle);
+		extern static byte nw_path_has_ipv4 (IntPtr handle);
 
-		public bool HasIPV6 => nw_path_has_ipv6 (GetCheckedHandle ());
-
-		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_has_dns (IntPtr handle);
-
-		public bool HasDns => nw_path_has_dns (GetCheckedHandle ());
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool HasIPV4 => nw_path_has_ipv4 (GetCheckedHandle ()) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_uses_interface_type (IntPtr handle, NWInterfaceType type);
+		extern static byte nw_path_has_ipv6 (IntPtr handle);
 
-		public bool UsesInterfaceType (NWInterfaceType type) => nw_path_uses_interface_type (GetCheckedHandle (), type);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool HasIPV6 => nw_path_has_ipv6 (GetCheckedHandle ()) != 0;
+
+		[DllImport (Constants.NetworkLibrary)]
+		extern static byte nw_path_has_dns (IntPtr handle);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool HasDns => nw_path_has_dns (GetCheckedHandle ()) != 0;
+
+		[DllImport (Constants.NetworkLibrary)]
+		extern static byte nw_path_uses_interface_type (IntPtr handle, NWInterfaceType type);
+
+		/// <param name="type">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool UsesInterfaceType (NWInterfaceType type) => nw_path_uses_interface_type (GetCheckedHandle (), type) != 0;
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static IntPtr nw_path_copy_effective_local_endpoint (IntPtr handle);
 
-		public NWEndpoint EffectiveLocalEndpoint {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NWEndpoint? EffectiveLocalEndpoint {
 			get {
 				var x = nw_path_copy_effective_local_endpoint (GetCheckedHandle ());
 				if (x == IntPtr.Zero)
@@ -78,7 +91,10 @@ namespace Network {
 		[DllImport (Constants.NetworkLibrary)]
 		extern static IntPtr nw_path_copy_effective_remote_endpoint (IntPtr handle);
 
-		public NWEndpoint EffectiveRemoteEndpoint {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NWEndpoint? EffectiveRemoteEndpoint {
 			get {
 				var x = nw_path_copy_effective_remote_endpoint (GetCheckedHandle ());
 				if (x == IntPtr.Zero)
@@ -88,45 +104,177 @@ namespace Network {
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
-		[return: MarshalAs(UnmanagedType.U1)]
-		extern static bool nw_path_is_equal (IntPtr p1, IntPtr p2);
+		extern static byte nw_path_is_equal (IntPtr p1, IntPtr p2);
 
+		/// <param name="other">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool EqualsTo (NWPath other)
 		{
-			if (other == null)
+			if (other is null)
 				return false;
 
-			return nw_path_is_equal (GetCheckedHandle (), other.Handle);
+			bool result = nw_path_is_equal (GetCheckedHandle (), other.Handle) != 0;
+			GC.KeepAlive (other);
+			return result;
 		}
 
-		delegate void nw_path_enumerate_interfaces_block_t (IntPtr block, IntPtr iface);
-		static nw_path_enumerate_interfaces_block_t static_Enumerator = TrampolineEnumerator;
-
-		[MonoPInvokeCallback (typeof (nw_path_enumerate_interfaces_block_t))]
-		static void TrampolineEnumerator (IntPtr block, IntPtr iface)
+		// Returning 'byte' since 'bool' isn't blittable
+		[UnmanagedCallersOnly]
+		static byte TrampolineEnumerator (IntPtr block, IntPtr iface)
 		{
-			var del = BlockLiteral.GetTarget<Action<NWInterface>> (block);
-			if (del != null)
-				del (new NWInterface (iface, owns: false));
+			var del = BlockLiteral.GetTarget<Func<NWInterface, bool>> (block);
+			if (del is not null)
+				return del (new NWInterface (iface, owns: false)) ? (byte) 1 : (byte) 0;
+			return 0;
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern void nw_path_enumerate_interfaces (IntPtr handle, ref BlockLiteral callback);
+		unsafe static extern void nw_path_enumerate_interfaces (IntPtr handle, BlockLiteral* callback);
 
-		[BindingImpl (BindingImplOptions.Optimizable)]
+
+#if !XAMCORE_5_0
+		/// <param name="callback">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Obsolete ("Use the overload that takes a 'Func<NWInterface, bool>' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
 		public void EnumerateInterfaces (Action<NWInterface> callback)
 		{
-			if (callback == null)
+			if (callback is null)
 				return;
 
-			BlockLiteral block_handler = new BlockLiteral ();
-			block_handler.SetupBlockUnsafe (static_Enumerator, callback);
+			Func<NWInterface, bool> func = (v) => {
+				callback (v);
+				return true;
+			};
+			EnumerateInterfaces (func);
+		}
+#endif // !XAMCORE_5_0
 
-			try {
-				nw_path_enumerate_interfaces (GetCheckedHandle (), ref block_handler);
-			} finally {
-				block_handler.CleanupBlock ();
+		[BindingImpl (BindingImplOptions.Optimizable)]
+		public void EnumerateInterfaces (Func<NWInterface, bool> callback)
+		{
+			if (callback is null)
+				return;
+
+			unsafe {
+				delegate* unmanaged<IntPtr, IntPtr, byte> trampoline = &TrampolineEnumerator;
+				using var block = new BlockLiteral (trampoline, callback, typeof (NWPath), nameof (TrampolineEnumerator));
+				nw_path_enumerate_interfaces (GetCheckedHandle (), &block);
+				GC.KeepAlive (this);
 			}
 		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern byte nw_path_is_constrained (IntPtr path);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public bool IsConstrained => nw_path_is_constrained (GetCheckedHandle ()) != 0;
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		unsafe static extern void nw_path_enumerate_gateways (IntPtr path, BlockLiteral* enumerate_block);
+
+		// Returning 'byte' since 'bool' isn't blittable
+		[UnmanagedCallersOnly]
+		static byte TrampolineGatewaysHandler (IntPtr block, IntPtr endpoint)
+		{
+			var del = BlockLiteral.GetTarget<Func<NWEndpoint, bool>> (block);
+			if (del is not null) {
+				var nwEndpoint = new NWEndpoint (endpoint, owns: false);
+				return del (nwEndpoint) ? (byte) 1 : (byte) 0;
+			}
+			return 0;
+		}
+
+#if !XAMCORE_5_0
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[Obsolete ("Use the overload that takes a 'Func<NWEndpoint, bool>' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public void EnumerateGateways (Action<NWEndpoint> callback)
+		{
+			Func<NWEndpoint, bool> func = (v) => {
+				callback (v);
+				return true;
+			};
+			EnumerateGateways (func);
+		}
+#endif
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[BindingImpl (BindingImplOptions.Optimizable)]
+		public void EnumerateGateways (Func<NWEndpoint, bool> callback)
+		{
+			if (callback is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (callback));
+
+			unsafe {
+				delegate* unmanaged<IntPtr, IntPtr, byte> trampoline = &TrampolineGatewaysHandler;
+				using var block = new BlockLiteral (trampoline, callback, typeof (NWPath), nameof (TrampolineGatewaysHandler));
+				nw_path_enumerate_gateways (GetCheckedHandle (), &block);
+				GC.KeepAlive (this);
+			}
+		}
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern NWPathUnsatisfiedReason /* nw_path_unsatisfied_reason_t */ nw_path_get_unsatisfied_reason (IntPtr /* OS_nw_path */ path);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public NWPathUnsatisfiedReason GetUnsatisfiedReason ()
+		{
+			return nw_path_get_unsatisfied_reason (GetCheckedHandle ());
+		}
+
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern byte nw_path_is_ultra_constrained (IntPtr path);
+
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		public bool IsUltraConstrained => nw_path_is_ultra_constrained (GetCheckedHandle ()) != 0;
+
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern byte nw_path_get_link_quality (IntPtr path);
+
+		[SupportedOSPlatform ("tvos26.0")]
+		[SupportedOSPlatform ("macos26.0")]
+		[SupportedOSPlatform ("ios26.0")]
+		[SupportedOSPlatform ("maccatalyst26.0")]
+		public NWLinkQuality LinkQuality => (NWLinkQuality) nw_path_get_link_quality (GetCheckedHandle ());
+
 	}
 }

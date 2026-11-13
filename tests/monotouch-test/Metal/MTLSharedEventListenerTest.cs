@@ -1,20 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
-using CoreFoundation;
 using Metal;
-#else
-using MonoTouch.CoreFoundation;
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLSharedEventListenerTest {
 		MTLSharedEventListener listener = null;
 		DispatchQueue queue = null;
@@ -31,9 +21,9 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (listener != null)
+			if (listener is not null)
 				listener.Dispose ();
-			if (queue != null)
+			if (queue is not null)
 				queue.Dispose ();
 			listener = null;
 			queue = null;
@@ -42,9 +32,7 @@ namespace MonoTouchFixtures.Metal {
 		[Test]
 		public void GetSetCommandTypesTest ()
 		{
-			Assert.AreEqual (queue, listener.DispatchQueue);
+			Assert.That (listener.DispatchQueue, Is.EqualTo (queue));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

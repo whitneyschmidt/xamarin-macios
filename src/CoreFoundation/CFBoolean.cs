@@ -26,57 +26,25 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace CoreFoundation {
 
+
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	// CFNumber.h
-	partial class CFBoolean : INativeObject, IDisposable {
-		IntPtr handle;
-
+	partial class CFBoolean : NativeObject {
 		[Preserve (Conditional = true)]
-		internal CFBoolean (IntPtr handle, bool owns)
+		internal CFBoolean (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
 		}
 
-		~CFBoolean ()
-		{
-			Dispose (false);
-		}
-
-		public IntPtr Handle {
-			get {
-				return handle;
-			}
-		}
-
-		[DllImport (Constants.CoreFoundationLibrary, EntryPoint="CFBooleanGetTypeID")]
+		[DllImport (Constants.CoreFoundationLibrary, EntryPoint = "CFBooleanGetTypeID")]
 		public extern static /* CFTypeID */ nint GetTypeID ();
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-#if XAMCORE_2_0
-		protected virtual void Dispose (bool disposing)
-#else
-		public virtual void Dispose (bool disposing)
-#endif
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
 
 		public static implicit operator bool (CFBoolean value)
 		{
@@ -99,16 +67,15 @@ namespace CoreFoundation {
 		}
 
 		[DllImport (Constants.CoreFoundationLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static /* Boolean */ bool CFBooleanGetValue (/* CFBooleanRef */ IntPtr boolean);
+		extern static /* Boolean */ byte CFBooleanGetValue (/* CFBooleanRef */ IntPtr boolean);
 
 		public bool Value {
-			get {return CFBooleanGetValue (handle);}
+			get { return CFBooleanGetValue (Handle) != 0; }
 		}
 
 		public static bool GetValue (IntPtr boolean)
 		{
-			return CFBooleanGetValue (boolean);
+			return CFBooleanGetValue (boolean) != 0;
 		}
 	}
 }

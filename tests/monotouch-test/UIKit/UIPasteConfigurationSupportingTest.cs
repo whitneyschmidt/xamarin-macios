@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for UIPasteConfigurationSupportingTest
 //
 // Authors:
@@ -8,23 +8,11 @@
 // Copyright 2017 Microsoft.
 //
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
-#if XAMCORE_2_0
 using CoreGraphics;
-using Foundation;
 using SpriteKit;
-using ObjCRuntime;
 using UIKit;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.SpriteKit;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
 	[TestFixture]
@@ -65,7 +53,7 @@ namespace MonoTouchFixtures.UIKit {
 
 			public override void Paste (NSItemProvider [] itemProviders)
 			{
-				Assert.IsTrue (itemProviders [0].CanLoadObject (typeof (UIImage)));
+				Assert.That (itemProviders [0].CanLoadObject (typeof (UIImage)), Is.True);
 			}
 		}
 
@@ -73,7 +61,7 @@ namespace MonoTouchFixtures.UIKit {
 
 			public override void Paste (NSItemProvider [] itemProviders)
 			{
-				Assert.IsTrue (itemProviders [0].CanLoadObject (typeof (UIImage)));
+				Assert.That (itemProviders [0].CanLoadObject (typeof (UIImage)), Is.True);
 			}
 		}
 
@@ -81,10 +69,10 @@ namespace MonoTouchFixtures.UIKit {
 
 			public override void Paste (NSItemProvider [] itemProviders)
 			{
-				Assert.IsTrue (itemProviders [0].CanLoadObject (typeof (UIImage)));
+				Assert.That (itemProviders [0].CanLoadObject (typeof (UIImage)), Is.True);
 			}
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !MONOMAC

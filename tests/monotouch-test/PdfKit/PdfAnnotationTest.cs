@@ -1,4 +1,4 @@
-﻿//
+//
 // PdfAnnotation Unit Tests
 //
 // Authors:
@@ -7,26 +7,19 @@
 // Copyright 2017 Microsoft Inc.
 //
 
-#if (__IOS__ || MONOMAC) && XAMCORE_2_0
-
-using System;
+#if __IOS__ || MONOMAC
 
 using CoreGraphics;
 using Foundation;
-using ObjCRuntime;
 using PdfKit;
 
-using NUnit.Framework;
-
-namespace MonoTouchFixtures.PdfKit
-{
+namespace MonoTouchFixtures.PdfKit {
 
 	[TestFixture]
 	// we want the test to be available if we use the linker
 	[Preserve (AllMembers = true)]
-	public class PdfAnnotationTest
-	{
-		[TestFixtureSetUp]
+	public class PdfAnnotationTest {
+		[OneTimeSetUp]
 		public void Setup ()
 		{
 			TestRuntime.AssertXcodeVersion (9, 0);
@@ -36,8 +29,8 @@ namespace MonoTouchFixtures.PdfKit
 		public void QuadrilateralPoints ()
 		{
 			using (var obj = new PdfAnnotation ()) {
-				Assert.IsNotNull (obj.QuadrilateralPoints, "Q1");
-				Assert.AreEqual (0, obj.QuadrilateralPoints.Length, "Q1b");
+				Assert.That (obj.QuadrilateralPoints, Is.Not.Null, "Q1");
+				Assert.That (obj.QuadrilateralPoints.Length, Is.EqualTo (0), "Q1b");
 
 				var points = new CGPoint []
 				{
@@ -48,14 +41,44 @@ namespace MonoTouchFixtures.PdfKit
 				};
 
 				obj.QuadrilateralPoints = points;
-				Assert.AreEqual (points, obj.QuadrilateralPoints, "Q2");
+				Assert.That (obj.QuadrilateralPoints, Is.EqualTo (points), "Q2");
 
 				obj.QuadrilateralPoints = null;
-				Assert.IsNotNull (obj.QuadrilateralPoints, "Q3");
-				Assert.AreEqual (0, obj.QuadrilateralPoints.Length, "Q3b");
+				Assert.That (obj.QuadrilateralPoints, Is.Not.Null, "Q3");
+				Assert.That (obj.QuadrilateralPoints.Length, Is.EqualTo (0), "Q3b");
+			}
+		}
+
+		[Test]
+		public void AnnotationHitEventArgs ()
+		{
+			using (var annotation = new PdfAnnotation ())
+			using (var key = new NSString ("PDFAnnotationHit"))
+			using (var userInfo = new NSMutableDictionary ()) {
+				userInfo.Add (key, annotation);
+
+				using (var notification = NSNotification.FromName (PdfView.AnnotationHitNotification, null, userInfo)) {
+					var args = new PdfViewAnnotationHitEventArgs (notification);
+					var actual = args.AnnotationHit;
+
+					Assert.That (actual, Is.Not.Null, "AnnotationHit");
+					if (actual is null)
+						return;
+
+					Assert.That (actual.Handle, Is.EqualTo (annotation.Handle), "Handle");
+				}
+			}
+		}
+
+		[Test]
+		public void AnnotationHitEventArgsNoUserInfo ()
+		{
+			using (var notification = NSNotification.FromName (PdfView.AnnotationHitNotification, null)) {
+				var args = new PdfViewAnnotationHitEventArgs (notification);
+				Assert.That (args.AnnotationHit, Is.Null, "AnnotationHit");
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // __IOS__ || MONOMAC

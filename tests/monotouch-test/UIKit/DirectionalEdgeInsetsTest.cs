@@ -7,13 +7,10 @@
 // Copyright 2017 Microsoft. All rights reserved.
 //
 
-#if XAMCORE_2_0 && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-using Foundation;
 using UIKit;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
 
@@ -48,12 +45,14 @@ namespace MonoTouchFixtures.UIKit {
 			var i1 = new NSDirectionalEdgeInsets (10, 20, 30, 40);
 			var i2 = new NSDirectionalEdgeInsets (10, 10, 10, 10);
 
-			Assert.True (i1 == i1, "i1 == i1");
-			Assert.True (i2 == i2, "i1 == i1");
-			Assert.True (i1 != i2, "i1 != i2");
-			Assert.True (i2 != i1, "i2 != i1");
+#pragma warning disable CS1718 // warning CS1718: Comparison made to same variable; did you mean to compare something else?
+			Assert.That (i1 == i1, Is.True, "i1 == i1");
+			Assert.That (i2 == i2, Is.True, "i1 == i1");
+			Assert.That (i1 != i2, Is.True, "i1 != i2");
+			Assert.That (i2 != i1, Is.True, "i2 != i1");
+#pragma warning restore
 		}
 	}
 }
 
-#endif // XAMCORE_2_0
+#endif // !MONOMAC

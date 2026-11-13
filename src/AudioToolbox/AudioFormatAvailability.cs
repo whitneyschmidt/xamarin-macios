@@ -26,64 +26,79 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
-using ObjCRuntime;
 using CoreFoundation;
-using Foundation;
 
 namespace AudioToolbox {
-
-	public static class AudioFormatAvailability
-	{
-		public static AudioValueRange[] GetAvailableEncodeBitRates (AudioFormatType format)
+	/// <summary>The application developer can use this class to retrieve the properties of available encoders and decoders.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public static class AudioFormatAvailability {
+		/// <param name="format">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static AudioValueRange []? GetAvailableEncodeBitRates (AudioFormatType format)
 		{
 			return GetAvailable<AudioValueRange> (AudioFormatProperty.AvailableEncodeBitRates, format);
 		}
 
-		public static AudioValueRange[] GetAvailableEncodeSampleRates (AudioFormatType format)
+		/// <param name="format">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static AudioValueRange []? GetAvailableEncodeSampleRates (AudioFormatType format)
 		{
 			return GetAvailable<AudioValueRange> (AudioFormatProperty.AvailableEncodeSampleRates, format);
 		}
 
-		public static AudioClassDescription[] GetDecoders (AudioFormatType format)
+		/// <param name="format">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static AudioClassDescription []? GetDecoders (AudioFormatType format)
 		{
 			return GetAvailable<AudioClassDescription> (AudioFormatProperty.Decoders, format);
 		}
 
-		public static AudioClassDescription[] GetEncoders (AudioFormatType format)
+		/// <param name="format">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static AudioClassDescription []? GetEncoders (AudioFormatType format)
 		{
 			return GetAvailable<AudioClassDescription> (AudioFormatProperty.Encoders, format);
 		}
 
-		unsafe static T[] GetAvailable<T> (AudioFormatProperty prop, AudioFormatType format)
-		{		
+		unsafe static T []? GetAvailable<T> (AudioFormatProperty prop, AudioFormatType format) where T : unmanaged
+		{
 			uint size;
-			if (AudioFormatPropertyNative.AudioFormatGetPropertyInfo (prop, sizeof (AudioFormatType), ref format, out size) != 0)
+			if (AudioFormatPropertyNative.AudioFormatGetPropertyInfo (prop, sizeof (AudioFormatType), &format, &size) != 0)
 				return null;
 
-			var data = new T[size / Marshal.SizeOf (typeof (T))];
-			var array_handle = GCHandle.Alloc (data, GCHandleType.Pinned); // This requires a pinned GCHandle, since it's not possible to use unsafe code to get the address of a generic object.
+			if (size == 0)
+				return Array.Empty<T> ();
 
-			try {
-				var ptr = array_handle.AddrOfPinnedObject ();
-				var res = AudioFormatPropertyNative.AudioFormatGetProperty (prop, sizeof (AudioFormatType), ref format, ref size, ptr);
+			var data = new T [size / Marshal.SizeOf<T> ()];
+			fixed (T* ptr = data) {
+				var res = AudioFormatPropertyNative.AudioFormatGetProperty (prop, sizeof (AudioFormatType), &format, &size, (IntPtr) ptr);
 				if (res != 0)
 					return null;
-
-				Array.Resize (ref data, (int) size / Marshal.SizeOf (typeof (T)));
-				return data;
-			} finally {
-				array_handle.Free ();
 			}
+
+
+			Array.Resize (ref data, (int) size / sizeof (T));
+			return data;
 		}
 	}
 
-	static partial class AudioFormatPropertyNative
-	{
+	static partial class AudioFormatPropertyNative {
 		[DllImport (Constants.AudioToolboxLibrary)]
-		public unsafe extern static AudioFormatError AudioFormatGetProperty (AudioFormatProperty inPropertyID, int inSpecifierSize, AudioClassDescription* inSpecifier, ref int ioPropertyDataSize,
-			out uint outPropertyData);
-	}	
+		public unsafe extern static AudioFormatError AudioFormatGetProperty (AudioFormatProperty inPropertyID, int inSpecifierSize, AudioClassDescription* inSpecifier, int* ioPropertyDataSize,
+			uint* outPropertyData);
+	}
 }

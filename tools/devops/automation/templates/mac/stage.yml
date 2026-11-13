@@ -1,0 +1,100 @@
+parameters:
+# name of the pool that contains the iOS devices
+- name: macPool
+  type: string
+
+- name: useImage
+  type: boolean
+  default: false
+
+- name: stageName
+  type: string
+
+- name: displayName
+  type: string
+
+- name: statusContext
+  type: string
+  default: '10.16'
+
+- name: keyringPass
+  type: string
+
+- name: xqaCertPass
+  type: string
+
+- name: demands
+  type: object
+  default: []
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: postPipeline
+  type: boolean
+  default: false
+
+- name: stageDisplayNamePrefix
+  type: string
+  default: ''
+
+- name: label
+  type: string
+  default: ''
+
+# When set (e.g. 'ACES' for VM-based pools), exposes VM_VENDOR so tests gated by
+# TestRuntime.AssertNotVirtualMachine are ignored, matching the simulator ACES path.
+- name: vmVendor
+  type: string
+  default: ''
+
+
+stages:
+
+- stage: ${{ parameters.stageName }}
+  displayName: ${{ parameters.displayName }}
+  dependsOn:
+  - build_macos_tests
+  - configure_build
+  condition: and(succeeded(), eq(dependencies.configure_build.outputs['configure.decisions.RUN_MAC_TESTS'], 'true'))
+  variables:
+    GITHUB_FAILURE_COMMENT_FILE: $(System.DefaultWorkingDirectory)/github-comment-file.md
+
+  jobs:
+  - job: tests
+    displayName: 'macOS tests'
+    timeoutInMinutes: 120
+    workspace:
+      clean: all
+
+    pool:
+      ${{ if eq(parameters.useImage, false) }}:
+        name: ${{ parameters.macPool }}
+        demands: ${{ parameters.demands }}
+      ${{ else }}:
+        vmImage: ${{ parameters.macPool }}
+
+    variables:
+      PR_ID: $[ stageDependencies.configure_build.configure.outputs['labels.pr_number'] ]
+      ${{ if parameters.vmVendor }}:
+        VM_VENDOR: ${{ parameters.vmVendor }}
+
+    steps:
+    - template: build.yml
+      parameters:
+        isPR: ${{ parameters.isPR }}
+        repositoryAlias: ${{ parameters.repositoryAlias }}
+        commit: ${{ parameters.commit }}
+        statusContext: ${{ parameters.statusContext }}
+        keyringPass: ${{ parameters.keyringPass }} 
+        xqaCertPass: ${{ parameters.xqaCertPass }}
+        label: ${{ parameters.label }}
+        stageName: ${{ parameters.stageName }}

@@ -27,143 +27,196 @@
 //
 //
 
-using System;
-using ObjCRuntime;
+#nullable enable
 
 namespace Foundation {
 
 	public partial class NSLocale {
-		public string Identifier {
+		/// <summary>Gets the locale identifier string.</summary>
+		/// <value>The locale identifier.</value>
+		public string? Identifier {
 			get {
-				return (string) (NSString) ObjectForKey (_Identifier);
+				return (string?) (NSString?) ObjectForKey (_Identifier);
 			}
 		}
 
-		public string GetIdentifierDisplayName (string value)
+		/// <summary>Gets the display name for the specified locale identifier.</summary>
+		/// <param name="value">The locale identifier.</param>
+		/// <returns>The localized display name for the identifier, or <see langword="null" /> if not available.</returns>
+		public string? GetIdentifierDisplayName (string value)
 		{
+			ArgumentNullException.ThrowIfNull (value);
 			return DisplayNameForKey (_Identifier, value);
 		}
-		
-		public string LanguageCode {
+
+		/// <summary>Gets the language code for the locale.</summary>
+		/// <value>The language code.</value>
+		public string? LanguageCode {
 			get {
-				return (string) (NSString) ObjectForKey (_LanguageCode);
-			}
-		}
-		
-		public string GetLanguageCodeDisplayName (string value)
-		{
-			return DisplayNameForKey (_LanguageCode, value);
-		}
-		
-		public string CountryCode {
-			get {
-				return (string) (NSString) ObjectForKey (_CountryCode);
+				return (string?) (NSString?) ObjectForKey (_LanguageCode);
 			}
 		}
 
-		public string GetCountryCodeDisplayName (string value)
+		/// <summary>Gets the display name for the specified language code.</summary>
+		/// <param name="value">The language code.</param>
+		/// <returns>The localized display name for the language code, or <see langword="null" /> if not available.</returns>
+		public string? GetLanguageCodeDisplayName (string value)
 		{
+			ArgumentNullException.ThrowIfNull (value);
+			return DisplayNameForKey (_LanguageCode, value);
+		}
+
+		/// <summary>Gets the country code for the locale.</summary>
+		/// <value>The country code.</value>
+		public string? CountryCode {
+			get {
+				return (string?) (NSString?) ObjectForKey (_CountryCode);
+			}
+		}
+
+		/// <summary>Gets the display name for the specified country code.</summary>
+		/// <param name="value">The country code.</param>
+		/// <returns>The localized display name for the country code, or <see langword="null" /> if not available.</returns>
+		public string? GetCountryCodeDisplayName (string value)
+		{
+			ArgumentNullException.ThrowIfNull (value);
 			return DisplayNameForKey (_CountryCode, value);
 		}
-		
-		public string ScriptCode {
+
+		/// <summary>Gets the script code for the locale.</summary>
+		/// <value>The script code.</value>
+		public string? ScriptCode {
 			get {
-				return (string) (NSString) ObjectForKey (_ScriptCode);
+				return (string?) (NSString?) ObjectForKey (_ScriptCode);
 			}
 		}
-		
-		public string VariantCode {
+
+		/// <summary>Gets the variant code for the locale.</summary>
+		/// <value>The variant code.</value>
+		public string? VariantCode {
 			get {
-				return (string) (NSString) ObjectForKey (_VariantCode);
+				return (string?) (NSString?) ObjectForKey (_VariantCode);
 			}
 		}
-		
-		public NSCharacterSet ExemplarCharacterSet {
+
+		/// <summary>Gets the exemplar character set for the locale.</summary>
+		/// <value>The character set containing exemplar characters.</value>
+		public NSCharacterSet? ExemplarCharacterSet {
 			get {
 				return ObjectForKey (_ExemplarCharacterSet) as NSCharacterSet;
 			}
 		}
-		
-		public NSCalendar Calendar {
+
+		/// <summary>Gets the calendar for the locale.</summary>
+		/// <value>The <see cref="NSCalendar" /> object associated with the locale.</value>
+		public NSCalendar? Calendar {
 			get {
 				return ObjectForKey (_Calendar) as NSCalendar;
 			}
 		}
-		
-		public string CollationIdentifier {
+
+		/// <summary>Gets the collation identifier for the locale.</summary>
+		/// <value>The collation identifier.</value>
+		public string? CollationIdentifier {
 			get {
-				return (string) (NSString) ObjectForKey (_CollationIdentifier);
-			}
-		}
-		
-		public bool UsesMetricSystem {
-			get {
-				return ((NSNumber) ObjectForKey (_UsesMetricSystem)).Int32Value != 0;
-			}
-		}
-		
-		public string MeasurementSystem {
-			get {
-				return (string) (NSString) ObjectForKey (_MeasurementSystem);
-			}
-		}
-		
-		public string DecimalSeparator {
-			get {
-				return  (string) (NSString) ObjectForKey (_DecimalSeparator);
-			}
-		}
-		
-		public string GroupingSeparator {
-			get {
-				return  (string) (NSString) ObjectForKey (_GroupingSeparator);
-			}
-		}
-		
-		public string CurrencySymbol {
-			get {
-				return  (string) (NSString) ObjectForKey (_CurrencySymbol);
-			}
-		}
-		
-		public string CurrencyCode {
-			get {
-				return  (string) (NSString) ObjectForKey (_CurrencyCode);
+				return (string?) (NSString?) ObjectForKey (_CollationIdentifier);
 			}
 		}
 
-		public string GetCurrencyCodeDisplayName (string value)
+		/// <summary>Gets a value indicating whether the locale uses the metric system.</summary>
+		/// <value><see langword="true" /> if the locale uses the metric system; otherwise, <see langword="false" />.</value>
+		public bool UsesMetricSystem {
+			get {
+				return (ObjectForKey (_UsesMetricSystem) as NSNumber)?.BoolValue == true;
+			}
+		}
+
+		/// <summary>Gets the measurement system for the locale.</summary>
+		/// <value>The measurement system identifier.</value>
+		public string? MeasurementSystem {
+			get {
+				return (string?) (NSString?) ObjectForKey (_MeasurementSystem);
+			}
+		}
+
+		/// <summary>Gets the decimal separator for the locale.</summary>
+		/// <value>The decimal separator character.</value>
+		public string? DecimalSeparator {
+			get {
+				return (string?) (NSString?) ObjectForKey (_DecimalSeparator);
+			}
+		}
+
+		/// <summary>Gets the grouping separator for the locale.</summary>
+		/// <value>The grouping separator character used in numbers.</value>
+		public string? GroupingSeparator {
+			get {
+				return (string?) (NSString?) ObjectForKey (_GroupingSeparator);
+			}
+		}
+
+		/// <summary>Gets the currency symbol for the locale.</summary>
+		/// <value>The currency symbol.</value>
+		public string? CurrencySymbol {
+			get {
+				return (string?) (NSString?) ObjectForKey (_CurrencySymbol);
+			}
+		}
+
+		/// <summary>Gets the currency code for the locale.</summary>
+		/// <value>The ISO 4217 currency code.</value>
+		public string? CurrencyCode {
+			get {
+				return (string?) (NSString?) ObjectForKey (_CurrencyCode);
+			}
+		}
+
+		/// <summary>Gets the display name for the specified currency code.</summary>
+		/// <param name="value">The currency code.</param>
+		/// <returns>The localized display name for the currency code, or <see langword="null" /> if not available.</returns>
+		public string? GetCurrencyCodeDisplayName (string value)
 		{
+			ArgumentNullException.ThrowIfNull (value);
 			return DisplayNameForKey (_CurrencyCode, value);
 		}
-		
-		public string CollatorIdentifier {
+
+		/// <summary>Gets the collator identifier for the locale.</summary>
+		/// <value>The collator identifier.</value>
+		public string? CollatorIdentifier {
 			get {
-				return  (string) (NSString) ObjectForKey (_CollatorIdentifier);
+				return (string?) (NSString?) ObjectForKey (_CollatorIdentifier);
 			}
 		}
-		
-		public string QuotationBeginDelimiterKey {
+
+		/// <summary>Gets the quotation begin delimiter for the locale.</summary>
+		/// <value>The character or string used to begin a quotation.</value>
+		public string? QuotationBeginDelimiterKey {
 			get {
-				return  (string) (NSString) ObjectForKey (_QuotationBeginDelimiterKey);
+				return (string?) (NSString?) ObjectForKey (_QuotationBeginDelimiterKey);
 			}
 		}
-		
-		public string QuotationEndDelimiterKey {
+
+		/// <summary>Gets the quotation end delimiter for the locale.</summary>
+		/// <value>The character or string used to end a quotation.</value>
+		public string? QuotationEndDelimiterKey {
 			get {
-				return (string) (NSString) ObjectForKey (_QuotationEndDelimiterKey);
+				return (string?) (NSString?) ObjectForKey (_QuotationEndDelimiterKey);
 			}
 		}
-		
-		public string AlternateQuotationBeginDelimiterKey {
+
+		/// <summary>Gets the alternate quotation begin delimiter for the locale.</summary>
+		/// <value>The character or string used to begin an alternate (nested) quotation.</value>
+		public string? AlternateQuotationBeginDelimiterKey {
 			get {
-				return (string) (NSString) ObjectForKey (_AlternateQuotationBeginDelimiterKey);
+				return (string?) (NSString?) ObjectForKey (_AlternateQuotationBeginDelimiterKey);
 			}
 		}
-		
-		public string AlternateQuotationEndDelimiterKey {
+
+		/// <summary>Gets the alternate quotation end delimiter for the locale.</summary>
+		/// <value>The character or string used to end an alternate (nested) quotation.</value>
+		public string? AlternateQuotationEndDelimiterKey {
 			get {
-				return (string) (NSString) ObjectForKey (_AlternateQuotationEndDelimiterKey);
+				return (string?) (NSString?) ObjectForKey (_AlternateQuotationEndDelimiterKey);
 			}
 		}
 	}

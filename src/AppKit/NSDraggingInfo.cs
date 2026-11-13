@@ -1,22 +1,22 @@
-using System;
-using System.Runtime.InteropServices;
+#if !__MACCATALYST__
 
 using CoreGraphics;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AppKit {
-	public partial class NSDraggingInfo {
-		public void EnumerateDraggingItems (NSDraggingItemEnumerationOptions enumOpts, NSView view, NSPasteboardReading [] classArray, NSDictionary searchOptions, NSDraggingEnumerator enumerator)
+	public static partial class INSDraggingInfo_Extensions {
+		public static void EnumerateDraggingItems (this INSDraggingInfo self, NSDraggingItemEnumerationOptions enumOpts, NSView view, INSPasteboardReading [] classArray, NSDictionary searchOptions, NSDraggingEnumerator enumerator)
 		{
-			var nsa_classArray = NSArray.FromNSObjects (classArray);
-			EnumerateDraggingItems (enumOpts, view, nsa_classArray.Handle, searchOptions, enumerator);
-			nsa_classArray.Dispose ();
+			using (var nsa_classArray = NSArray.FromNSObjects (classArray))
+				self.EnumerateDraggingItems (enumOpts, view, nsa_classArray.Handle, searchOptions, enumerator);
 		}
 
-		public void EnumerateDraggingItems (NSDraggingItemEnumerationOptions enumOpts, NSView view, NSArray classArray, NSDictionary searchOptions, NSDraggingEnumerator enumerator)
+		public static void EnumerateDraggingItems (this INSDraggingInfo self, NSDraggingItemEnumerationOptions enumOpts, NSView view, NSArray classArray, NSDictionary searchOptions, NSDraggingEnumerator enumerator)
 		{
-			EnumerateDraggingItems (enumOpts, view, classArray.Handle, searchOptions, enumerator);
+			self.EnumerateDraggingItems (enumOpts, view, classArray.Handle, searchOptions, enumerator);
+			GC.KeepAlive (classArray);
 		}
 	}
 }
+#endif // !__MACCATALYST__

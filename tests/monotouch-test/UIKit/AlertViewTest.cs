@@ -1,39 +1,30 @@
 // Copyright 2011-2012 Xamarin Inc. All rights reserved
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
 using System.Drawing;
 using System.Reflection;
-#if XAMCORE_2_0
-using Foundation;
+using CoreGraphics;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class AlertViewTest {
-		
+
+		[SetUp]
+		public void Setup ()
+		{
+			// Throws an exception if the test is run on a UIScene based application
+			// Objective-C exception thrown.  Name: NSObjectNotAvailableException Reason: UIAlertView is deprecated and unavailable for UIScene based applications, please use UIAlertController!
+			Assert.Ignore ("UIAlertView is deprecated and unavailable for UIScene based applications. We moved to use UISceneDelegate in Xcode 26.");
+		}
+
 		[Test]
 		public void InitWithFrame ()
 		{
-			RectangleF frame = new RectangleF (10, 10, 100, 100);
+			var frame = new CGRect (10, 10, 100, 100);
 			using (UIAlertView av = new UIAlertView (frame)) {
 				Assert.That (av.Frame, Is.EqualTo (frame), "Frame");
 			}
@@ -66,10 +57,10 @@ namespace MonoTouchFixtures.UIKit {
 			using (var a = new UIAlertView ("title", "message", del, null, null)) {
 				Assert.That (a.Title, Is.EqualTo ("title"), "Title");
 				Assert.That (a.Message, Is.EqualTo ("message"), "Message");
-				Assert.NotNull (typeof (UIAlertView).GetField ("__mt_WeakDelegate_var", BindingFlags.Instance | BindingFlags.NonPublic).GetValue (a), "backing field");
+				Assert.That (typeof (UIAlertView).GetField ("__mt_WeakDelegate_var", BindingFlags.Instance | BindingFlags.NonPublic).GetValue (a), Is.Not.Null, "backing field");
 				// check properties after the field (so we're not setting it only when calling the properties)
-				Assert.NotNull (a.Delegate, "Delegate");
-				Assert.NotNull (a.WeakDelegate, "WeakDelegate");
+				Assert.That (a.Delegate, Is.Not.Null, "Delegate");
+				Assert.That (a.WeakDelegate, Is.Not.Null, "WeakDelegate");
 			}
 		}
 
@@ -83,4 +74,4 @@ namespace MonoTouchFixtures.UIKit {
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !MONOMAC

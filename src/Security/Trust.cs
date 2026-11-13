@@ -27,119 +27,159 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Linq;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
-using ObjCRuntime;
 using CoreFoundation;
-using Foundation;
 
 namespace Security {
-	public partial class SecTrust : INativeObject, IDisposable {
-		IntPtr handle;
-
-		public SecTrust (IntPtr handle) 
-			: this (handle, false)
+	/// <summary>A trust level. A trust object combines a certificate with a policy or policies. </summary>
+	///     <remarks>To be added.</remarks>
+	public partial class SecTrust : NativeObject {
+		[Preserve (Conditional = true)]
+		internal SecTrust (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
-		}
-
-		[Preserve (Conditional=true)]
-		internal SecTrust (IntPtr handle, bool owns)
-		{
-			if (handle == IntPtr.Zero)
-				throw new Exception ("Invalid handle");
-
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
 		}
 
 #if !COREBUILD
 
-		[DllImport (Constants.SecurityLibrary, EntryPoint="SecTrustGetTypeID")]
+		/// <summary>Type identifier for the Security.SecTrust type.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>
+		///           <para>The returned token is the CoreFoundation type identifier (CFType) that has been assigned to this class.</para>
+		///           <para>This can be used to determine type identity between different CoreFoundation objects.</para>
+		///           <para>You can retrieve the type of a CoreFoundation object by invoking the <see cref="CoreFoundation.CFType.GetTypeID(System.IntPtr)" /> on the native handle of the object</para>
+		///           <example>
+		///             <code lang="csharp lang-csharp"><![CDATA[bool isSecTrust = (CFType.GetTypeID (foo.Handle) == SecTrust.GetTypeID ());]]></code>
+		///           </example>
+		///         </remarks>
+		[DllImport (Constants.SecurityLibrary, EntryPoint = "SecTrustGetTypeID")]
 		public extern static nint GetTypeID ();
 
 		[DllImport (Constants.SecurityLibrary)]
-		extern static SecStatusCode SecTrustCreateWithCertificates (
+		unsafe extern static SecStatusCode SecTrustCreateWithCertificates (
 			/* CFTypeRef */            IntPtr certOrCertArray,
 			/* CFTypeRef __nullable */ IntPtr policies,
-			/* SecTrustRef *__nonull */ out IntPtr sectrustref);
-		
+			/* SecTrustRef *__nonull */ IntPtr* sectrustref);
 
-		public SecTrust (X509Certificate certificate, SecPolicy policy)
+
+		/// <param name="certificate">The certificate to be evaluated.</param>
+		///         <param name="policy">The policy to be used to evaluate the trust.</param>
+		///         <summary>Create a new instance based on the certificate, to be evaluated, and a policy, to be applied.</summary>
+		///         <remarks>
+		///         </remarks>
+		public SecTrust (X509Certificate certificate, SecPolicy? policy)
 		{
-			if (certificate == null)
-				throw new ArgumentNullException ("certificate");
+			if (certificate is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificate));
 
 			using (SecCertificate cert = new SecCertificate (certificate)) {
 				Initialize (cert.Handle, policy);
+				GC.KeepAlive (cert);
 			}
 		}
 
-		public SecTrust (X509Certificate2 certificate, SecPolicy policy)
+		/// <param name="certificate">The certificate to be evaluated.</param>
+		///         <param name="policy">The policy to be used to evaluate the trust.</param>
+		///         <summary>Create a new instance based on the certificate, to be evaluated, and a policy, to be applied</summary>
+		///         <remarks>
+		///         </remarks>
+		public SecTrust (X509Certificate2 certificate, SecPolicy? policy)
 		{
-			if (certificate == null)
-				throw new ArgumentNullException ("certificate");
+			if (certificate is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificate));
 
 			using (SecCertificate cert = new SecCertificate (certificate)) {
 				Initialize (cert.Handle, policy);
+				GC.KeepAlive (cert);
 			}
 		}
 
-		public SecTrust (X509CertificateCollection certificates, SecPolicy policy)
+		/// <param name="certificates">A collection of X.509 certificates</param>
+		///         <param name="policy">The policy to be used to evaluate the trust.</param>
+		///         <summary>Create a new instance based on the certificate, to be evaluated, and a policy, to be applied.</summary>
+		///         <remarks>The first certificate (in the collection) is the one to be evaluated, the others will be used to build a chain of trust.</remarks>
+		public SecTrust (X509CertificateCollection certificates, SecPolicy? policy)
 		{
-			if (certificates == null)
-				throw new ArgumentNullException ("certificates");
+			if (certificates is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificates));
 
-			SecCertificate[] array = new SecCertificate [certificates.Count];
+			SecCertificate [] array = new SecCertificate [certificates.Count];
 			int i = 0;
 			foreach (var certificate in certificates)
 				array [i++] = new SecCertificate (certificate);
 			Initialize (array, policy);
 		}
 
-		public SecTrust (X509Certificate2Collection certificates, SecPolicy policy)
+		/// <param name="certificates">A collection of X.509 certificates</param>
+		///         <param name="policy">The policy to be used to evaluate the trust.</param>
+		///         <summary>Create a new instance based on the certificate, to be evaluated, and a policy, to be applied.</summary>
+		///         <remarks>The first certificate (in the collection) is the one to be evaluated, the others will be used to build a chain of trust.</remarks>
+		public SecTrust (X509Certificate2Collection certificates, SecPolicy? policy)
 		{
-			if (certificates == null)
-				throw new ArgumentNullException ("certificates");
+			if (certificates is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (certificates));
 
-			SecCertificate[] array = new SecCertificate [certificates.Count];
+			SecCertificate [] array = new SecCertificate [certificates.Count];
 			int i = 0;
 			foreach (var certificate in certificates)
 				array [i++] = new SecCertificate (certificate);
 			Initialize (array, policy);
 		}
 
-		void Initialize (SecCertificate[] array, SecPolicy policy)
+		void Initialize (SecCertificate [] array, SecPolicy? policy)
 		{
 			using (var certs = CFArray.FromNativeObjects (array)) {
 				Initialize (certs.Handle, policy);
+				GC.KeepAlive (certs);
 			}
 		}
 
-		void Initialize (IntPtr certHandle, SecPolicy policy)
+		void Initialize (IntPtr certHandle, SecPolicy? policy)
 		{
-			SecStatusCode result = SecTrustCreateWithCertificates (certHandle, policy == null ? IntPtr.Zero : policy.Handle, out handle);
+			IntPtr handle;
+			SecStatusCode result;
+			unsafe {
+				result = SecTrustCreateWithCertificates (certHandle, policy.GetHandle (), &handle);
+				GC.KeepAlive (policy);
+			}
 			if (result != SecStatusCode.Success)
 				throw new ArgumentException (result.ToString ());
+			InitializeHandle (handle);
 		}
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("macos", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("ios", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
 		[DllImport (Constants.SecurityLibrary)]
-		extern static SecStatusCode /* OSStatus */ SecTrustEvaluate (IntPtr /* SecTrustRef */ trust, out /* SecTrustResultType */ SecTrustResult result);
+		unsafe extern static SecStatusCode /* OSStatus */ SecTrustEvaluate (IntPtr /* SecTrustRef */ trust, /* SecTrustResultType */ SecTrustResult* result);
 
-		[Deprecated (PlatformName.iOS, 12, 1, message : "Use 'SecTrust.Evaluate (out NSError)' instead.")]
-		[Deprecated (PlatformName.TvOS, 12, 1, message : "Use 'SecTrust.Evaluate (out NSError)' instead.")]
-		[Deprecated (PlatformName.WatchOS, 5, 1, message : "Use 'SecTrust.Evaluate (out NSError)' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 14, 1, message : "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		/// <summary>Evaluate the trust of the certificate using the policy.</summary>
+		///         <returns>A code that describe if the certificate can be trusted and, if so, under which circumstances.</returns>
+		///         <remarks>In general both Proceed and Unspecified means you can trust the certificate, other values means it should not be trusted.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("tvos", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("macos", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
+		[ObsoletedOSPlatform ("ios", "Use 'SecTrust.Evaluate (out NSError)' instead.")]
 		public SecTrustResult Evaluate ()
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
 			SecTrustResult trust;
-			SecStatusCode result = SecTrustEvaluate (handle, out trust);
+			SecStatusCode result;
+			unsafe {
+				result = SecTrustEvaluate (GetCheckedHandle (), &trust);
+			}
 			if (result != SecStatusCode.Success)
 				throw new InvalidOperationException (result.ToString ());
 			return trust;
@@ -148,165 +188,235 @@ namespace Security {
 		[DllImport (Constants.SecurityLibrary)]
 		extern static nint /* CFIndex */ SecTrustGetCertificateCount (IntPtr /* SecTrustRef */ trust);
 
+		/// <summary>Return the number of certificates used for evaluation.</summary>
+		///         <value>The number of certificates.</value>
+		///         <remarks>There can be more and different certificates than the one provided to the constructor.</remarks>
 		public int Count {
 			get {
-				if (handle == IntPtr.Zero)
+				if (Handle == IntPtr.Zero)
 					return 0;
-				return (int) SecTrustGetCertificateCount (handle);
+				return (int) SecTrustGetCertificateCount (Handle);
 			}
 		}
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("tvos15.0")]
+		[ObsoletedOSPlatform ("ios15.0")]
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr /* SecCertificateRef */ SecTrustGetCertificateAtIndex (IntPtr /* SecTrustRef */ trust, nint /* CFIndex */ ix);
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos", "Use the 'GetCertificateChain' method instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use the 'GetCertificateChain' method instead.")]
+		[ObsoletedOSPlatform ("tvos15.0", "Use the 'GetCertificateChain' method instead.")]
+		[ObsoletedOSPlatform ("ios15.0", "Use the 'GetCertificateChain' method instead.")]
 		public SecCertificate this [nint index] {
 			get {
-				if (handle == IntPtr.Zero)
-					throw new ObjectDisposedException ("SecTrust");
 				if ((index < 0) || (index >= Count))
-					throw new ArgumentOutOfRangeException ("index");
+					throw new ArgumentOutOfRangeException (nameof (index));
 
-				return new SecCertificate (SecTrustGetCertificateAtIndex (handle, index));
+				return new SecCertificate (SecTrustGetCertificateAtIndex (GetCheckedHandle (), index), false);
 			}
 		}
 
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.SecurityLibrary)]
+		static extern /* CFArrayRef */ IntPtr SecTrustCopyCertificateChain (/* SecTrustRef */ IntPtr trust);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public SecCertificate []? GetCertificateChain ()
+			=> NSArray.ArrayFromHandleDropNullElements<SecCertificate> (SecTrustCopyCertificateChain (Handle), releaseHandle: true);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("tvos14.0")]
+		[ObsoletedOSPlatform ("ios14.0")]
+		[ObsoletedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr /* SecKeyRef */ SecTrustCopyPublicKey (IntPtr /* SecTrustRef */ trust);
 
+		/// <summary>Get the public key of the evaluated certificate.</summary>
+		///         <returns>A SecKey instance of the certificate's public key.</returns>
+		///         <remarks>
+		///         </remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'GetKey' instead.")]
+		[ObsoletedOSPlatform ("macos", "Use 'GetKey' instead.")]
+		[ObsoletedOSPlatform ("tvos14.0", "Use 'GetKey' instead.")]
+		[ObsoletedOSPlatform ("ios14.0", "Use 'GetKey' instead.")]
 		public SecKey GetPublicKey ()
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
-			return new SecKey (SecTrustCopyPublicKey (handle), true);
+			return new SecKey (SecTrustCopyPublicKey (GetCheckedHandle ()), true);
 		}
 
-		[Mac (10,9)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.SecurityLibrary)]
+		extern static IntPtr /* SecKeyRef */ SecTrustCopyKey (IntPtr /* SecTrustRef */ trust);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public SecKey GetKey ()
+		{
+			return new SecKey (SecTrustCopyKey (GetCheckedHandle ()), true);
+		}
+
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.SecurityLibrary)]
 		extern static IntPtr /* CFDataRef */ SecTrustCopyExceptions (IntPtr /* SecTrustRef */ trust);
 
-		[Mac (10,9)]
-		public NSData GetExceptions ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSData? GetExceptions ()
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
-			return new NSData (SecTrustCopyExceptions (handle), false); // inverted boolean?
+			return Runtime.GetNSObject<NSData> (SecTrustCopyExceptions (GetCheckedHandle ()), true);
 		}
 
-		[Mac (10,9)]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.SecurityLibrary)]
-		extern static bool SecTrustSetExceptions (IntPtr /* SecTrustRef */ trust, IntPtr /* __nullable CFDataRef */ exceptions);
+		extern static byte SecTrustSetExceptions (IntPtr /* SecTrustRef */ trust, IntPtr /* __nullable CFDataRef */ exceptions);
 
-		[Mac (10,9)]
+		/// <param name="data">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		public bool SetExceptions (NSData data)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
-			IntPtr p = data == null ? IntPtr.Zero : data.Handle;
-			return SecTrustSetExceptions (handle, p);
+			bool result = SecTrustSetExceptions (GetCheckedHandle (), data.GetHandle ()) != 0;
+			GC.KeepAlive (data);
+			return result;
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static double /* CFAbsoluteTime */ SecTrustGetVerifyTime (IntPtr /* SecTrustRef */ trust);
 
+		/// <summary>Get the verification time.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>This is often used for digital signatures.</remarks>
 		public double GetVerifyTime ()
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
-			return SecTrustGetVerifyTime (handle);
+			return SecTrustGetVerifyTime (GetCheckedHandle ());
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static SecStatusCode /* OSStatus */ SecTrustSetVerifyDate (IntPtr /* SecTrustRef */ trust, IntPtr /* CFDateRef */ verifyDate);
 
+		/// <param name="date">Date for which the verification should made.</param>
+		///         <summary>Set the date at which the trust is to be evaluated.</summary>
+		///         <returns>An error code.</returns>
+		///         <remarks>This is often used for digital signatures.</remarks>
 		public SecStatusCode SetVerifyDate (DateTime date)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
 			// CFDateRef amd NSDate are toll-freee bridged
 			using (NSDate d = (NSDate) date) {
-				return SecTrustSetVerifyDate (handle, d.Handle);
+				SecStatusCode statusCode = SecTrustSetVerifyDate (GetCheckedHandle (), d.Handle);
+				return statusCode;
 			}
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
 		extern static SecStatusCode /* OSStatus */ SecTrustSetAnchorCertificates (IntPtr /* SecTrustRef */ trust, IntPtr /* CFArrayRef */ anchorCertificates);
 
+		/// <param name="certificates">A collection of anchor (trusted root) certificates.</param>
+		///         <summary>Provide your own collection of trusted certificate for the evaluation.</summary>
+		///         <returns>An error code.</returns>
+		///         <remarks>
+		///         </remarks>
 		public SecStatusCode SetAnchorCertificates (X509CertificateCollection certificates)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-			if (certificates == null)
-				return SecTrustSetAnchorCertificates (handle, IntPtr.Zero);
+			if (certificates is null)
+				return SecTrustSetAnchorCertificates (GetCheckedHandle (), IntPtr.Zero);
 
-			SecCertificate[] array = new SecCertificate [certificates.Count];
+			SecCertificate [] array = new SecCertificate [certificates.Count];
 			int i = 0;
 			foreach (var certificate in certificates)
 				array [i++] = new SecCertificate (certificate);
 			return SetAnchorCertificates (array);
 		}
 
+		/// <param name="certificates">A collection of anchor (trusted root) certificates.</param>
+		///         <summary>Provide your own collection of trusted certificate for the evaluation.</summary>
+		///         <returns>An error code.</returns>
+		///         <remarks>
+		///         </remarks>
 		public SecStatusCode SetAnchorCertificates (X509Certificate2Collection certificates)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-			if (certificates == null)
-				return SecTrustSetAnchorCertificates (handle, IntPtr.Zero);
+			if (certificates is null)
+				return SecTrustSetAnchorCertificates (GetCheckedHandle (), IntPtr.Zero);
 
-			SecCertificate[] array = new SecCertificate [certificates.Count];
+			SecCertificate [] array = new SecCertificate [certificates.Count];
 			int i = 0;
 			foreach (var certificate in certificates)
 				array [i++] = new SecCertificate (certificate);
 			return SetAnchorCertificates (array);
 		}
 
-		public SecStatusCode SetAnchorCertificates (SecCertificate[] array)
+		/// <param name="array">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public SecStatusCode SetAnchorCertificates (SecCertificate [] array)
 		{
-			if (array == null)
-				return SecTrustSetAnchorCertificates (handle, IntPtr.Zero);
+			if (array is null)
+				return SecTrustSetAnchorCertificates (Handle, IntPtr.Zero);
 			using (var certs = CFArray.FromNativeObjects (array)) {
-				return SecTrustSetAnchorCertificates (handle, certs.Handle);
+				SecStatusCode statusCode = SecTrustSetAnchorCertificates (Handle, certs.Handle);
+				GC.KeepAlive (certs);
+				return statusCode;
 			}
 		}
 
 		[DllImport (Constants.SecurityLibrary)]
-		extern static SecStatusCode /* OSStatus */ SecTrustSetAnchorCertificatesOnly (IntPtr /* SecTrustRef */ trust, bool anchorCertificatesOnly);
+		extern static SecStatusCode /* OSStatus */ SecTrustSetAnchorCertificatesOnly (IntPtr /* SecTrustRef */ trust, byte anchorCertificatesOnly);
 
+		/// <param name="anchorCertificatesOnly">true if only the supplied anchors should be used, false if the system anchors should also be used</param>
+		///         <summary>Specify if only the supplied anchor certificates should be used.</summary>
+		///         <returns>An error code.</returns>
+		///         <remarks>
+		///         </remarks>
 		public SecStatusCode SetAnchorCertificatesOnly (bool anchorCertificatesOnly)
 		{
-			if (handle == IntPtr.Zero)
-				throw new ObjectDisposedException ("SecTrust");
-
-			return SecTrustSetAnchorCertificatesOnly (handle, anchorCertificatesOnly);
+			return SecTrustSetAnchorCertificatesOnly (GetCheckedHandle (), anchorCertificatesOnly.AsByte ());
 		}
 #endif
-
-
-		~SecTrust ()
-		{
-			Dispose (false);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero) {
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
 	}
 }

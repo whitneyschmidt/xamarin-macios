@@ -1,4 +1,4 @@
-﻿//
+//
 // VNFaceLandmarkRegion2D.cs
 //
 // Authors:
@@ -7,15 +7,17 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
+#nullable enable
 
-using System;
 using CoreGraphics;
 
 namespace Vision {
 	public partial class VNFaceLandmarkRegion2D {
 
-		public virtual CGPoint [] NormalizedPoints {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public virtual CGPoint []? NormalizedPoints {
 			get {
 				var ret = _GetNormalizedPoints ();
 				if (ret == IntPtr.Zero)
@@ -32,7 +34,11 @@ namespace Vision {
 			}
 		}
 
-		public virtual CGPoint [] GetPointsInImage (CGSize imageSize)
+		/// <param name="imageSize">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public virtual CGPoint []? GetPointsInImage (CGSize imageSize)
 		{
 			// return the address of the array of pointCount points
 			// or NULL if the conversion could not take place.
@@ -51,4 +57,3 @@ namespace Vision {
 		}
 	}
 }
-#endif

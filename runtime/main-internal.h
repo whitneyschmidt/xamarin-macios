@@ -13,11 +13,6 @@ extern "C" {
 #endif
 //#endif
 
-#ifdef WATCH_EXTENSION
-// WatchKit.framework defines a main function.
-	int main (int argc, char **argv);	
-#endif
-
 #ifdef TV_EXTENSION
 	int TVExtensionMain (int argc, char **argv);	
 #endif

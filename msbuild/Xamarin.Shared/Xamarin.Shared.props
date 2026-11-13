@@ -1,0 +1,315 @@
+<!--
+***********************************************************************************************
+Xamarin.Shared.props
+
+WARNING:  DO NOT MODIFY this file unless you are knowledgeable about MSBuild and have
+  created a backup copy.  Incorrect changes to this file will make it
+  impossible to load or build your projects from the command-line or the IDE.
+
+This file imports the version- and platform-specific targets for the project importing
+this file. This file also defines targets to produce an error if the specified targets
+file does not exist, but the project is built anyway (command-line or IDE build).
+
+Copyright (C) 2020 Microsoft. All rights reserved.
+***********************************************************************************************
+-->
+
+<!-- This is shared between Xamarin.iOS and Xamarin.Mac -->
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.targets"
+			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).Before.targets')"/>
+
+	<!-- Sometimes we've used different variable names for the same thing for Xamarin.iOS and Xamarin.Mac projects. Here we try to unify those variables -->
+	<PropertyGroup>
+		<!-- ResourcePrefix -->
+		<!-- First set platform-specific properties if not already set (for backwards compatibility) -->
+		<MonoMacResourcePrefix Condition="'$(_PlatformName)' == 'macOS' And '$(MonoMacResourcePrefix)' == ''">Resources</MonoMacResourcePrefix>
+		<XamMacResourcePrefix Condition="'$(_PlatformName)' == 'macOS' And '$(XamMacResourcePrefix)' == ''">$(MonoMacResourcePrefix)</XamMacResourcePrefix>
+		<XamMacResourcePrefix Condition="'$(_PlatformName)' == 'macOS' And '$(XamMacResourcePrefix)' == ''">Resources</XamMacResourcePrefix>
+		<IPhoneResourcePrefix Condition="'$(_PlatformName)' != 'macOS' And '$(IPhoneResourcePrefix)' == ''">Resources</IPhoneResourcePrefix>
+		
+		<!-- Set AppBundleResourcePrefix from platform-specific properties if not already set -->
+		<AppBundleResourcePrefix Condition="'$(AppBundleResourcePrefix)' == '' And '$(_PlatformName)' == 'macOS'">$(XamMacResourcePrefix)</AppBundleResourcePrefix>
+		<AppBundleResourcePrefix Condition="'$(AppBundleResourcePrefix)' == '' And '$(_PlatformName)' != 'macOS'">$(IPhoneResourcePrefix)</AppBundleResourcePrefix>
+		<AppBundleResourcePrefix Condition="'$(AppBundleResourcePrefix)' == ''">Resources</AppBundleResourcePrefix>
+		
+		<!-- Set _ResourcePrefix from AppBundleResourcePrefix -->
+		<_ResourcePrefix>$(AppBundleResourcePrefix)</_ResourcePrefix>
+		<!-- Split _ResourcePrefix into individual properties for multi-prefix glob expansion.
+		     We support up to 3 semicolon-separated resource prefix paths.
+		     Trailing semicolons are appended so that Split(';')[N] never throws IndexOutOfRangeException. -->
+		<_ResourcePrefixCount>$([System.String]::new('$(_ResourcePrefix)').Split(';').Length)</_ResourcePrefixCount>
+		<_ResourcePrefix_1>$([System.String]::new('$(_ResourcePrefix);;;').Split(';')[0])</_ResourcePrefix_1>
+		<_ResourcePrefix_2>$([System.String]::new('$(_ResourcePrefix);;;').Split(';')[1])</_ResourcePrefix_2>
+		<_ResourcePrefix_3>$([System.String]::new('$(_ResourcePrefix);;;').Split(';')[2])</_ResourcePrefix_3>
+
+		<!-- SdkVersion -->
+		<_SdkVersion Condition="'$(_PlatformName)' == 'macOS'">$(MacOSXSdkVersion)</_SdkVersion>
+		<_SdkVersion Condition="'$(_PlatformName)' != 'macOS'">$(MtouchSdkVersion)</_SdkVersion>
+
+		<!-- Other variables that are used in code signing / packaging, but that are by default empty (so no need for any logic): -->
+		<!-- CodesignProvision: the name of the provisioning profile to use when signing the bundle -->
+		<!-- CodesignExtraArgs: any extra arguments to pass to 'codesign' -->
+		<!-- PackageSigningKey: the certificate used to sign packages (.pkg). Applicable to macOS and Mac Catalyst -->
+		<!-- PackagingExtraArgs: any extra arguments passed to the productbuild tool when creating packages (.pkg). Applicable to macOS and Mac Catalyst -->
+		<!-- ProductDefinition: the product definition template (plist) used when creating the product definition to pass to the product build tool when creating packages (.pkg). Applicable to mcOS and Mac Catalyst -->
+
+		<!-- CodesignEntitlements: the path to the Entitlements.plist to use when signing the bundle
+			If:
+			* We're building for .NET, and
+			* There's an Entitlements.plist file in the root project directory, and
+			* The CodesignEntitlements property is empty, and
+			* The EnableDefaultCodesignEntitlements property is not false
+
+			Then we'll automatically set the CodesignEntitlements property to "Entitlements.plist"
+		-->
+		<CodesignEntitlements Condition="'$(CodesignEntitlements)' == '' And Exists('Entitlements.plist') And '$(EnableDefaultCodesignEntitlements)' != 'false'">Entitlements.plist</CodesignEntitlements>
+
+		<!-- If we should automatically try to detect the app manifest (Info.plist) from any None, BundleResource or Content items -->
+		<!-- It might be desirable to turn off the automatic detection if the current logic detects Info.plist that aren't the app manifest -->
+		<!-- One example would be when including native frameworks in the app bundle - frameworks have an Info.plist that might be picked up -->
+		<AppManifestDetectionEnabled Condition="'$(AppManifestDetectionEnabled)' == ''">true</AppManifestDetectionEnabled>
+		<ValidateSceneManifest Condition="'$(ValidateSceneManifest)' == ''">true</ValidateSceneManifest>
+	</PropertyGroup>
+
+	<!-- Code signing defaults -->
+	<PropertyGroup>
+	<!-- EnableCodeSigning: enable by default -->
+		<EnableCodeSigning Condition="'$(EnableCodeSigning)' == ''">true</EnableCodeSigning>
+
+		<!-- SpecifiedCodeSigningKey -->
+		<!-- Xamarin.Mac projects use 'CodeSigningKey', and Xamarin.iOS projects use 'CodesignKey'. -->
+		<!-- Here we accept both, and we'll recommend using 'CodesignKey' for all platforms going forward -->
+		<_SpecifiedCodesignKey Condition="'$(_SpecifiedCodesignKey)' == ''">$(CodeSigningKey)</_SpecifiedCodesignKey>
+		<_SpecifiedCodesignKey Condition="'$(_SpecifiedCodesignKey)' == ''">$(CodesignKey)</_SpecifiedCodesignKey>
+
+		<!-- If the .pkg should be signed or not. Applicable to macOS and Mac Catalyst. Defaults to false. -->
+		<EnablePackageSigning Condition="'$(EnablePackageSigning)' == ''">false</EnablePackageSigning>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ArchiveOnBuild Condition="'$(ArchiveOnBuild)' == ''">false</ArchiveOnBuild>
+		<IsAppExtension Condition="'$(IsAppExtension)' == ''">false</IsAppExtension>
+		<IsWatchExtension Condition="'$(IsWatchExtension)' == ''">false</IsWatchExtension>
+		<IsWatchApp Condition="'$(IsWatchApp)' == ''">false</IsWatchApp>
+
+		<!-- Xamarin.iOS projects use MtouchEnableSGenConc, and Xamarin.Mac projects use EnableSGenConc -->
+		<!-- Going forward we're sticking with EnableSGenConc, but we'll accept MtouchEnableSGenConc if it's set -->
+		<!-- If both are set, EnableSGenConc takes precedence -->
+		<EnableSGenConc Condition="'$(EnableSGenConc)' == ''">$(MtouchEnableSGenConc)</EnableSGenConc>
+		<EnableSGenConc Condition="'$(EnableSGenConc)' == ''">false</EnableSGenConc>
+
+		<_CanOutputAppBundle>false</_CanOutputAppBundle>
+		<_CanOutputAppBundle Condition="'$(OutputType)' == 'Exe' Or '$(IsAppExtension)' == 'true' Or '$(IsWatchApp)' == 'true'">true</_CanOutputAppBundle>
+
+		<!-- We can archive: -->
+		<!-- macOS and Mac Catalyst: executable projects which aren't app extensions -->
+		<!-- iOS, tvOS and watchOS: executable projects built for device which aren't app extensions -->
+		<_CanArchive>false</_CanArchive>
+		<_CanArchive Condition="'$(SdkIsDesktop)' == 'true' And '$(OutputType)' == 'Exe' And '$(IsAppExtension)' == 'false'">true</_CanArchive>
+		<_CanArchive Condition="'$(OutputType)' == 'Exe' And '$(SdkIsDevice)' == 'true' And '$(IsAppExtension)' == 'false'">true</_CanArchive>
+
+		<!-- Debug -->
+		<!-- Xamarin.Mac: use MmpDebug -->
+		<_BundlerDebug Condition="'$(_BundlerDebug)' == '' And '$(_PlatformName)' == 'macOS'">$(MmpDebug)</_BundlerDebug>
+		<!-- Xamarin.iOS: Use MtouchDebug -->
+		<_BundlerDebug Condition="'$(_BundlerDebug)' == '' And '$(_PlatformName)' != 'macOS'">$(MtouchDebug)</_BundlerDebug>
+		<!-- Otherwise the default is true if we're building a Debug configuration -->
+		<_BundlerDebug Condition="'$(_BundlerDebug)' == '' And '$(Configuration)' == 'Debug'">true</_BundlerDebug>
+		<!-- As a last resort, the default is false for all platforms -->
+		<_BundlerDebug Condition="'$(_BundlerDebug)' == ''">false</_BundlerDebug>
+
+		<!-- Extra arguments -->
+		<AppBundleExtraOptions Condition="'$(_PlatformName)' == 'macOS'">$(AppBundleExtraOptions) $(MonoBundlingExtraArgs)</AppBundleExtraOptions>
+		<AppBundleExtraOptions Condition="'$(_PlatformName)' != 'macOS'">$(AppBundleExtraOptions) $(MtouchExtraArgs)</AppBundleExtraOptions>
+
+		<!-- NoSymbolStrip -->
+		<!-- Xamarin.Mac never had an equivalent for MtouchNoSymbolStrip and was never stripped, except when using NativeAOT -> true -->
+		<!-- default to 'false' -->
+		<NoSymbolStrip Condition="'$(NoSymbolStrip)' == '' And '$(_PlatformName)' != 'macOS'">$(MtouchNoSymbolStrip)</NoSymbolStrip>
+		<NoSymbolStrip Condition="'$(NoSymbolStrip)' == '' And '$(SdkIsDesktop)' == 'true' And '$(_UseNativeAot)' != 'true'">true</NoSymbolStrip>
+		<!-- Disable stripping for simulator builds by default -->
+		<NoSymbolStrip Condition="'$(NoSymbolStrip)' == '' And '$(SdkIsSimulator)' == 'true'">true</NoSymbolStrip>
+		<NoSymbolStrip Condition="'$(NoSymbolStrip)' == ''">false</NoSymbolStrip>
+
+		<!-- StripMergeableLibraries: remove static linking metadata (LC_ATOM_INFO) from mergeable libraries to reduce app size -->
+		<!-- Default to true when optimizing (typically Release builds) -->
+		<StripMergeableLibraries Condition="'$(StripMergeableLibraries)' == ''">$(Optimize)</StripMergeableLibraries>
+
+		<!-- NoDSymUtil -->
+		<!-- Xamarin.Mac never had an equivalent for MtouchNoDSymUtil and never produced them -> now, produce them by default when archiving -->
+		<NoDSymUtil Condition="'$(NoDSymUtil)' == '' And '$(_PlatformName)' != 'macOS'">$(MtouchNoDSymUtil)</NoDSymUtil>
+		<!-- Disable dsymutil on desktop unless archiving, except when using NativeAOT (where dSYMs are useful) -->
+		<NoDSymUtil Condition="'$(NoDSymUtil)' == '' And '$(SdkIsDesktop)' == 'true' And '$(ArchiveOnBuild)' != 'true' And '$(_UseNativeAot)' != 'true'">true</NoDSymUtil>
+		<!-- Disable dsymutil for simulator builds by default -->
+		<NoDSymUtil Condition="'$(NoDSymUtil)' == '' And '$(SdkIsSimulator)' == 'true'">true</NoDSymUtil>
+		<NoDSymUtil Condition="'$(NoDSymUtil)' == ''">false</NoDSymUtil>
+
+		<!-- DeviceSpecificIntermediateOutputPath -->
+		<!--
+			We don't need this value for Xamarin.Mac, but many of the targets
+			that can be shared need to use this for Xamarin.iOS, so set this
+			value for Xamarin.Mac as well. It will always be the default
+			IntermediateOutputPath for Xamarin.Mac, while for Xamarin.iOS it
+			might be changed in _ComputeTargetArchitectures.
+		-->
+		<DeviceSpecificIntermediateOutputPath>$(IntermediateOutputPath)</DeviceSpecificIntermediateOutputPath>
+		<!-- Make sure DeviceSpecificOutputPath is a relative path, we depend
+		     on this elsewhere (we prepend the project's directory). When
+		     using dotnet IntermediateOutputPath (and thus
+		     DeviceSpecificIntermediateOutputPath) might be a full path, so
+		     handle this by calculating the corresponding relative path for
+		     DeviceSpecificOutputPath. -->
+		<DeviceSpecificOutputPath>$(OutputPath)</DeviceSpecificOutputPath>
+		<DeviceSpecificOutputPath Condition="$([System.IO.Path]::IsPathRooted('$(DeviceSpecificOutputPath)')) == 'true'">$([MSBuild]::MakeRelative ('$(MSBuildProjectDirectory)','$(OutputPath)'))</DeviceSpecificOutputPath>
+		<!-- We assume elsewhere that DeviceSpecificOutputPath has a trailing slash, so make sure that's always the case -->
+		<DeviceSpecificOutputPath>$([MSBuild]::EnsureTrailingSlash('$(DeviceSpecificOutputPath)'))</DeviceSpecificOutputPath>
+
+		<!-- OptimizePNGs:
+			default to false if a binding project (both XI and XM)
+			otherwise default to true for release builds in .NET 11+ except on macOS
+			otherwise default to false
+		-->
+		<OptimizePNGs Condition="'$(IsBindingProject)' == 'true' And '$(OptimizePNGs)' == ''">false</OptimizePNGs>
+		<OptimizePNGs Condition="'$(_PlatformName)' == 'macOS' And '$(OptimizePNGs)' == ''">false</OptimizePNGs>
+		<OptimizePNGs Condition="'$(OptimizePNGs)' == '' And '$(_BundlerDebug)' != 'true' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 11.0))">true</OptimizePNGs>
+		<OptimizePNGs Condition="'$(OptimizePNGs)' == ''">false</OptimizePNGs>
+
+		<!-- OptimizePropertyLists:
+			default to false if a binding project (both XI and XM)
+			otherwise default to true for release builds in .NET 11+ except on macOS
+			otherwise default to false
+		-->
+		<OptimizePropertyLists Condition="'$(IsBindingProject)' == 'true' And '$(OptimizePropertyLists)' == ''">false</OptimizePropertyLists>
+		<OptimizePropertyLists Condition="'$(_PlatformName)' == 'macOS' And '$(OptimizePropertyLists)' == ''">false</OptimizePropertyLists>
+		<OptimizePropertyLists Condition="'$(OptimizePropertyLists)' == '' And '$(_BundlerDebug)' != 'true' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 11.0))">true</OptimizePropertyLists>
+		<OptimizePropertyLists Condition="'$(OptimizePropertyLists)' == ''">false</OptimizePropertyLists>
+
+		<StripFrameworkHeaders Condition="'$(StripFrameworkHeaders)' == ''">true</StripFrameworkHeaders>
+
+		<!-- EnableOnDemandResources: default to true for Xamarin.iOS and false for Xamarin.Mac -->
+		<EnableOnDemandResources Condition="'$(_PlatformName)' == 'macOS' And '$(EnableOnDemandResources)' == ''">false</EnableOnDemandResources>
+		<EnableOnDemandResources Condition="'$(_PlatformName)' != 'macOS' And '$(EnableOnDemandResources)' == ''">true</EnableOnDemandResources>
+
+		<!-- This is the prefix used for embedded resources, both for library projects and binding projects -->
+		<_EmbeddedResourcePrefix Condition="'$(_PlatformName)' == 'macOS'">xammac</_EmbeddedResourcePrefix>
+		<_EmbeddedResourcePrefix Condition="'$(_PlatformName)' != 'macOS'">monotouch</_EmbeddedResourcePrefix>
+
+		<_AppBundleManifestRelativePath Condition="'$(SdkIsDesktop)' == 'true'">Contents/</_AppBundleManifestRelativePath>
+
+		<AppBundleExtension Condition="'$(AppBundleExtension)' == '' And '$(IsAppExtension)' == 'true' And '$(IsXPCService)' == 'true'">.xpc</AppBundleExtension>
+		<AppBundleExtension Condition="'$(AppBundleExtension)' == '' And '$(IsAppExtension)' == 'true'">.appex</AppBundleExtension>
+		<AppBundleExtension Condition="'$(AppBundleExtension)' == ''">.app</AppBundleExtension>
+
+		<!-- Accept 'UseInterpreter' as an alternative for 'MtouchInterpreter', so that we have the same variable name as Android -->
+		<MtouchInterpreter Condition="'$(MtouchInterpreter)' == '' And '$(UseInterpreter)' == 'True' And '$(UseMonoRuntime)' == 'true'">all</MtouchInterpreter>
+
+		<_AppBundleName Condition="'$(_AppBundleName)' == '' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 10.0)) And '$(SdkIsDesktop)' == 'true'">$(ApplicationTitle)</_AppBundleName>
+		<_AppBundleName Condition="'$(_AppBundleName)' == ''">$(AssemblyName)</_AppBundleName>
+
+		<!-- If resources are pre-compiled/processed before being embedded in libraries, or if they're stored as-is -->
+		<BundleOriginalResources Condition="'$(BundleOriginalResources)' == '' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 10.0))">true</BundleOriginalResources>
+		<!-- Does not apply unless we're actually building a library - and since BundleOriginalResources can be specified on the command line, use a secondary property -->
+		<!-- that also encapsulates whether we're a library or not (this makes conditions simpler) -->
+		<_BundleOriginalResources Condition="'$(OutputType)' == 'Library' And '$(IsAppExtension)' != 'true' And '$(BundleOriginalResources)' == 'true'">true</_BundleOriginalResources>
+
+		<!-- Resolve Content and BundleResource items relative to the project file instead of the defining project file.
+		     This fixes issues where SDKs (like the Razor SDK) add items from a directory far from the project,
+		     producing nonsensical paths. Ref: https://github.com/dotnet/macios/issues/23898
+		     Opt-in for < .NET 12, opt-out (default true) for .NET 12+, permanently enabled for .NET 13+. -->
+		<ResolveResourceItemsRelativeToProject Condition="'$(ResolveResourceItemsRelativeToProject)' == '' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 12.0))">true</ResolveResourceItemsRelativeToProject>
+		<ResolveResourceItemsRelativeToProject Condition="'$(ResolveResourceItemsRelativeToProject)' == ''">false</ResolveResourceItemsRelativeToProject>
+		<_ResolveResourceItemsRelativeToProjectInvalid Condition="'$(ResolveResourceItemsRelativeToProject)' == 'false' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 13.0))">true</_ResolveResourceItemsRelativeToProjectInvalid>
+
+		<EnableDiagnostics Condition="'$(EnableDiagnostics)' == '' And ('$(DiagnosticConfiguration)' != '' Or '$(DiagnosticAddress)' != '' Or '$(DiagnosticPort)' != '' Or '$(DiagnosticSuspend)' != '' Or '$(DiagnosticListenMode)' != '')">true</EnableDiagnostics>
+
+		<!-- Set the name of the native executable -->
+		<_NativeExecutableName Condition="'$(_NativeExecutableName)' == ''">$(AssemblyName)</_NativeExecutableName>
+
+		<!-- These properties are only used when using type maps (the trimmable static registrar) -->
+		<_TypeMapAssemblyName Condition="'$(_TypeMapAssemblyName)' == ''">_Microsoft.$(_PlatformName).TypeMaps</_TypeMapAssemblyName>
+		<_TypeMapOutputDirectory Condition="'$(_TypeMapOutputDirectory)' == ''">$(DeviceSpecificIntermediateOutputPath)typemap\</_TypeMapOutputDirectory>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(EnableDiagnostics)' == 'true' And '$(DiagnosticConfiguration)' == ''">
+		<DiagnosticAddress Condition="'$(DiagnosticAddress)' == ''">127.0.0.1</DiagnosticAddress>
+		<DiagnosticPort Condition="'$(DiagnosticPort)' == ''">9000</DiagnosticPort>
+		<DiagnosticSuspend Condition="'$(DiagnosticSuspend)' == ''">false</DiagnosticSuspend>
+		<DiagnosticListenMode Condition="'$(DiagnosticListenMode)' == ''">listen</DiagnosticListenMode>
+		<DiagnosticConfiguration>$(DiagnosticAddress):$(DiagnosticPort),$(DiagnosticListenMode)</DiagnosticConfiguration>
+		<DiagnosticConfiguration Condition="'$(DiagnosticSuspend)' == 'true'">$(DiagnosticConfiguration),suspend</DiagnosticConfiguration>
+		<DiagnosticConfiguration Condition="'$(DiagnosticSuspend)' != 'true'">$(DiagnosticConfiguration),nosuspend</DiagnosticConfiguration>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(EnableDiagnostics)' == 'true' And '$(DiagnosticConfiguration)' != '' And '$(DiagnosticConfiguration)' != 'disable'">
+		<_BundlerEnvironmentVariables Include="DOTNET_DiagnosticPorts" Value="$(DiagnosticConfiguration)" Overwrite="false" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(IsBindingProject)' == 'true'">
+		<GeneratedSourcesDir Condition="'$(GeneratedSourcesDir)' == ''">$(IntermediateOutputPath)$(_PlatformName)</GeneratedSourcesDir>
+		<GeneratedSourcesDir Condition="'$(GeneratedSourcesDir)' != '' and !HasTrailingSlash ('$(GeneratedSourcesDir)')">$(GeneratedSourcesDir)\</GeneratedSourcesDir>
+		<_GeneratedSourcesFileList>$(GeneratedSourcesDir)sources.list</_GeneratedSourcesFileList>
+
+		<ProcessEnums Condition="'$(ProcessEnums)' == ''">false</ProcessEnums>
+
+		<!-- The generated binding code is unsafe, so make sure to allow unsafe code when compiling the C# code -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- Default NoBindingEmbedding to 'true' for .NET projects, it's the new way -->
+		<NoBindingEmbedding Condition="'$(NoBindingEmbedding)' == ''">true</NoBindingEmbedding>
+
+		<!-- NoBindingEmbedding=false is deprecated in .NET 10, and removed in .NET 12+ -->
+		<_NoBindingEmbeddingDeprecated Condition="'$(NoBindingEmbedding)' != 'true' And !$([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 12.0))">true</_NoBindingEmbeddingDeprecated>
+		<_NoBindingEmbeddingRemoved Condition="'$(NoBindingEmbedding)' != 'true' And $([MSBuild]::VersionGreaterThanOrEquals($(TargetFrameworkVersion), 12.0))">true</_NoBindingEmbeddingRemoved>
+
+		<!-- We don't want to build a binding project when in design time mode, and not bundling original resources, because we might end up requiring a connection to a remote mac, which is not a good idea for a supposedly quick design-time build. -->
+		<_DisableBindingProjectBuild Condition="'$(_DisableBindingProjectBuild)' == '' And '$(BundleOriginalResources)' != 'true' And '$(DesignTimeBuild)' == 'true'">true</_DisableBindingProjectBuild>
+	</PropertyGroup>
+
+	<Target Name="_ComputeTargetFrameworkMoniker" Condition="'$(_ComputedTargetFrameworkMoniker)' == ''">
+		<PropertyGroup>
+			<!-- Get the TargetFrameworkMoniker and store it in our own variable so that it's overridable while only affecting the parts of the build that we care about.
+				 This is overridability is a workaround while we wait for .NET 5 to be able to give us the TFM we're supposed to get during the build. -->
+			<_ComputedTargetFrameworkMoniker>$(TargetFrameworkMoniker)</_ComputedTargetFrameworkMoniker>
+		</PropertyGroup>
+	</Target>
+
+	<PropertyGroup>
+		<AllowedReferenceRelatedFileExtensions>
+			$(AllowedReferenceRelatedFileExtensions);
+			.pdb
+		</AllowedReferenceRelatedFileExtensions>
+	</PropertyGroup>
+
+	<!-- This is used to determine if VS is connected to mac. -->
+	<PropertyGroup>
+		<IsMacEnabled Condition="'$(IsMacEnabled)' == '' And !$([MSBuild]::IsOSPlatform('windows'))">true</IsMacEnabled>
+		<IsMacEnabled Condition="'$(IsMacEnabled)' == '' And  $([MSBuild]::IsOSPlatform('windows'))">false</IsMacEnabled>
+		<MtouchTargetsEnabled Condition="'$(_PlatformName)' != 'macOS'">$(IsMacEnabled)</MtouchTargetsEnabled>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Enable nuget package conflict resolution -->
+		<ResolveAssemblyConflicts>true</ResolveAssemblyConflicts>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<_IsUnifiedDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__UNIFIED__($|;)'))</_IsUnifiedDefined>
+		<_IsMobileDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__MOBILE__($|;)'))</_IsMobileDefined>
+		<_IsIOSDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__IOS__($|;)'))</_IsIOSDefined>
+		<_IsTVOSDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__TVOS__($|;)'))</_IsTVOSDefined>
+		<_IsMacOSDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__MACOS__($|;)'))</_IsMacOSDefined>
+		<_IsMacCatalystDefined>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants.Trim())', '(^|;)__MACCATALYST__($|;)'))</_IsMacCatalystDefined>
+
+		<DefineConstants Condition="!$(_IsUnifiedDefined)">__UNIFIED__;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="!$(_IsMobileDefined) And '$(_PlatformName)' != 'macOS'">__MOBILE__;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="!$(_IsIOSDefined) And '$(_PlatformName)' == 'iOS'">__IOS__;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="!$(_IsTVOSDefined) And '$(_PlatformName)' == 'tvOS'">__TVOS__;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="!$(_IsMacOSDefined) And '$(_PlatformName)' == 'macOS'">__MACOS__;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="!$(_IsIOSDefined) And '$(_PlatformName)' == 'MacCatalyst'">__IOS__;$(DefineConstants)</DefineConstants> <!-- We define __IOS__ for MacCatalyst as well for now -->
+		<DefineConstants Condition="!$(_IsMacCatalystDefined) And '$(_PlatformName)' == 'MacCatalyst'">__MACCATALYST__;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+
+	<Import Project="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.targets"
+			Condition="Exists('$(MSBuildThisFileDirectory)$(MSBuildThisFileName).After.targets')"/>
+</Project>

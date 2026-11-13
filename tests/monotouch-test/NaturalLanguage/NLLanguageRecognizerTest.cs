@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NLLanguageRecognizer.
 //
 // Authors:
@@ -7,11 +7,7 @@
 // Copyright 2018 Microsoft Corp. All rights reserved.
 //
 
-using System;
-using System.Collections.Generic;
-using Foundation;
 using NaturalLanguage;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.NaturalLanguage {
 
@@ -30,7 +26,7 @@ namespace MonoTouchFixtures.NaturalLanguage {
 		{
 			var text = "Die Kleinen haben friedlich zusammen gespielt.";
 			var lang = NLLanguageRecognizer.GetDominantLanguage (text);
-			Assert.AreEqual (NLLanguage.German, lang);
+			Assert.That (lang, Is.EqualTo (NLLanguage.German));
 		}
 
 		[Test]
@@ -53,6 +49,17 @@ namespace MonoTouchFixtures.NaturalLanguage {
 				// just test that we do return something. We are not testing the API perse.
 				var hypo = recognizer.GetLanguageHypotheses (5);
 				Assert.That (hypo.Count, Is.GreaterThan (0), "GetLanguageHypotheses");
+			}
+		}
+
+		[Test]
+		public void HandelNumbers ()
+		{
+			using (var recognizer = new NLLanguageRecognizer ()) {
+				Assert.That (recognizer.DominantLanguage, Is.EqualTo (NLLanguage.Unevaluated), "DominantLanguage/Pre-Process");
+				var text = "2";
+				recognizer.Process (text);
+				Assert.That (recognizer.DominantLanguage, Is.EqualTo (NLLanguage.Unevaluated), "DominantLanguage/Post-Process");
 			}
 		}
 	}

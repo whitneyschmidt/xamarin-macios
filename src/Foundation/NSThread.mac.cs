@@ -8,30 +8,28 @@
 
 #if MONOMAC
 
-using System;
-
-namespace Foundation 
-{
-	public partial class NSThread
-	{
-		class ActionThread : NSThread
-		{
+namespace Foundation {
+	public partial class NSThread {
+		class ActionThread : NSThread {
 			Action action;
-		
+
 			public ActionThread (Action action)
 			{
 				this.action = action;
 			}
-	
+
 			public override void Main ()
 			{
 				action ();
 			}
 		}
 
+		/// <summary>Starts a new thread that executes the specified action.</summary>
+		/// <param name="action">The action to perform on the new thread.</param>
+		/// <returns>The newly created and started thread.</returns>
 		public static NSThread Start (Action action)
 		{
-			if (action == null) {
+			if (action is null) {
 				throw new ArgumentNullException ("action");
 			}
 

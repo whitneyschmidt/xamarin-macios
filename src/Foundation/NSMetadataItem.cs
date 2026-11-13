@@ -6,18 +6,12 @@
 // Author:
 //   Miguel de Icaza
 //
-using System;
-using ObjCRuntime;
+using CoreFoundation;
+
+#nullable enable
 
 namespace Foundation {
 	public partial class NSMetadataItem {
-
-		bool GetBool (NSString key)
-		{
-			var n = Runtime.GetNSObject<NSNumber> (GetHandle (key));
-			return n == null ? false : n.BoolValue;
-		}
-
 		bool? GetNullableBool (NSString key)
 		{
 			var n = Runtime.GetNSObject<NSNumber> (GetHandle (key));
@@ -27,7 +21,7 @@ namespace Foundation {
 		double GetDouble (NSString key)
 		{
 			var n = Runtime.GetNSObject<NSNumber> (GetHandle (key));
-			return n == null ? 0 : n.DoubleValue;
+			return n is null ? 0 : n.DoubleValue;
 		}
 
 		double? GetNullableDouble (NSString key)
@@ -39,1178 +33,2133 @@ namespace Foundation {
 		nint? GetNInt (NSString key)
 		{
 			var n = Runtime.GetNSObject<NSNumber> (GetHandle (key));
-#if XAMCORE_2_0
 			return n?.NIntValue;
-#else
-			return n?.IntValue;
-#endif
 		}
 
 		// same order as NSMetadataAttributes.h
 
-		public NSString FileSystemName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSString? FileSystemName {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.ItemFSNameKey));
 			}
 		}
 
-		public NSString DisplayName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSString? DisplayName {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.ItemDisplayNameKey));
 			}
 		}
 
-		public NSUrl Url {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSUrl? Url {
 			get {
 				return Runtime.GetNSObject<NSUrl> (GetHandle (NSMetadataQuery.ItemURLKey));
 			}
 		}
 
-		public NSString Path {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSString? Path {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.ItemPathKey));
 			}
 		}
 
-		public NSNumber FileSystemSize {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSNumber? FileSystemSize {
 			get {
 				return Runtime.GetNSObject<NSNumber> (GetHandle (NSMetadataQuery.ItemFSSizeKey));
 			}
 		}
 
-		public NSDate FileSystemCreationDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSDate? FileSystemCreationDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.ItemFSCreationDateKey));
 			}
 		}
 
-		public NSDate FileSystemContentChangeDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSDate? FileSystemContentChangeDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.ItemFSContentChangeDateKey));
 			}
 		}
 
-		[iOS (8,0)][Mac (10,9)]
-		public NSString ContentType {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSString? ContentType {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.ContentTypeKey));
 			}
 		}
 
-		[iOS (8,0)][Mac (10,9)]
-		public NSString[] ContentTypeTree {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSString? []? ContentTypeTree {
 			get {
 				using (var a = Runtime.GetNSObject<NSArray> (GetHandle (NSMetadataQuery.ContentTypeTreeKey)))
 					return NSArray.FromArray<NSString> (a);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public bool IsUbiquitous {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool? IsUbiquitous {
 			get {
-				return GetBool (NSMetadataQuery.ItemIsUbiquitousKey);
+				return GetNullableBool (NSMetadataQuery.ItemIsUbiquitousKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public bool UbiquitousItemHasUnresolvedConflicts {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool? UbiquitousItemHasUnresolvedConflicts {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemHasUnresolvedConflictsKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemHasUnresolvedConflictsKey);
 			}
 		}
 
-		[iOS (7,0)][Mac (10,9)]
-#if XAMCORE_4_0
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		public NSItemDownloadingStatus UbiquitousItemDownloadingStatus {
-#else
-		public NSItemDownloadingStatus DownloadingStatus {
-#endif
 			get {
 				return NSItemDownloadingStatusExtensions.GetValue (Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.UbiquitousItemDownloadingStatusKey)));
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public bool UbiquitousItemIsDownloading {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool? UbiquitousItemIsDownloading {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemIsDownloadingKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemIsDownloadingKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public bool UbiquitousItemIsUploaded {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool? UbiquitousItemIsUploaded {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemIsUploadedKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemIsUploadedKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public bool UbiquitousItemIsUploading {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public bool? UbiquitousItemIsUploading {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemIsUploadingKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemIsUploadingKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public double UbiquitousItemPercentDownloaded {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public double? UbiquitousItemPercentDownloaded {
 			get {
-				return GetDouble (NSMetadataQuery.UbiquitousItemPercentDownloadedKey);
+				return GetNullableDouble (NSMetadataQuery.UbiquitousItemPercentDownloadedKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		public double UbiquitousItemPercentUploaded {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public double? UbiquitousItemPercentUploaded {
 			get {
-				return GetDouble (NSMetadataQuery.UbiquitousItemPercentUploadedKey);
+				return GetNullableDouble (NSMetadataQuery.UbiquitousItemPercentUploadedKey);
 			}
 		}
 
-		[iOS (7,0)][Mac (10,9)]
-		public NSError UbiquitousItemDownloadingError {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSError? UbiquitousItemDownloadingError {
 			get {
 				return Runtime.GetNSObject<NSError> (GetHandle (NSMetadataQuery.UbiquitousItemDownloadingErrorKey));
 			}
 		}
 
-		[iOS (7,0)][Mac (10,9)]
-		public NSError UbiquitousItemUploadingError {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSError? UbiquitousItemUploadingError {
 			get {
 				return Runtime.GetNSObject<NSError> (GetHandle (NSMetadataQuery.UbiquitousItemUploadingErrorKey));
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		[iOS (8,0)][Mac (10,10)]
-		public bool UbiquitousItemDownloadRequested {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public bool? UbiquitousItemDownloadRequested {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemDownloadRequestedKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemDownloadRequestedKey);
 			}
 		}
 
-		// XAMCORE_4_0 FIXME return nullable
-		[iOS (8,0)][Mac (10,10)]
-		public bool UbiquitousItemIsExternalDocument {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public bool? UbiquitousItemIsExternalDocument {
 			get {
-				return GetBool (NSMetadataQuery.UbiquitousItemIsExternalDocumentKey);
+				return GetNullableBool (NSMetadataQuery.UbiquitousItemIsExternalDocumentKey);
 			}
 		}
 
-		[iOS (8,0)][Mac (10,9)]
-		public NSString UbiquitousItemContainerDisplayName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSString? UbiquitousItemContainerDisplayName {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.UbiquitousItemContainerDisplayNameKey));
 			}
 		}
 
-		[iOS (8,0)][Mac (10,9)]
-		public NSUrl UbiquitousItemUrlInLocalContainer {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		public NSUrl? UbiquitousItemUrlInLocalContainer {
 			get {
 				return Runtime.GetNSObject<NSUrl> (GetHandle (NSMetadataQuery.UbiquitousItemURLInLocalContainerKey));
 			}
 		}
 
 #if MONOMAC
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Keywords {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Keywords {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.KeywordsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.KeywordsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Title {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Title {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.TitleKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.TitleKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Authors {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Authors {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorsKey)); 
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Editors {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Editors {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EditorsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EditorsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Participants {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Participants {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ParticipantsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ParticipantsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Projects {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Projects {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ProjectsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ProjectsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate DownloadedDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? DownloadedDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.DownloadedDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] WhereFroms {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? WhereFroms {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.WhereFromsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.WhereFromsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Comment {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Comment {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CommentKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CommentKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Copyright {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Copyright {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CopyrightKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CopyrightKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate LastUsedDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? LastUsedDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.LastUsedDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate ContentCreationDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? ContentCreationDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.ContentCreationDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate ContentModificationDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? ContentModificationDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.ContentModificationDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate DateAdded {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? DateAdded {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.DateAddedKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? DurationSeconds {
 			get {
 				return GetNullableDouble (NSMetadataQuery.DurationSecondsKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] ContactKeywords {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? ContactKeywords {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ContactKeywordsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ContactKeywordsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Version {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Version {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.VersionKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.VersionKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? PixelHeight {
 			get {
 				return GetNInt (NSMetadataQuery.PixelHeightKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? PixelWidth {
 			get {
 				return GetNInt (NSMetadataQuery.PixelWidthKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? PixelCount {
 			get {
 				return GetNInt (NSMetadataQuery.PixelCountKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ColorSpace {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ColorSpace {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ColorSpaceKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ColorSpaceKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? BitsPerSample {
 			get {
 				return GetNInt (NSMetadataQuery.BitsPerSampleKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? FlashOnOff {
 			get {
 				return GetNullableBool (NSMetadataQuery.FlashOnOffKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? FocalLength {
 			get {
 				return GetNullableDouble (NSMetadataQuery.FocalLengthKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AcquisitionMake {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AcquisitionMake {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AcquisitionMakeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AcquisitionMakeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AcquisitionModel {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AcquisitionModel {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AcquisitionModelKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AcquisitionModelKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? IsoSpeed {
 			get {
 				return GetNullableDouble (NSMetadataQuery.IsoSpeedKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? Orientation {
 			get {
 				return GetNInt (NSMetadataQuery.OrientationKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] LayerNames {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? LayerNames {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.LayerNamesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.LayerNamesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? WhiteBalance {
 			get {
 				return GetNullableDouble (NSMetadataQuery.WhiteBalanceKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Aperture {
 			get {
 				return GetNullableDouble (NSMetadataQuery.ApertureKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ProfileName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ProfileName {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ProfileNameKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ProfileNameKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? ResolutionWidthDpi {
 			get {
 				return GetNInt (NSMetadataQuery.ResolutionWidthDpiKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? ResolutionHeightDpi {
 			get {
 				return GetNInt (NSMetadataQuery.ResolutionHeightDpiKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? ExposureMode {
 			get {
 				return GetNInt (NSMetadataQuery.ExposureModeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? ExposureTimeSeconds {
 			get {
 				return GetNullableDouble (NSMetadataQuery.ExposureTimeSecondsKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ExifVersion {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ExifVersion {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ExifVersionKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ExifVersionKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string CameraOwner {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? CameraOwner {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CameraOwnerKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CameraOwnerKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? FocalLength35mm {
 			get {
 				return GetNInt (NSMetadataQuery.FocalLength35mmKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string LensModel {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? LensModel {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.LensModelKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.LensModelKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ExifGpsVersion {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ExifGpsVersion {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ExifGpsVersionKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ExifGpsVersionKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Altitude {
 			get {
 				return GetNullableDouble (NSMetadataQuery.AltitudeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Latitude {
 			get {
 				return GetNullableDouble (NSMetadataQuery.LatitudeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Longitude {
 			get {
 				return GetNullableDouble (NSMetadataQuery.LongitudeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Speed {
 			get {
 				return GetNullableDouble (NSMetadataQuery.SpeedKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate Timestamp {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? Timestamp {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.TimestampKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsTrack {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsTrackKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? ImageDirection {
 			get {
 				return GetNullableDouble (NSMetadataQuery.ImageDirectionKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string NamedLocation {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? NamedLocation {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.NamedLocationKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.NamedLocationKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string GpsStatus {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? GpsStatus {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GpsStatusKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GpsStatusKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string GpsMeasureMode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? GpsMeasureMode {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GpsMeasureModeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GpsMeasureModeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsDop {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsDopKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string GpsMapDatum {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? GpsMapDatum {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GpsMapDatumKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GpsMapDatumKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsDestLatitude {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsDestLatitudeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsDestLongitude {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsDestLongitudeKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsDestBearing {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsDestBearingKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? GpsDestDistance {
 			get {
 				return GetNullableDouble (NSMetadataQuery.GpsDestDistanceKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string GpsProcessingMethod {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? GpsProcessingMethod {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GpsProcessingMethodKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GpsProcessingMethodKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string GpsAreaInformation {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? GpsAreaInformation {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GpsAreaInformationKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GpsAreaInformationKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate GpsDateStamp {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? GpsDateStamp {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.GpsDateStampKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public double? GpsDifferential {
+			get {
+				return GetNullableDouble (NSMetadataQuery.GpsDifferentialKey);
+			}
+		}
+
+#if !XAMCORE_5_0
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		[System.Obsolete ("Use 'GpsDifferential' instead.")]
+		[System.ComponentModel.EditorBrowsable (System.ComponentModel.EditorBrowsableState.Never)]
 		public double? GpsDifferental {
 			get {
-				return GetNullableDouble (NSMetadataQuery.GpsDifferentalKey);
+				return GpsDifferential;
 			}
 		}
+#endif
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Codecs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Codecs {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.CodecsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.CodecsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] MediaTypes {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? MediaTypes {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.MediaTypesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.MediaTypesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? Streamable {
 			get {
 				return GetNullableBool (NSMetadataQuery.StreamableKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? TotalBitRate {
 			get {
 				return GetNInt (NSMetadataQuery.TotalBitRateKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? VideoBitRate {
 			get {
 				return GetNInt (NSMetadataQuery.VideoBitRateKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? AudioBitRate {
 			get {
 				return GetNInt (NSMetadataQuery.AudioBitRateKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string DeliveryType {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? DeliveryType {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.DeliveryTypeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.DeliveryTypeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Album {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Album {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AlbumKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AlbumKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? HasAlphaChannel {
 			get {
 				return GetNullableBool (NSMetadataQuery.HasAlphaChannelKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? RedEyeOnOff {
 			get {
 				return GetNullableBool (NSMetadataQuery.RedEyeOnOffKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string MeteringMode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? MeteringMode {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.MeteringModeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.MeteringModeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? MaxAperture {
 			get {
 				return GetNullableDouble (NSMetadataQuery.MaxApertureKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? FNumber {
 			get {
 				return GetNInt (NSMetadataQuery.FNumberKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ExposureProgram {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ExposureProgram {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ExposureProgramKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ExposureProgramKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ExposureTimeString {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ExposureTimeString {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ExposureTimeStringKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ExposureTimeStringKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Headline {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Headline {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.HeadlineKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.HeadlineKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Instructions {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Instructions {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.InstructionsKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.InstructionsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string City {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? City {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CityKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CityKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string StateOrProvince {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? StateOrProvince {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.StateOrProvinceKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.StateOrProvinceKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Country {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Country {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CountryKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CountryKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string TextContent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? TextContent {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.TextContentKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.TextContentKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? AudioSampleRate {
 			get {
 				return GetNInt (NSMetadataQuery.AudioSampleRateKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? AudioChannelCount {
 			get {
 				return GetNInt (NSMetadataQuery.AudioChannelCountKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? Tempo {
 			get {
 				return GetNullableDouble (NSMetadataQuery.TempoKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string KeySignature {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? KeySignature {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.KeySignatureKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.KeySignatureKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string TimeSignature {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? TimeSignature {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.TimeSignatureKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.TimeSignatureKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AudioEncodingApplication {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AudioEncodingApplication {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AudioEncodingApplicationKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AudioEncodingApplicationKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Composer {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Composer {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ComposerKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ComposerKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Lyricist {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Lyricist {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.LyricistKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.LyricistKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? AudioTrackNumber {
 			get {
 				return GetNInt (NSMetadataQuery.AudioTrackNumberKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate RecordingDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? RecordingDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.RecordingDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string MusicalGenre {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? MusicalGenre {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.MusicalGenreKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.MusicalGenreKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? IsGeneralMidiSequence {
 			get {
 				return GetNullableBool (NSMetadataQuery.IsGeneralMidiSequenceKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? RecordingYear {
 			get {
 				return GetNInt (NSMetadataQuery.RecordingYearKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Organizations {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Organizations {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.OrganizationsKey));			}
-		}
-
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Languages {
-			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.LanguagesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.OrganizationsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Rights {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Languages {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.RightsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.LanguagesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Publishers {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Rights {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PublishersKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.RightsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Contributors {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Publishers {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ContributorsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PublishersKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Coverage {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Contributors {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.CoverageKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ContributorsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Subject {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Coverage {
+			get {
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.CoverageKey));
+			}
+		}
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Subject {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.SubjectKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Theme {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Theme {
 			get {
 				return Runtime.GetNSObject<NSString> (GetHandle (NSMetadataQuery.ThemeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Description {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Description {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.DescriptionKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.DescriptionKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Identifier {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Identifier {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.IdentifierKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.IdentifierKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Audiences {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Audiences {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AudiencesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AudiencesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public nint? NumberOfPages {
 			get {
 				return GetNInt (NSMetadataQuery.NumberOfPagesKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? PageWidth {
 			get {
 				return GetNullableDouble (NSMetadataQuery.PageWidthKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? PageHeight {
 			get {
 				return GetNullableDouble (NSMetadataQuery.PageHeightKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string SecurityMethod {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? SecurityMethod {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.SecurityMethodKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.SecurityMethodKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Creator {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Creator {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CreatorKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CreatorKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] EncodingApplications {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? EncodingApplications {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EncodingApplicationsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EncodingApplicationsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public NSDate DueDate {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public NSDate? DueDate {
 			get {
 				return Runtime.GetNSObject<NSDate> (GetHandle (NSMetadataQuery.DueDateKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public double? StarRating {
 			get {
 				return GetNullableDouble (NSMetadataQuery.StarRatingKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] PhoneNumbers {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? PhoneNumbers {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PhoneNumbersKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PhoneNumbersKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] EmailAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? EmailAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EmailAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.EmailAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] InstantMessageAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? InstantMessageAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.InstantMessageAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.InstantMessageAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Kind {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Kind {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.KindKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.KindKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Recipients {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Recipients {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string FinderComment {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? FinderComment {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.FinderCommentKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.FinderCommentKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Fonts {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Fonts {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.FontsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.FontsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AppleLoopsRoot {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AppleLoopsRoot {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsRootKeyKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsRootKeyKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AppleLoopsKeyFilterType {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AppleLoopsKeyFilterType {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsKeyFilterTypeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsKeyFilterTypeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string AppleLoopsLoopMode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? AppleLoopsLoopMode {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsLoopModeKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.AppleLoopsLoopModeKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] AppleLoopDescriptors {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? AppleLoopDescriptors {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AppleLoopDescriptorsKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AppleLoopDescriptorsKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string MusicalInstrumentCategory {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? MusicalInstrumentCategory {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.MusicalInstrumentCategoryKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.MusicalInstrumentCategoryKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string MusicalInstrumentName {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? MusicalInstrumentName {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.MusicalInstrumentNameKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.MusicalInstrumentNameKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string CFBundleIdentifier {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? CFBundleIdentifier {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.CFBundleIdentifierKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.CFBundleIdentifierKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Information {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Information {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.InformationKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.InformationKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Director {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Director {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.DirectorKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.DirectorKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Producer {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Producer {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ProducerKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ProducerKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string Genre {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? Genre {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.GenreKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.GenreKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] Performers {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? Performers {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PerformersKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.PerformersKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string OriginalFormat {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? OriginalFormat {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.OriginalFormatKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.OriginalFormatKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string OriginalSource {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? OriginalSource {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.OriginalSourceKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.OriginalSourceKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] AuthorEmailAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? AuthorEmailAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorEmailAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorEmailAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] RecipientEmailAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? RecipientEmailAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientEmailAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientEmailAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] AuthorAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? AuthorAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.AuthorAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] RecipientAddresses {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? RecipientAddresses {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientAddressesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.RecipientAddressesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? IsLikelyJunk {
 			get {
 				return GetNullableBool (NSMetadataQuery.IsLikelyJunkKey);
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] ExecutableArchitectures {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? ExecutableArchitectures {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ExecutableArchitecturesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ExecutableArchitecturesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string ExecutablePlatform {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? ExecutablePlatform {
 			get {
-				return NSString.FromHandle (GetHandle (NSMetadataQuery.ExecutablePlatformKey));
+				return CFString.FromHandle (GetHandle (NSMetadataQuery.ExecutablePlatformKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
-		public string [] ApplicationCategories {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		public string? []? ApplicationCategories {
 			get {
-				return NSArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ApplicationCategoriesKey));
+				return CFArray.StringArrayFromHandle (GetHandle (NSMetadataQuery.ApplicationCategoriesKey));
 			}
 		}
 
-		[NoWatch, NoTV, NoiOS, Mac (10, 9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
 		public bool? IsApplicationManaged {
 			get {
 				return GetNullableBool (NSMetadataQuery.IsApplicationManagedKey);

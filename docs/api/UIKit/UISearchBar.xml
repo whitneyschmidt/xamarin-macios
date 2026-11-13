@@ -1,0 +1,6 @@
+<Documentation>
+  <Docs DocId="T:UIKit.UISearchBar">
+    <summary>A <see cref="UIKit.UIView" /> that displays a search bar.</summary>
+    <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/UIKit/Reference/UISearchBar_Class/index.html">Apple documentation for <c>UISearchBar</c></related>
+  </Docs>
+</Documentation>

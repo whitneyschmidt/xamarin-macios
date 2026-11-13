@@ -1,0 +1,17 @@
+## The C# binding for this ends up being the same as the the nameWithString: selector, which we've already bound.
+!missing-selector! +FSFileName::nameWithCString: not bound
+!missing-selector! FSFileName::initWithCString: not bound
+
+## debugDescripion is already bound on NSObject
+!missing-selector! FSFileName::debugDescription not bound
+
+## bound selectors with no native declaration reachable from the class in the current SDK headers:
+## private/SPI selectors, protocol/category members Apple inlines without declaring the conformance on
+## the class, managed callback infrastructure, or API Apple removed/privatized - kept for compatibility
+## (baseline for https://github.com/dotnet/macios/issues/26053)
+!unknown-selector! +FSBlockDeviceResource::proxyResourceForBSDName: not found
+!unknown-selector! +FSBlockDeviceResource::proxyResourceForBSDName:isWritable: not found
+## The Xcode 27 headers annotate these values as non-null, but their documentation allows nil.
+!extra-null-allowed! 'FSKit.FSFileName[] FSKit.IFSVolumeXattrHandler::GetSupportedXattrNames(FSKit.FSItem)' has a extraneous [NullAllowed] on return type
+!extra-null-allowed! 'System.Void FSKit.IFSVolumeKernelOffloadedIoHandler::CompleteIo(FSKit.FSItem,System.Int64,System.UIntPtr,Foundation.NSError,FSKit.FSCompleteIoFlags,System.UIntPtr,FSKit.FSVolumeKernelOffloadedIoHandlerCompleteIoHandler)' has a extraneous [NullAllowed] on parameter #3
+!missing-null-allowed! 'Foundation.NSProgress FSKit.IFSManageableResourceMaintenanceOperations::StartCheckWithTask(FSKit.FSTask,FSKit.FSTaskOptions,Foundation.NSError&)' is missing an [NullAllowed] on return type

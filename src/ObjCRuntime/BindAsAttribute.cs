@@ -1,15 +1,13 @@
-using System;
-#if BGENERATOR
-using IKVM.Reflection;
-using Type = IKVM.Reflection.Type;
-#endif
+
+#nullable enable
+
 namespace ObjCRuntime {
 	//
 	// BindAsAttribute
 	//
 	// The BindAsAttribute allows binding NSNumber, NSValue and NSString(enums) into more accurate C# types.
-	// It can be used in methods, parameters and properties. The only restriction is that your member must not
-	// be inside a [Protocol] or [Model] interface.
+	// It can be used in methods, parameters and properties. Parameters are supported inside [Protocol] and
+	// [Model] interfaces, but return values and properties are not.
 	//
 	// For example:
 	//
@@ -39,30 +37,38 @@ namespace ObjCRuntime {
 	//
 	// CAScroll is a NSString backed enum, we will fetch the right NSString value and handle the type conversion.
 	//
+	/// <include file="../../docs/api/ObjCRuntime/BindAsAttribute.xml" path="/Documentation/Docs[@DocId='T:ObjCRuntime.BindAsAttribute']/*" />
 	[AttributeUsage (AttributeTargets.ReturnValue | AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false)]
 	public class BindAsAttribute : Attribute {
+		/// <param name="type">The managed type.</param>
+		///         <summary>Initializes a new BindAs attribute with the specified managed type.</summary>
+		///         <remarks />
 		public BindAsAttribute (Type type)
 		{
 			Type = type;
 		}
+		/// <summary>The managed type.</summary>
+		///         <remarks />
 		public Type Type;
-		public Type OriginalType;
+		/// <summary>The Objective-C type.</summary>
+		///         <remarks />
+		public Type? OriginalType;
 #if BGENERATOR
-		Type nullable;
-		Type GetNullable (Generator generator)
+		Type? nullable;
+		Type? GetNullable (Generator generator)
 		{
-			if (nullable == null)
-				nullable = Type.IsArray ? generator.TypeManager.GetUnderlyingNullableType (Type.GetElementType ()) : generator.TypeManager.GetUnderlyingNullableType (Type);
+			if (nullable is null)
+				nullable = Type.IsArray ? generator.TypeManager.GetUnderlyingNullableType (Type.GetElementType ()!) : generator.TypeManager.GetUnderlyingNullableType (Type);
 			return nullable;
 		}
 
 		internal bool IsNullable (Generator generator)
 		{
-			return GetNullable (generator) != null;
+			return GetNullable (generator) is not null;
 		}
 		internal bool IsValueType (Generator generator)
 		{
-			return IsNullable (generator) ? GetNullable (generator).IsValueType : Type.IsValueType;
+			return IsNullable (generator) ? GetNullable (generator)!.IsValueType : Type.IsValueType;
 
 		}
 #endif

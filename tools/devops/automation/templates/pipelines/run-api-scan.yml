@@ -1,0 +1,75 @@
+# template that can be extended by pipelines that will be used to run the api-scan tests. This
+# allows to share resources and parameters
+parameters:
+
+  - name: isPR
+    displayName: Is PR build
+    type: boolean
+    default: false
+
+  - name: pool
+    type: string
+    displayName: Bot pool to use
+    default: automatic
+    values:
+      - pr
+      - ci
+      - automatic
+
+resources:
+  repositories:
+    - repository: self
+      checkoutOptions:
+        submodules: true
+
+    - repository: yaml-templates
+      type: git
+      name: xamarin.yaml-templates
+      ref: refs/heads/main
+
+    - repository: release-scripts
+      type: github
+      name: xamarin/release-scripts
+      ref: refs/heads/only_codesign
+      endpoint: xamarin
+
+variables:
+  - template: ../variables/common.yml
+  - template: ../variables/api-scan.yml
+  - ${{ if eq(parameters.isPR, false) }}:
+      - name: DisablePipelineConfigDetector
+        value: true
+  - ${{ else }}:
+      - name: DisablePipelineConfigDetector
+        value: false
+
+stages:
+  - stage: configure_build
+    displayName: 'Configure'
+    jobs:
+      - job: configure
+        displayName: 'Configure build'
+        pool:
+          vmImage: windows-latest
+
+        variables:
+          isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+          isScheduled: $[eq(variables['Build.Reason'], 'Schedule')]
+          BRANCH_NAME: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
+
+        steps:
+          - template: ../common/configure.yml
+            parameters: 
+              repositoryAlias: self
+              commit: HEAD
+              statusContext: 'VSTS: simulator tests' 
+              uploadArtifacts: true
+              use1ES: false
+
+  - template: ../governance/stage.yml
+    parameters:
+      isPR: ${{ parameters.isPR }}
+      repositoryAlias: self
+      commit: HEAD
+      dependsOn: configure_build
+      use1ES: false

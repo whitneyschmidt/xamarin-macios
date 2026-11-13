@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
+    <RootNamespace>bgen_tests</RootNamespace>
+
+    <IsPackable>false</IsPackable>
+    <DefaultItemExcludesInProjectFolder>$(DefaultItemExcludesInProjectFolder);tests/**</DefaultItemExcludesInProjectFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="$(NUnitPackageVersion)" />
+    <PackageReference Include="NUnit3TestAdapter" Version="$(NUnit3TestAdapterPackageVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkPackageVersion)" />
+    <PackageReference Include="Mono.Cecil" Version="$(MonoCecilPackageVersion)" />
+    <PackageReference Include="Moq" Version="4.18.4" />
+    <PackageReference Include="MSBuild.StructuredLogger" Version="$(MSBuildStructuredLoggerPackageVersion)" />
+    <PackageReference Include="NUnitXml.TestLogger" Version="$(NUnitXmlTestLoggerPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\bgen\bgen.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\common\Configuration.cs">
+      <Link>common/Configuration.cs</Link>
+    </Compile>
+    <Compile Include="..\common\ConfigurationNUnit.cs">
+      <Link>common/ConfigurationNUnit.cs</Link>
+    </Compile>
+    <Compile Include="..\common\ExecutionHelper.cs">
+      <Link>common/ExecutionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\common\Profile.cs">
+      <Link>common/Profile.cs</Link>
+    </Compile>
+    <Compile Include="..\mtouch\Cache.cs">
+      <Link>mtouch/Cache.cs</Link>
+    </Compile>
+    <Compile Include="..\..\tools\common\StringUtils.cs">
+      <Link>tools/common/StringUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\common\Tool.cs">
+      <Link>common/Tool.cs</Link>
+    </Compile>
+    <Compile Include="..\common\BinLog.cs">
+      <Link>common/BinLog.cs</Link>
+    </Compile>
+    <Compile Include="..\..\tools\common\SdkVersions.cs">
+      <Link>tools/common/SdkVersions.cs</Link>
+    </Compile>
+  </ItemGroup>
+</Project>

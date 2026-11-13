@@ -25,201 +25,235 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using CoreFoundation;
-using ObjCRuntime;
-using Foundation;
+
+#nullable enable
 
 namespace CoreVideo {
 
 	// CVBuffer.h
-	[Watch (4,0)]
-	public partial class CVBuffer : INativeObject
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public partial class CVBuffer : NativeObject {
 #if !COREBUILD
-		, IDisposable
-#endif
-		{
-#if !COREBUILD
-#if !XAMCORE_2_0
-		public static readonly NSString MovieTimeKey;
-		public static readonly NSString TimeValueKey;
-		public static readonly NSString TimeScaleKey;
-		public static readonly NSString PropagatedAttachmentsKey;
-		public static readonly NSString NonPropagatedAttachmentsKey;
-
-		static CVBuffer ()
-		{
-			var hlib = Dlfcn.dlopen (Constants.CoreVideoLibrary, 0);
-			if (hlib == IntPtr.Zero)
-				return;
-			try {
-				MovieTimeKey = Dlfcn.GetStringConstant (hlib, "kCVBufferMovieTimeKey");
-				TimeValueKey = Dlfcn.GetStringConstant (hlib, "kCVBufferTimeValueKey");
-				TimeScaleKey = Dlfcn.GetStringConstant (hlib, "kCVBufferTimeScaleKey");
-				PropagatedAttachmentsKey = Dlfcn.GetStringConstant (hlib, "kCVBufferPropagatedAttachmentsKey");
-				NonPropagatedAttachmentsKey = Dlfcn.GetStringConstant (hlib, "kCVBufferNonPropagatedAttachmentsKey");
-			}
-			finally {
-				Dlfcn.dlclose (hlib);
-			}
-		}
-#endif
-		internal IntPtr handle;
-
-		internal CVBuffer ()
+		[Preserve (Conditional = true)]
+		internal CVBuffer (NativeHandle handle, bool owns)
+			: base (handle, owns, verify: true)
 		{
 		}
 
-		internal CVBuffer (IntPtr handle)
-		{
-			if (handle == IntPtr.Zero)
-				throw new Exception ("Invalid parameters to context creation");
-
-			CVBufferRetain (handle);
-			this.handle = handle;
-		}
-
-		[Preserve (Conditional=true)]
-		internal CVBuffer (IntPtr handle, bool owns)
-		{
-			if (!owns)
-				CVBufferRetain (handle);
-
-			this.handle = handle;
-		}
-
-		~CVBuffer ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		public IntPtr Handle {
-			get { return handle; }
-		}
-	
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferRelease (/* CVBufferRef */ IntPtr buffer);
-		
+
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static /* CVBufferRef */ IntPtr CVBufferRetain (/* CVBufferRef */ IntPtr buffer);
-		
-		protected virtual void Dispose (bool disposing)
+
+		protected internal override void Retain ()
 		{
-			if (handle != IntPtr.Zero){
-				CVBufferRelease (handle);
-				handle = IntPtr.Zero;
-			}
+			CVBufferRetain (GetCheckedHandle ());
+		}
+
+		protected internal override void Release ()
+		{
+			CVBufferRelease (GetCheckedHandle ());
 		}
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferRemoveAllAttachments (/* CVBufferRef */ IntPtr buffer);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void RemoveAllAttachments ()
 		{
-			CVBufferRemoveAllAttachments (handle);
+			CVBufferRemoveAllAttachments (Handle);
 		}
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferRemoveAttachment (/* CVBufferRef */ IntPtr buffer, /* CFStringRef */ IntPtr key);
 
+		/// <param name="key">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void RemoveAttachment (NSString key)
 		{
-			if (key == null)
-				throw new ArgumentNullException ("key");
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
 
-			CVBufferRemoveAttachment (handle, key.Handle);
+			CVBufferRemoveAttachment (Handle, key.Handle);
+			GC.KeepAlive (key);
 		}
 
+		// The new method is the same as the old one but changing the ownership from Get to Copy, so we will use the new version if possible since the
+		// older method has been deprecatd.
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.CoreVideoLibrary)]
-		extern static /* CFTypeRef */ IntPtr CVBufferGetAttachment (/* CVBufferRef */ IntPtr buffer, /* CFStringRef */ IntPtr key, out CVAttachmentMode attachmentMode);
+		unsafe extern static /* CFTypeRef */ IntPtr CVBufferCopyAttachment (/* CVBufferRef */ IntPtr buffer, /* CFStringRef */ IntPtr key, CVAttachmentMode* attachmentMode);
 
-// FIXME: we need to bring the new API to xamcore
-#if XAMCORE_2_0 && !MONOMAC
-		// any CF object can be attached
-		public T GetAttachment<T> (NSString key, out CVAttachmentMode attachmentMode) where T : class, INativeObject
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		unsafe static IntPtr CVBufferCopyAttachment (IntPtr buffer, IntPtr key, out CVAttachmentMode attachmentMode)
 		{
-			if (key == null)
-				throw new ArgumentNullException ("key");
-			return Runtime.GetINativeObject<T> (CVBufferGetAttachment (handle, key.Handle, out attachmentMode), false);
+			attachmentMode = default;
+			fixed (CVAttachmentMode* attachmentModePtr = &attachmentMode)
+				return CVBufferCopyAttachment (buffer, key, attachmentModePtr);
 		}
-#else
-		public NSObject GetAttachment (NSString key, out CVAttachmentMode attachmentMode)
+
+		// any CF object can be attached
+		/// <typeparam name="T">To be added.</typeparam>
+		///         <param name="key">To be added.</param>
+		///         <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public T? GetAttachment<T> (NSString key, out CVAttachmentMode attachmentMode) where T : class, INativeObject
 		{
-			if (key == null)
-				throw new ArgumentNullException ("key");
-			return Runtime.GetNSObject (CVBufferGetAttachment (handle, key.Handle, out attachmentMode));
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
+			T? result2 = Runtime.GetINativeObject<T> (CVBufferCopyAttachment (Handle, key.Handle, out attachmentMode), true);
+			GC.KeepAlive (key);
+			return result2;
+		}
+
+#if MONOMAC && !XAMCORE_5_0
+		/// <param name="key">To be added.</param>
+		///         <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Obsolete ("Use the generic 'GetAttachment<T>' method instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[UnsupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		public NSObject? GetAttachment (NSString key, out CVAttachmentMode attachmentMode)
+		{
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
+			NSObject? result = Runtime.GetNSObject<NSObject> (CVBufferCopyAttachment (Handle, key.Handle, out attachmentMode), true);
+			GC.KeepAlive (key);
+			return result;
 		}
 #endif
 
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.CoreVideoLibrary)]
-		extern static /* CFDictionaryRef */ IntPtr CVBufferGetAttachments (/* CVBufferRef */ IntPtr buffer, CVAttachmentMode attachmentMode);
+		extern static /* CFDictionaryRef */ IntPtr CVBufferCopyAttachments (/* CVBufferRef */ IntPtr buffer, CVAttachmentMode attachmentMode);
 
-		public NSDictionary GetAttachments (CVAttachmentMode attachmentMode)
+		/// <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public NSDictionary? GetAttachments (CVAttachmentMode attachmentMode)
 		{
-			return (NSDictionary) Runtime.GetNSObject (CVBufferGetAttachments (handle, attachmentMode));
+			return Runtime.GetINativeObject<NSDictionary> (CVBufferCopyAttachments (Handle, attachmentMode), true);
 		}
 
-#if XAMCORE_2_0
 		// There is some API that needs a more strongly typed version of a NSDictionary
 		// and there is no easy way to downcast from NSDictionary to NSDictionary<TKey, TValue>
-		public NSDictionary<TKey, TValue> GetAttachments<TKey, TValue> (CVAttachmentMode attachmentMode)
+		/// <typeparam name="TKey">To be added.</typeparam>
+		///         <typeparam name="TValue">To be added.</typeparam>
+		///         <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public NSDictionary<TKey, TValue>? GetAttachments<TKey, TValue> (CVAttachmentMode attachmentMode)
 			where TKey : class, INativeObject
 			where TValue : class, INativeObject
 		{
-			return Runtime.GetNSObject<NSDictionary<TKey, TValue>> (CVBufferGetAttachments (handle, attachmentMode));
+			return Runtime.GetNSObject<NSDictionary<TKey, TValue>> (CVBufferCopyAttachments (Handle, attachmentMode), true);
 		}
-#endif
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferPropagateAttachments (/* CVBufferRef */ IntPtr sourceBuffer, /* CVBufferRef */ IntPtr destinationBuffer);
 
-		public void PropogateAttachments (CVBuffer destinationBuffer)
+		/// <param name="destinationBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void PropagateAttachments (CVBuffer destinationBuffer)
 		{
-			if (destinationBuffer == null)
-				throw new ArgumentNullException ("destinationBuffer");
+			if (destinationBuffer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (destinationBuffer));
 
-			CVBufferPropagateAttachments (handle, destinationBuffer.Handle);
+			CVBufferPropagateAttachments (Handle, destinationBuffer.Handle);
+			GC.KeepAlive (destinationBuffer);
 		}
+
+#if !XAMCORE_5_0
+		[Obsolete ("Use 'PropagateAttachments' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public void PropogateAttachments (CVBuffer destinationBuffer) => PropagateAttachments (destinationBuffer);
+#endif
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferSetAttachment (/* CVBufferRef */ IntPtr buffer, /* CFStringRef */ IntPtr key, /* CFTypeRef */ IntPtr @value, CVAttachmentMode attachmentMode);
 
-#if XAMCORE_2_0
+		/// <param name="key">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void SetAttachment (NSString key, INativeObject @value, CVAttachmentMode attachmentMode)
 		{
-			if (key == null)
-				throw new ArgumentNullException ("key");
-			if (@value == null)
-				throw new ArgumentNullException ("value");
-			CVBufferSetAttachment (handle, key.Handle, @value.Handle, attachmentMode);
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
+			if (@value is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
+			CVBufferSetAttachment (Handle, key.Handle, @value.Handle, attachmentMode);
+			GC.KeepAlive (key);
+			GC.KeepAlive (@value);
 		}
-#else
-		public void SetAttachment (NSString key, NSObject @value, CVAttachmentMode attachmentMode)
-		{
-			if (key == null)
-				throw new ArgumentNullException ("key");
-			if (@value == null)
-				throw new ArgumentNullException ("value");
-			CVBufferSetAttachment (handle, key.Handle, @value.Handle, attachmentMode);
-		}
-#endif
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVBufferSetAttachments (/* CVBufferRef */ IntPtr buffer, /* CFDictionaryRef */ IntPtr theAttachments, CVAttachmentMode attachmentMode);
 
+		/// <param name="theAttachments">To be added.</param>
+		///         <param name="attachmentMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void SetAttachments (NSDictionary theAttachments, CVAttachmentMode attachmentMode)
 		{
-			if (theAttachments == null)
-				throw new ArgumentNullException ("theAttachments");
-			CVBufferSetAttachments (handle, theAttachments.Handle, attachmentMode);
+			if (theAttachments is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (theAttachments));
+			CVBufferSetAttachments (Handle, theAttachments.Handle, attachmentMode);
+			GC.KeepAlive (theAttachments);
 		}
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[DllImport (Constants.CoreVideoLibrary)]
+		static extern byte CVBufferHasAttachment (/* CVBufferRef */ IntPtr buffer, /* CFStringRef */ IntPtr key);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public bool HasAttachment (NSString key)
+		{
+			if (key is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (key));
+			bool result = CVBufferHasAttachment (Handle, key.Handle) != 0;
+			GC.KeepAlive (key);
+			return result;
+		}
+
 #endif // !COREBUILD
 	}
 }

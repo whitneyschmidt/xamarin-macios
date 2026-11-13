@@ -1,4 +1,4 @@
-﻿// 
+// 
 // CVPixelBufferIOSurface.cs
 //
 // Authors: Alex Soto (alexsoto@microsoft.com)
@@ -6,24 +6,30 @@
 // Copyright 2017 Xamarin Inc.
 //
 
-#if XAMCORE_2_0 && !WATCH
-using System;
-using System.Runtime.InteropServices;
 using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreVideo {
 	public partial class CVPixelBuffer : CVImageBuffer {
 
-		[iOS (11,0), Mac (10,13, onlyOn64:true), TV (11,0), NoWatch]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static IntPtr /* IOSurfaceRef */ CVPixelBufferGetIOSurface (
 			/* CVPixelBufferRef CV_NULLABLE */ IntPtr pixelBuffer
 		);
 
-		[iOS (11,0), Mac (10,13, onlyOn64:true), TV (11,0), NoWatch]
-		public IOSurface.IOSurface GetIOSurface ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public IOSurface.IOSurface? GetIOSurface ()
 		{
 			if (Handle == IntPtr.Zero)
 				throw new ObjectDisposedException ("CVPixelBuffer");
@@ -32,31 +38,48 @@ namespace CoreVideo {
 			if (ret == IntPtr.Zero)
 				return null;
 
-			return Runtime.GetINativeObject <IOSurface.IOSurface> (ret, false);
+			return Runtime.GetINativeObject<IOSurface.IOSurface> (ret, false);
 		}
 
-		[iOS (11,0), Mac (10,13, onlyOn64:true), TV (11,0), NoWatch]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.CoreVideoLibrary)]
-		extern static CVReturn /* IOSurfaceRef */ CVPixelBufferCreateWithIOSurface (
+		unsafe extern static CVReturn /* IOSurfaceRef */ CVPixelBufferCreateWithIOSurface (
 			/* CFAllocatorRef CV_NULLABLE */ IntPtr allocator,
 			/* IOSurfaceRef CV_NONNULL */ IntPtr surface,
 			/* CFDictionaryRef CV_NULLABLE */ IntPtr pixelBufferAttributes,
-			/* CVPixelBufferRef CV_NULLABLE * CV_NONNULL */ out IntPtr pixelBufferOut
+			/* CVPixelBufferRef CV_NULLABLE * CV_NONNULL */ IntPtr* pixelBufferOut
 		);
 
-		[iOS (11,0), Mac (10,13, onlyOn64:true), TV (11,0), NoWatch]
-		public static CVPixelBuffer Create (IOSurface.IOSurface surface, out CVReturn result, CVPixelBufferAttributes pixelBufferAttributes = null)
+		/// <param name="surface">To be added.</param>
+		///         <param name="result">To be added.</param>
+		///         <param name="pixelBufferAttributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static CVPixelBuffer? Create (IOSurface.IOSurface surface, out CVReturn result, CVPixelBufferAttributes? pixelBufferAttributes = null)
 		{
-			if (surface == null)
-				throw new ArgumentNullException (nameof (surface));
+			if (surface is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (surface));
 
 			IntPtr pixelBufferPtr;
-			result = CVPixelBufferCreateWithIOSurface (
-				allocator: IntPtr.Zero,
-				surface: surface.Handle,
-				pixelBufferAttributes: pixelBufferAttributes?.Dictionary.Handle ?? IntPtr.Zero,
-				pixelBufferOut: out pixelBufferPtr
-			);
+			unsafe {
+				var pixelBufferAttributesDict = pixelBufferAttributes?.Dictionary;
+				result = CVPixelBufferCreateWithIOSurface (
+					allocator: IntPtr.Zero,
+					surface: surface.Handle,
+					pixelBufferAttributes: pixelBufferAttributesDict?.Handle ?? IntPtr.Zero,
+					pixelBufferOut: &pixelBufferPtr
+				);
+				GC.KeepAlive (surface);
+				GC.KeepAlive (pixelBufferAttributesDict);
+			}
 
 			if (result != CVReturn.Success)
 				return null;
@@ -64,12 +87,19 @@ namespace CoreVideo {
 			return new CVPixelBuffer (pixelBufferPtr, true);
 		}
 
-		[iOS (11,0), Mac (10,13, onlyOn64:true), TV (11,0), NoWatch]
-		public static CVPixelBuffer Create (IOSurface.IOSurface surface, CVPixelBufferAttributes pixelBufferAttributes = null)
+		/// <param name="surface">To be added.</param>
+		///         <param name="pixelBufferAttributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static CVPixelBuffer? Create (IOSurface.IOSurface surface, CVPixelBufferAttributes? pixelBufferAttributes = null)
 		{
 			CVReturn result;
 			return Create (surface, out result, pixelBufferAttributes);
 		}
 	}
 }
-#endif

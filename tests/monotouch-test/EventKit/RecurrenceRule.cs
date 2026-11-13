@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for EKRecurrenceRule
 //
 // Authors:
@@ -9,45 +9,35 @@
 
 #if !__TVOS__
 
-using System;
-#if XAMCORE_2_0
 using EventKit;
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.EventKit;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.EventKit {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class RecurrenceRuleTest
-	{
+	public class RecurrenceRuleTest {
 		[SetUp]
 		public void Setup ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 8, throwIfOtherPlatform: false);
 		}
 
 		[Test]
 		public void DefaultProperties ()
 		{
 			using (var rule = new EKRecurrenceRule ()) {
-				Assert.AreEqual ("gregorian", rule.CalendarIdentifier, "CalendarIdentifier");
-				Assert.IsNull (rule.RecurrenceEnd, "RecurrenceEnd");
-				Assert.AreEqual (EKRecurrenceFrequency.Weekly, rule.Frequency, "Frequency");
-				Assert.AreEqual (1, rule.Interval, "Interval");
-				Assert.AreEqual (EKDay.Monday, rule.FirstDayOfTheWeek, "FirstDayOfTheWeek");
-				Assert.IsNull (rule.DaysOfTheWeek, "DaysOfTheWeek");
-				Assert.IsNull (rule.DaysOfTheMonth, "DaysOfTheMonth");
-				Assert.IsNull (rule.DaysOfTheYear, "DaysOfTheYear");
-				Assert.IsNull (rule.WeeksOfTheYear, "WeeksOfTheYear");
-				Assert.IsNull (rule.MonthsOfTheYear, "MonthsOfTheYear");
-				Assert.IsNull (rule.SetPositions, "SetPositions");
+				Assert.That (rule.CalendarIdentifier, Is.EqualTo ("gregorian"), "CalendarIdentifier");
+				Assert.That (rule.RecurrenceEnd, Is.Null, "RecurrenceEnd");
+				Assert.That (rule.Frequency, Is.EqualTo (EKRecurrenceFrequency.Weekly), "Frequency");
+				Assert.That (rule.Interval, Is.EqualTo ((nint) 1), "Interval");
+				Assert.That (rule.FirstDayOfTheWeek, Is.EqualTo (EKWeekday.Monday), "FirstDayOfTheWeek");
+				Assert.That (rule.DaysOfTheWeek, Is.Null, "DaysOfTheWeek");
+				Assert.That (rule.DaysOfTheMonth, Is.Null, "DaysOfTheMonth");
+				Assert.That (rule.DaysOfTheYear, Is.Null, "DaysOfTheYear");
+				Assert.That (rule.WeeksOfTheYear, Is.Null, "WeeksOfTheYear");
+				Assert.That (rule.MonthsOfTheYear, Is.Null, "MonthsOfTheYear");
+				Assert.That (rule.SetPositions, Is.Null, "SetPositions");
 			}
 		}
 

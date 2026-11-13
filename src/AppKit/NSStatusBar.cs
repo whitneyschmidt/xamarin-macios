@@ -7,21 +7,29 @@
 // Copyright 2012 Xamarin Inc
 //
 
-using System;
+#if !__MACCATALYST__
 
-namespace AppKit
-{
-	public enum NSStatusItemLength
-	{
+#nullable enable
+
+namespace AppKit {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	public enum NSStatusItemLength {
+		/// <summary>To be added.</summary>
 		Variable = -1,
-		Square = -2
+		/// <summary>To be added.</summary>
+		Square = -2,
 	}
 
-	public partial class NSStatusBar
-	{
+	public partial class NSStatusBar {
+		/// <param name="length">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public NSStatusItem CreateStatusItem (NSStatusItemLength length)
 		{
-			return CreateStatusItem ((float)length);
+			return CreateStatusItem ((float) length);
 		}
 	}
 }
+#endif // !__MACCATALYST__

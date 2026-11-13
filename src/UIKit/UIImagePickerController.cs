@@ -8,152 +8,128 @@
 // Copyright 2012-2014 Xamarin Inc
 //
 
-#if !TVOS && !WATCH // __TVOS_PROHIBITED, doesn't show up in WatchOS headers
+#if !TVOS // __TVOS_PROHIBITED
 
-using ObjCRuntime;
-using Foundation;
 using CoreGraphics;
 using Photos;
-using System;
-using System.Drawing;
+
+#nullable enable
 
 namespace UIKit {
 	public partial class UIImagePickerController {
-
-// the newer (4.1 fields) are defined in uikit.cs
-#if !XAMCORE_2_0
-		public readonly static NSString MediaType;
-		public readonly static NSString OriginalImage;
-		public readonly static NSString EditedImage;
-		public readonly static NSString CropRect;
-		public readonly static NSString MediaURL;
-		
-		static UIImagePickerController ()
-		{
-			var handle = Libraries.UIKit.Handle;
-
-			MediaType  = Dlfcn.GetStringConstant (handle, "UIImagePickerControllerMediaType");
-			OriginalImage = Dlfcn.GetStringConstant (handle, "UIImagePickerControllerOriginalImage");
-			EditedImage = Dlfcn.GetStringConstant (handle, "UIImagePickerControllerEditedImage");
-			CropRect = Dlfcn.GetStringConstant (handle, "UIImagePickerControllerCropRect");
-			MediaURL = Dlfcn.GetStringConstant (handle, "UIImagePickerControllerMediaURL");
-		}
-#endif
-		
 		//
 		// The following construct emulates the support for:
 		// id<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 		//
-		// That is, the type can contain either one, btu we still want it strongly typed
+		// That is, the type can contain either one, but we still want it strongly typed
 		//
-#if XAMCORE_4_0
-		public IUIImagePickerControllerDelegate ImagePickerControllerDelegate {
+		/// <summary>Gets or sets the delegate object used to respond to events relating to this <see cref="UIImagePickerController" />.</summary>
+		public IUIImagePickerControllerDelegate? ImagePickerControllerDelegate {
 			get {
 				return Delegate as IUIImagePickerControllerDelegate;
 			}
 			set {
-				Delegate = value;
+				Delegate = (NSObject?) value;
 			}
 		}
 
-		public IUINavigationControllerDelegate NavigationControllerDelegate {
+		/// <summary>Gets or sets a delegate object used to respond to navigation events.</summary>
+		public IUINavigationControllerDelegate? NavigationControllerDelegate {
 			get {
 				return Delegate as IUINavigationControllerDelegate;
 			}
 			set {
-				Delegate = value;
+				Delegate = (NSObject?) value;
 			}
 		}
-#else
-		public UIImagePickerControllerDelegate ImagePickerControllerDelegate {
-			get {
-				return Delegate as UIImagePickerControllerDelegate;
-			}
-
-			set {
-				Delegate = value;
-			}
-		}
-
-		public UINavigationControllerDelegate NavigationControllerDelegate {
-			get {
-				return Delegate as UINavigationControllerDelegate;
-			}
-
-			set {
-				Delegate = value;
-			}
-		}
-#endif
 	}
 
+	/// <summary>Provides data for the <see cref="UIImagePickerController.FinishedPickingMedia" /> event.</summary>
+	/// <remarks>These arguments are available when using the <see cref="UIImagePickerController.FinishedPickingMedia" /> event in <see cref="UIImagePickerController" />.</remarks>
 	public partial class UIImagePickerMediaPickedEventArgs {
-		public string MediaType {
+		/// <summary>Gets the media type of the picked media.</summary>
+		public string? MediaType {
 			get {
-				return ((NSString)Info [UIImagePickerController.MediaType]).ToString ();
+				return ((NSString?) Info [UIImagePickerController.MediaType])?.ToString ();
 			}
 		}
 
-		public UIImage OriginalImage {
+		/// <summary>Gets the original image prior to editing by the user.</summary>
+		public UIImage? OriginalImage {
 			get {
-				return (UIImage) Info [UIImagePickerController.OriginalImage];
+				return (UIImage?) Info [UIImagePickerController.OriginalImage];
 			}
 		}
 
-		public UIImage EditedImage {
+		/// <summary>Gets the image edited by the user.</summary>
+		public UIImage? EditedImage {
 			get {
-				return (UIImage) Info [UIImagePickerController.EditedImage];
+				return (UIImage?) Info [UIImagePickerController.EditedImage];
 			}
 		}
 
+		/// <summary>Gets the cropping rectangle that was applied to the original image.</summary>
 		public CGRect? CropRect {
 			get {
-				var nsv = ((NSValue)Info [UIImagePickerController.CropRect]);
-				if (nsv == null)
+				var nsv = (NSValue?) Info [UIImagePickerController.CropRect];
+				if (nsv is null)
 					return null;
 				return nsv.CGRectValue;
 			}
 		}
 
-		public NSUrl MediaUrl {
+		/// <summary>Gets the filesystem URL for a movie.</summary>
+		public NSUrl? MediaUrl {
 			get {
-				return (NSUrl) Info [UIImagePickerController.MediaURL];
+				return (NSUrl?) Info [UIImagePickerController.MediaURL];
 			}
 		}
 
-		[iOS (9,1)]
-		public PHLivePhoto LivePhoto {
+		/// <summary>Gets the <see cref="PHLivePhoto" /> of the photo.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public PHLivePhoto? LivePhoto {
 			get {
-				return (PHLivePhoto) Info [UIImagePickerController.LivePhoto];
+				return (PHLivePhoto?) Info [UIImagePickerController.LivePhoto];
 			}
 		}
 
-		public NSDictionary MediaMetadata {
+		/// <summary>Gets the metadata for newly-captured photos.</summary>
+		public NSDictionary? MediaMetadata {
 			get {
-				return (NSDictionary) Info [UIImagePickerController.MediaMetadata];
+				return (NSDictionary?) Info [UIImagePickerController.MediaMetadata];
 			}
 		}
 
-		public NSUrl ReferenceUrl {
+		/// <summary>Gets the reference URL for the picked asset.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("ios", "Use 'UIImagePickerController.PHAsset' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'UIImagePickerController.PHAsset' instead.")]
+		public NSUrl? ReferenceUrl {
 			get {
-				return (NSUrl) Info [UIImagePickerController.ReferenceUrl];
+				return (NSUrl?) Info [UIImagePickerController.ReferenceUrl];
 			}
 		}
 
-		[iOS (11,0)]
-		public PHAsset PHAsset {
+		/// <summary>Gets the <see cref="Photos.PHAsset" /> associated with the picked media.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public PHAsset? PHAsset {
 			get {
-				return (PHAsset) Info [UIImagePickerController.PHAsset];
+				return (PHAsset?) Info [UIImagePickerController.PHAsset];
 			}
 		}
 
-		[iOS (11,0)]
-		public NSUrl ImageUrl {
+		/// <summary>Gets the <see cref="Foundation.NSUrl" /> of the image file.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public NSUrl? ImageUrl {
 			get {
-				return (NSUrl) Info [UIImagePickerController.ImageUrl];
+				return (NSUrl?) Info [UIImagePickerController.ImageUrl];
 			}
 		}
 	}
 }
 
-#endif // !TVOS && !WATCH
+#endif // !TVOS

@@ -25,23 +25,30 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreVideo {
 
-	[Watch (4,0)]
-	[iOS (6,0)]
-	public class CVPixelBufferAttributes : DictionaryContainer
-	{
+	/// <summary>Manages the attributes associated with <see cref="CoreVideo.CVPixelBuffer" />.</summary>
+	///     <remarks>
+	///       <para />
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CVPixelBufferAttributes : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>Creates an empty set of attributes.</summary>
 		public CVPixelBufferAttributes ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <summary>Initializes the strongly typed <see cref="CoreVideo.CVPixelBufferAttributes" /> from the provided dictionary.</summary>
+		/// <param name="dictionary">The dictionary containing pixel buffer attributes.</param>
 		public CVPixelBufferAttributes (NSDictionary dictionary)
 			: base (dictionary)
 		{
@@ -55,23 +62,51 @@ namespace CoreVideo {
 			Height = height;
 		}
 
-#if !XAMCORE_2_0
-		public CVPixelBufferAttributes (CVPixelFormatType pixelFormatType, System.Drawing.Size size)
-			: this (pixelFormatType, size.Width, size.Height)
-		{
-		}
-#endif
-
+		/// <summary>The pixel format of the pixel buffer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferPixelFormatTypeKey value to access the underlying dictionary.</remarks>
 		public CVPixelFormatType? PixelFormatType {
 			set {
-				SetNumberValue (CVPixelBuffer.PixelFormatTypeKey, (uint?)value);
+				SetNumberValue (CVPixelBuffer.PixelFormatTypeKey, (uint?) value);
 			}
 			get {
 				return (CVPixelFormatType?) GetUIntValue (CVPixelBuffer.PixelFormatTypeKey);
 			}
-		} 
+		}
 
-		public CFAllocator MemoryAllocator {
+		/// <summary>The pixel formats of the pixel buffer.</summary>
+		/// <value></value>
+		/// <remarks>The property uses constant kCVPixelBufferPixelFormatTypeKey value to access the underlying dictionary.</remarks>
+		public CVPixelFormatType []? PixelFormatTypes {
+			get {
+				var obj = GetNativeValue<NSObject> (CVPixelBuffer.PixelFormatTypeKey);
+				if (obj is null) {
+					return null;
+				} else if (obj is NSNumber number) {
+					return new CVPixelFormatType [] { (CVPixelFormatType) number.UInt32Value };
+				} else if (obj is NSArray array) {
+					return Array.ConvertAll<NSObject?, CVPixelFormatType> (array.ToArray (), (v) => (CVPixelFormatType) (((NSNumber?) v)?.UInt32Value ?? default));
+				} else {
+					throw new InvalidOperationException ($"Unable to convert object of type {obj.GetType ()} into an array of CVPixelFormatType.");
+				}
+			}
+			set {
+				if (value is null) {
+					SetNumberValue (CVPixelBuffer.PixelFormatTypeKey, (uint?) null);
+				} else if (value.Length == 1) {
+					SetNumberValue (CVPixelBuffer.PixelFormatTypeKey, (uint?) value [0]);
+				} else {
+					SetArrayValue (CVPixelBuffer.PixelFormatTypeKey, Array.ConvertAll (value, (v) => new NSNumber ((uint) v)));
+				}
+			}
+		}
+
+		/// <summary>The allocator used for the pixel buffer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferMemoryAllocatorKey value to access the underlying dictionary.</remarks>
+		public CFAllocator? MemoryAllocator {
 			get {
 				return GetNativeValue<CFAllocator> (CVPixelBuffer.MemoryAllocatorKey);
 			}
@@ -80,6 +115,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The width of the pixel buffer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferWidthKey value to access the underlying dictionary.</remarks>
 		public nint? Width {
 			set {
 				SetNumberValue (CVPixelBuffer.WidthKey, value);
@@ -89,6 +128,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The height of the pixel buffer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferHeightKey value to access the underlying dictionary.</remarks>
 		public nint? Height {
 			set {
 				SetNumberValue (CVPixelBuffer.HeightKey, value);
@@ -98,6 +141,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The number of pixels padding the left of the image.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferExtendedPixelsLeftKey value to access the underlying dictionary.</remarks>
 		public int? ExtendedPixelsLeft {
 			set {
 				SetNumberValue (CVPixelBuffer.ExtendedPixelsLeftKey, value);
@@ -107,6 +154,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The number of pixels padding the top of the image.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferExtendedPixelsTopKey value to access the underlying dictionary.</remarks>
 		public int? ExtendedPixelsTop {
 			set {
 				SetNumberValue (CVPixelBuffer.ExtendedPixelsTopKey, value);
@@ -116,6 +167,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The number of pixels padding the right of the image.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferExtendedPixelsRightKey value to access the underlying dictionary.</remarks>
 		public int? ExtendedPixelsRight {
 			set {
 				SetNumberValue (CVPixelBuffer.ExtendedPixelsRightKey, value);
@@ -125,6 +180,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>The number of pixels padding the bottom of the image.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferExtendedPixelsBottomKey value to access the underlying dictionary.</remarks>
 		public int? ExtendedPixelsBottom {
 			set {
 				SetNumberValue (CVPixelBuffer.ExtendedPixelsBottomKey, value);
@@ -134,6 +193,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>Indicates the number of bytes per row in the pixel buffer.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferBytesPerRowAlignmentKey value to access the underlying dictionary.</remarks>
 		public int? BytesPerRowAlignment {
 			set {
 				SetNumberValue (CVPixelBuffer.BytesPerRowAlignmentKey, value);
@@ -143,6 +206,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>Indicates whether the pixel buffer is compatible with Core Graphics bitmap contexts.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferCGBitmapContextCompatibilityKey value to access the underlying dictionary.</remarks>
 		public bool? CGBitmapContextCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.CGBitmapContextCompatibilityKey, value);
@@ -152,6 +219,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>Indicates whether the pixel buffer is compatible with CGImage types</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferCGImageCompatibilityKey value to access the underlying dictionary.</remarks>
 		public bool? CGImageCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.CGImageCompatibilityKey, value);
@@ -161,6 +232,10 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>Indicates whether the pixel buffer is compatible with OpenGL contexts.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant kCVPixelBufferOpenGLCompatibilityKey value to access the underlying dictionary.</remarks>
 		public bool? OpenGLCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.OpenGLCompatibilityKey, value);
@@ -170,6 +245,9 @@ namespace CoreVideo {
 			}
 		}
 
+		/// <summary>Specifies the alignment of the planes within the buffer.</summary>
+		///         <value>Planes will start on a byte number which is a multiple of this value.</value>
+		///         <remarks>The property uses constant kCVPixelBufferPlaneAlignmentKey value to access the underlying dictionary.</remarks>
 		public int? PlaneAlignment {
 			set {
 				SetNumberValue (CVPixelBuffer.PlaneAlignmentKey, value);
@@ -179,9 +257,7 @@ namespace CoreVideo {
 			}
 		}
 
-		// TODO: kCVPixelBufferIOSurfacePropertiesKey
-#if !MONOMAC || !XAMCORE_2_0
-		// The presence of the IOSurfacePropertiesKey mandates the allocation via IOSurfaceProperty
+		/// <summary>If this key is set, this instructs CoreVideo to allocate the video buffers using the <see cref="IOSurface.IOSurface" />. This is required for some uses of pixel buffers.</summary>
 		public bool? AllocateWithIOSurface {
 			set {
 				if (value.HasValue && value.Value)
@@ -190,12 +266,17 @@ namespace CoreVideo {
 					RemoveValue (CVPixelBuffer.IOSurfacePropertiesKey);
 			}
 			get {
-				return GetNSDictionary (CVPixelBuffer.IOSurfacePropertiesKey) != null;
+				return GetNSDictionary (CVPixelBuffer.IOSurfacePropertiesKey) is not null;
 			}
 		}
 
-#if !WATCH
-		[iOS (6,0)]
+#if !__MACCATALYST__ && !__MACOS__
+		/// <summary>Indicates whether the pixel buffer is compatible with OpenGL for Embedded Systems contexts.</summary>
+		/// <remarks>The property uses the <c>kCVPixelBufferOpenGLESCompatibilityKey</c> constant to access the underlying dictionary.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		[UnsupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
 		public bool? OpenGLESCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.OpenGLESCompatibilityKey, value);
@@ -204,8 +285,9 @@ namespace CoreVideo {
 				return GetBoolValue (CVPixelBuffer.OpenGLESCompatibilityKey);
 			}
 		}
+#endif
 
-		[iOS (8,0)]
+		/// <summary>Indicates whether the pixel buffer is compatible with Metal.</summary>
 		public bool? MetalCompatibility {
 			set {
 				SetBooleanValue (CVPixelBuffer.MetalCompatibilityKey, value);
@@ -214,9 +296,6 @@ namespace CoreVideo {
 				return GetBoolValue (CVPixelBuffer.MetalCompatibilityKey);
 			}
 		}
-#endif // !WATCH
-#endif
-#endif
+#endif // !COREBUILD
 	}
 }
-

@@ -1,4 +1,4 @@
-﻿//
+//
 // AVDepthData.cs
 //
 // Authors:
@@ -7,25 +7,29 @@
 // Copyright 2017 Xamarin Inc.
 //
 
-#if !WATCH
-using System;
-using Foundation;
-using ObjCRuntime;
 using CoreVideo;
 using ImageIO;
+
+#nullable enable
 
 namespace AVFoundation {
 	public partial class AVDepthData {
 
-		public static AVDepthData Create (CGImageAuxiliaryDataInfo dataInfo, out NSError error)
+		/// <summary>Creates depth data from the specified auxiliary image data.</summary>
+		/// <param name="dataInfo">The auxiliary image data from which to create the depth data.</param>
+		/// <param name="error">The error that occurred, or <see langword="null" /> if no error occurred.</param>
+		/// <returns>The created depth data, or <see langword="null" /> if it could not be created.</returns>
+		public static AVDepthData? Create (CGImageAuxiliaryDataInfo dataInfo, out NSError? error)
 		{
 			return Create (dataInfo.Dictionary, out error);
 		}
 
-		public CVPixelFormatType [] AvailableDepthDataTypes {
+		/// <summary>Gets the depth data types that are suitable for use with <see cref="AVFoundation.AVDepthData.Create(CGImageAuxiliaryDataInfo, out NSError)" />.</summary>
+		/// <value>The available depth data pixel formats, an empty array if no formats are available, or <see langword="null" /> if the underlying value is unavailable.</value>
+		public CVPixelFormatType []? AvailableDepthDataTypes {
 			get {
 				var values = WeakAvailableDepthDataTypes;
-				if (values == null)
+				if (values is null)
 					return null;
 
 				var count = values.Length;
@@ -38,4 +42,3 @@ namespace AVFoundation {
 		}
 	}
 }
-#endif

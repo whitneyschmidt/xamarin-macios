@@ -19,40 +19,30 @@ using Mono.Tuner;
 
 using Xamarin.Bundler;
 
+#nullable enable
+
 namespace MonoTouch.Tuner {
-
-	public partial class MonoTouchManifestResolver : MonoTouchResolver {
-
-		internal List<Exception> list = new List<Exception> ();
-		
-		public override AssemblyDefinition Load (string file)
-		{
-			if (EnableRepl && Profile.IsSdkAssembly (Path.GetFileNameWithoutExtension (file))) {
-				var fn = Path.Combine (Path.GetDirectoryName (file), "repl", Path.GetFileName (file));
-				if (File.Exists (fn))
-					file = fn;
-			}
-			return base.Load (file);
-		}
-	}
-
 	// recent cecil removed some overloads - https://github.com/mono/cecil/commit/42db79cc16f1cbe8dbab558904e188352dba2b41
 	public static class AssemblyResolverRocks {
 
-		static ReaderParameters defaults = new ReaderParameters ();
+		static readonly ReaderParameters defaults = new ReaderParameters ();
 
 		public static AssemblyDefinition Resolve (this IAssemblyResolver self, string fullName)
 		{
-			if (fullName == null)
+			if (fullName is null)
 				throw new ArgumentNullException (nameof (fullName));
-			
+
 			return self.Resolve (AssemblyNameReference.Parse (fullName), defaults);
 		}
 	}
 
 	public class MonoTouchResolver : CoreResolver {
+		Application app;
 
-		public bool EnableRepl { get; set; }
+		public MonoTouchResolver (Application app)
+		{
+			this.app = app;
+		}
 
 		public IEnumerable<AssemblyDefinition> GetAssemblies ()
 		{
@@ -64,47 +54,43 @@ namespace MonoTouch.Tuner {
 			cache [Path.GetFileNameWithoutExtension (assembly.MainModule.FileName)] = assembly;
 		}
 
-		public override AssemblyDefinition Resolve (AssemblyNameReference name, ReaderParameters parameters)
+#pragma warning disable CS8764 // Nullability of return type doesn't match overridden member (possibly because of nullability attributes).
+		public override AssemblyDefinition? Resolve (AssemblyNameReference name, ReaderParameters parameters)
+#pragma warning restore CS8764
 		{
 			var aname = name.Name;
 
-			AssemblyDefinition assembly;
-			if (cache.TryGetValue (aname, out assembly))
+			if (cache.TryGetValue (aname, out var assembly))
 				return assembly;
 
-			if (EnableRepl) {
-				var replDir = Path.Combine (FrameworkDirectory, "repl");
-				if (Directory.Exists (replDir)) {
-					assembly = SearchDirectory (aname, replDir);
-					if (assembly != null)
-						return assembly;
-				}
-			}
-
-			var facadeDir = Path.Combine (FrameworkDirectory, "Facades");
-			if (Directory.Exists (facadeDir)) {
-				assembly = SearchDirectory (aname, facadeDir);
-				if (assembly != null)
+			if (FrameworkDirectory is not null) {
+				var facadeDir = Path.Combine (FrameworkDirectory, "Facades");
+				assembly = SearchDirectory (app, aname, facadeDir);
+				if (assembly is not null)
 					return assembly;
 			}
 
-			if (ArchDirectory != null) {
-				assembly = SearchDirectory (aname, ArchDirectory);
-				if (assembly != null)
+			if (ArchDirectory is not null) {
+				assembly = SearchDirectory (app, aname, ArchDirectory);
+				if (assembly is not null)
 					return assembly;
 			}
 
-			assembly = SearchDirectory (aname, FrameworkDirectory);
-			if (assembly != null)
-				return assembly;
+			if (FrameworkDirectory is not null) {
+				assembly = SearchDirectory (app, aname, FrameworkDirectory);
+				if (assembly is not null)
+					return assembly;
+			}
 
-			assembly = SearchDirectory (aname, RootDirectory);
-			if (assembly != null)
-				return assembly;
+			if (RootDirectory is not null) {
+				assembly = SearchDirectory (app, aname, RootDirectory);
+				if (assembly is not null)
+					return assembly;
 
-			assembly = SearchDirectory (aname, RootDirectory, ".exe");
-			if (assembly != null)
-				return assembly;
+				assembly = SearchDirectory (app, aname, RootDirectory, ".exe");
+				if (assembly is not null)
+					return assembly;
+			}
 
 			return null;
 		}

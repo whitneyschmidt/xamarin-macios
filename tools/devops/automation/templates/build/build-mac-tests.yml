@@ -1,0 +1,90 @@
+parameters:
+- name: vsdropsPrefix
+  type: string
+
+- name: keyringPass
+  type: string
+
+- name: gitHubToken
+  type: string
+
+- name: xqaCertPass
+  type: string
+
+- name: uploadBinlogs
+  type: boolean
+  default: true
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: uploadPrefix
+  type: string
+  default: '$(MaciosUploadPrefix)'
+
+- name: use1ES
+  type: boolean
+
+- name: XcodeChannel
+  type: string
+
+steps:
+- template: build.yml
+  parameters:
+    isPR: ${{ parameters.isPR }}
+    repositoryAlias: ${{ parameters.repositoryAlias }}
+    commit: ${{ parameters.commit }}
+    vsdropsPrefix: ${{ parameters.vsdropsPrefix }}
+    keyringPass: ${{ parameters.keyringPass }}
+    gitHubToken: ${{ parameters.gitHubToken }}
+    xqaCertPass: ${{ parameters.xqaCertPass }}
+    use1ES: ${{ parameters.use1ES }}
+    xcodeChannel: ${{ parameters.xcodeChannel }}
+    statusContext: "Build macOS tests"
+    requiredDiskSpace: 10
+    buildSteps:
+
+    - bash: |
+        set -x
+        set -e
+
+        make -C $(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/tests package-tests
+
+        if test -f "$(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/tests/mac-test-package.7z"; then
+          set +x
+          echo "##vso[artifact.upload containerfolder=mac-test-package;artifactname=${{ parameters.uploadPrefix }}mac-test-package]$(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/tests/mac-test-package.7z"
+          set -x
+        fi
+
+      name: macTestPkg
+      displayName: 'Package macOS tests'
+      condition: and(succeeded(), contains(variables['RUN_MAC_TESTS'], 'true'))
+      timeoutInMinutes: 60
+
+    - ${{ if eq(parameters.uploadBinlogs, true) }}:
+      # Copy all the binlogs to a separate directory, keeping directory structure.
+      - script: |
+          set -x
+          mkdir -p $(Build.ArtifactStagingDirectory)/mactests-binlogs
+          rsync -av --prune-empty-dirs --include '*/' --include '*.binlog' --exclude '*' $(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE) $(Build.ArtifactStagingDirectory)/mactests-binlogs
+        displayName: Copy all binlogs
+        continueOnError: true
+        condition: succeededOrFailed()
+
+      # Publish all the binlogs we collected in the previous step
+      - template: ../common/publish-pipeline-artifact.yml
+        parameters:
+          use1ES: ${{ parameters.use1ES }}
+          displayName: 'Publish Artifact: All binlogs'
+          path: $(Build.ArtifactStagingDirectory)/mactests-binlogs
+          artifact: '${{ parameters.uploadPrefix }}mactests-binlogs-$(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)'
+          continueOnError: true
+          condition: succeededOrFailed()

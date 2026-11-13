@@ -1,0 +1,54 @@
+## only a subset of the old, pre WKWebKit, is bound for macOS
+
+# xcode 15
+
+# older/legacy API
+!missing-selector! +NSObject::isKeyExcludedFromWebScript: not bound
+!missing-selector! +NSObject::isSelectorExcludedFromWebScript: not bound
+!missing-selector! +NSObject::webScriptNameForKey: not bound
+!missing-selector! +NSObject::webScriptNameForSelector: not bound
+!missing-selector! NSObject::finalizeForWebScript not bound
+!missing-selector! NSObject::invokeDefaultMethodWithArguments: not bound
+!missing-selector! NSObject::invokeUndefinedMethodFromWebScript:withArguments: not bound
+!missing-selector! NSObject::objectForWebScript not bound
+!missing-selector! NSObject::webFrame not bound
+!missing-selector! NSObject::webPlugInContainerLoadRequest:inFrame: not bound
+!missing-selector! NSObject::webPlugInContainerSelectionColor not bound
+!missing-selector! NSObject::webPlugInContainerShowStatus: not bound
+!missing-selector! NSObject::webPlugInDestroy not bound
+!missing-selector! NSObject::webPlugInInitialize not bound
+!missing-selector! NSObject::webPlugInMainResourceDidFailWithError: not bound
+!missing-selector! NSObject::webPlugInMainResourceDidFinishLoading not bound
+!missing-selector! NSObject::webPlugInMainResourceDidReceiveData: not bound
+!missing-selector! NSObject::webPlugInMainResourceDidReceiveResponse: not bound
+!missing-selector! NSObject::webPlugInSetIsSelected: not bound
+!missing-selector! NSObject::webPlugInStart not bound
+!missing-selector! NSObject::webPlugInStop not bound
+
+# enabled for XAMCORE 5, else breaking change
+!missing-protocol-conformance! WKWebView should conform to NSTextFinderClient (defined in 'WKNSTextFinderClient' category)
+
+## bound selectors with no native declaration reachable from the class in the current SDK headers:
+## private/SPI selectors, protocol/category members Apple inlines without declaring the conformance on
+## the class, managed callback infrastructure, or API Apple removed/privatized - kept for compatibility
+## (baseline for https://github.com/dotnet/macios/issues/26053)
+!unknown-selector! WKPreferences::textInteractionEnabled not found
+!missing-null-allowed! 'System.Void WebKit.IWKDownloadDelegate::DecideDestination(WebKit.WKDownload,Foundation.NSUrlResponse,System.String,System.Action`1<Foundation.NSUrl>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.IWKDownloadDelegate::DidReceiveAuthenticationChallenge(WebKit.WKDownload,Foundation.NSUrlAuthenticationChallenge,System.Action`2<Foundation.NSUrlSessionAuthChallengeDisposition,Foundation.NSUrlCredential>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.IWKNavigationDelegate::DidReceiveAuthenticationChallenge(WebKit.WKWebView,Foundation.NSUrlAuthenticationChallenge,System.Action`2<Foundation.NSUrlSessionAuthChallengeDisposition,Foundation.NSUrlCredential>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.IWKScriptMessageHandlerWithReply::DidReceiveScriptMessage(WebKit.WKUserContentController,WebKit.WKScriptMessage,System.Action`2<Foundation.NSObject,Foundation.NSString>)' is missing a '?' on parameter 'replyHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.IWKScriptMessageHandlerWithReply::DidReceiveScriptMessage(WebKit.WKUserContentController,WebKit.WKScriptMessage,System.Action`2<Foundation.NSObject,Foundation.NSString>)' is missing a '?' on parameter 'replyHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.IWKUIDelegate::RunJavaScriptTextInputPanel(WebKit.WKWebView,System.String,System.String,WebKit.WKFrameInfo,System.Action`1<System.String>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.IWKUIDelegate::RunOpenPanel(WebKit.WKWebView,WebKit.WKOpenPanelParameters,WebKit.WKFrameInfo,System.Action`1<Foundation.NSUrl[]>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKDownload::Cancel(System.Action`1<Foundation.NSData>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebsiteDataStore::Remove(Foundation.NSUuid,System.Action`1<Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CallAsyncJavaScript(System.String,Foundation.NSDictionary`2<Foundation.NSString,Foundation.NSObject>,WebKit.WKFrameInfo,WebKit.WKContentWorld,System.Action`2<Foundation.NSObject,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CallAsyncJavaScript(System.String,Foundation.NSDictionary`2<Foundation.NSString,Foundation.NSObject>,WebKit.WKFrameInfo,WebKit.WKContentWorld,System.Action`2<Foundation.NSObject,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CreatePdf(WebKit.WKPdfConfiguration,System.Action`2<Foundation.NSData,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CreatePdf(WebKit.WKPdfConfiguration,System.Action`2<Foundation.NSData,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CreateWebArchive(System.Action`2<Foundation.NSData,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::CreateWebArchive(System.Action`2<Foundation.NSData,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.WKWebView::EvaluateJavaScript(System.String,WebKit.WKFrameInfo,WebKit.WKContentWorld,System.Action`2<Foundation.NSObject,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::EvaluateJavaScript(System.String,WebKit.WKFrameInfo,WebKit.WKContentWorld,System.Action`2<Foundation.NSObject,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void WebKit.WKWebView::TakeSnapshot(WebKit.WKSnapshotConfiguration,System.Action`2<AppKit.NSImage,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void WebKit.WKWebView::TakeSnapshot(WebKit.WKSnapshotConfiguration,System.Action`2<AppKit.NSImage,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1

@@ -1,20 +1,25 @@
 using System;
 using System.Collections.Generic;
 using Mono.Cecil;
+using Mono.Linker;
 
 using Mono.Tuner;
 
 using Xamarin.Tuner;
 
+#if !LEGACY_TOOLS && !ASSEMBLY_PREPARER
+using LinkContext = Xamarin.Bundler.DotNetLinkContext;
+#endif
+
 namespace MonoTouch.Tuner {
 
 	public static class Extensions {
-		
+
 		public static bool? GetIsDirectBindingConstant (this TypeDefinition type, DerivedLinkContext link_context)
 		{
-			if (link_context?.IsDirectBindingValue == null)
+			if (link_context?.IsDirectBindingValue is null)
 				return null;
-			
+
 			bool? value;
 			if (link_context.IsDirectBindingValue.TryGetValue (type, out value))
 				return value;
@@ -22,17 +27,12 @@ namespace MonoTouch.Tuner {
 			return null;
 		}
 
-		public static bool IsPlatformType (this TypeReference type, string @namespace, string name)
+		// Extension method to avoid conditional code for files shared between
+		// .NET linker and Legacy (where LinkContext doesn't implement IMetadataResolver).
+		// This doesn't actually use the LinkContext.
+		public static TypeDefinition Resolve (this LinkContext context, TypeReference type)
 		{
-#if MONOMAC
-			if (Xamarin.Bundler.Driver.IsUnified) {
-				return type.Is (@namespace, name);
-			} else {
-				return type.Is ("MonoMac." + @namespace, name);
-			}
-#else
-			return type.Is (@namespace, name);
-#endif
+			return type.Resolve ();
 		}
 	}
 }

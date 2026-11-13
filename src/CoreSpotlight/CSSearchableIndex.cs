@@ -1,4 +1,4 @@
-﻿//
+//
 // CSSearchableIndex.cs: Implements some nicer methods for CSSearchableIndex
 //
 // Authors:
@@ -7,29 +7,22 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
+#nullable enable
+
 #if IOS
 
-using System;
-using Foundation;
-using ObjCRuntime;
-
 namespace CoreSpotlight {
-
-	[iOS (9,0)]
-	public enum CSFileProtection {
-		None,
-		Complete,
-		CompleteUnlessOpen,
-		CompleteUntilFirstUserAuthentication
-	}
 
 	public partial class CSSearchableIndex {
 
 		// Strongly typed version of initWithName:protectionClass:
+		/// <summary>Creates a new <see cref="CoreSpotlight.CSSearchableIndex" /> with the specified <paramref name="name" /> and protection options.</summary>
+		/// <param name="name">The name of the searchable index.</param>
+		/// <param name="protectionOption">The file protection level for the index.</param>
 		public CSSearchableIndex (string name, CSFileProtection protectionOption = CSFileProtection.None) : this (name, Translate (protectionOption))
-			{}
+		{ }
 
-		static NSString Translate (CSFileProtection protectionOption)
+		static NSString? Translate (CSFileProtection protectionOption)
 		{
 			switch (protectionOption) {
 			case CSFileProtection.None:

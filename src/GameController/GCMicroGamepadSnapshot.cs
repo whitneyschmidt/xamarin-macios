@@ -1,107 +1,217 @@
-﻿// Copyright 2015 Xamarin Inc.
+// Copyright 2015 Xamarin Inc.
 
-#if !WATCHOS
+#nullable enable
 
-using System;
-using System.Runtime.InteropServices;
-
-using ObjCRuntime;
-using Foundation;
+using System.Runtime.CompilerServices;
 
 namespace GameController {
 
-	[iOS (10,0), TV (9,0), Mac (10,12, onlyOn64: true)]
 	// GCMicroGamepadSnapshot.h
 	// float_t are 4 bytes (at least for ARM64)
+	/// <summary>Represents the instantaneous state of a micro gamepad in V100 format at a point in time.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("tvos")]
+	[ObsoletedOSPlatform ("macos10.14.4", "Use 'GCController.GetMicroGamepadController()' instead.")]
+	[ObsoletedOSPlatform ("tvos12.2", "Use 'GCController.GetMicroGamepadController()' instead.")]
+	[ObsoletedOSPlatform ("ios12.2", "Use 'GCController.GetMicroGamepadController()' instead.")]
 	[StructLayout (LayoutKind.Sequential, Pack = 1)]
-	[Deprecated (PlatformName.iOS, 12, 2, message: "Use 'GCMicroGamepadSnapshotData' instead.")]
-	[Deprecated (PlatformName.MacOSX, 10, 14, 4, message: "Use 'GCMicroGamepadSnapshotData' instead.")]
-	[Deprecated (PlatformName.TvOS, 12, 2, message: "Use 'GCMicroGamepadSnapshotData' instead.")]
 	public struct GCMicroGamepadSnapShotDataV100 {
 
 		// Standard information
+		/// <summary>The micro gamepad version.</summary>
+		///         <remarks>To be added.</remarks>
 		public ushort /* uint16_t */ Version; // 0x0100
+		/// <summary>The size of the snapshot, in bytes.</summary>
+		///         <remarks>To be added.</remarks>
 		public ushort /* uint16_t */ Size;    // sizeof(GCMicroGamepadSnapShotDataV100) or larger
 
 		// Standard gamepad data
 		// Axes in the range [-1.0, 1.0]
+		/// <summary>The <c>X</c>v alue of the D-pad input when the snapshot was taken.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ DPadX;
+		/// <summary>The <c>Y</c> value of the D-pad input when the snapshot was taken.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ DPadY;
 
 		// Buttons in the range [0.0, 1.0]
+		/// <summary>The value of ButtonA when the snapshot was taken.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ ButtonA;
+		/// <summary>The value of ButtonX when the snapshot was taken.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ ButtonX;
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
 		[DllImport (Constants.GameControllerLibrary)]
-		static extern /* NSData * __nullable */ IntPtr NSDataFromGCMicroGamepadSnapShotDataV100 (
-			/* __nullable */ ref GCMicroGamepadSnapShotDataV100 snapshotData);
+		unsafe static extern /* NSData * __nullable */ IntPtr NSDataFromGCMicroGamepadSnapShotDataV100 (
+			/* __nullable */ GCMicroGamepadSnapShotDataV100* snapshotData);
 
-		public NSData ToNSData ()
+		/// <summary>Converts the snapshot to an <see cref="Foundation.NSData" /> object.</summary>
+		///         <returns>An <see cref="Foundation.NSData" /> object that contains the snapshot data.</returns>
+		///         <remarks>To be added.</remarks>
+		public NSData? ToNSData ()
 		{
-			var p = NSDataFromGCMicroGamepadSnapShotDataV100 (ref this);
-			return p == IntPtr.Zero ? null : new NSData (p);
+			unsafe {
+				fixed (GCMicroGamepadSnapShotDataV100* self = &this) {
+					var p = NSDataFromGCMicroGamepadSnapShotDataV100 (self);
+					return p == IntPtr.Zero ? null : new NSData (p);
+				}
+			}
 		}
 	}
 
 	// GCMicroGamepadSnapshot.h
 	// float_t are 4 bytes (at least for ARM64)
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+	[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+	[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
 	[StructLayout (LayoutKind.Sequential, Pack = 1)]
 	public struct GCMicroGamepadSnapshotData {
 
 		// Standard information
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public ushort /* uint16_t */ Version;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public ushort /* uint16_t */ Size;
 
 		// Standard gamepad data
 		// Axes in the range [-1.0, 1.0]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ DPadX;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ DPadY;
 
 		// Buttons in the range [0.0, 1.0]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ ButtonA;
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public float /* float_t = float */ ButtonX;
 
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
 		[DllImport (Constants.GameControllerLibrary)]
-		[TV (12, 2), Mac (10, 14, 4, onlyOn64: true), iOS (12, 2)]
-		static extern /* NSData * __nullable */ IntPtr NSDataFromGCMicroGamepadSnapshotData (
-			/* __nullable */ ref GCMicroGamepadSnapshotData snapshotData);
+		unsafe static extern /* NSData * __nullable */ IntPtr NSDataFromGCMicroGamepadSnapshotData (
+			/* __nullable */ GCMicroGamepadSnapshotData* snapshotData);
 
-		[TV (12, 2), Mac (10, 14, 4, onlyOn64: true), iOS (12, 2)]
-		public NSData ToNSData ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		public NSData? ToNSData ()
 		{
-			var p = NSDataFromGCMicroGamepadSnapshotData (ref this);
-			return p == IntPtr.Zero ? null : new NSData (p);
+			unsafe {
+				fixed (GCMicroGamepadSnapshotData* self = &this) {
+					var p = NSDataFromGCMicroGamepadSnapshotData (self);
+					return p == IntPtr.Zero ? null : new NSData (p);
+				}
+			}
 		}
 	}
-
 
 	public partial class GCMicroGamepadSnapshot {
 
 		// GCGamepadSnapshot.h
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
 		[DllImport (Constants.GameControllerLibrary)]
-		[Mac (10, 12)]
-		static extern bool GCMicroGamepadSnapShotDataV100FromNSData (out GCMicroGamepadSnapShotDataV100 snapshotData, /* NSData */ IntPtr data);
+		unsafe static extern byte GCMicroGamepadSnapShotDataV100FromNSData (GCMicroGamepadSnapShotDataV100* snapshotData, /* NSData */ IntPtr data);
 
-		[Mac (10, 12)]
-		[Deprecated (PlatformName.iOS, 12, 2, message: "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 14, 4, message: "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
-		[Deprecated (PlatformName.TvOS, 12, 2, message: "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
-		public static bool TryGetSnapshotData (NSData data, out GCMicroGamepadSnapShotDataV100 snapshotData)
+		/// <param name="data">The NSData from which to get the V100 data.</param>
+		///         <param name="snapshotData">The location in which to store the snapshot data.</param>
+		///         <summary>Tries to obtain v100 snapshot data from an NSData object.</summary>
+		///         <returns>
+		///           <see langword="true" /> if the data could be retrieved. Otherwise, <see langword="false" />.</returns>
+		///         <remarks>When the return value is <see langword="false" />, <paramref name="snapshotData" /> will contain <see cref="System.IntPtr.Zero" />.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.14.4", "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
+		[ObsoletedOSPlatform ("tvos12.2", "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
+		[ObsoletedOSPlatform ("ios12.2", "Use 'TryGetSnapshotData (NSData, out GCMicroGamepadSnapshotData)' instead.")]
+		public static bool TryGetSnapshotData (NSData? data, out GCMicroGamepadSnapShotDataV100 snapshotData)
 		{
-			return GCMicroGamepadSnapShotDataV100FromNSData (out snapshotData, data == null ? IntPtr.Zero : data.Handle);
+			snapshotData = default;
+			unsafe {
+				fixed (GCMicroGamepadSnapShotDataV100* snapshotDataPtr = &snapshotData) {
+					bool result = GCMicroGamepadSnapShotDataV100FromNSData (snapshotDataPtr, data.GetHandle ()) != 0;
+					GC.KeepAlive (data);
+					return result;
+				}
+			}
 		}
-		
-		[DllImport (Constants.GameControllerLibrary)]
-		[TV (12, 2), Mac (10, 14, 4, onlyOn64: true), iOS (12, 2)]
-		static extern bool GCMicroGamepadSnapshotDataFromNSData (out GCMicroGamepadSnapshotData snapshotData, /* NSData */ IntPtr data);
 
-		[TV (12, 2), Mac (10, 14, 4, onlyOn64: true), iOS (12, 2)]
-		public static bool TryGetSnapshotData (NSData data, out GCMicroGamepadSnapshotData snapshotData)
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.GetMicroGamepadController()' instead.")]
+		[DllImport (Constants.GameControllerLibrary)]
+		unsafe static extern byte GCMicroGamepadSnapshotDataFromNSData (GCMicroGamepadSnapshotData* snapshotData, /* NSData */ IntPtr data);
+
+		/// <param name="data">To be added.</param>
+		///         <param name="snapshotData">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[ObsoletedOSPlatform ("macos10.15", "Use 'GCController.Capture()' instead.")]
+		[ObsoletedOSPlatform ("tvos13.0", "Use 'GCController.Capture()' instead.")]
+		[ObsoletedOSPlatform ("ios13.0", "Use 'GCController.Capture()' instead.")]
+		public static bool TryGetSnapshotData (NSData? data, out GCMicroGamepadSnapshotData snapshotData)
 		{
-			return GCMicroGamepadSnapshotDataFromNSData (out snapshotData, data == null ? IntPtr.Zero : data.Handle);
+			snapshotData = default;
+			unsafe {
+				fixed (GCMicroGamepadSnapshotData* snapshotDataPtr = &snapshotData) {
+					bool result = GCMicroGamepadSnapshotDataFromNSData (snapshotDataPtr, data.GetHandle ()) != 0;
+					GC.KeepAlive (data);
+					return result;
+				}
+			}
 		}
 
 	}
 }
-
-#endif 

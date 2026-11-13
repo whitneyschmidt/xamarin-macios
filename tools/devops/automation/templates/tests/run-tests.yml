@@ -1,0 +1,309 @@
+parameters:
+- name: statusContext
+  type: string
+  default: 'iOS Device Tests' # default context, since we started dealing with iOS devices.
+
+- name: testsLabels
+  type: string
+
+- name: label
+  type: string
+
+- name: isPR
+  type: boolean
+
+- name: labelWithPlatform
+  type: string
+
+- name: testPlatform
+  type: string
+  default: ''
+
+- name: vsdropsPrefix
+  type: string
+
+- name: testPrefix
+  type: string
+  default: 'ios' # default context, since we started dealing with iOS devices.
+
+- name: uploadPrefix
+  type: string
+  default: '$(MaciosUploadPrefix)'
+
+- name: retryCount
+  type: number
+  default: 3
+
+steps:
+- bash: |
+    set -ex
+    brew update
+    if [[ "1" == "$(sysctl -n sysctl.proc_translated)" ]]; then
+      arch -arm64 brew install powershell
+    else
+      brew install powershell
+    fi
+  displayName: Install powershell
+
+- pwsh: '& "$(Build.SourcesDirectory)/$Env:BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/initialize-test-output-variables.ps1"'
+  displayName: Set output variables
+  env:
+    TESTS_LABEL: ${{ parameters.label }}
+    TESTS_PLATFORM: ${{ parameters.testPlatform }}
+    LABEL_WITH_PLATFORM: ${{ parameters.labelWithPlatform }}
+
+# remove any old processes that might have been left behind.
+- pwsh: |
+    Import-Module $Env:SYSTEM_DEFAULTWORKINGDIRECTORY/$Env:BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/MaciosCI.psd1
+    Clear-XamarinProcesses
+  displayName: 'Process cleanup'
+
+# Increase mlaunch verbosity. Will step on the old setting present.
+- pwsh: |
+    Import-Module $Env:SYSTEM_DEFAULTWORKINGDIRECTORY/$Env:BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/MaciosCI.psd1
+    Set-MLaunchVerbosity -Verbosity 10
+  displayName: 'Make mlaunch verbose'
+
+# Re-start the daemon used to find the devices in the bot.
+- pwsh: |
+    Import-Module $Env:SYSTEM_DEFAULTWORKINGDIRECTORY/$Env:BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/MaciosCI.psd1
+    Optimize-DeviceDiscovery
+  displayName: 'Fix device discovery (reset launchctl)'
+
+- bash: |
+    set -ex
+    make -C msbuild Versions.g.cs
+    make -C tools/spawner
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)
+  displayName: "Generate / compile dependencies"
+  timeoutInMinutes: 15
+
+- pwsh: >-
+    ./set_xtro_workloads.ps1
+    -WorkloadPath "$(Build.SourcesDirectory)/artifacts/${{ parameters.uploadPrefix }}WorkloadRollback/WorkloadRollback.json"
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts
+  displayName: 'Set workload versions for xtro'
+
+- bash: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/bash/install-workloads.sh
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)
+  displayName: 'Install dotnet workloads'
+  timeoutInMinutes: 45
+  env:
+    MACIOS_UPLOAD_PREFIX: ${{ parameters.uploadPrefix }}
+
+# expand all the prebuilt test dependencies
+- bash: |
+    ls -Rla@ $(Build.SourcesDirectory)/artifacts
+    xattr -s -c -r $(Build.SourcesDirectory)/artifacts/${{ parameters.uploadPrefix }}package-test-libraries/package-test-libraries.zip
+    unzip -o $(Build.SourcesDirectory)/artifacts/${{ parameters.uploadPrefix }}package-test-libraries/package-test-libraries.zip -d .
+    ls -Rla@ .
+    xattr -s -c -r .
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)
+  displayName: Expand test libraries.
+  timeoutInMinutes: 10
+
+# Run tests.
+- bash: |
+    set -x
+    set -e
+
+    # uri used to create the vsdrops index using full uri
+    export VSDROPS_URI="$VSDROPSPREFIX/$BUILD_BUILDNUMBER/$BUILD_BUILDID/$PARAMETERS_TESTPREFIX-$SYSTEM_JOBATTEMPT;/tests/"
+
+    # show environment
+    env -0 | sort -z | tr '\0' '\n' || true
+
+    make -C tests jenkins
+
+    # We reached the end! This means we succeeded!
+    set +x
+    echo "##vso[task.setvariable variable=TESTS_JOBSTATUS;isOutput=true]Succeeded"
+    set -x
+  env:
+    TEST_PREFIX: ${{ upper(parameters.testPrefix) }}
+    TESTS_EXTRA_ARGUMENTS: ${{ parameters.testsLabels }}
+    USE_TCP_TUNNEL: 'true'
+    PARAMETERS_TESTPREFIX: '${{ parameters.testPrefix }}'
+    IS_PR: $(parameters.isPr)
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)
+  displayName: 'Run tests'
+  name: runTests # not to be confused with the displayName, this is used to later use the name of the step to access the output variables from an other job
+  timeoutInMinutes: 165
+  ${{ if not(parameters.isPR) }}:
+    retryCountOnTaskFailure: ${{ parameters.retryCount }}
+
+# Collect simulator diagnostic logs
+- bash: |
+    set -x
+    set -e
+
+    rm -Rf $(System.DefaultWorkingDirectory)/diagnostic-sim-output/output
+    mkdir -p $(System.DefaultWorkingDirectory)/diagnostic-sim-output/output
+    if ! printf "\n" | xcrun simctl diagnose -b -X --output=$(System.DefaultWorkingDirectory)/diagnostic-sim-output/output; then
+      echo "simctl diagnose failed with exit code $?"
+    fi
+
+  displayName: 'Collect diagnostic info from simulators'
+  condition: eq(variables['system.debug'], true)
+  continueOnError: true
+  name: collectSimulatorInfo
+  timeoutInMinutes: 30
+
+# Publish the simulator diagnostic logs
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: Simulator diagnostic info'
+  inputs:
+    targetPath: $(System.DefaultWorkingDirectory)/diagnostic-sim-output
+    artifactName: '${{ parameters.uploadPrefix }}diagnostic-simulator-info-$(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)-${{ parameters.labelWithPlatform }}'
+  condition: and(eq(variables['system.debug'], true), succeededOrFailed())
+  continueOnError: true
+
+# Upload TestSummary as an artifact.
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: TestSummary'
+  inputs:
+    targetPath: '$(BUILD_REPOSITORY_TITLE)/tests/TestSummary.md'
+    artifactName: '${{ parameters.uploadPrefix }}TestSummary-${{ parameters.testPrefix }}-$(System.JobAttempt)'
+  continueOnError: true
+  condition: succeededOrFailed()
+
+# Upload updated expected app size files if the app size tests produced any.
+- bash: |
+    if [ -d "$(Build.ArtifactStagingDirectory)/updated-expected-sizes" ]; then
+      echo "##vso[task.setvariable variable=HAS_UPDATED_EXPECTED_SIZES]true"
+    fi
+  displayName: 'Check for updated expected app size files'
+  condition: succeededOrFailed()
+
+- bash: |
+    if [ -d "$(Build.ArtifactStagingDirectory)/failed-app-size-bundles" ]; then
+      echo "##vso[task.setvariable variable=HAS_FAILED_APP_SIZE_BUNDLES]true"
+    fi
+  displayName: 'Check for app bundles'
+  condition: succeededOrFailed()
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: Updated expected app size files'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/updated-expected-sizes'
+    artifactName: '${{ parameters.uploadPrefix }}updated-expected-sizes-${{ parameters.testPrefix }}-$(System.JobAttempt)'
+  continueOnError: true
+  condition: and(succeededOrFailed(), eq(variables['HAS_UPDATED_EXPECTED_SIZES'], 'true'))
+
+# Note: the updated expected app size files from all the test jobs are aggregated into a
+# single gist + PR comment in the 'publish_test_results' job (see publish-html.yml), so that
+# a maintainer only has to apply one gist to update the expected files for all platforms.
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: Updated app bundles'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/failed-app-size-bundles'
+    artifactName: '${{ parameters.uploadPrefix }}failed-app-size-bundles-${{ parameters.testPrefix }}-$(System.JobAttempt)'
+  continueOnError: true
+  condition: and(succeededOrFailed(), eq(variables['HAS_FAILED_APP_SIZE_BUNDLES'], 'true'))
+
+- pwsh: |
+    $summaryName = "TestSummary-${{ parameters.testPrefix }}.md"
+    $summaryPath = "$Env:SYSTEM_DEFAULTWORKINGDIRECTORY/$(BUILD_REPOSITORY_TITLE)/tests/TestSummary.md"
+    if (Test-Path -Path $summaryPath -PathType Leaf) {
+      Write-Host "##vso[task.addattachment type=Distributedtask.Core.Summary;name=$summaryName;]$summaryPath"
+    }
+  displayName: Set TestSummary
+  continueOnError: true
+  condition: succeededOrFailed()
+
+- bash: |
+    echo "##vso[task.setvariable variable=JOB_STATUS_BEFORE_VSDROPS]$AGENT_JOBSTATUS"
+  displayName: 'Capture job status before VSDrops publish'
+  condition: succeededOrFailed()
+  continueOnError: true
+
+- task: artifactDropTask@1
+  displayName: 'Publish to Artifact Services Drop'
+  name: publishVSDrops
+  inputs:
+    dropServiceURI: 'https://devdiv.artifacts.visualstudio.com/DefaultCollection'
+    dropMetadataContainerName: '${{ parameters.uploadPrefix }}DropMetadata-${{ parameters.testPrefix }}${{ parameters.labelWithPlatform }}-$(System.JobAttempt)'
+    buildNumber: '$(BUILD_REPOSITORY_TITLE)/device-tests/$(Build.BuildNumber)/$(Build.BuildId)/${{ parameters.testPrefix }}-$(System.JobAttempt)'
+    sourcePath: '$(BUILD_REPOSITORY_TITLE)/jenkins-results'
+    detailedLog: true
+    usePat: true
+  timeoutInMinutes: 30
+  continueOnError: true
+  condition: succeededOrFailed()
+
+# Azure DevOps doesn't support checking individual step results in step conditions
+# (failed('stepName') only works for jobs/stages). Comparing AGENT_JOBSTATUS before
+# and after the publish step is the best available approach to detect publish failures.
+- bash: |
+    if [ "$JOB_STATUS_BEFORE_VSDROPS" != "$AGENT_JOBSTATUS" ]; then
+      echo "VSDrops publish changed job status from '$JOB_STATUS_BEFORE_VSDROPS' to '$AGENT_JOBSTATUS'"
+      echo "##vso[task.setvariable variable=VSDROPS_PUBLISHED;isOutput=true]Failed"
+    fi
+  name: setVSDropsPublishResult
+  displayName: 'Set VSDrops publish result'
+  continueOnError: true
+  condition: succeededOrFailed()
+
+- bash: |
+    set -ex
+    find . -name 'vsts-*.xml' || true
+    find . -name 'vsts-*.xml' -ls -exec cat {} \; || true
+    VSTS_XML_FILES=$(find . -name 'vsts-*.xml' | wc -l | sed 's/ //g')
+    set +x
+    echo "##vso[task.setvariable variable=VSTS_XML_FILES]$VSTS_XML_FILES"
+    set -x
+  name: CountNUnitTestResults
+  continueOnError: true
+  condition: succeededOrFailed()
+  displayName: 'Count NUnit test results'
+
+# Upload test results to vsts.
+- task: PublishTestResults@2
+  displayName: 'Publish NUnit Device Test Results'
+  inputs:
+    testResultsFormat: NUnit
+    testResultsFiles: '**/vsts-*.xml'
+  continueOnError: true
+  condition: and(ne(variables['VSTS_XML_FILES'], 0), succeededOrFailed())
+
+- template: ../common/archive-html-report.yml
+  parameters:
+    rootFolder: '$(BUILD_REPOSITORY_TITLE)/jenkins-results'
+    artifactName: '${{ parameters.uploadPrefix }}HtmlReport-${{ parameters.testPrefix }}-$(System.JobAttempt)'
+
+# Upload all the binlogs
+# Copy all the binlogs to a separate directory, keeping directory structure.
+- script: |
+    set -x
+    mkdir -p $(Build.ArtifactStagingDirectory)/all-binlogs
+    rsync -av --prune-empty-dirs --include '*/' --include '*.binlog' --exclude '*' $(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE) $(Build.ArtifactStagingDirectory)/all-binlogs
+  displayName: Copy all binlogs
+  continueOnError: true
+  condition: succeededOrFailed()
+
+# Publish all the binlogs we collected in the previous step
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: All binlogs'
+  inputs:
+    targetPath: $(Build.ArtifactStagingDirectory)/all-binlogs
+    artifactName: ${{ parameters.uploadPrefix }}all-binlogs-test-${{ parameters.testPrefix }}-$(Build.BuildId)-$(System.StageAttempt)-$(System.JobAttempt)
+  continueOnError: true
+  condition: succeededOrFailed()
+
+- bash: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/bash/collect-and-upload-crash-reports.sh
+  displayName: 'Collect and upload crash reports'
+  condition: always() # who knows when crash reports can end up being useful
+  continueOnError: true
+  env:
+    MACIOS_TEST_PREFIX: ${{ parameters.testPrefix }}
+    MACIOS_UPLOAD_PREFIX: ${{ parameters.uploadPrefix }}
+
+# Be nice and clean behind you
+- pwsh: |
+    Import-Module ./MaciosCI.psd1
+    Clear-AfterTests
+  displayName: 'Cleanup'
+  continueOnError: true
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts
+  condition: always() # no matter what, includes cancellation

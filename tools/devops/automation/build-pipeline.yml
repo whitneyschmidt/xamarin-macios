@@ -1,0 +1,160 @@
+# yamllint disable rule:line-length
+# YAML pipeline build definition
+# https://devdiv.visualstudio.com/DevDiv/_apps/hub/ms.vss-ciworkflow.build-ci-hub?_a=edit-build-definition&id=13947&view=Tab_Tasks
+#
+# YAML build pipeline based on the Jenkins multi-stage (main branch) build workflow
+# https://jenkins.internalx.com/view/Xamarin.MaciOS/job/macios/job/main/
+# https://jenkins.internalx.com/view/Xamarin.MaciOS/job/macios/configure
+parameters:
+  - name: macOSName  # comes from the build agent demand named macOS.Name
+    displayName: Name of the version of macOS to use
+    type: string
+    default: 'Tahoe'
+
+  - name: runGovernanceTests
+    displayName: Run Governance Checks
+    type: boolean
+    default: true
+
+  - name: forceInsertion
+    displayName: Force Insertion
+    type: boolean
+    default: false
+
+  - name: pushNugets
+    type: boolean
+    displayName: 'Push Nugets (dotnet)'
+    default: true
+
+  - name: pushNugetsToMaestro
+    type: boolean
+    displayName: 'Push Nugets (Maestro)'
+    default: true
+
+resources:
+  repositories:
+    - repository: self
+      checkoutOptions:
+        submodules: true
+
+    - repository: yaml-templates
+      type: git
+      name: xamarin.yaml-templates
+      ref: refs/heads/main
+
+    - repository: CustomPipelineTemplates
+      type: git
+      name: 1ESPipelineTemplates/MicroBuildTemplate
+
+variables:
+  - ${{ if contains(variables['Build.DefinitionName'], 'private') }}:
+      - template: templates/vsts-variables.yml
+  - template: templates/variables/common.yml
+  - template: templates/variables/api-scan.yml
+  - template: templates/variables/signing.yml
+  - name: MicrobuildConnector
+    value: 'MicroBuild Signing Task (DevDiv)'
+  - name: DisablePipelineConfigDetector
+    value: true
+
+trigger:
+  branches:
+    include:
+      - '*'
+    exclude:
+      - refs/heads/dev/*
+      - refs/heads/darc-*
+      - refs/heads/backport-pr-*
+      - refs/heads/lego/*
+      - refs/heads/locfiles/*
+      - refs/heads/copilot/*
+      - refs/heads/dependabot/*
+      - refs/heads/merge/*
+
+  paths:
+    exclude:
+      - .github
+      - docs
+      - CODEOWNERS
+      - ISSUE_TEMPLATE.md
+      - LICENSE
+      - NOTICE.txt
+      - SECURITY.MD
+      - README.md
+      - src/README.md
+      - tools/mtouch/README.md
+      - msbuild/Xamarin.Localization.MSBuild/README.md
+      - '**/TranslatedAssemblies/*.*.resx'
+
+extends:
+  template: azure-pipelines/MicroBuild.1ES.Official.yml@CustomPipelineTemplates
+  parameters:
+    pool:  # default pool to be used for validation jobs
+      name: AzurePipelines-EO
+      image: 1ESPT-Windows2022
+      os: windows
+    sdl:
+      baseline:
+        baselineFile: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/governance/baselines.gdnbaselines'
+      suppression:
+        suppressionFile: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/governance/suppress.gdnsuppress'
+      sourceAnalysisPool:
+        name: AzurePipelines-EO
+        image: 1ESPT-Windows2022
+        os: windows
+      tsa:
+        configFile: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/governance/tsa_config.gdntsa'
+      sbom:
+        enabled: false  # we run our on sbom generation
+      credscan:
+        suppressionsFile: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/governance/CredScanSuppressions.json'
+      policheck:
+        enabled: true
+        exclusionsFile: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/governance/PoliCheckExclusions.xml'
+      sourceRepositoriesToScan:
+        runInSingleJob: true  # run both maccore and macios in the same job
+        include:
+          - repository: self
+        exclude:
+          - repository: yaml-templates
+    stages:
+      - template: templates/main-stage.yml
+        parameters:
+          xcodeChannel: $(xcodeChannel)
+          macOSName: ${{ parameters.macOSName }}
+          isPR: false
+          pool: $(CIBuildPool)
+          runGovernanceTests: ${{ parameters.runGovernanceTests }}
+          forceInsertion: ${{ parameters.forceInsertion }}
+          pushNugets: ${{ parameters.pushNugets }}
+          pushNugetsToMaestro: ${{ parameters.pushNugetsToMaestro }}
+          useACES: true  # see templates/variables/common.yml
+
+      - template: localization/v1.yml@yaml-templates
+        parameters:
+          condition: endsWith(coalesce(variables['System.PullRequest.SourceBranch'], variables['Build.SourceBranch'], 'refs/heads/main'), 'main')
+          preSteps:
+            - template: ../sdk-unified/steps/checkout/v1.yml@yaml-templates
+              parameters:
+                resource: self
+                commit: HEAD
+                clean: true
+                submodules: recursive
+                path: s/$(BUILD_REPOSITORY_TITLE)
+                fetchTags: false
+              
+            - bash: |
+                make LocProject.json              
+              workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops
+              displayName: 'Generate LocProject.json'
+                
+          settings:
+            locProjectPath: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/Localize/LocProject.json'
+            outputPath: '$(Build.ArtifactStagingDirectory)'
+            createPr: true
+            autoCompletePr: false
+            deletePrSourceBranch: false
+            prSourceBranchPrefix: 'locfiles'
+            repoType: gitHub
+            gitHubPatVariable: '$(GitHub.Token)'
+            postLocPowerShellScript: '$(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/localizationBomRemoval.ps1'

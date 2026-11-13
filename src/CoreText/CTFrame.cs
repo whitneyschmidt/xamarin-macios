@@ -25,181 +25,197 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
 using CoreGraphics;
 
 namespace CoreText {
 
+	/// <summary>An enumeration whose values can be used as flags with the <see cref="CoreText.CTFrameAttributes.Progression" /> property.</summary>
+	///     <remarks>Specifies the line-stacking behavior of a frame. <see cref="CoreText.CTFrameProgression.RightToLeft" /> stacks lines left-to-right when used with vertical text, <see cref="CoreText.CTFrameProgression.TopToBottom" /> stacks lines top-to-bottom for horizontal text.</remarks>
 	[Flags]
 	public enum CTFrameProgression : uint {
+		/// <summary>To be added.</summary>
 		TopToBottom = 0,
-		RightToLeft = 1
+		/// <summary>To be added.</summary>
+		RightToLeft = 1,
+		LeftToRight = 2,
 	}
 
+	/// <summary>An enumeration whose values specify the fill rule used by a <see cref="CoreText.CTFrame" />.</summary>
+	///     <remarks>To be added.</remarks>
 	public enum CTFramePathFillRule {
+		/// <summary>To be added.</summary>
 		EvenOdd,
-		WindingNumber
+		/// <summary>To be added.</summary>
+		WindingNumber,
 	}
 
-	public static class CTFrameAttributeKey {
-
-		public static readonly NSString Progression;
-
-		public static readonly NSString PathFillRule;
-		public static readonly NSString PathWidth;
-		public static readonly NSString ClippingPaths;
-		public static readonly NSString PathClippingPath;
-		
-		static CTFrameAttributeKey ()
-		{
-			var handle = Libraries.CoreText.Handle;
-			Progression = Dlfcn.GetStringConstant (handle, "kCTFrameProgressionAttributeName");
-			PathFillRule = Dlfcn.GetStringConstant (handle, "kCTFramePathFillRuleAttributeName");
-			PathWidth = Dlfcn.GetStringConstant (handle, "kCTFramePathWidthAttributeName");
-			ClippingPaths = Dlfcn.GetStringConstant (handle, "kCTFrameClippingPathsAttributeName");
-			PathClippingPath = Dlfcn.GetStringConstant (handle, "kCTFramePathClippingPathAttributeName");
-		}
-	}
-
+	/// <summary>Encapsulates the attributes used in the creation of a <see cref="CoreText.CTFrame" />.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreText.CTFrameAttributeKey" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CTFrameAttributes {
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTFrameAttributes ()
 			: this (new NSMutableDictionary ())
 		{
 		}
 
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTFrameAttributes (NSDictionary dictionary)
 		{
-			if (dictionary == null)
-				throw new ArgumentNullException ("dictionary");
+			if (dictionary is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (dictionary));
 			Dictionary = dictionary;
 		}
 
-		public NSDictionary Dictionary {get; private set;}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSDictionary Dictionary { get; private set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTFrameProgression? Progression {
 			get {
 				var value = Adapter.GetUInt32Value (Dictionary, CTFrameAttributeKey.Progression);
 				return !value.HasValue ? null : (CTFrameProgression?) value.Value;
 			}
 			set {
-				Adapter.SetValue (Dictionary, CTFrameAttributeKey.Progression,
+				Adapter.SetValue (Dictionary, CTFrameAttributeKey.Progression!,
 						value.HasValue ? (uint?) value.Value : null);
 			}
 		}
 	}
 
-	public class CTFrame : INativeObject, IDisposable {
-		internal IntPtr handle;
+	internal static class CTFrameAttributesExtensions {
+		public static IntPtr GetHandle (this CTFrameAttributes? self)
+		{
+			if (self is null)
+				return IntPtr.Zero;
+			return self.Dictionary.GetHandle ();
+		}
+	}
 
-		internal CTFrame (IntPtr handle, bool owns)
+	/// <summary>A rectangular area containing lines of text.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <related type="sample" href="https://github.com/xamarin/ios-samples/tree/master/SimpleTextInput/">SimpleTextInput</related>
+	///     <altmember cref="CoreText.CTLine" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CTFrame : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CTFrame (NativeHandle handle, bool owns)
+			: base (handle, owns, verify: true)
 		{
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.ArgumentNull (this, "handle");
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
-		}
-		
-		public IntPtr Handle {
-			get { return handle; }
-		}
-
-		~CTFrame ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static NSRange CTFrameGetStringRange (IntPtr handle);
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static NSRange CTFrameGetVisibleStringRange (IntPtr handle);
-		
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public NSRange GetStringRange ()
 		{
-			return CTFrameGetStringRange (handle);
+			return CTFrameGetStringRange (Handle);
 		}
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public NSRange GetVisibleStringRange ()
 		{
-			return CTFrameGetVisibleStringRange (handle);
+			return CTFrameGetVisibleStringRange (Handle);
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static IntPtr CTFrameGetPath (IntPtr handle);
-		
-		public CGPath GetPath ()
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CGPath? GetPath ()
 		{
-			IntPtr h = CTFrameGetPath (handle);
+			IntPtr h = CTFrameGetPath (Handle);
 			return h == IntPtr.Zero ? null : new CGPath (h, false);
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static IntPtr CTFrameGetFrameAttributes (IntPtr handle);
 
-		public CTFrameAttributes GetFrameAttributes ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CTFrameAttributes? GetFrameAttributes ()
 		{
-			var attrs = (NSDictionary) Runtime.GetNSObject (CTFrameGetFrameAttributes (handle));
-			return attrs == null ? null : new CTFrameAttributes (attrs);
+			var attrs = Runtime.GetNSObject<NSDictionary> (CTFrameGetFrameAttributes (Handle));
+			return attrs is null ? null : new CTFrameAttributes (attrs);
 		}
-		
+
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static IntPtr CTFrameGetLines (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CTLine [] GetLines ()
 		{
-			var cfArrayRef = CTFrameGetLines (handle);
+			var cfArrayRef = CTFrameGetLines (Handle);
 			if (cfArrayRef == IntPtr.Zero)
-				return new CTLine [0];
+				return Array.Empty<CTLine> ();
 
 			return NSArray.ArrayFromHandleFunc<CTLine> (cfArrayRef, (p) => {
-					// We need to take a ref, since we dispose it later.
-					return new CTLine (p, false);
-				});
+				// We need to take a ref, since we dispose it later.
+				return new CTLine (p, false);
+			})!;
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
-		extern static void CTFrameGetLineOrigins(IntPtr handle, NSRange range, [Out] CGPoint[] origins);
-		public void GetLineOrigins (NSRange range, CGPoint[] origins)
+		extern static void CTFrameGetLineOrigins (IntPtr handle, NSRange range, [Out] CGPoint [] origins);
+		/// <param name="range">To be added.</param>
+		///         <param name="origins">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public void GetLineOrigins (NSRange range, CGPoint [] origins)
 		{
-			if (origins == null)
-				throw new ArgumentNullException ("origins");
+			if (origins is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (origins));
 			if (range.Length != 0 && origins.Length < range.Length)
-				throw new ArgumentException ("origins must contain at least range.Length elements.", "origins");
-			else if (origins.Length < CFArray.GetCount (CTFrameGetLines (handle)))
-				throw new ArgumentException ("origins must contain at least GetLines().Length elements.", "origins");
-			CTFrameGetLineOrigins (handle, range, origins);
+				throw new ArgumentException ("origins must contain at least range.Length elements.", nameof (origins));
+			else if (origins.Length < CFArray.GetCount (CTFrameGetLines (Handle)))
+				throw new ArgumentException ("origins must contain at least GetLines().Length elements.", nameof (origins));
+			CTFrameGetLineOrigins (Handle, range, origins);
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		extern static void CTFrameDraw (IntPtr handle, IntPtr context);
 
+		/// <param name="ctx">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Draw (CGContext ctx)
 		{
-			if (ctx == null)
-				throw new ArgumentNullException ("ctx");
+			if (ctx is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (ctx));
 
-			CTFrameDraw (handle, ctx.Handle);
+			CTFrameDraw (Handle, ctx.Handle);
+			GC.KeepAlive (ctx);
 		}
 	}
 }
-

@@ -1,0 +1,25 @@
+<Documentation>
+  <Docs DocId="T:SpriteKit.SKTileMapNode">
+    <summary>A <see cref="SpriteKit.SKNode" /> that encapsulates a tiled map and a <see cref="SpriteKit.SKTileSet" />.</summary>
+    <remarks>
+      <para>The <see cref="SpriteKit.SKTileMapNode" /> subclass of <see cref="SpriteKit.SKNode" /> allows developers to easily create and manipulate tile-based maps with a variety of geometries and perspectives. An <see cref="SpriteKit.SKTileMapNode" /> contains a <see cref="SpriteKit.SKTileSet" /> that defines the overall map. In addition, the <see cref="SpriteKit.SKTileSet" /> contains one or more <see cref="SpriteKit.SKTileGroup" /> objects, each of which represents one style of tile, which may have several representations.</para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[
+//Load tile set
+var tileSet = SKTileSet.FromName ("MyTileSet");
+//Create a 16x16 map
+var tileNode = new SKTileMapNode (tileSet, 16, 16, tileSet.DefaultTileSize);
+
+//Fill the node's grid with the default tile 
+var tg = tileSet.DefaultTileGroup;
+tileNode.Fill (tg);
+    ]]></code>
+        <para>The relationship between a <see cref="SKTileMapNode" /> and it's tiles is shown in the following image:</para>
+        <para>
+          <img href="~/xml/SpriteKit/_images/SKTileMapNode.Hierarchy.png" alt="UML class diagram showing important classes relating to SKTileMapNode" />
+        </para>
+      </example>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/reference/SpriteKit/SKTileMapNode">Apple documentation for <c>SKTileMapNode</c></related>
+  </Docs>
+</Documentation>

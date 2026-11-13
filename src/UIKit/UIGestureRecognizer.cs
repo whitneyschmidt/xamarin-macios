@@ -8,27 +8,22 @@
 // Copyright 2011-2013 Xamarin Inc. All rights reserved
 //
 
-#if !WATCH
-
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using Foundation; 
-using ObjCRuntime;
-using CoreGraphics;
+#nullable enable
 
 namespace UIKit {
+
 	public partial class UIGestureRecognizer {
 		//
 		// Tracks the targets (NSObject, which we always enforce to be Token) to the Selector the point to, used when disposing
 		//
-		Dictionary<Token,IntPtr> recognizers = new Dictionary<Token,IntPtr> ();
+		Dictionary<Token, IntPtr> recognizers = new Dictionary<Token, IntPtr> ();
 		const string tsel = "target";
 		internal const string parametrized_selector = "target:";
-#if !XAMCORE_2_0
-		[Obsolete ("Don't use, this field has been removed the Unified API. Use 'Selector.GetHandle (<string>)' instead.")]
-		public static Selector ParametrizedSelector = new Selector ("target:");
-#endif
+
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Initalizes a gesture recognizer.</summary>
+		///         <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		public UIGestureRecognizer (Action action) : this (Selector.GetHandle (tsel), new ParameterlessDispatch (action))
 		{
@@ -37,13 +32,15 @@ namespace UIKit {
 		// Called by the Dispose() method, because this can run from a finalizer, we need to
 		// (a) reference the handle, that we will release later, and (b) to remove the targets on the
 		// UI thread.
+		// Note: preserving this member allows us to re-enable the `Optimizable` binding flag
+		[Preserve (Conditional = true)]
 		void OnDispose ()
 		{
 			var copyOfRecognizers = recognizers;
 			var savedHandle = Handle;
-			recognizers = null;
-			
-			if (copyOfRecognizers == null)
+			recognizers = new Dictionary<Token, IntPtr> ();
+
+			if (copyOfRecognizers.Count == 0)
 				return;
 
 			DangerousRetain (savedHandle);
@@ -53,10 +50,14 @@ namespace UIKit {
 				DangerousRelease (savedHandle);
 			});
 		}
-		
+
 		//
 		// Signature swapped, this is only used so we can store the "token" in recognizers
 		//
+		/// <param name="sel">A selector that specifies the method that is implemented by the target to handle the gesture that is recognized by the receiver.</param>
+		///         <param name="token">String constant to be used as a token.</param>
+		///         <summary>Initalizes a gesture recognizer.</summary>
+		///         <remarks>To be added.</remarks>
 		public UIGestureRecognizer (Selector sel, Token token) : this (token, sel)
 		{
 			recognizers [token] = sel.Handle;
@@ -68,24 +69,56 @@ namespace UIKit {
 			recognizers [token] = sel;
 			MarkDirty ();
 		}
-		
+
+		/// <summary>Represents an action that was added to a UIGestureRecognizer.</summary>
+		///     <remarks>
+		///
+		///       An instance of this class is returned when you invoke the <see cref="UIKit.UIGestureRecognizer" />'s <see cref="UIKit.UIGestureRecognizer.AddTarget(Foundation.NSObject,ObjCRuntime.Selector)" /> method.
+		///       The AddTarget returns this token as a mechanism for later
+		///       unsubscribing this particular action from the recognizer using the <see cref="UIKit.UIGestureRecognizer.RemoveTarget(Foundation.NSObject,ObjCRuntime.Selector)" /> method.
+		///
+		///     </remarks>
+		/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/uikit/uigesturerecognizer">Apple documentation for <c>UIGestureRecognizer</c></related>
 		[Register ("__UIGestureRecognizerToken")]
 		public class Token : NSObject {
+			/// <summary>To be added.</summary>
+			///         <remarks>To be added.</remarks>
 			public Token ()
 			{
 				IsDirectBinding = false;
 			}
 		}
 
+		[Register ("__UIGestureRecognizerGenericCB")]
+		internal class Callback<T> : Token where T : UIGestureRecognizer {
+			Action<T> action;
+
+			internal Callback (Action<T> action)
+			{
+				this.action = action;
+			}
+
+			[Export ("target:")]
+			[Preserve (Conditional = true)]
+			public void Activated (T sender) => action (sender);
+
+		}
+
+		/// <summary>Subtype of <see cref="UIKit.UIGestureRecognizer.Token" />, which is returned by <see cref="UIKit.UIView.AddGestureRecognizer(UIKit.UIGestureRecognizer)" />.</summary>
+		///     <remarks>To be added.</remarks>
+		///     <altmember cref="UIKit.UIGestureRecognizer.ParametrizedDispatch" />
+		/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/uikit/uigesturerecognizer">Apple documentation for <c>UIGestureRecognizer</c></related>
 		[Register ("__UIGestureRecognizerParameterlessToken")]
 		public class ParameterlessDispatch : Token {
 			Action action;
-			
+
 			internal ParameterlessDispatch (Action action)
 			{
 				this.action = action;
 			}
-			
+
+			/// <summary>To be added.</summary>
+			///         <remarks>To be added.</remarks>
 			[Export ("target")]
 			[Preserve (Conditional = true)]
 			public void Activated ()
@@ -94,15 +127,22 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Subtype of <see cref="UIKit.UIGestureRecognizer.Token" />.</summary>
+		///     <remarks>To be added.</remarks>
+		///     <altmember cref="UIKit.UIGestureRecognizer.ParameterlessDispatch" />
+		/// <related type="externalDocumentation" href="https://developer.apple.com/documentation/uikit/uigesturerecognizer">Apple documentation for <c>UIGestureRecognizer</c></related>
 		[Register ("__UIGestureRecognizerParametrizedToken")]
 		public class ParametrizedDispatch : Token {
 			Action<UIGestureRecognizer> action;
-			
+
 			internal ParametrizedDispatch (Action<UIGestureRecognizer> action)
 			{
 				this.action = action;
 			}
-			
+
+			/// <param name="sender">To be added.</param>
+			///         <summary>To be added.</summary>
+			///         <remarks>To be added.</remarks>
 			[Export ("target:")]
 			[Preserve (Conditional = true)]
 			public void Activated (UIGestureRecognizer sender)
@@ -110,10 +150,14 @@ namespace UIKit {
 				action (sender);
 			}
 		}
-		
+
+		/// <param name="action">The method to invoke when the gesture has been recognized.</param>
+		///         <summary>Registers a new callback for when the gesture has been recognized.</summary>
+		///         <returns>The returned token can be used later to remove this particular action from being invoked by the gesture recognizer.</returns>
+		///         <remarks>To be added.</remarks>
 		public Token AddTarget (Action action)
 		{
-			if (action == null)
+			if (action is null)
 				throw new ArgumentNullException ("action");
 
 			var t = new ParameterlessDispatch (action);
@@ -121,9 +165,14 @@ namespace UIKit {
 			return t;
 		}
 
-		public Token AddTarget (Action<NSObject> action) 
+		/// <param name="action">The method to invoke when the gesture has been recognized.</param>
+		///         <summary>Registers a new callback for when the gesture has been recognized.</summary>
+		///         <returns>The returned token can be used later to remove this particular action from being invoked by the gesture recognizer using the <see cref="UIKit.UIGestureRecognizer.RemoveTarget(Foundation.NSObject,ObjCRuntime.Selector)" /> method.</returns>
+		///         <remarks>
+		///         </remarks>
+		public Token AddTarget (Action<NSObject> action)
 		{
-			if (action == null)
+			if (action is null)
 				throw new ArgumentNullException ("action");
 
 			var t = new ParametrizedDispatch (action);
@@ -138,11 +187,14 @@ namespace UIKit {
 			recognizers [target] = sel;
 		}
 
+		/// <param name="token">A Token returned by the AddTarget method.</param>
+		///         <summary>Removes the callback method for the specified gesture being recognized, based on the token that was returned by AddTarget.</summary>
+		///         <remarks>To be added.</remarks>
 		public void RemoveTarget (Token token)
 		{
-			if (token == null)
+			if (token is null)
 				throw new ArgumentNullException ("token");
-			if (recognizers == null)
+			if (recognizers is null)
 				return;
 			if (recognizers.Remove (token, out var sel))
 				RemoveTarget (token, sel);
@@ -151,173 +203,112 @@ namespace UIKit {
 		//
 		// Used to enumerate all the registered handlers for this UIGestureRecognizer
 		//
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public IEnumerable<Token> GetTargets ()
 		{
-			return (IEnumerable<Token>) recognizers?.Keys ?? Array.Empty<Token> ();
+			var keys = recognizers?.Keys;
+			if (keys is null)
+				return Array.Empty<Token> ();
+			return (IEnumerable<Token>) keys;
 		}
 	}
 
 #if !TVOS
 	public partial class UIRotationGestureRecognizer : UIGestureRecognizer {
-		public UIRotationGestureRecognizer (Action action) : base (action) {}
-		public UIRotationGestureRecognizer (Action<UIRotationGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UIRotationGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UIRotationGestureRecognizer (Action<UIRotationGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UIRotationGestureRecognizer> (action)) { }
 
-		[Register ("__UIRotationGestureRecognizer")]
-		class Callback : Token {
-			Action<UIRotationGestureRecognizer> action;
-			
-			internal Callback (Action<UIRotationGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UIRotationGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 #endif
 
 	public partial class UILongPressGestureRecognizer : UIGestureRecognizer {
-		public UILongPressGestureRecognizer (Action action) : base (action) {}
-		public UILongPressGestureRecognizer (Action<UILongPressGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UILongPressGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UILongPressGestureRecognizer (Action<UILongPressGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UILongPressGestureRecognizer> (action)) { }
 
-		[Register ("__UILongPressGestureRecognizer")]
-		class Callback : Token {
-			Action<UILongPressGestureRecognizer> action;
-			
-			internal Callback (Action<UILongPressGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UILongPressGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 
 	public partial class UITapGestureRecognizer : UIGestureRecognizer {
-		public UITapGestureRecognizer (Action action) : base (action) {}
-		public UITapGestureRecognizer (Action<UITapGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UITapGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UITapGestureRecognizer (Action<UITapGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UITapGestureRecognizer> (action)) { }
 
-		[Register ("__UITapGestureRecognizer")]
-		class Callback : Token {
-			Action<UITapGestureRecognizer> action;
-			
-			internal Callback (Action<UITapGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UITapGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 
 	public partial class UIPanGestureRecognizer : UIGestureRecognizer {
-		public UIPanGestureRecognizer (Action action) : base (action) {}
-		public UIPanGestureRecognizer (Action<UIPanGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UIPanGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UIPanGestureRecognizer (Action<UIPanGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UIPanGestureRecognizer> (action)) { }
 
-		internal UIPanGestureRecognizer (IntPtr sel, Token token) : base (token, sel) {}
+		internal UIPanGestureRecognizer (IntPtr sel, Token token) : base (token, sel) { }
 
-		[Register ("__UIPanGestureRecognizer")]
-		class Callback : Token {
-			Action<UIPanGestureRecognizer> action;
-			
-			internal Callback (Action<UIPanGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UIPanGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 
 #if !TVOS
 	public partial class UIPinchGestureRecognizer : UIGestureRecognizer {
-		public UIPinchGestureRecognizer (Action action) : base (action) {}
-		public UIPinchGestureRecognizer (Action<UIPinchGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UIPinchGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UIPinchGestureRecognizer (Action<UIPinchGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UIPinchGestureRecognizer> (action)) { }
 
-		[Register ("__UIPinchGestureRecognizer")]
-		class Callback : Token {
-			Action<UIPinchGestureRecognizer> action;
-			
-			internal Callback (Action<UIPinchGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UIPinchGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 #endif
 
 	public partial class UISwipeGestureRecognizer : UIGestureRecognizer {
-		public UISwipeGestureRecognizer (Action action) : base (action) {}
-		public UISwipeGestureRecognizer (Action<UISwipeGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public UISwipeGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the gesture is recognized.</param>
+		///         <summary>Constructs a gesture recognizer and provides a method to invoke when the gesture is recognized.</summary>
+		///         <remarks>This overload allows the method that will be invoked to receive the recognizer that detected the gesture as a parameter.</remarks>
+		public UISwipeGestureRecognizer (Action<UISwipeGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UISwipeGestureRecognizer> (action)) { }
 
-		[Register ("__UISwipeGestureRecognizer")]
-		class Callback : Token {
-			Action<UISwipeGestureRecognizer> action;
-			
-			internal Callback (Action<UISwipeGestureRecognizer> action)
-			{
-				this.action = action;
-			}
-			
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UISwipeGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 
 #if !TVOS
 	public partial class UIScreenEdgePanGestureRecognizer : UIPanGestureRecognizer {
-		public UIScreenEdgePanGestureRecognizer (Action action) : base (action) {}
-		public UIScreenEdgePanGestureRecognizer (Action<UIScreenEdgePanGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback (action)) {}
+		/// <param name="action">Code to invoke when the screen edge pan gesture is recognized.</param>
+		///         <summary>Initalizes a screen edge pan gesture recognizer.</summary>
+		///         <remarks>To be added.</remarks>
+		public UIScreenEdgePanGestureRecognizer (Action action) : base (action) { }
+		/// <param name="action">Code to invoke when the screen edge pan gesture is recognized.</param>
+		///         <summary>Initializes a designated screen edge pan gesture recognizer.</summary>
+		///         <remarks>To be added.</remarks>
+		public UIScreenEdgePanGestureRecognizer (Action<UIScreenEdgePanGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UIScreenEdgePanGestureRecognizer> (action)) { }
 
-		[Register ("__UIScreenEdgePanGestureRecognizer")]
-		class Callback : Token {
-			Action<UIScreenEdgePanGestureRecognizer> action;
+	}
 
-			internal Callback (Action<UIScreenEdgePanGestureRecognizer> action)
-			{
-				this.action = action;
-			}
+	public partial class UIHoverGestureRecognizer : UIGestureRecognizer {
+		public UIHoverGestureRecognizer (Action<UIHoverGestureRecognizer> action) : base (Selector.GetHandle (UIGestureRecognizer.parametrized_selector), new Callback<UIHoverGestureRecognizer> (action)) { }
 
-			[Export ("target:")]
-			[Preserve (Conditional = true)]
-			public void Activated (UIScreenEdgePanGestureRecognizer sender)
-			{
-				action (sender);
-			}
-		}
 	}
 #endif
 }
-
-#endif // !WATCH

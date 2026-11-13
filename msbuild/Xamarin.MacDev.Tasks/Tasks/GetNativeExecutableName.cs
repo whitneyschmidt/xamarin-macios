@@ -1,6 +1,53 @@
-﻿namespace Xamarin.MacDev.Tasks
-{
-	public class GetNativeExecutableName : GetNativeExecutableNameTaskBase
-	{
+using System;
+
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+using Xamarin.MacDev;
+using Xamarin.Localization.MSBuild;
+using Xamarin.Messaging.Build.Client;
+
+#nullable enable
+
+namespace Xamarin.MacDev.Tasks {
+	public class GetNativeExecutableName : XamarinTask, ICancelableTask {
+		#region Inputs
+
+		[Required]
+		public string AppManifest { get; set; } = "";
+
+		#endregion
+
+		#region Outputs
+
+		[Output]
+		public string ExecutableName { get; set; } = "";
+
+		#endregion
+
+		public override bool Execute ()
+		{
+			if (ShouldExecuteRemotely ())
+				return ExecuteRemotely ();
+
+			PDictionary plist;
+
+			try {
+				plist = PDictionary.OpenFile (AppManifest);
+			} catch (Exception ex) {
+				Log.LogError (MSBStrings.E0055, ex.Message);
+				return false;
+			}
+
+			ExecutableName = plist.GetCFBundleExecutable ();
+
+			return !Log.HasLoggedErrors;
+		}
+
+		public void Cancel ()
+		{
+			if (ShouldExecuteRemotely ())
+				BuildConnection.CancelAsync (BuildEngine4).Wait ();
+		}
 	}
 }

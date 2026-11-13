@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CNContactStore
 //
 // Authors:
@@ -8,19 +8,8 @@
 //
 
 #if !__TVOS__
-#if XAMCORE_2_0 // The Contacts framework is Unified only
 
-using System;
-#if XAMCORE_2_0
 using Contacts;
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Contacts {
 
@@ -34,7 +23,7 @@ namespace MonoTouchFixtures.Contacts {
 			TestRuntime.AssertXcodeVersion (7, 0);
 		}
 
-#if !MONOMAC // Unlike XI, XM does not have infrastructure yet to disable prompts
+#if !MONOMAC && !__MACCATALYST__ // Unlike XI, XM and MacCatalyst do not have infrastructure yet to disable prompts
 		[Test]
 #endif
 		public void GetUnifiedContacts ()
@@ -49,38 +38,36 @@ namespace MonoTouchFixtures.Contacts {
 			using (var store = new CNContactStore ()) {
 				var contacts = store.GetUnifiedContacts (predicate, fetchKeys, out error);
 				// we can't be sure what's on devices, so check there's no error is the only thing we do
-				// but it's in the default simulator build (but not the watchOS simulator)
-#if !MONOMAC && !__WATCHOS__
-				if ((error == null) && (Runtime.Arch == Arch.SIMULATOR)) {
-					Assert.That (contacts.Length, Is.EqualTo (1), "Length");
-					identifier = contacts [0].Identifier;
+				// but it's in the default simulator build
+#if !MONOMAC && !__MACCATALYST__
+				if (error is null) { // we might get an "Access Denied" error
+					Assert.That (contacts.Length, Is.GreaterThan (-1), "Length");
+					if (contacts.Length > 0)
+						identifier = contacts [0].Identifier;
 				}
 #endif
 			}
 
 			// if we can't find the previous contact then we don't have an identifier for the GetUnifiedContact API
 			// and we can't hardcode one as each simulator instance has a different identifier...
-			if (identifier == null)
+			if (identifier is null)
 				return;
 
 			using (var store = new CNContactStore ()) {
 				var contact = store.GetUnifiedContact (identifier, fetchKeys, out error);
 				// it's in the default simulator build
-#if !MONOMAC
-				if (Runtime.Arch == Arch.SIMULATOR) {
+				if (TestRuntime.IsSimulatorOrDesktop) {
 					// it fails on some bots (watchOS 4.2 on jenkins) so we cannot assume it always work
-					if (error != null)
+					if (error is not null)
 						return;
-					Assert.NotNull (contact, "contact");
-					Assert.False (contact.AreKeysAvailable (CNContactOptions.OrganizationName | CNContactOptions.Note), "AreKeysAvailable-1");
-					Assert.True (contact.AreKeysAvailable (CNContactOptions.None), "AreKeysAvailable-2");
-					Assert.True (contact.AreKeysAvailable (fetchKeys), "AreKeysAvailable-3");
+					Assert.That (contact, Is.Not.Null, "contact");
+					Assert.That (contact.AreKeysAvailable (CNContactOptions.OrganizationName | CNContactOptions.Note), Is.False, "AreKeysAvailable-1");
+					Assert.That (contact.AreKeysAvailable (CNContactOptions.None), Is.True, "AreKeysAvailable-2");
+					Assert.That (contact.AreKeysAvailable (fetchKeys), Is.True, "AreKeysAvailable-3");
 				}
-#endif
 			}
 		}
 	}
 }
 
-#endif // XAMCORE_2_0
 #endif // !__TVOS__

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This file is processed by xharness, and contains logic shared by all our test suites -->
+<Project>
+	<!-- NativeLibName: the platform-specific subdirectory of tests/test-libraries/.libs where to get libraries with all the relevant architectures -->
+
+	<Import Project="$(MSBuildThisFileDirectory)/test-variations.csproj" />
+
+	<!-- Logic for iOS -->
+	<PropertyGroup Condition="$(TargetFramework.EndsWith('-ios'))">
+		<AssetTargetFallback>xamarinios10;$(AssetTargetFallback)</AssetTargetFallback>
+		<NativeLibName>iossimulator</NativeLibName>
+		<!-- We need this because we'd otherwise default to the latest OS version we support, and we'll want to execute on earlier versions -->
+		<CompilerResponseFile>$(MSBuildThisFileDirectory)\..\..\src\rsp\dotnet\ios-defines-dotnet.rsp</CompilerResponseFile>
+		<!-- Determine whether we're building for the simulator (not device nor desktop) -->
+		<_IsSimulatorBuild Condition="'$(RuntimeIdentifier)$(RuntimeIdentifiers)' == '' Or $(RuntimeIdentifier.Contains('simulator')) Or $(RuntimeIdentifiers.Contains('iossimulator'))">true</_IsSimulatorBuild>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(_PlatformName)' == 'iOS'">
+	</ItemGroup>
+
+	<!-- Logic for tvOS -->
+	<PropertyGroup Condition="$(TargetFramework.EndsWith('-tvos'))">
+		<AssetTargetFallback>xamarintvos10;$(AssetTargetFallback)</AssetTargetFallback>
+		<NativeLibName>tvossimulator</NativeLibName>
+		<CompilerResponseFile>$(MSBuildThisFileDirectory)\..\..\src\rsp\dotnet\tvos-defines-dotnet.rsp</CompilerResponseFile>
+		<!-- Determine whether we're building for the simulator (not device nor desktop) -->
+		<_IsSimulatorBuild Condition="'$(RuntimeIdentifier)$(RuntimeIdentifiers)' == '' Or $(RuntimeIdentifier.Contains('simulator')) Or $(RuntimeIdentifiers.Contains('tvossimulator'))">true</_IsSimulatorBuild>
+	</PropertyGroup>
+	<ItemGroup Condition="$(TargetFramework.EndsWith('-tvos'))">
+	</ItemGroup>
+
+	<!-- Logic for macOS -->
+	<PropertyGroup Condition="$(TargetFramework.EndsWith('-macos'))">
+		<DefineConstants>$(DefineConstants);MONOMAC</DefineConstants>
+		<NativeLibName>macos</NativeLibName>
+		<CompilerResponseFile>$(MSBuildThisFileDirectory)\..\..\src\rsp\dotnet\macos-defines-dotnet.rsp</CompilerResponseFile>
+		<RuntimeIdentifiers Condition="'$(UniversalBuild)' == 'true'">osx-x64;osx-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifiers Condition="'$(Configuration)' == 'Release' And '$(SingleArchReleaseBuild)' == 'true'">osx-x64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<!-- Logic for Mac Catalyst -->
+	<PropertyGroup Condition="$(TargetFramework.EndsWith('-maccatalyst'))">
+		<AssetTargetFallback>xamarinios10;$(AssetTargetFallback)</AssetTargetFallback>
+		<NativeLibName>maccatalyst</NativeLibName>
+		<CompilerResponseFile>$(MSBuildThisFileDirectory)\..\..\src\rsp\dotnet\maccatalyst-defines-dotnet.rsp</CompilerResponseFile>
+		<RuntimeIdentifiers Condition="'$(UniversalBuild)' == 'true'">maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifiers Condition="'$(Configuration)' == 'Release' And '$(SingleArchReleaseBuild)' == 'true'">maccatalyst-x64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<!-- Logic for all test suites -->
+	<PropertyGroup>
+		<!-- Disable the implicit FSharp.Core reference, because sometimes the implicit reference wants a version that isn't available anywhere -->
+		<DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+
+		<!-- There's unsafe code in shared test code, which means pretty much all test suites need unsafe code -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- Don't show warnings about platform availability -->
+		<NoWarn Condition="'$(IncludeCS1416Warnigs)' != 'true'">CA1416;$(NoWarn)</NoWarn>
+
+		<CustomBeforeMicrosoftCommonTargets>$(CustomBeforeMicrosoftCommonTargets);$(MSBuildThisFileDirectory)SupportedOSPlatformVersions.targets</CustomBeforeMicrosoftCommonTargets>
+
+		<!-- We must set 'UseFloatingTargetPlatformVersion=true' for our test projects, to avoid building them with other workloads than the current workload. -->
+		<UseFloatingTargetPlatformVersion Condition="'$(UseFloatingTargetPlatformVersion)' == ''">true</UseFloatingTargetPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PartialAppManifest Include="$(RootTestsDirectory)/common/shared-dotnet.plist" Condition="'$(_PlatformName)' != 'macOS'">
+			<Link>shared-dotnet.plist</Link>
+		</PartialAppManifest>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Language)' == 'C#'">
+		<Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+		<ObjcBindingCoreSource Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" Condition="'$(IsBindingProject)' == 'true'" />
+	</ItemGroup>
+
+	<!-- Logic for NativeAOT -->
+	<PropertyGroup Condition="'$(PublishAot)' == 'true' And '$(_IsPublishing)' == 'true'">
+		<!-- Define NATIVEAOT when using NativeAOT -->
+		<DefineConstants>$(DefineConstants);NATIVEAOT</DefineConstants>
+		<!-- We're enabling warnaserror by default, but we're not warning-free for ILC (especially for NUnit), so disable warnaserror for ILC - https://github.com/dotnet/macios/issues/19911 -->
+		<IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+		<!-- NUnit 4.x's EquatablesComparer calls Type.GetInterfaceMap() which requires complete type metadata.
+		     Without this, any Assert.That(x, Is.EqualTo(y)) where x implements IEquatable<T> will throw
+		     NotSupportedException on NativeAOT. See https://github.com/nunit/nunit/issues/3970
+		     Only enable this when NUnit is actually referenced: it makes every reflectable type keep
+		     complete metadata (and every method reflectable), which significantly increases the app size
+		     of any app that uses NUnit. We must not impose that cost on apps that don't reference NUnit. -->
+		<IlcGenerateCompleteTypeMetadata Condition="'$(ExcludeNUnitLiteReference)' != 'true'">true</IlcGenerateCompleteTypeMetadata>
+		<IlcTrimMetadata Condition="'$(ExcludeNUnitLiteReference)' != 'true'">false</IlcTrimMetadata>
+	</PropertyGroup>
+
+	<!-- Trimmer options -->
+	<!-- We want to ignore any trimmer warnings from NUnit. We do this by:
+		* Enable all warnings
+		* Turn off all warnings (enabling single-warning mode) for NUnit
+		* Ignore the warning produced when single-warning logic is triggered.
+	-->
+	<PropertyGroup>
+		<!-- We want all the trimmer warnings -->
+		<TrimmerSingleWarn Condition="'$(TrimmerSingleWarn)' == ''">false</TrimmerSingleWarn>
+		<!-- IL2104: Assembly '...' produced trim warnings -->
+		<NoWarn>$(NoWarn);IL2104</NoWarn>
+		<!-- Touch.Unit is not trimmer-safe, so ignore any trimmer warnings if we're including Touch.Unit in the build -->
+		<SuppressTrimAnalysisWarnings Condition="'$(SuppressTrimAnalysisWarnings)' == '' And '$(ExcludeTouchUnitReference)' != 'true'">true</SuppressTrimAnalysisWarnings>
+	</PropertyGroup>
+	<Target Name="IgnoreTrimmerWarningsInNUnit" BeforeTargets="PrepareForILLink">
+		<ItemGroup>
+			<ManagedAssemblyToLink Condition="'%(Filename)' == 'nunit.framework'">
+				<TrimmerSingleWarn>true</TrimmerSingleWarn>
+			</ManagedAssemblyToLink>
+			<ManagedAssemblyToLink Condition="'%(Filename)' == 'nunit.framework.legacy'">
+				<TrimmerSingleWarn>true</TrimmerSingleWarn>
+			</ManagedAssemblyToLink>
+			<!-- The above ItemGroup doesn't work for NativeAOT, so pass the argument manually to ILC: https://github.com/dotnet/runtime/issues/94255 -->
+			<IlcArg Include="--singlewarnassembly:nunit.framework" />
+			<IlcArg Include="--singlewarnassembly:nunit.framework.legacy" />
+		</ItemGroup>
+	</Target>
+
+	<ItemGroup>
+		<PackageReference Include="NUnitLite" Version="$(NUnitLitePackageVersion)" Condition="'$(ExcludeNUnitLiteReference)' != 'true'" />
+		<ProjectReference Include="$(MSBuildThisFileDirectory)\Touch.Unit\Touch.Client\dotnet\Touch.Client.$(_PlatformName).csproj" Condition="'$(ExcludeTouchUnitReference)' != 'true'" />
+	</ItemGroup>
+	<PropertyGroup>
+		<DefineConstants Condition="'$(ExcludeNUnitLiteReference)' == 'true'">$(DefineConstants);EXCLUDE_NUNITLITE_REFERENCE</DefineConstants>
+		<DefineConstants Condition="'$(ExcludeTouchUnitReference)' == 'true'">$(DefineConstants);EXCLUDE_TOUCH_UNIT_REFERENCE</DefineConstants>
+	</PropertyGroup>
+
+	<!--
+		Define PREPARE_ASSEMBLIES when the assembly-preparer is used. Just like
+		$(HotReloadCompatibleBuild), $(PrepareAssemblies) may be computed in the platform SDK
+		targets/props (it's enabled by default in some configurations), so this has to happen in a
+		target, and not in a plain PropertyGroup.
+	-->
+	<Target Name="_AddPrepareAssembliesDefine" BeforeTargets="CoreCompile" Condition="'$(PrepareAssemblies)' == 'true' And !$(DefineConstants.Contains('PREPARE_ASSEMBLIES'))">
+		<PropertyGroup>
+			<DefineConstants>$(DefineConstants);PREPARE_ASSEMBLIES</DefineConstants>
+		</PropertyGroup>
+	</Target>
+
+	<Import Project="$(MSBuildThisFileDirectory)/../ComputeRegistrarConstant.targets" />
+	<Import Project="$(MSBuildThisFileDirectory)/../nunit.framework.targets" Condition="'$(ExcludeNUnitLiteReference)' != 'true'" />
+
+	<Import Project="$(GeneratedProjectFile)" Condition="'$(GeneratedProjectFile)' != ''" />
+
+	<!-- Logic for NativeAOT -->
+	<PropertyGroup Condition="'$(PublishAot)' == 'true' And '$(_IsPublishing)' == 'true'">
+		<!-- Define NATIVEAOT when using NativeAOT -->
+		<DefineConstants>$(DefineConstants);NATIVEAOT</DefineConstants>
+		<!-- We're enabling warnaserror by default, but we're not warning-free for ILC (especially for NUnit), so disable warnaserror for ILC - https://github.com/dotnet/macios/issues/19911 -->
+		<IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+		<!-- NUnit 4.x's EquatablesComparer calls Type.GetInterfaceMap() which requires complete type metadata.
+		     Without this, any Assert.That(x, Is.EqualTo(y)) where x implements IEquatable<T> will throw
+		     NotSupportedException on NativeAOT. See https://github.com/nunit/nunit/issues/3970
+		     Only enable this when NUnit is actually referenced: it makes every reflectable type keep
+		     complete metadata (and every method reflectable), which significantly increases the app size
+		     of any app that uses NUnit. We must not impose that cost on apps that don't reference NUnit. -->
+		<IlcGenerateCompleteTypeMetadata Condition="'$(ExcludeNUnitLiteReference)' != 'true'">true</IlcGenerateCompleteTypeMetadata>
+		<IlcTrimMetadata Condition="'$(ExcludeNUnitLiteReference)' != 'true'">false</IlcTrimMetadata>
+	</PropertyGroup>
+
+	<!--
+		This is a helper target for our tests to zip up the app bundle.
+		This is useful when building remotely, and we want to inspect the results on Windows:
+		we build on the Mac, zip up the resulting app bundle, transfer the zip file to Windows where the test is executing, and inspect the zip file there
+	-->
+	<Target Name="CompressAppBundle" AfterTargets="Codesign" Condition="'$(IsMacEnabled)' == 'true' And '$(CopyAppBundleToWindows)' == 'true'">
+		<PropertyGroup>
+			<DirectoryToCompress Condition="'$(DirectoryToCompress)' == ''">$(_AppBundlePath)</DirectoryToCompress>
+			<CompressedName Condition="'$(CompressedName)' == ''">AppBundle.zip</CompressedName>
+			<CompressedPath Condition="'$(CompressedPath)' == ''">$(DeviceSpecificIntermediateOutputPath)$(CompressedName)</CompressedPath>
+		</PropertyGroup>
+
+		<MakeDir SessionId="$(BuildSessionId)" Directories="$([System.IO.Path]::GetDirectoryName('$(CompressedPath)'))" />
+		<Delete SessionId="$(BuildSessionId)" Files="$(CompressedPath)" />
+
+		<Zip
+			SessionId="$(BuildSessionId)"
+			Condition="'$(IsMacEnabled)' == 'true'"
+			ZipPath="$(ZipPath)"
+			Sources="$(DirectoryToCompress)"
+			OutputFile="$(CompressedPath)"
+			WorkingDirectory="$(DirectoryToCompress)"
+			>
+			<Output TaskParameter="OutputFile" ItemName="FileWrites" />
+		</Zip>
+	</Target>
+
+	<Target Name="VerifyRemoteConnection" AfterTargets="_SayHello" Condition="'$(EnsureRemoteConnection)' == 'true'">
+		<Error Condition="'$(IsMacEnabled)' != 'true'" Text="Unable to connect to the remote Mac. Please examine the output of the SayHello target to figure out what happened." />
+	</Target>
+</Project>

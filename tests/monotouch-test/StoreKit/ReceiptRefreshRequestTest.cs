@@ -7,26 +7,14 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.IO;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
 using StoreKit;
 #if !MONOMAC
 using UIKit;
 #endif
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.StoreKit;
-#if !MONOMAC
-using MonoTouch.UIKit;
-#endif
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.StoreKit {
 
@@ -37,7 +25,7 @@ namespace MonoTouchFixtures.StoreKit {
 		[Test]
 		public void TerminateForInvalidReceipt ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 1, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 1, throwIfOtherPlatform: false);
 			// not yet documented - seems to kill the app on purpose ?!? on both sim and devices
 			//SKReceiptRefreshRequest.TerminateForInvalidReceipt ();
 
@@ -49,4 +37,4 @@ namespace MonoTouchFixtures.StoreKit {
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

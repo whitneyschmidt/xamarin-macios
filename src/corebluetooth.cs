@@ -7,179 +7,383 @@
 //
 // Copyright 2011-2013 Xamarin Inc
 //
-using ObjCRuntime;
-using Foundation;
-using System;
+using System.ComponentModel;
+
 using CoreFoundation;
 
 namespace CoreBluetooth {
 
-	[Watch (4,0)]
-	[iOS (8,0)]
-	[Mac (10,13)]
+	/// <summary>Class that uniquely identifies a Bluetooth device.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/CoreBluetooth/CBAttribute">Apple documentation for <c>CBAttribute</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	interface CBAttribute {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("UUID")]
-		CBUUID UUID { get; [NotImplemented] set;  }
+		CBUUID UUID { get; [NotImplemented] set; }
 	}
 
-	[Watch (4,0)]
+	/// <summary>Contains options for initializing a Bluetooth central manager.</summary>
+	[MacCatalyst (13, 1)]
 	[StrongDictionary ("CBCentralManager")]
 	interface CBCentralInitOptions {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("OptionShowPowerAlertKey")]
 		bool ShowPowerAlert { get; set; }
 
-#if !MONOMAC
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NoMac]
+		[MacCatalyst (13, 1)]
 		[Export ("OptionRestoreIdentifierKey")]
 		string RestoreIdentifier { get; set; }
-#endif
 	}
 
-	[Watch (4,0)]
-	[iOS (10,0)]
-	[Mac (10,13)]
-	[BaseType (typeof(NSObject))]
+	/// <related type="externalDocumentation" href="https://developer.apple.com/reference/CoreBluetooth/CBManager">Apple documentation for <c>CBManager</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface CBManager {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("state", ArgumentSemantic.Assign)]
 		CBManagerState State { get; }
+
+		[Internal]
+		[NoTV]
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Export ("authorization", ArgumentSemantic.Assign)]
+		CBManagerAuthorization _IAuthorization { get; }
+
+		[Internal]
+		[iOS (13, 1)]
+		[NoTV]
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Static]
+		[Export ("authorization", ArgumentSemantic.Assign)]
+		CBManagerAuthorization _SAuthorization { get; }
+
+		[NoiOS]
+		[NoMacCatalyst]
+		[Static]
+		[Export ("authorization", ArgumentSemantic.Assign)]
+		CBManagerAuthorization Authorization { get; }
 	}
 
-	[Watch (4,0)]
-	[BaseType (typeof (CBManager), Delegates=new[] {"WeakDelegate"}, Events = new[] { typeof (CBCentralManagerDelegate)})]
+	[NoMac]
+	[MacCatalyst (13, 1)]
+	[StrongDictionary ("CBConnectionEventMatchingOptionsKeys")]
+	interface CBConnectionEventMatchingOptions {
+		NSUuid [] PeripheralUuids { get; set; }
+		CBUUID [] ServiceUuids { get; set; }
+	}
+
+	[NoMac]
+	[MacCatalyst (13, 1)]
+	[Static]
+	[Internal]
+	interface CBConnectionEventMatchingOptionsKeys {
+		[Field ("CBConnectionEventMatchingOptionPeripheralUUIDs")]
+		NSString PeripheralUuidsKey { get; }
+		[Field ("CBConnectionEventMatchingOptionServiceUUIDs")]
+		NSString ServiceUuidsKey { get; }
+	}
+
+	[StrongDictionary ("CBConnectPeripheralOptionsKeys")]
+	interface CBConnectPeripheralOptions {
+		[MacCatalyst (13, 1)]
+		bool NotifyOnConnection { get; set; }
+		bool NotifyOnDisconnection { get; set; }
+		[MacCatalyst (13, 1)]
+		bool NotifyOnNotification { get; set; }
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		bool EnableTransportBridging { get; set; }
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		bool RequiresAncs { get; set; }
+		[iOS (17, 0), TV (17, 0), MacCatalyst (17, 0)]
+		bool EnableAutoReconnect { get; }
+	}
+
+	[Static]
+	[Internal]
+	interface CBConnectPeripheralOptionsKeys {
+		[MacCatalyst (13, 1)]
+		[Field ("CBConnectPeripheralOptionNotifyOnConnectionKey")]
+		NSString NotifyOnConnectionKey { get; }
+		[Field ("CBConnectPeripheralOptionNotifyOnDisconnectionKey")]
+		NSString NotifyOnDisconnectionKey { get; }
+		[MacCatalyst (13, 1)]
+		[Field ("CBConnectPeripheralOptionNotifyOnNotificationKey")]
+		NSString NotifyOnNotificationKey { get; }
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Field ("CBConnectPeripheralOptionEnableTransportBridgingKey")]
+		NSString EnableTransportBridgingKey { get; }
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Field ("CBConnectPeripheralOptionRequiresANCS")]
+		NSString RequiresAncsKey { get; }
+		[iOS (17, 0), TV (17, 0), MacCatalyst (17, 0)]
+		[Field ("CBConnectPeripheralOptionEnableAutoReconnect")]
+		NSString EnableAutoReconnectKey { get; }
+	}
+
+	/// <summary>Represents the local central device in Bluetooth LE.  Use the CBCentralManager to scan, discover and connect to remote peripherals.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBCentralManager_Class/index.html">Apple documentation for <c>CBCentralManager</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CBManager), Delegates = new [] { "WeakDelegate" }, Events = new [] { typeof (CBCentralManagerDelegate) })]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBCentralManager {
 
+		/// <summary>An object that can respond to the delegate protocol for this type</summary>
+		///         <value>The instance that will respond to events and data requests.</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>   Methods must be decorated with the [Export ("selectorName")] attribute to respond to each method from the protocol.   Alternatively use the Delegate method which is strongly typed and does not require the [Export] attributes on methods.</para>
+		///         </remarks>
 		[Export ("delegate", ArgumentSemantic.Assign), NullAllowed]
 		NSObject WeakDelegate { get; set; }
 
+		/// <summary>An instance of the CoreBluetooth.ICBCentralManagerDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the CoreBluetooth.ICBCentralManagerDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		CBCentralManagerDelegate Delegate { get; set; }
-		
-		[Mac (10, 7, onlyOn64: true)] // Was removed from 32-bit in 10.13 unannounced
+		ICBCentralManagerDelegate Delegate { get; set; }
+
+		/// <param name="centralDelegate">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="queue">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>Creates a new <see cref="CoreBluetooth.CBCentralManager" /> with the specified central delegate and dispatch queue.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDelegate:queue:")]
 		[PostGet ("WeakDelegate")]
-		IntPtr Constructor ([NullAllowed, Protocolize] CBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue);
+		NativeHandle Constructor ([NullAllowed] ICBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue);
 
+		/// <param name="centralDelegate">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="queue">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="options">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>Creates a new <see cref="CoreBluetooth.CBCentralManager" /> with the specified central delegate, dispatch queue, and options.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDelegate:queue:options:")]
 		[PostGet ("WeakDelegate")]
-		IntPtr Constructor ([NullAllowed, Protocolize] CBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue, [NullAllowed] NSDictionary options);
+		NativeHandle Constructor ([NullAllowed] ICBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue, [NullAllowed] NSDictionary options);
 
-		[iOS (7,0), Mac (10,9)]
-		[Wrap ("this (centralDelegate, queue, options == null ? null : options.Dictionary)")]
-		IntPtr Constructor ([NullAllowed, Protocolize] CBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue, CBCentralInitOptions options);
-
-		[NoTV]
-		[NoWatch]
-		[Availability (Obsoleted = Platform.iOS_9_0)]
-		[Mac (10, 7, onlyOn64: true)] // Was removed from 32-bit in 10.13 unannounced
-		[Export ("retrievePeripherals:"), Internal]
-		void RetrievePeripherals (NSArray peripheralUUIDs);
-
-		[NoTV]
-		[NoWatch]
-		[Mac (10, 7, onlyOn64: true)] // Was removed from 32-bit in 10.13 unannounced
-		[Export ("retrieveConnectedPeripherals")]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_9_0, Message = "Use 'RetrievePeripheralsWithIdentifiers' instead.")]
-		void RetrieveConnectedPeripherals ();
+		/// <param name="centralDelegate">To be added.</param>
+		/// <param name="queue">To be added.</param>
+		/// <param name="options">To be added.</param>
+		/// <summary>Creates a new <see cref="CoreBluetooth.CBCentralManager" /> with the specified central delegate, dispatch queue, and options.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Wrap ("this (centralDelegate, queue, options.GetDictionary ())")]
+		NativeHandle Constructor ([NullAllowed] ICBCentralManagerDelegate centralDelegate, [NullAllowed] DispatchQueue queue, CBCentralInitOptions options);
 
 		[Export ("scanForPeripheralsWithServices:options:"), Internal]
 		void ScanForPeripherals ([NullAllowed] NSArray serviceUUIDs, [NullAllowed] NSDictionary options);
 
+		/// <summary>Tells the manager to stop scanning for peripherals.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("stopScan")]
 		void StopScan ();
 
+		/// <param name="peripheral">Peripheral to connect to.</param>
+		///         <param name="options">
+		///           <para>Options to configure the peripheral connection, the keys include OptionAllowDuplicatesKey and OptionNotifyOnDisconnectionKey which should contain NSNumbers.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Connects to the specified peripheral (weakly typed parameter version).</summary>
+		///         <remarks>
+		///         </remarks>
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		[Export ("connectPeripheral:options:")]
 		void ConnectPeripheral (CBPeripheral peripheral, [NullAllowed] NSDictionary options);
 
+		[Wrap ("ConnectPeripheral (peripheral, options.GetDictionary ())")]
+		void ConnectPeripheral (CBPeripheral peripheral, [NullAllowed] CBConnectPeripheralOptions options);
+
+		/// <param name="peripheral">To be added.</param>
+		///         <summary>Cancels an active or pending connection to the specified <paramref name="peripheral" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("cancelPeripheralConnection:")]
 		void CancelPeripheralConnection (CBPeripheral peripheral);
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerScanOptionAllowDuplicatesKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerScanOptionAllowDuplicatesKey")]
 		NSString ScanOptionAllowDuplicatesKey { get; }
 
-		[Field ("CBConnectPeripheralOptionNotifyOnDisconnectionKey")]
-		NSString OptionNotifyOnDisconnectionKey { get; }
-
-		[Mac (10,13)]
-		[iOS (6,0)]
-		[Field ("CBConnectPeripheralOptionNotifyOnConnectionKey")]
-		NSString OptionNotifyOnConnectionKey { get; }
-
-		[Mac (10,13)]
-		[iOS (6,0)]
-		[Field ("CBConnectPeripheralOptionNotifyOnNotificationKey")]
-		NSString OptionNotifyOnNotificationKey { get; }
-
-		[Mac (10,14)]
-		[iOS (11,2)][TV (11,2)][Watch (4,2)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBConnectPeripheralOptionStartDelayKey")]
 		NSString OptionStartDelayKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerOptionRestoreIdentifierKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerOptionRestoreIdentifierKey")]
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		NSString OptionRestoreIdentifierKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerRestoredStatePeripheralsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerRestoredStatePeripheralsKey")]
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		NSString RestoredStatePeripheralsKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerRestoredStateScanServicesKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerRestoredStateScanServicesKey")]
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		NSString RestoredStateScanServicesKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerRestoredStateScanOptionsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerRestoredStateScanOptionsKey")]
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		NSString RestoredStateScanOptionsKey { get; }
 
-		[iOS (7,0), Mac (10,9)]
+		/// <param name="identifiers">To be added.</param>
+		///         <summary>Returns all peripherals that are identified by the specified <paramref name="identifiers" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("retrievePeripheralsWithIdentifiers:")]
 		CBPeripheral [] RetrievePeripheralsWithIdentifiers ([Params] NSUuid [] identifiers);
 
-		[iOS (7,0), Mac (10,9)]
+		/// <param name="serviceUUIDs">To be added.</param>
+		///         <summary>Returns all connected peripherals that have services that are identified by the specified <paramref name="serviceUUIDs" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("retrieveConnectedPeripheralsWithServices:")]
-		CBPeripheral [] RetrieveConnectedPeripherals ([Params] CBUUID []  serviceUUIDs);
+		CBPeripheral [] RetrieveConnectedPeripherals ([Params] CBUUID [] serviceUUIDs);
 
+		/// <summary>Represents the value associated with the constant CBCentralManagerOptionShowPowerAlertKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerOptionShowPowerAlertKey")]
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		NSString OptionShowPowerAlertKey { get; }
 
+		[iOS (16, 0), NoMac, TV (16, 0), MacCatalyst (16, 0)]
+		[Field ("CBCentralManagerOptionDeviceAccessForMedia")]
+		NSString OptionDeviceAccessForMedia { get; }
+
+		/// <summary>Represents the value associated with the constant CBCentralManagerScanOptionSolicitedServiceUUIDsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBCentralManagerScanOptionSolicitedServiceUUIDsKey")]
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		NSString ScanOptionSolicitedServiceUUIDsKey { get; }
 
-		[iOS (9,0)]
-		[Mac (10,13)]
+		/// <summary>Gets a Boolean value that tells whether the manager is currently scanning for peripherals.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isScanning")]
 		bool IsScanning { get; }
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Static]
+		[Export ("supportsFeatures:")]
+		bool SupportsFeatures (CBCentralManagerFeature features);
+
+		[EditorBrowsable (EditorBrowsableState.Advanced)]
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Export ("registerForConnectionEventsWithOptions:")]
+		void RegisterForConnectionEvents ([NullAllowed] NSDictionary options);
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Wrap ("RegisterForConnectionEvents (options.GetDictionary ())")]
+		void RegisterForConnectionEvents ([NullAllowed] CBConnectionEventMatchingOptions options);
 	}
 
-	[Watch (4,0)]
+	[MacCatalyst (13, 1)]
 	[StrongDictionary ("AdvertisementDataKeys")]
 	interface AdvertisementData {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		string LocalName { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		NSData ManufacturerData { get; set; }
-		
-#if XAMCORE_2_0
-		NSDictionary <CBUUID, NSData> ServiceData { get; set; }
-#else
-		NSDictionary ServiceData { get; set; }
-#endif
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		NSDictionary<CBUUID, NSData> ServiceData { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		CBUUID [] ServiceUuids { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		CBUUID [] OverflowServiceUuids { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		NSNumber TxPowerLevel { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		bool IsConnectable { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		CBUUID [] SolicitedServiceUuids { get; set; }
 	}
 
-	[Watch (4,0)]
+	[MacCatalyst (13, 1)]
 	[Static, Internal]
 	interface AdvertisementDataKeys {
 		[Field ("CBAdvertisementDataLocalNameKey")]
@@ -194,247 +398,443 @@ namespace CoreBluetooth {
 		[Field ("CBAdvertisementDataServiceUUIDsKey")]
 		NSString ServiceUuidsKey { get; }
 
-		[Mac (10, 9)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataOverflowServiceUUIDsKey")]
 		NSString OverflowServiceUuidsKey { get; }
 
 		[Field ("CBAdvertisementDataTxPowerLevelKey")]
 		NSString TxPowerLevelKey { get; }
 
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataIsConnectable")]
 		NSString IsConnectableKey { get; }
 
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataSolicitedServiceUUIDsKey")]
 		NSString SolicitedServiceUuidsKey { get; }
 	}
 
-	[Watch (4,0)]
+	/// <summary>Possible values for the options parameter in calls to <see cref="CoreBluetooth.CBCentralManager.ScanForPeripherals(CoreBluetooth.CBUUID[],Foundation.NSDictionary)" />.</summary>
+	[MacCatalyst (13, 1)]
 	[StrongDictionary ("PeripheralScanningOptionsKeys")]
 	interface PeripheralScanningOptions { }
 
-	[Watch (4,0)]
+	[MacCatalyst (13, 1)]
 	[StrongDictionary ("RestoredStateKeys")]
 	interface RestoredState {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		CBPeripheral [] Peripherals { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		CBPeripheral [] ScanServices { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		PeripheralScanningOptions ScanOptions { get; set; }
 	}
 
-	[Watch (4,0)]
+	[MacCatalyst (13, 1)]
 	[Static, Internal]
 	interface RestoredStateKeys {
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBCentralManagerRestoredStatePeripheralsKey")]
 		NSString PeripheralsKey { get; }
 
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBCentralManagerRestoredStateScanServicesKey")]
 		NSString ScanServicesKey { get; }
 
-		[iOS (7,0)]
-		[Mac (10,13)]
+		[MacCatalyst (13, 1)]
 		[Field ("CBCentralManagerRestoredStateScanOptionsKey")]
 		NSString ScanOptionsKey { get; }
 	}
 
-	[Watch (4,0)]
+	interface ICBCentralManagerDelegate { }
+
+	/// <summary>Delegate objects for <see cref="CoreBluetooth.CBCentralManager" /> objects.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBCentralManagerDelegate_Protocol/index.html">Apple documentation for <c>CBCentralManagerDelegate</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface CBCentralManagerDelegate {
+		/// <param name="central">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EventArgs ("", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Abstract]
 		[Export ("centralManagerDidUpdateState:")]
 		void UpdatedState (CBCentralManager central);
 
-		[NoTV]
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_8_4)] // Available in iOS 5.0 through iOS 8.4. Deprecated in iOS 7.0.
-		[Export ("centralManager:didRetrievePeripherals:"), EventArgs ("CBPeripherals")]
-		void RetrievedPeripherals (CBCentralManager central, CBPeripheral [] peripherals);
-
-		[NoTV]
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_8_4)] // Available in iOS 5.0 through iOS 8.4. Deprecated in iOS 7.0.
-		[Export ("centralManager:didRetrieveConnectedPeripherals:"), EventArgs ("CBPeripherals")]
-		void RetrievedConnectedPeripherals (CBCentralManager central, CBPeripheral [] peripherals);
-
-		[Export ("centralManager:didDiscoverPeripheral:advertisementData:RSSI:"), EventArgs ("CBDiscoveredPeripheral")]
+		/// <param name="central">To be added.</param>
+		///         <param name="peripheral">To be added.</param>
+		///         <param name="advertisementData">To be added.</param>
+		///         <param name="RSSI">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("centralManager:didDiscoverPeripheral:advertisementData:RSSI:"), EventArgs ("CBDiscoveredPeripheral", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+#if XAMCORE_5_0
+		void DiscoveredPeripheral (CBCentralManager central, CBPeripheral peripheral, NSDictionary advertisementData, NSNumber rssi);
+#else
 		void DiscoveredPeripheral (CBCentralManager central, CBPeripheral peripheral, NSDictionary advertisementData, NSNumber RSSI);
+#endif
 
-		[Export ("centralManager:didConnectPeripheral:"), EventArgs ("CBPeripheral")]
+		/// <param name="central">To be added.</param>
+		///         <param name="peripheral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("centralManager:didConnectPeripheral:"), EventArgs ("CBPeripheral", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void ConnectedPeripheral (CBCentralManager central, CBPeripheral peripheral);
 
-		[Export ("centralManager:didFailToConnectPeripheral:error:"), EventArgs ("CBPeripheralError")]
-		void FailedToConnectPeripheral (CBCentralManager central, CBPeripheral peripheral, NSError error);
+		/// <param name="central">To be added.</param>
+		///         <param name="peripheral">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("centralManager:didFailToConnectPeripheral:error:"), EventArgs ("CBPeripheralError", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void FailedToConnectPeripheral (CBCentralManager central, CBPeripheral peripheral, [NullAllowed] NSError error);
 
-		[Export ("centralManager:didDisconnectPeripheral:error:"), EventArgs ("CBPeripheralError")]
-		void DisconnectedPeripheral (CBCentralManager central, CBPeripheral peripheral, NSError error);
-		
-		[Export ("centralManager:willRestoreState:"), EventArgs ("CBWillRestore")]
+		/// <param name="central">To be added.</param>
+		///         <param name="peripheral">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("centralManager:didDisconnectPeripheral:error:"), EventArgs ("CBPeripheralError", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void DisconnectedPeripheral (CBCentralManager central, CBPeripheral peripheral, [NullAllowed] NSError error);
+
+		/// <param name="central">To be added.</param>
+		///         <param name="dict">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("centralManager:willRestoreState:"), EventArgs ("CBWillRestore", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void WillRestoreState (CBCentralManager central, NSDictionary dict);
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Export ("centralManager:connectionEventDidOccur:forPeripheral:"), EventArgs ("CBPeripheralConnectionEvent")]
+		void ConnectionEventDidOccur (CBCentralManager central, CBConnectionEvent connectionEvent, CBPeripheral peripheral);
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Export ("centralManager:didUpdateANCSAuthorizationForPeripheral:"), EventArgs ("CBAncsAuthorizationUpdate")]
+		void DidUpdateAncsAuthorization (CBCentralManager central, CBPeripheral peripheral);
+
+		[iOS (17, 0), TV (17, 0), MacCatalyst (17, 0), EventArgs ("CBPeripheralDiconnectionEvent")]
+		[Export ("centralManager:didDisconnectPeripheral:timestamp:isReconnecting:error:")]
+		void DidDisconnectPeripheral (CBCentralManager central, CBPeripheral peripheral, double timestamp, bool isReconnecting, [NullAllowed] NSError error);
 	}
 
-	[Watch (4,0)]
+	/// <summary>Keys used to lookup dictionary values from the NSDictionary received as a parameter in <see cref="CoreBluetooth.CBCentralManagerDelegate.DiscoveredPeripheral(CoreBluetooth.CBCentralManager,CoreBluetooth.CBPeripheral,Foundation.NSDictionary,Foundation.NSNumber)" />.</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	interface CBAdvertisement {
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataServiceUUIDsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBAdvertisementDataServiceUUIDsKey")]
 		NSString DataServiceUUIDsKey { get; }
-		
+
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataLocalNameKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBAdvertisementDataLocalNameKey")]
 		NSString DataLocalNameKey { get; }
-		
+
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataTxPowerLevelKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBAdvertisementDataTxPowerLevelKey")]
 		NSString DataTxPowerLevelKey { get; }
-		
+
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataManufacturerDataKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBAdvertisementDataManufacturerDataKey")]
 		NSString DataManufacturerDataKey { get; }
-		
+
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataServiceDataKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBAdvertisementDataServiceDataKey")]
 		NSString DataServiceDataKey { get; }
 
-		[iOS (6,0), Mac (10,9)]
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataOverflowServiceUUIDsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataOverflowServiceUUIDsKey")]
 		NSString DataOverflowServiceUUIDsKey { get; }
 
-		[iOS (7,0), Mac (10,9)]
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataIsConnectable</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataIsConnectable")]
 		NSString IsConnectable { get; }
 
-		[iOS (7,0), Mac (10,9)]
+		/// <summary>Represents the value associated with the constant CBAdvertisementDataSolicitedServiceUUIDsKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBAdvertisementDataSolicitedServiceUUIDsKey")]
 		NSString DataSolicitedServiceUUIDsKey { get; }
 
 	}
 
-	[Watch (4,0)]
+	/// <summary>Characteristics of a remote peripheral.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBCharacteristic_Class/index.html">Apple documentation for <c>CBCharacteristic</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBAttribute))]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBCharacteristic {
-		
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("properties")]
 		CBCharacteristicProperties Properties { get; [NotImplemented ("Not available on CBCharacteristic, only available on CBMutableCharacteristic")] set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("value", ArgumentSemantic.Retain)]
-		NSData Value { get; [NotImplemented ("Not available on CBCharacteristic, only available on CBMutableCharacteristic")] set;  }
+		NSData Value { get; [NotImplemented ("Not available on CBCharacteristic, only available on CBMutableCharacteristic")] set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("descriptors", ArgumentSemantic.Retain)]
 		CBDescriptor [] Descriptors { get; [NotImplemented ("Not available on CBCharacteristic, only available on CBMutableCharacteristic")] set; }
 
-		[Deprecated (PlatformName.iOS, 8,0)]
-		[Deprecated (PlatformName.MacOSX, 10,13)]
+		/// <summary>Developers should not use this deprecated property. </summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 8, 0)]
+		[Deprecated (PlatformName.TvOS, 9, 0)]
+		[Deprecated (PlatformName.MacOSX, 10, 13)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("isBroadcasted")]
-		bool IsBroadcasted { get;  }
+		bool IsBroadcasted { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isNotifying")]
-		bool IsNotifying { get;  }
+		bool IsNotifying { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("service", ArgumentSemantic.Weak)]
 		CBService Service { get; }
-
-#if !XAMCORE_2_0
-		[iOS (7,0), Export ("subscribedCentrals"), Mac (10,9)]
-		CBCentral [] SubscribedCentrals { get; }
-#endif
 	}
 
-	[Watch (4,0)]
-	[iOS (6, 0), Mac (10,9)]
+	/// <summary>A mutable <see cref="CoreBluetooth.CBCharacteristic" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBMutableCharacteristic_Class/index.html">Apple documentation for <c>CBMutableCharacteristic</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBCharacteristic))]
 	[DisableDefaultCtor]
 	interface CBMutableCharacteristic {
 
+		/// <param name="uuid">To be added.</param>
+		/// <param name="properties">To be added.</param>
+		/// <param name="value">
+		///           <para>Characteristic value to cache, if null, the value will be loaded on demand.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="permissions">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[NoTV]
-		[NoWatch]
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
 		[Export ("initWithType:properties:value:permissions:")]
 		[PostGet ("UUID")]
 		[PostGet ("Value")]
-		IntPtr Constructor (CBUUID uuid, CBCharacteristicProperties properties, [NullAllowed] NSData value, CBAttributePermissions permissions);
+		NativeHandle Constructor (CBUUID uuid, CBCharacteristicProperties properties, [NullAllowed] NSData value, CBAttributePermissions permissions);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("permissions", ArgumentSemantic.Assign)]
 		CBAttributePermissions Permissions { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("properties", ArgumentSemantic.Assign)]
 		[Override]
 		CBCharacteristicProperties Properties { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed]
 		[Export ("value", ArgumentSemantic.Retain)]
 		[Override]
 		NSData Value { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed]
 		[Export ("descriptors", ArgumentSemantic.Retain)]
 		[Override]
 		CBDescriptor [] Descriptors { get; set; }
 
-#if XAMCORE_2_0
-		[iOS (7,0), Export ("subscribedCentrals"), Mac (10,9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("subscribedCentrals")]
+		[NullAllowed]
 		CBCentral [] SubscribedCentrals { get; }
-#endif
 	}
 
-	[Watch (4,0)]
+	/// <summary>An immutable description of a peripheral's characteristic. See also <see cref="CoreBluetooth.CBMutableDescriptor" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBDescriptor_Class/index.html">Apple documentation for <c>CBDescriptor</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBAttribute))]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBDescriptor {
-		
-		[Export ("value", ArgumentSemantic.Retain)]
-		NSObject Value { get;  }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("value", ArgumentSemantic.Retain)]
+		[NullAllowed]
+		NSObject Value { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("characteristic", ArgumentSemantic.Weak)]
 		CBCharacteristic Characteristic { get; }
 	}
 
-	[Watch (4,0)]
-	[iOS (6, 0), Mac (10,9)]
+	/// <summary>A mutable <see cref="CBDescriptor" />.</summary>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBMutableDescriptor_Class/index.html">Apple documentation for <c>CBMutableDescriptor</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBDescriptor))]
 	[DisableDefaultCtor]
 	interface CBMutableDescriptor {
+		/// <param name="uuid">To be added.</param>
+		/// <param name="descriptorValue">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[NoTV]
-		[NoWatch]
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
 		[Export ("initWithType:value:")]
 		[PostGet ("UUID")]
 		[PostGet ("Value")]
-		IntPtr Constructor (CBUUID uuid, NSObject descriptorValue);
+		NativeHandle Constructor (CBUUID uuid, [NullAllowed] NSObject descriptorValue);
 	}
 
-	[Watch (4,0)]
-	[BaseType (typeof (CBPeer), Delegates=new string [] { "WeakDelegate" }, Events=new Type [] {typeof (CBPeripheralDelegate)})]
+	/// <summary>Represents a CoreBluetooth peripheral.</summary>
+	///     <remarks>
+	///       <para>
+	/// 	CBPeripherals represent a remote peripheral that the device
+	/// 	has discovered or has discovered and connected to.
+	///       </para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBPeripheral_Class/index.html">Apple documentation for <c>CBPeripheral</c></related>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (CBPeer), Delegates = new string [] { "WeakDelegate" }, Events = new Type [] { typeof (CBPeripheralDelegate) })]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBPeripheral : NSCopying {
+		/// <summary>Gets the peripheral name.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("name", ArgumentSemantic.Retain)]
-		[DisableZeroCopy]
-		string Name { get;  }
+		[NullAllowed]
+		string Name { get; }
 
-		[Deprecated (PlatformName.iOS, 8,0)]
-		[Deprecated (PlatformName.MacOSX, 10,13)]
-		[NoWatch]
+		/// <summary>Developers should not use this deprecated property. </summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 8, 0)]
+		[Deprecated (PlatformName.TvOS, 9, 0)]
+		[Deprecated (PlatformName.MacOSX, 10, 13)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("RSSI", ArgumentSemantic.Retain)]
-		NSNumber RSSI { get;  }
+		[NullAllowed]
+		NSNumber RSSI { get; }
 
-		[NoTV]
-		[NoWatch]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_9_0)]
-		[Export ("isConnected")]
-		[Mac (10, 7, onlyOn64: true)] // Was removed from 32-bit in 10.13 unannounced
-		bool IsConnected { get;  }
-
+		/// <summary>The discovered <see cref="CoreBluetooth.CBService" />s of this peripheral.</summary>
+		///         <value>Will be <see langword="null" /> until some time after <see cref="CoreBluetooth.CBPeripheral.DiscoverServices(CoreBluetooth.CBUUID[])" /> is called.</value>
+		///         <remarks>
+		///           <para>This property is mutated asynchronously subsequent to calls to <see cref="CoreBluetooth.CBPeripheral.DiscoverServices(CoreBluetooth.CBUUID[])" />. Application developers generally override <see cref="CoreBluetooth.CBPeripheralDelegate.DiscoveredService(CoreBluetooth.CBPeripheral,Foundation.NSError)" /> to enumerate services. </para>
+		///         </remarks>
 		[Export ("services", ArgumentSemantic.Retain)]
-		CBService [] Services { get;  }
+		[NullAllowed]
+		CBService [] Services { get; }
 
+		/// <summary>An object that can respond to the delegate protocol for this type</summary>
+		///         <value>The instance that will respond to events and data requests.</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>   Methods must be decorated with the [Export ("selectorName")] attribute to respond to each method from the protocol.   Alternatively use the Delegate method which is strongly typed and does not require the [Export] attributes on methods.</para>
+		///         </remarks>
 		[Export ("delegate", ArgumentSemantic.Weak), NullAllowed]
 		NSObject WeakDelegate { get; set; }
 
+		/// <summary>An instance of the CoreBluetooth.ICBPeripheralDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the CoreBluetooth.ICBPeripheralDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		CBPeripheralDelegate Delegate { get; set; }
-		
+		ICBPeripheralDelegate Delegate { get; set; }
+
+		/// <summary>Reads the signal strength of the peripheral.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("readRSSI")]
 		void ReadRSSI ();
 
@@ -447,511 +847,975 @@ namespace CoreBluetooth {
 		[Export ("discoverCharacteristics:forService:"), Internal]
 		void DiscoverCharacteristics ([NullAllowed] NSArray characteristicUUIDs, CBService forService);
 
+		/// <param name="characteristic">To be added.</param>
+		///         <summary>Reads the value of the specified <paramref name="characteristic" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("readValueForCharacteristic:")]
 		void ReadValue (CBCharacteristic characteristic);
 
+		/// <param name="data">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="type">To be added.</param>
+		///         <summary>Writes <paramref name="data" /> to the specified <paramref name="characteristic" /> with the specified <paramref name="type" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("writeValue:forCharacteristic:type:")]
 		void WriteValue (NSData data, CBCharacteristic characteristic, CBCharacteristicWriteType type);
 
+		/// <param name="enabled">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <summary>Sets the notification status for the specified <paramref name="characteristic" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNotifyValue:forCharacteristic:")]
 		void SetNotifyValue (bool enabled, CBCharacteristic characteristic);
 
+		/// <param name="characteristic">To be added.</param>
+		///         <summary>Finds descriptors for the specified <paramref name="characteristic" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("discoverDescriptorsForCharacteristic:")]
 		void DiscoverDescriptors (CBCharacteristic characteristic);
 
+		/// <param name="descriptor">To be added.</param>
+		///         <summary>Reads the value of the characteristic that is identified by the specified <paramref name="descriptor" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("readValueForDescriptor:")]
 		void ReadValue (CBDescriptor descriptor);
 
+		/// <param name="data">The data to write.</param>
+		///         <param name="descriptor">The descriptor to use for the data.</param>
+		///         <summary>Writes <paramref name="data" /> to the characteristic that is identified by the specified <paramref name="descriptor" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("writeValue:forDescriptor:")]
 		void WriteValue (NSData data, CBDescriptor descriptor);
 
-		[iOS (9,0)][Mac (10,12)]
+		/// <param name="type">To be added.</param>
+		///         <summary>Gets the maximum write length for data that is written to the values of the specified <paramref name="type" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("maximumWriteValueLengthForType:")]
 		nuint GetMaximumWriteValueLength (CBCharacteristicWriteType type);
 
-#if !XAMCORE_2_0
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_9_0)]
-		[Export ("UUID")]
-		System.IntPtr UUID { get; }
-#endif
-
-		[iOS (7,0), Mac (10,9)]
+		/// <summary>Gets the connection state for the peripheral.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("state")]
 		CBPeripheralState State { get; }
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("canSendWriteWithoutResponse")]
 		bool CanSendWriteWithoutResponse { get; }
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13, onlyOn64: true)]
+		/// <param name="psm">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("openL2CAPChannel:")]
 		void OpenL2CapChannel (ushort psm);
+
+		/// <param name="configuration">The configuration for the channel sounding session.</param>
+		/// <summary>Starts a channel sounding session with the peripheral.</summary>
+		[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("startChannelSoundingSession:")]
+		void StartChannelSoundingSession (CBChannelSoundingSessionConfiguration configuration);
+
+		/// <summary>Cancels the active channel sounding session, if one exists.</summary>
+		[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("cancelChannelSoundingSession")]
+		void CancelChannelSoundingSession ();
+
+		[NoMac]
+		[MacCatalyst (13, 1)]
+		[Export ("ancsAuthorized")]
+		bool AncsAuthorized { get; }
 	}
 
-	[Watch (4,0)]
+	interface ICBPeripheralDelegate { }
+
+	/// <summary>Delegate object for <see cref="CoreBluetooth.CBPeripheral" />. Provides methods called on events relating to discovery, exploration, and interaction with a remote peripheral.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBPeripheralDelegate_Protocol/index.html">Apple documentation for <c>CBPeripheralDelegate</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface CBPeripheralDelegate {
-		[Deprecated (PlatformName.MacOSX, 10, 13, message : "Use 'RssiRead' instead.")]
-		[Deprecated (PlatformName.iOS, 8, 0, message : "Use 'RssiRead' instead.")]
-		[Export ("peripheralDidUpdateRSSI:error:"), EventArgs ("NSError", true)]
-		void RssiUpdated (CBPeripheral peripheral, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.MacOSX, 10, 13, message: "Use 'RssiRead' instead.")]
+		[Deprecated (PlatformName.iOS, 8, 0, message: "Use 'RssiRead' instead.")]
+		[Deprecated (PlatformName.TvOS, 9, 0, message: "Use 'RssiRead' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'RssiRead' instead.")]
+		[Export ("peripheralDidUpdateRSSI:error:"), EventArgs ("NSError", true, XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void RssiUpdated (CBPeripheral peripheral, [NullAllowed] NSError error);
 
-		[iOS (8,0)]
-		[Mac (10,13)]
-		[Export ("peripheral:didReadRSSI:error:"), EventArgs ("CBRssi")]
-		void RssiRead (CBPeripheral peripheral, NSNumber rssi, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="rssi">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Export ("peripheral:didReadRSSI:error:"), EventArgs ("CBRssi", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void RssiRead (CBPeripheral peripheral, NSNumber rssi, [NullAllowed] NSError error);
 
-		// FIXME: TYPO: missing 's' (plural)
-		[Export ("peripheral:didDiscoverServices:"), EventArgs ("NSError", true)]
-		void DiscoveredService (CBPeripheral peripheral, NSError error);
-
-		[Export ("peripheral:didDiscoverIncludedServicesForService:error:"), EventArgs ("CBService")]
-		void DiscoveredIncludedService  (CBPeripheral peripheral, CBService service, NSError error);
-
-		[Export ("peripheral:didDiscoverCharacteristicsForService:error:"), EventArgs ("CBService")]
-#if XAMCORE_2_0
-		// FIXME: TYPO: missing 's' (plural)
-		void DiscoveredCharacteristic (CBPeripheral peripheral, CBService service, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didDiscoverServices:"), EventArgs ("NSError", true, XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+#if XAMCORE_5_0
+		void DiscoveredServices (CBPeripheral peripheral, [NullAllowed] NSError error);
 #else
-		void DiscoverCharacteristic (CBPeripheral peripheral, CBService service, NSError error);
+		void DiscoveredService (CBPeripheral peripheral, [NullAllowed] NSError error);
 #endif
-		
-		[Export ("peripheral:didUpdateValueForCharacteristic:error:"), EventArgs ("CBCharacteristic")]
-		void UpdatedCharacterteristicValue (CBPeripheral peripheral, CBCharacteristic characteristic, NSError error);
-		 
-		[Export ("peripheral:didWriteValueForCharacteristic:error:"), EventArgs ("CBCharacteristic")]
-		void WroteCharacteristicValue (CBPeripheral peripheral, CBCharacteristic characteristic, NSError error);
 
-		[Export ("peripheral:didUpdateNotificationStateForCharacteristic:error:"), EventArgs ("CBCharacteristic")]
-		void UpdatedNotificationState (CBPeripheral peripheral, CBCharacteristic characteristic, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="service">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didDiscoverIncludedServicesForService:error:"), EventArgs ("CBService", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void DiscoveredIncludedService (CBPeripheral peripheral, CBService service, [NullAllowed] NSError error);
 
-		[Export ("peripheral:didDiscoverDescriptorsForCharacteristic:error:"), EventArgs ("CBCharacteristic")]
-		void DiscoveredDescriptor (CBPeripheral peripheral, CBCharacteristic characteristic, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		/// <param name="service">To be added.</param>
+		/// <param name="error">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("peripheral:didDiscoverCharacteristicsForService:error:"), EventArgs ("CBService", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void DiscoveredCharacteristics (CBPeripheral peripheral, CBService service, [NullAllowed] NSError error);
 
-		[Export ("peripheral:didUpdateValueForDescriptor:error:"), EventArgs ("CBDescriptor")]
-		void UpdatedValue (CBPeripheral peripheral, CBDescriptor descriptor, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didUpdateValueForCharacteristic:error:"), EventArgs ("CBCharacteristic", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+#if XAMCORE_5_0
+		void UpdatedCharacteristicValue (CBPeripheral peripheral, CBCharacteristic characteristic, [NullAllowed] NSError error);
+#else
+		void UpdatedCharacterteristicValue (CBPeripheral peripheral, CBCharacteristic characteristic, [NullAllowed] NSError error);
+#endif
 
-		[Export ("peripheral:didWriteValueForDescriptor:error:"), EventArgs ("CBDescriptor")]
-		void WroteDescriptorValue (CBPeripheral peripheral, CBDescriptor descriptor, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didWriteValueForCharacteristic:error:"), EventArgs ("CBCharacteristic", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void WroteCharacteristicValue (CBPeripheral peripheral, CBCharacteristic characteristic, [NullAllowed] NSError error);
 
-		[NoTV]
-		[NoWatch]
-		[Availability (Introduced = Platform.iOS_6_0, Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_8_4)]
-		[Export ("peripheralDidInvalidateServices:")]
-		void InvalidatedService (CBPeripheral peripheral);	
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didUpdateNotificationStateForCharacteristic:error:"), EventArgs ("CBCharacteristic", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void UpdatedNotificationState (CBPeripheral peripheral, CBCharacteristic characteristic, [NullAllowed] NSError error);
 
-		[iOS (6, 0)]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didDiscoverDescriptorsForCharacteristic:error:"), EventArgs ("CBCharacteristic", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void DiscoveredDescriptor (CBPeripheral peripheral, CBCharacteristic characteristic, [NullAllowed] NSError error);
+
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didUpdateValueForDescriptor:error:"), EventArgs ("CBDescriptor", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void UpdatedValue (CBPeripheral peripheral, CBDescriptor descriptor, [NullAllowed] NSError error);
+
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didWriteValueForDescriptor:error:"), EventArgs ("CBDescriptor", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void WroteDescriptorValue (CBPeripheral peripheral, CBDescriptor descriptor, [NullAllowed] NSError error);
+
+		/// <param name="peripheral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EventArgs ("", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheralDidUpdateName:")]
 		void UpdatedName (CBPeripheral peripheral);
 
-		[iOS (7,0)]
-		[Export ("peripheral:didModifyServices:"), EventArgs ("CBPeripheralServices")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="services">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheral:didModifyServices:"), EventArgs ("CBPeripheralServices", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void ModifiedServices (CBPeripheral peripheral, CBService [] services);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13)]
-		[EventArgs ("CBPeripheralOpenL2CapChannel")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="channel">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="error">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[EventArgs ("CBPeripheralOpenL2CapChannel", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheral:didOpenL2CAPChannel:error:")]
 		void DidOpenL2CapChannel (CBPeripheral peripheral, [NullAllowed] CBL2CapChannel channel, [NullAllowed] NSError error);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13)]
+		/// <param name="peripheral">The peripheral that provided the update.</param>
+		/// <param name="results">
+		///   <para>The channel sounding procedure results.</para>
+		///   <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		/// </param>
+		/// <param name="error">
+		///   <para>The error that occurred.</para>
+		///   <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		/// </param>
+		/// <summary>Called when a channel sounding procedure produces results.</summary>
+		[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+		[EventArgs ("CBChannelSoundingProcedureResults", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		[Export ("peripheral:didReceiveChannelSoundingProcedureResults:error:")]
+		void DidReceiveChannelSoundingProcedureResults (CBPeripheral peripheral, [NullAllowed] CBChannelSoundingProcedureResults results, [NullAllowed] NSError error);
+
+		/// <param name="peripheral">The peripheral whose channel sounding session completed.</param>
+		/// <param name="error">
+		///   <para>The error that occurred.</para>
+		///   <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		/// </param>
+		/// <summary>Called when a channel sounding session completes.</summary>
+		[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+		[EventArgs ("NSError", true, XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		[Export ("peripheral:didCompleteChannelSoundingSession:")]
+		void DidCompleteChannelSoundingSession (CBPeripheral peripheral, [NullAllowed] NSError error);
+
+		/// <param name="peripheral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EventArgs ("", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		[MacCatalyst (13, 1)]
 		[Export ("peripheralIsReadyToSendWriteWithoutResponse:")]
 		void IsReadyToSendWriteWithoutResponse (CBPeripheral peripheral);
 	}
 
-	[Watch (4,0)]
+	/// <summary>Configures the role that a peripheral assumes in a channel sounding session.</summary>
+	[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CBChannelSoundingSessionConfiguration {
+		/// <summary>Gets the role that the peripheral assumes in the channel sounding session.</summary>
+		[Export ("role")]
+		CBChannelSoundingSessionConfigurationRole Role { get; }
+
+		/// <param name="role">The role that the peripheral assumes in the channel sounding session.</param>
+		/// <summary>Creates a channel sounding session configuration with the specified role.</summary>
+		[DesignatedInitializer]
+		[Export ("initWithRole:")]
+		NativeHandle Constructor (CBChannelSoundingSessionConfigurationRole role);
+	}
+
+	/// <summary>Contains the results of a channel sounding procedure.</summary>
+	[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface CBChannelSoundingProcedureResults {
+		/// <summary>Gets the measured distance to the peripheral, in meters.</summary>
+		[Export ("distance")]
+		double Distance { get; }
+	}
+
+	/// <summary>Represents the services of a remote peripheral.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBService_Class/index.html">Apple documentation for <c>CBService</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBAttribute))]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBService {
-		[iOS (6,0), Mac (10,9)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isPrimary")]
-#if XAMCORE_4_0
 		bool Primary { get; }
-#else
-		bool Primary { get; [NotImplemented ("Not available on 'CBService', only available on 'CBMutableService'.")] set; }
-#endif
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("includedServices", ArgumentSemantic.Retain)]
-		CBService [] IncludedServices { get; [NotImplemented ("Not available on 'CBService', only available on CBMutableService.")] set;  }
+		[NullAllowed]
+		CBService [] IncludedServices { get; [NotImplemented ("Not available on 'CBService', only available on CBMutableService.")] set; }
 
+		/// <summary>The list of characteristics discovered by this service.</summary>
+		/// <value>Array of CBCharacteristic objects.</value>
+		/// <remarks>
+		///   The contents of this property are only updated after you
+		///   have initiated a characteristic discovery using the <see cref="CoreBluetooth.CBPeripheral.DiscoverCharacteristics(CBUUID[],CBService)" />
+		///   method.
+		/// </remarks>
 		[Export ("characteristics", ArgumentSemantic.Retain)]
-		CBCharacteristic [] Characteristics { get; [NotImplemented ("Not available on 'CBService', only available on CBMutableService.")] set;  }
+		[NullAllowed]
+		CBCharacteristic [] Characteristics { get; [NotImplemented ("Not available on 'CBService', only available on CBMutableService.")] set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed]
 		[Export ("peripheral", ArgumentSemantic.Weak)]
 		CBPeripheral Peripheral { get; }
 
 	}
-		
-	[Watch (4,0)]
-	[iOS (6, 0), Mac(10,9)]
+
+	/// <summary>A mutable <see cref="CoreBluetooth.CBService" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBMutableService_Class/index.html">Apple documentation for <c>CBMutableService</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBService))]
 	[DisableDefaultCtor]
 	interface CBMutableService {
+		/// <param name="uuid">To be added.</param>
+		/// <param name="primary">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[NoTV]
-		[NoWatch]
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
 		[Export ("initWithType:primary:")]
 		[PostGet ("UUID")]
-		IntPtr Constructor (CBUUID uuid, bool primary);
+		NativeHandle Constructor (CBUUID uuid, bool primary);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("includedServices", ArgumentSemantic.Retain)]
 		[Override]
-		CBService[] IncludedServices { get; set; }  // TODO: check array type
+		[NullAllowed]
+		CBService [] IncludedServices { get; set; }  // TODO: check array type
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("characteristics", ArgumentSemantic.Retain)]
 		[Override]
-		CBCharacteristic[] Characteristics { get; set; }	// TODO: check array type
+		[NullAllowed]
+		CBCharacteristic [] Characteristics { get; set; }   // TODO: check array type
 	}
 
-	[Watch (4,0)]
+	/// <summary>Universal Unique Identifiers for the Bluetooth stack.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBUUID_Class/index.html">Apple documentation for <c>CBUUID</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // crash (at dispose time) on OSX
 	interface CBUUID : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("data")]
-		NSData Data{ get; }
+		NSData Data { get; }
 
+		/// <param name="theString">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[MarshalNativeExceptions]
 		[Export ("UUIDWithString:")]
 		CBUUID FromString (string theString);
 
+		/// <param name="theData">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("UUIDWithData:")]
 		CBUUID FromData (NSData theData);
 
-		[Availability (Deprecated = Platform.iOS_9_0)]
+		/// <param name="theUUID">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.MacOSX, 10, 13)]
 		[Deprecated (PlatformName.iOS, 9, 0)]
-		[NoWatch]
+		[Deprecated (PlatformName.TvOS, 9, 0)]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Static]
 		[Export ("UUIDWithCFUUID:")]
 		CBUUID FromCFUUID (IntPtr theUUID);
-		
+
+		/// <param name="theUUID">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
-		[iOS (7,0), Mac (10,9)]
+		[MacCatalyst (13, 1)]
 		[Export ("UUIDWithNSUUID:")]
 		CBUUID FromNSUuid (NSUuid theUUID);
 
-#if !XAMCORE_3_0
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDGenericAccessProfileString")]
-		NSString GenericAccessProfileString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDGenericAttributeProfileString")]
-		NSString GenericAttributeProfileString { get; }
-#endif
-
+		/// <summary>Represents the value associated with the constant CBUUIDCharacteristicExtendedPropertiesString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDCharacteristicExtendedPropertiesString")]
 		NSString CharacteristicExtendedPropertiesString { get; }
 
+		/// <summary>Represents the value associated with the constant CBUUIDCharacteristicUserDescriptionString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDCharacteristicUserDescriptionString")]
 		NSString CharacteristicUserDescriptionString { get; }
 
+		/// <summary>Represents the value associated with the constant CBUUIDClientCharacteristicConfigurationString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDClientCharacteristicConfigurationString")]
 		NSString ClientCharacteristicConfigurationString { get; }
 
+		/// <summary>Represents the value associated with the constant CBUUIDServerCharacteristicConfigurationString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDServerCharacteristicConfigurationString")]
 		NSString ServerCharacteristicConfigurationString { get; }
 
+		/// <summary>Represents the value associated with the constant CBUUIDCharacteristicFormatString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDCharacteristicFormatString")]
 		NSString CharacteristicFormatString { get; }
 
+		/// <summary>Represents the value associated with the constant CBUUIDCharacteristicAggregateFormatString</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBUUIDCharacteristicAggregateFormatString")]
 		NSString CharacteristicAggregateFormatString { get; }
 
-#if MONOMAC
-		[Internal]
-		[Field ("CBUUIDValidRangeString")]
-		[Introduced (PlatformName.MacOSX, 10, 12)]
-		[Deprecated (PlatformName.MacOSX, 10, 13)]
-		[Obsoleted (PlatformName.MacOSX, 10, 13)]
-		NSString CBUUIDValidRangeString { get; }
-
-		[Internal]
-		[Mac (10,13)]
-		[Field ("CBUUIDCharacteristicValidRangeString")]
-		NSString CBUUIDCharacteristicValidRangeString { get; }
-#else
-		[iOS (10,0)]
-		[TV (10,0)]
+		/// <summary>Represents the value associated with the constant CBUUIDCharacteristicValidRangeString</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBUUIDCharacteristicValidRangeString")]
 		NSString CharacteristicValidRangeString { get; }
-#endif
 
-		[iOS (11,0)]
-		[TV (11,0)]
-		[Mac (10,13)]
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Field ("CBUUIDCharacteristicObservationScheduleString")]
+		NSString CharacteristicObservationScheduleString { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("CBUUIDL2CAPPSMCharacteristicString")]
 		NSString L2CapPsmCharacteristicString { get; }
 
-#if !XAMCORE_3_0
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDDeviceNameString")]
-		NSString DeviceNameString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDAppearanceString")]
-		NSString AppearanceString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDPeripheralPrivacyFlagString")]
-		NSString PeripheralPrivacyFlagString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDReconnectionAddressString")]
-		NSString ReconnectionAddressString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDPeripheralPreferredConnectionParametersString")]
-		NSString PeripheralPreferredConnectionParametersString { get; }
-
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0)]
-		[Field ("CBUUIDServiceChangedString")]
-		NSString ServiceChangedString { get; }
-#endif // !XAMCORE_3_0
-
-		[iOS (7,1)][Mac (10,10)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("UUIDString")]
 		string Uuid { get; }
 	}
-		
-	[Watch (4,0)]
-	[iOS (6,0), Mac(10,9)]
+
+	/// <summary>An Attribute Protocol request for reading or writing.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBATTRequest_class/index.html">Apple documentation for <c>CBATTRequest</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface CBATTRequest {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("central", ArgumentSemantic.Retain)]
 		CBCentral Central { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("characteristic", ArgumentSemantic.Retain)]
 		CBCharacteristic Characteristic { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("offset")]
 		nint Offset { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("value", ArgumentSemantic.Copy)]
-		NSData Value { get; set; }		
+		[NullAllowed]
+		NSData Value { get; set; }
 	}
 
-	[Mac (10,9)]
-	[Watch (4,0)]
-	[iOS (6,0)]
+	/// <summary>Used to identify centrals (that are not the current device).</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBCentral_Class/index.html">Apple documentation for <c>CBCentral</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (CBPeer))]
 	// `delloc` a default instance crash applications and a default instance, without the ability to change the UUID, does not make sense
 	[DisableDefaultCtor]
 	interface CBCentral : NSCopying {
-#if !XAMCORE_2_0
-		[Export ("UUID")]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_9_0)]
-		IntPtr UUID { get; }
-#endif
-
-#if MONOMAC
-		// Introduced with iOS7, but does not have NS_AVAILABLE
-		// Moved to a new base class, CBPeer, in iOS 8.
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NoiOS]
+		[NoTV]
+		[NoMacCatalyst]
 		[Export ("identifier")]
 		NSUuid Identifier { get; }
-#endif
 
 		// Introduced with iOS7, but does not have NS_AVAILABLE
-		[iOS (7,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumUpdateValueLength")]
 		nuint MaximumUpdateValueLength { get; }
 	}
 
-	[Watch (4,0)]
-	[iOS (6, 0), Mac(10,9)]
+	/// <summary>Manages published services per the <see cref="CBPeripheral" /> device's GATT database.</summary>
+	/// <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBPeripheralManager_Class/index.html">Apple documentation for <c>CBPeripheralManager</c></related>
+	[MacCatalyst (13, 1)]
 	[DisableDefaultCtor]
-	[BaseType (typeof (CBManager), Delegates=new[] { "WeakDelegate" }, Events=new[] { typeof (CBPeripheralManagerDelegate) })]
+	[BaseType (typeof (CBManager), Delegates = new [] { "WeakDelegate" }, Events = new [] { typeof (CBPeripheralManagerDelegate) })]
 	interface CBPeripheralManager {
 
-		[Mac (10,9, onlyOn64: true)]  // Was removed from 32-bit in 10.13 unannounced
+		/// <summary>Default constructor, initializes a new instance of this class.</summary>
+		/// <remarks />
 		[Export ("init")]
-		IntPtr Constructor ();
+		NativeHandle Constructor ();
 
+		/// <param name="peripheralDelegate">To be added.</param>
+		/// <param name="queue">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[NoTV]
-		[NoWatch]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDelegate:queue:")]
 		[PostGet ("WeakDelegate")]
-		IntPtr Constructor ([Protocolize] CBPeripheralManagerDelegate peripheralDelegate, [NullAllowed] DispatchQueue queue);
+		NativeHandle Constructor ([NullAllowed] ICBPeripheralManagerDelegate peripheralDelegate, [NullAllowed] DispatchQueue queue);
 
+		/// <param name="peripheralDelegate">To be added.</param>
+		/// <param name="queue">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="options">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[NoTV]
-		[NoWatch]
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
-		[iOS (7,0),Mac (10,9)]
 		[Export ("initWithDelegate:queue:options:")]
 		[PostGet ("WeakDelegate")]
-		IntPtr Constructor ([Protocolize] CBPeripheralManagerDelegate peripheralDelegate, [NullAllowed] DispatchQueue queue, [NullAllowed] NSDictionary options);
+		NativeHandle Constructor ([NullAllowed] ICBPeripheralManagerDelegate peripheralDelegate, [NullAllowed] DispatchQueue queue, [NullAllowed] NSDictionary options);
 
+		/// <summary>An instance of the CoreBluetooth.ICBPeripheralManagerDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the CoreBluetooth.ICBPeripheralManagerDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[NullAllowed]
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		CBPeripheralManagerDelegate Delegate { get; set; }
+		ICBPeripheralManagerDelegate Delegate { get; set; }
 
+		/// <summary>An object that can respond to the delegate protocol for this type</summary>
+		///         <value>The instance that will respond to events and data requests.</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>   Methods must be decorated with the [Export ("selectorName")] attribute to respond to each method from the protocol.   Alternatively use the Delegate method which is strongly typed and does not require the [Export] attributes on methods.</para>
+		///         </remarks>
 		[NullAllowed]
 		[Export ("delegate", ArgumentSemantic.Weak)]
 		NSObject WeakDelegate { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isAdvertising")]
 		bool Advertising { get; }
 
+		/// <param name="service">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("addService:")]
 		void AddService (CBMutableService service);
 
+		/// <param name="service">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeService:")]
 		void RemoveService (CBMutableService service);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("removeAllServices")]
 		void RemoveAllServices ();
 
+		/// <param name="request">To be added.</param>
+		///         <param name="result">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("respondToRequest:withResult:")]
 		void RespondToRequest (CBATTRequest request, CBATTError result); // TODO: Could it return CBATTError?. This won't work because it's a value
 
+		/// <param name="options">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("startAdvertising:")]
 		void StartAdvertising ([NullAllowed] NSDictionary options);
 
-		[Wrap ("StartAdvertising (options == null ? null : options.Dictionary)")]
+		/// <param name="options">
+		///           <para>Weakly typed set of options to advertise.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Wrap ("StartAdvertising (options.GetDictionary ())")]
 		void StartAdvertising ([NullAllowed] StartAdvertisingOptions options);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("stopAdvertising")]
 		void StopAdvertising ();
 
+		/// <param name="latency">To be added.</param>
+		///         <param name="connectedCentral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setDesiredConnectionLatency:forCentral:")]
 		void SetDesiredConnectionLatency (CBPeripheralManagerConnectionLatency latency, CBCentral connectedCentral);
 
+		/// <param name="value">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <param name="subscribedCentrals">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("updateValue:forCharacteristic:onSubscribedCentrals:")]
-		bool UpdateValue (NSData value, CBMutableCharacteristic characteristic, [NullAllowed] CBCentral[] subscribedCentrals);
+		bool UpdateValue (NSData value, CBMutableCharacteristic characteristic, [NullAllowed] CBCentral [] subscribedCentrals);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13, onlyOn64: true)]
+		/// <param name="encryptionRequired">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("publishL2CAPChannelWithEncryption:")]
 		void PublishL2CapChannel (bool encryptionRequired);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13, onlyOn64: true)]
+		/// <param name="psm">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("unpublishL2CAPChannel:")]
 		void UnpublishL2CapChannel (ushort psm);
 
+		/// <summary>Represents the value associated with the constant CBPeripheralManagerOptionShowPowerAlertKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBPeripheralManagerOptionShowPowerAlertKey")]
-		[iOS (7,0)]
 		NSString OptionShowPowerAlertKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBPeripheralManagerOptionRestoreIdentifierKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBPeripheralManagerOptionRestoreIdentifierKey")]
-		[iOS (7,0)]
 		NSString OptionRestoreIdentifierKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBPeripheralManagerRestoredStateServicesKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBPeripheralManagerRestoredStateServicesKey")]
-		[iOS (7,0)]
 		NSString RestoredStateServicesKey { get; }
 
+		/// <summary>Represents the value associated with the constant CBPeripheralManagerRestoredStateAdvertisementDataKey</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Field ("CBPeripheralManagerRestoredStateAdvertisementDataKey")]
-		[iOS (7,0)]
 		NSString RestoredStateAdvertisementDataKey { get; }
-
-#if !MONOMAC || !XAMCORE_4_0
-		[iOS (7,0)]
-		[Static]
-		[Export ("authorizationStatus")]
-		CBPeripheralManagerAuthorizationStatus AuthorizationStatus { get; }
-#endif
 	}
 
-	[Watch (4,0)]
-	[iOS (6, 0), Mac(10,9)]
+	interface ICBPeripheralManagerDelegate { }
+
+	/// <summary>Delegate object for <see cref="CoreBluetooth.CBPeripheralManager" />. Adds methods for events relating to availability, publishing, advertising, and subscription.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/CoreBluetooth/Reference/CBPeripheralManagerDelegate_Protocol/index.html">Apple documentation for <c>CBPeripheralManagerDelegate</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[Model]
 	[Protocol]
 	interface CBPeripheralManagerDelegate {
+		/// <param name="peripheral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EventArgs ("", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Abstract]
 		[Export ("peripheralManagerDidUpdateState:")]
 		void StateUpdated (CBPeripheralManager peripheral);
 
-		[Export ("peripheralManager:willRestoreState:"), EventArgs ("CBWillRestore")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="dict">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:willRestoreState:"), EventArgs ("CBWillRestore", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void WillRestoreState (CBPeripheralManager peripheral, NSDictionary dict);
 
-		[Export ("peripheralManagerDidStartAdvertising:error:"), EventArgs ("NSError", true)]
-		void AdvertisingStarted (CBPeripheralManager peripheral, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManagerDidStartAdvertising:error:"), EventArgs ("NSError", true, XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void AdvertisingStarted (CBPeripheralManager peripheral, [NullAllowed] NSError error);
 
-		[Export ("peripheralManager:didAddService:error:"), EventArgs ("CBPeripheralManagerService")]
-		void ServiceAdded (CBPeripheralManager peripheral, CBService service, NSError error);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="service">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:didAddService:error:"), EventArgs ("CBPeripheralManagerService", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void ServiceAdded (CBPeripheralManager peripheral, CBService service, [NullAllowed] NSError error);
 
-		[Export ("peripheralManager:central:didSubscribeToCharacteristic:"), EventArgs ("CBPeripheralManagerSubscription")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="central">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:central:didSubscribeToCharacteristic:"), EventArgs ("CBPeripheralManagerSubscription", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void CharacteristicSubscribed (CBPeripheralManager peripheral, CBCentral central, CBCharacteristic characteristic);
 
-		[Export ("peripheralManager:central:didUnsubscribeFromCharacteristic:"), EventArgs ("CBPeripheralManagerSubscription")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="central">To be added.</param>
+		///         <param name="characteristic">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:central:didUnsubscribeFromCharacteristic:"), EventArgs ("CBPeripheralManagerSubscription", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void CharacteristicUnsubscribed (CBPeripheralManager peripheral, CBCentral central, CBCharacteristic characteristic);
 
-		[Export ("peripheralManager:didReceiveReadRequest:"), EventArgs ("CBATTRequest")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="request">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:didReceiveReadRequest:"), EventArgs ("CBATTRequest", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		void ReadRequestReceived (CBPeripheralManager peripheral, CBATTRequest request);
 
-		[Export ("peripheralManager:didReceiveWriteRequests:"), EventArgs ("CBATTRequests")]
-		void WriteRequestsReceived (CBPeripheralManager peripheral, CBATTRequest[] requests);
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="requests">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("peripheralManager:didReceiveWriteRequests:"), EventArgs ("CBATTRequests", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
+		void WriteRequestsReceived (CBPeripheralManager peripheral, CBATTRequest [] requests);
 
+		/// <param name="peripheral">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EventArgs ("", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheralManagerIsReadyToUpdateSubscribers:")]
 		void ReadyToUpdateSubscribers (CBPeripheralManager peripheral);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13)]
-		[EventArgs ("CBPeripheralManagerOpenL2CapChannel")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="channel">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="error">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[EventArgs ("CBPeripheralManagerOpenL2CapChannel", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheralManager:didOpenL2CAPChannel:error:")]
 		void DidOpenL2CapChannel (CBPeripheralManager peripheral, [NullAllowed] CBL2CapChannel channel, [NullAllowed] NSError error);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13)]
-		[EventArgs ("CBPeripheralManagerL2CapChannelOperation")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="psm">To be added.</param>
+		///         <param name="error">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[EventArgs ("CBPeripheralManagerL2CapChannelOperation", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheralManager:didUnpublishL2CAPChannel:error:")]
 		void DidUnpublishL2CapChannel (CBPeripheralManager peripheral, ushort psm, [NullAllowed] NSError error);
 
-		[iOS (11,0)][TV (11,0)][Mac (10,13)]
-		[EventArgs ("CBPeripheralManagerL2CapChannelOperation")]
+		/// <param name="peripheral">To be added.</param>
+		///         <param name="psm">To be added.</param>
+		///         <param name="error">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[EventArgs ("CBPeripheralManagerL2CapChannelOperation", XmlDocs = """
+			<summary>Event raised by the object.</summary>
+			<remarks>If developers do not assign a value to this event, this will reset the value for the WeakDelegate property to an internal handler that maps delegates to events.</remarks>
+			""")]
 		[Export ("peripheralManager:didPublishL2CAPChannel:error:")]
 		void DidPublishL2CapChannel (CBPeripheralManager peripheral, ushort psm, [NullAllowed] NSError error);
 	}
 
-	[iOS (8, 0)]
-	[Mac (10,13)]
-	[Watch (4,0)]
+	/// <summary>Class that represents a central or perhipheral Bluetooth device.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/CoreBluetooth/CBPeer">Apple documentation for <c>CBPeer</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // CBPeer.h: - (instancetype)init NS_UNAVAILABLE;
 	interface CBPeer : NSCopying {
-		[Internal]
-		[NoTV]
-		[NoWatch]
-		[NoMac]
-		[Availability (Deprecated = Platform.iOS_7_0, Obsoleted = Platform.iOS_9_0)]
-		[Export ("UUID")]
-		IntPtr _UUID { get;  }
-	
-		[iOS (7, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("identifier")]
 		NSUuid Identifier { get; }
 	}
 
 	// The type is available in 32bits macOS 10.13 even if most properties are 64 bits only
-	[Watch (4,0)][iOS (11,0)][TV (11,0)][Mac (10,13)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject), Name = "CBL2CAPChannel")]
 	interface CBL2CapChannel {
-		[Mac (10,13, onlyOn64: true)]
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("peer")]
 		CBPeer Peer { get; }
 
-		[Mac (10,13, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputStream")]
 		NSInputStream InputStream { get; }
 
-		[Mac (10,13, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputStream")]
 		NSOutputStream OutputStream { get; }
 
-		[Mac (10,13, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("PSM")]
-		/* uint16_t */ ushort Psm { get; }
+		/* uint16_t */
+		ushort Psm { get; }
 	}
 }

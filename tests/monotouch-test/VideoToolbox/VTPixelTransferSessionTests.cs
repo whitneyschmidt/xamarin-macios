@@ -1,0 +1,57 @@
+//
+// Unit tests for VTPixelTransferSession
+//
+// Authors:
+//	Israel Soto <issoto@microsoft.com>
+//	
+//
+// Copyright 2022 Microsoft Corporation.
+//
+
+#nullable enable
+
+using System.Threading;
+
+using VideoToolbox;
+using CoreMedia;
+using CoreVideo;
+using AVFoundation;
+using Xamarin.Utils;
+
+namespace MonoTouchFixtures.VideoToolbox {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class VTPixelTransferSessionTests {
+		[OneTimeSetUp]
+		public void Init () => TestRuntime.AssertXcodeVersion (14, 0);
+
+		[Test]
+		public void PixelTransferSessionCreateTest ()
+		{
+			using var session = VTPixelTransferSession.Create ();
+			Assert.That (session, Is.Not.Null, "Session should not be null");
+		}
+
+		[Test]
+		public void PixelTransferSessionTransferImageTest ()
+		{
+			using var session = VTPixelTransferSession.Create ();
+			using var sourcePixelBuffer = new CVPixelBuffer (640, 480, CVPixelFormatType.CV420YpCbCr8BiPlanarFullRange);
+			using var destinationPixelBuffer = new CVPixelBuffer (320, 240, CVPixelFormatType.CV420YpCbCr8BiPlanarFullRange);
+			var result = session.TransferImage (sourcePixelBuffer, destinationPixelBuffer);
+			Assert.That (VTStatus.Ok, Is.EqualTo (result), "TransferImage");
+		}
+
+		[Test]
+		public void SetTransferPropertiesTest ()
+		{
+			using var session = VTPixelTransferSession.Create ();
+			var result = session.SetTransferProperties (new VTPixelTransferProperties {
+				ScalingMode = VTScalingMode.Letterbox
+			});
+
+			Assert.That (VTStatus.Ok, Is.EqualTo (result), "SetTransferProperties");
+		}
+	}
+}

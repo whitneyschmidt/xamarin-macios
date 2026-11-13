@@ -25,26 +25,29 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
 
-using Foundation; 
-using ObjCRuntime;
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreAnimation {
 
 	public unsafe partial class CALayerDelegate {
-		IntPtr calayer;
+		WeakReference<CALayer>? calayer;
 
-		internal void SetCALayer (CALayer layer)
+		internal void SetCALayer (CALayer? layer)
 		{
-			calayer = layer == null ? IntPtr.Zero : layer.Handle;
+			calayer = layer is null ? null : new WeakReference<CALayer> (layer);
 		}
 
+		/// <inheritdoc />
 		protected override void Dispose (bool disposing)
 		{
-			if (calayer != IntPtr.Zero)
-				Messaging.void_objc_msgSend_IntPtr (calayer, Selector.GetHandle ("setDelegate:"), IntPtr.Zero);
+			if (calayer?.TryGetTarget (out var layer) == true) {
+				Messaging.void_objc_msgSend_IntPtr (layer.Handle, Selector.GetHandle ("setDelegate:"), IntPtr.Zero);
+				GC.KeepAlive (layer);
+				calayer = null;
+			}
 
 			base.Dispose (disposing);
 		}

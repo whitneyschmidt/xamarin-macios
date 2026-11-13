@@ -7,13 +7,10 @@
 // Authors:
 //   Rolf Bjarne Kvinge <rolf@xamarin.com>
 //
-using System;
 
 namespace ObjCRuntime {
-	[AttributeUsage (AttributeTargets.Parameter, AllowMultiple=false)]
-#if XAMCORE_2_0
-	sealed
-#endif
-	public class TransientAttribute : Attribute {
+	/// <include file="../../docs/api/ObjCRuntime/TransientAttribute.xml" path="/Documentation/Docs[@DocId='T:ObjCRuntime.TransientAttribute']/*" />
+	[AttributeUsage (AttributeTargets.Parameter, AllowMultiple = false)]
+	public sealed class TransientAttribute : Attribute {
 	}
 }

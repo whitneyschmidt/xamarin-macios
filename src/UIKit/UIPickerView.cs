@@ -1,28 +1,16 @@
 #if IOS
 
-using System;
-
-using Foundation; 
 using CoreGraphics;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace UIKit {
 	public partial class UIPickerView : UIView, IUITableViewDataSource {
-		private UIPickerViewModel model;
+		UIPickerViewModel? model;
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use Model instead")]
-		public UIPickerViewModel Source {
-			get {
-				return Model;
-			}
-			set {
-				Model = value;
-			}
-		}
-#endif
-
-		public UIPickerViewModel Model {
+		/// <summary>Gets or sets the <see cref="UIPickerViewModel" /> that this <see cref="UIPickerView" /> is representing.</summary>
+		/// <value>The model used by the picker view. May be <see langword="null" /> to indicate that no model is set or to clear the current model.</value>
+		public UIPickerViewModel? Model {
 			get {
 				return model;
 			}

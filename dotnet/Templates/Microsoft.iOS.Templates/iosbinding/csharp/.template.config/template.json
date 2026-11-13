@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Microsoft",
+  "classifications": [ "iOS", "Mobile" ],
+  "groupIdentity": "Microsoft.iOS.iOSBinding",
+  "identity": "Microsoft.iOS.iOSBinding.CSharp",
+  "name": "iOS Binding Library",
+  "description": "A project for creating a .NET iOS binding library",
+  "shortName": "iosbinding",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "iOSBinding1",
+  "preferNameDirectory": true,
+  "primaryOutputs": [
+    { "path": "iOSBinding1.csproj" }
+  ],
+  "defaultName": "iOSBinding1",
+  "symbols": {
+    "Framework": {
+      "type": "parameter",
+      "description": "The target framework for the project.",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "net12.0-ios",
+          "description": "Target net12.0-ios"
+        },
+        {
+          "choice": "net11.0-ios",
+          "description": "Target net11.0-ios"
+        }
+      ],
+      "replaces": "TFM",
+      "defaultValue": "net12.0-ios"
+    }
+  }
+}

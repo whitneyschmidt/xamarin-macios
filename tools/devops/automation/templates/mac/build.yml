@@ -1,0 +1,251 @@
+parameters:
+
+- name: statusContext
+  type: string 
+  default: '10.16' # default context, since we started dealing with iOS devices. 
+
+# can depend on the pool, which is annoying, but we should keep it in mind
+- name: keyringPass
+  type: string
+
+- name: xqaCertPass
+  type: string
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+- name: uploadPrefix
+  type: string
+  default: '$(MaciosUploadPrefix)'
+
+- name: retryCount
+  type: number
+  default: 3
+
+- name: label
+  type: string
+  default: ''
+
+- name: stageName
+  type: string
+  default: ''
+
+steps:
+
+- template: ../common/checkout.yml
+  parameters:
+    isPR: ${{ parameters.isPR }}
+    repositoryAlias: ${{ parameters.repositoryAlias }}
+    commit: ${{ parameters.commit }}
+
+- template: agent-cleanser/v1.yml@yaml-templates # Uninstalls mono, Xamarin.Mac (if installed) plus cleanses the Provisionator Xcode cache and kills processes at the end
+  parameters:
+    CleanseProcesses: true
+
+- bash: $(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/disable-codeql-arm64.sh
+  displayName: 'Disable CodeQL on arm64'
+  name: disableCodeQLOnArm64
+
+# Write a generic failure message to the failure comment file, so a failure will be reported
+# if something goes wrong before we successfully complete the tests (in which case we delete the file).
+- pwsh: |
+    Set-Content -Path "$Env:GITHUB_FAILURE_COMMENT_FILE" -Value "Tests on macOS ${{ parameters.statusContext }} failed for unknown reasons."
+  displayName: "Initialize state"
+  env:
+    CONTEXT: ${{ parameters.statusContext }}
+    GITHUB_TOKEN: $(GitHub.Token)
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+- bash: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/bash/remove-ui-prompt.sh
+  env:
+    OSX_KEYCHAIN_PASS: ${{ parameters.keyringPass }}
+  displayName: 'Remove security UI-prompt (http://stackoverflow.com/a/40039594/183422)'
+  condition: succeededOrFailed() # we do not care about the previous process cleanup
+  continueOnError: true
+
+# download the packages that have been created, install them, later download the zip files that contain the already built
+# tests and execute them.
+
+- pwsh: '& "$Env:SYSTEM_DEFAULTWORKINGDIRECTORY/$Env:BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/show_bot_info.ps1"'
+  displayName: 'Show Bot Info'
+  continueOnError: true
+  timeoutInMinutes: 10
+
+- bash: '$SYSTEM_DEFAULTWORKINGDIRECTORY/$BUILD_REPOSITORY_TITLE/tools/devops/automation/scripts/bash/clean-bot.sh'
+  displayName: 'Clean bot'
+  continueOnError: true
+  timeoutInMinutes: 60
+
+- bash: |
+    if [[ $(ioreg -l | grep -e 'VMware' | wc -l) -ne 0 ]]; then
+      echo "Using VMware virtualization."
+      echo "##vso[task.setvariable variable=VM_VENDOR]VMware"
+    fi
+
+    if [[ $(ioreg -l | grep -e 'VirtualBox' | wc -l) -ne 0 ]]; then
+      echo "Using VirtualBox virtualization."
+      echo "##vso[task.setvariable variable=VM_VENDOR]VirtualBox"
+    fi
+
+    if [[ $(ioreg -l | grep -e 'Parallels' | wc -l) -ne 0 ]]; then
+      echo "Using Parallels virtualization."
+      echo "##vso[task.setvariable variable=VM_VENDOR]Parallels"
+    fi
+
+  displayName: 'Set VM Vendor'
+
+- bash: |
+    sudo rm -Rf $(Build.SourcesDirectory)/package
+    sudo rm -Rf $(Build.SourcesDirectory)/artifacts
+  displayName: "Remove artifacts"
+  condition: always()
+
+# Go get the tests!
+- task: DownloadPipelineArtifact@2
+  displayName: Download Mac tests
+  inputs:
+    artifact: 'mac-test-package'
+    allowFailedBuilds: true
+    path: $(Build.SourcesDirectory)/artifacts/tmp
+
+# 'Expand tests.' below needs 7z, which used to be installed by the Provisionator brew
+# step. The macOS test jobs don't provision Xcode, so they don't get 7z from
+# common/provision-xcode.yml either, and a freshly imaged agent doesn't have it at all.
+- bash: |
+    set -euo pipefail
+
+    # Homebrew refuses to run under Rosetta, so re-execute natively when translated.
+    if [[ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" == "1" ]]; then
+      /usr/bin/arch -arm64 "$REPOSITORY_PATH/system-dependencies.sh" --ignore-all --ignore-old-simulators --provision-7z
+    else
+      "$REPOSITORY_PATH/system-dependencies.sh" --ignore-all --ignore-old-simulators --provision-7z
+    fi
+  displayName: 'Provision 7z'
+  timeoutInMinutes: 30
+  env:
+    REPOSITORY_PATH: $(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)
+
+- bash: |
+    set -ex
+    ls -Rla@ $(Build.SourcesDirectory)/artifacts/tmp
+    xattr -s -c -r $(Build.SourcesDirectory)/artifacts/tmp/mac-test-package.7z
+    7z x $(Build.SourcesDirectory)/artifacts/tmp/mac-test-package.7z -o$(Build.SourcesDirectory)/artifacts/ -bb1
+    # no prefix! we did expand to the exact name we are using
+    xattr -s -c -r $(Build.SourcesDirectory)/artifacts/mac-test-package
+    ls -Rla@ $(Build.SourcesDirectory)/artifacts/mac-test-package
+  displayName: Expand tests.
+
+- bash: |
+    ls -Rla $(Build.SourcesDirectory)/artifacts
+    # no prefix, we do know the path!
+    $(Build.SourcesDirectory)/artifacts/mac-test-package/test-dependencies.sh
+  displayName: Install dependencies.
+  timeoutInMinutes: 60
+
+- template: ../common/install-qa-provisioning-profiles.yml
+  parameters:
+    env:
+      AUTH_TOKEN_GITHUB_COM: $(GitHub.Token)
+      AUTH_TOKEN_LA_DEV_APPLE_P12: ${{ parameters.xqaCertPass }}
+      AUTH_TOKEN_LA_DISTR_APPLE_P12: ${{ parameters.xqaCertPass }}
+      AUTH_TOKEN_LA_MAC_INSTALLER_DISTR_P12: ${{ parameters.xqaCertPass }}
+      AUTH_TOKEN_VSENG_XAMARIN_MAC_DEVICES_P12: ${{ parameters.xqaCertPass }}
+      AUTH_TOKEN_VSENG_XAMARIN_MAC_DEVICES_2_P12: ${{ parameters.xqaCertPass }}
+
+- pwsh: |
+    Write-Host "Running tests on $($Env:AGENT_NAME)"
+    Write-Host "##vso[task.setvariable variable=TESTS_BOT;isOutput=true]$($Env:AGENT_NAME)"
+    Write-Host "##vso[task.setvariable variable=TESTS_LABEL;isOutput=true]${{ parameters.label }}"
+    Write-Host "##vso[task.setvariable variable=TESTS_PLATFORM;isOutput=true]"
+    Write-Host "##vso[task.setvariable variable=TESTS_ATTEMPT;isOutput=true]$($Env:SYSTEM_JOBATTEMPT)"
+    Write-Host "##vso[task.setvariable variable=TESTS_TITLE;isOutput=true]${{ parameters.label }}"
+  displayName: 'Set output variables'
+
+- pwsh: >-
+    $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/run_mac_tests.ps1
+    -GithubToken $(GitHub.Token)
+    -RepositoryUri "$(Build.Repository.Uri)"
+    -SourcesDirectory "$(Build.SourcesDirectory)"
+    -GithubFailureCommentFile "$Env:GITHUB_FAILURE_COMMENT_FILE"
+    -StatusContext "${{ parameters.statusContext }}"
+    -TestSummaryPath "$(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/tests/TestSummary.md"
+    -HtmlReportPath "$(Build.SourcesDirectory)/$(BUILD_REPOSITORY_TITLE)/jenkins-results/tests/vsdrops_index.html"
+  displayName: 'Run tests'
+  name: runTests
+  timeoutInMinutes: 90
+  ${{ if not(parameters.isPR) }}:
+    retryCountOnTaskFailure: ${{ parameters.retryCount }}
+  env:
+    CONTEXT: ${{ parameters.statusContext }}
+    GITHUB_TOKEN: $(GitHub.Token)
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    MONO_DEBUG: no-gdb-backtrace
+    TEST_BOT: $(Agent.Name)
+    IS_PR: $(parameters.isPr)
+    MAC_TEST_PREFIX: ${{ parameters.stageName }}${{ parameters.label }}
+    VSDROPSPREFIX: $(VSDropsPrefix)
+
+- bash: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts/bash/collect-and-upload-crash-reports.sh
+  displayName: 'Collect and upload crash reports'
+  condition: always() # who knows when crash reports can end up being useful
+  continueOnError: true
+  env:
+    MACIOS_UPLOAD_PREFIX: ${{ parameters.uploadPrefix }}
+
+# Upload TestSummary as an artifact.
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Artifact: TestSummary'
+  inputs:
+    targetPath: '$(BUILD_REPOSITORY_TITLE)/tests/TestSummary.md'
+    artifactName: '${{ parameters.uploadPrefix }}TestSummary-${{ parameters.stageName }}${{ parameters.label }}-$(System.JobAttempt)'
+  continueOnError: true
+  condition: succeededOrFailed()
+
+# Upload to VSDrops so that the Html Report link in the GitHub comment works.
+- bash: |
+    echo "##vso[task.setvariable variable=JOB_STATUS_BEFORE_VSDROPS]$AGENT_JOBSTATUS"
+  displayName: 'Capture job status before VSDrops publish'
+  condition: succeededOrFailed()
+  continueOnError: true
+
+- task: artifactDropTask@1
+  displayName: 'Publish to Artifact Services Drop'
+  name: publishVSDrops
+  inputs:
+    dropServiceURI: 'https://devdiv.artifacts.visualstudio.com/DefaultCollection'
+    dropMetadataContainerName: '${{ parameters.uploadPrefix }}DropMetadata-${{ parameters.stageName }}${{ parameters.label }}-$(System.JobAttempt)'
+    buildNumber: '$(BUILD_REPOSITORY_TITLE)/device-tests/$(Build.BuildNumber)/$(Build.BuildId)/${{ parameters.stageName }}${{ parameters.label }}-$(System.JobAttempt)'
+    sourcePath: '$(BUILD_REPOSITORY_TITLE)/jenkins-results'
+    detailedLog: true
+    usePat: true
+  timeoutInMinutes: 30
+  continueOnError: true
+  condition: succeededOrFailed()
+
+# Azure DevOps doesn't support checking individual step results in step conditions
+# (failed('stepName') only works for jobs/stages). Comparing AGENT_JOBSTATUS before
+# and after the publish step is the best available approach to detect publish failures.
+- bash: |
+    if [ "$JOB_STATUS_BEFORE_VSDROPS" != "$AGENT_JOBSTATUS" ]; then
+      echo "VSDrops publish changed job status from '$JOB_STATUS_BEFORE_VSDROPS' to '$AGENT_JOBSTATUS'"
+      echo "##vso[task.setvariable variable=VSDROPS_PUBLISHED;isOutput=true]Failed"
+    fi
+  name: setVSDropsPublishResult
+  displayName: 'Set VSDrops publish result'
+  continueOnError: true
+  condition: succeededOrFailed()
+
+- template: ../common/archive-html-report.yml
+  parameters:
+    rootFolder: '$(BUILD_REPOSITORY_TITLE)/jenkins-results'
+    artifactName: '${{ parameters.uploadPrefix }}HtmlReport-${{ parameters.stageName }}${{ parameters.label }}-$(System.JobAttempt)'
+
+

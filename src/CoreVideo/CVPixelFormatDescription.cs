@@ -25,109 +25,201 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
 using CoreFoundation;
-using ObjCRuntime;
-using Foundation;
+
+#if XAMCORE_5_0
+using CVFillExtendedPixelsCallBackDataStruct = CoreVideo.CVFillExtendedPixelsCallBackData;
+#endif
+
+#nullable enable
 
 namespace CoreVideo {
-
-	[Watch (4,0)]
-	public static class CVPixelFormatDescription {
+	/// <summary>A class that supports the definition of custom pixel formats.</summary>
+	public partial class CVPixelFormatDescription {
 #if !COREBUILD
-		public static readonly NSString NameKey;
-		public static readonly NSString ConstantKey;
-		public static readonly NSString CodecTypeKey;
-		public static readonly NSString FourCCKey;
-		public static readonly NSString PlanesKey;
-		public static readonly NSString BlockWidthKey;
-		public static readonly NSString BlockHeightKey;
-		public static readonly NSString BitsPerBlockKey;
-		public static readonly NSString BlockHorizontalAlignmentKey;
-		public static readonly NSString BlockVerticalAlignmentKey;
-		public static readonly NSString BlackBlockKey;
-		public static readonly NSString HorizontalSubsamplingKey;
-		public static readonly NSString VerticalSubsamplingKey;
-   
-		public static readonly NSString OpenGLFormatKey;
-		public static readonly NSString OpenGLTypeKey;
-		public static readonly NSString OpenGLInternalFormatKey;
-   
-		public static readonly NSString CGBitmapInfoKey;
-   
-		public static readonly NSString QDCompatibilityKey;
-		public static readonly NSString CGBitmapContextCompatibilityKey;
-		public static readonly NSString CGImageCompatibilityKey;
-		public static readonly NSString OpenGLCompatibilityKey;
-   
-		public static readonly NSString FillExtendedPixelsCallbackKey;
+#if !XAMCORE_5_0
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.Name" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.Name' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString NameKey = CVPixelFormatKeys.Name;
 
-		[iOS (8,0)][Mac (10,10)]
-		public static readonly NSString ContainsRgb;
-		[iOS (8,0)][Mac (10,10)]
-		public static readonly NSString ContainsYCbCr;
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.Constant" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.Constant' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ConstantKey = CVPixelFormatKeys.Constant;
 
-		[iOS (9,0)][Mac (10,10)]
-		public static readonly NSString ComponentRangeKey;
-		[iOS (9,0)][Mac (10,10)]
-		public static readonly NSString ComponentRangeFullRangeKey;
-		[iOS (9,0)][Mac (10,10)]
-		public static readonly NSString ComponentRangeVideoRangeKey;
-		[iOS (9,0)][Mac (10,10)]
-		public static readonly NSString ComponentRangeWideRangeKey;
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.CodecType" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.CodecType' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString CodecTypeKey = CVPixelFormatKeys.CodecType;
 
-		[iOS (12,0)][TV (12,0)][Watch (5,0)][Mac (10,14, onlyOn64: true)]
-		public static readonly NSString ContainsGrayscaleKey;
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.FourCC" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.FourCC' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString FourCCKey = CVPixelFormatKeys.FourCC;
 
-		static CVPixelFormatDescription ()
-		{
-			var handle = Libraries.CoreVideo.Handle;
-			NameKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatName");
-			ConstantKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatConstant");
-			CodecTypeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatCodecType");
-			FourCCKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatFourCC");
-			PlanesKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatPlanes");
-			BlockWidthKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBlockWidth");
-			BlockHeightKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBlockHeight");
-			BitsPerBlockKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBitsPerBlock");
-			BlockHorizontalAlignmentKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBlockHorizontalAlignment");
-			BlockVerticalAlignmentKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBlockVerticalAlignment");
-			BlackBlockKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatBlackBlock");
-			HorizontalSubsamplingKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatHorizontalSubsampling");
-			VerticalSubsamplingKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatVerticalSubsampling");
-			OpenGLFormatKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatOpenGLFormat");
-			OpenGLTypeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatOpenGLType");
-			OpenGLInternalFormatKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatOpenGLInternalFormat");
-			CGBitmapInfoKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatCGBitmapInfo");
-			QDCompatibilityKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatQDCompatibility");
-			CGBitmapContextCompatibilityKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatCGBitmapContextCompatibility");
-			CGImageCompatibilityKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatCGImageCompatibility");
-			OpenGLCompatibilityKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatOpenGLCompatibility");
-			FillExtendedPixelsCallbackKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatFillExtendedPixelsCallback");
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.Planes" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.Planes' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString PlanesKey = CVPixelFormatKeys.Planes;
 
-			//iOS8 only
-			ContainsRgb = Dlfcn.GetStringConstant (handle, "kCVPixelFormatContainsRGB");
-			ContainsYCbCr = Dlfcn.GetStringConstant (handle, "kCVPixelFormatContainsYCbCr");
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BlockWidth" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BlockWidth' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BlockWidthKey = CVPixelFormatKeys.BlockWidth;
 
-			//iOS9 only
-			ComponentRangeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatComponentRange");
-			ComponentRangeFullRangeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatComponentRange_FullRange");
-			ComponentRangeVideoRangeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatComponentRange_VideoRange");
-			ComponentRangeWideRangeKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatComponentRange_WideRange");
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BlockHeight" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BlockHeight' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BlockHeightKey = CVPixelFormatKeys.BlockHeight;
 
-			// Xcode 10
-			ContainsGrayscaleKey = Dlfcn.GetStringConstant (handle, "kCVPixelFormatContainsGrayscale");
-		}
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BitsPerBlock" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BitsPerBlock' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BitsPerBlockKey = CVPixelFormatKeys.BitsPerBlock;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BlockHorizontalAlignment" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BlockHorizontalAlignment' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BlockHorizontalAlignmentKey = CVPixelFormatKeys.BlockHorizontalAlignment;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BlockVerticalAlignment" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BlockVerticalAlignment' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BlockVerticalAlignmentKey = CVPixelFormatKeys.BlockVerticalAlignment;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.BlackBlock" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.BlackBlock' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString BlackBlockKey = CVPixelFormatKeys.BlackBlock;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.HorizontalSubsampling" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.HorizontalSubsampling' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString HorizontalSubsamplingKey = CVPixelFormatKeys.HorizontalSubsampling;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.VerticalSubsampling" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.VerticalSubsampling' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString VerticalSubsamplingKey = CVPixelFormatKeys.VerticalSubsampling;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.OpenGLFormat" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.OpenGLFormat' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString OpenGLFormatKey = CVPixelFormatKeys.OpenGLFormat;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.OpenGLType" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.OpenGLType' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString OpenGLTypeKey = CVPixelFormatKeys.OpenGLType;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.OpenGLInternalFormat" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.OpenGLInternalFormat' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString OpenGLInternalFormatKey = CVPixelFormatKeys.OpenGLInternalFormat;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.CGBitmapInfo" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.CGBitmapInfo' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString CGBitmapInfoKey = CVPixelFormatKeys.CGBitmapInfo;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.QDCompatibility" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.QDCompatibility' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString QDCompatibilityKey = CVPixelFormatKeys.QDCompatibility;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.CGBitmapContextCompatibility" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.CGBitmapContextCompatibility' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString CGBitmapContextCompatibilityKey = CVPixelFormatKeys.CGBitmapContextCompatibility;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.CGImageCompatibility" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.CGImageCompatibility' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString CGImageCompatibilityKey = CVPixelFormatKeys.CGImageCompatibility;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.OpenGLCompatibility" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.OpenGLCompatibility' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString OpenGLCompatibilityKey = CVPixelFormatKeys.OpenGLCompatibility;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.FillExtendedPixelsCallback" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.FillExtendedPixelsCallback' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString FillExtendedPixelsCallbackKey = CVPixelFormatKeys.FillExtendedPixelsCallback;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.ContainsRgb" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.ContainsRgb' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ContainsRgb = CVPixelFormatKeys.ContainsRgb;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.ContainsYCbCr" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.ContainsYCbCr' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ContainsYCbCr = CVPixelFormatKeys.ContainsYCbCr;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.ComponentRange" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.ComponentRange' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ComponentRangeKey = CVPixelFormatKeys.ComponentRange;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatComponentRangeKeys.FullRange" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatComponentRangeKeys.FullRange' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ComponentRangeFullRangeKey = CVPixelFormatComponentRangeKeys.FullRange;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatComponentRangeKeys.VideoRange" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatComponentRangeKeys.VideoRange' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ComponentRangeVideoRangeKey = CVPixelFormatComponentRangeKeys.VideoRange;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatComponentRangeKeys.WideRange" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatComponentRangeKeys.WideRange' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public static readonly NSString ComponentRangeWideRangeKey = CVPixelFormatComponentRangeKeys.WideRange;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.ContainsGrayscale" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.ContainsGrayscale' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static readonly NSString ContainsGrayscaleKey = CVPixelFormatKeys.ContainsGrayscale;
+
+		/// <summary>Obsolete alias for <see cref="CVPixelFormatKeys.ContainsSenselArray" />.</summary>
+		[Obsolete ("Use 'CVPixelFormatKeys.ContainsSenselArray' instead.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[SupportedOSPlatform ("ios16.0")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos16.0")]
+#pragma warning disable CA1416 // This call site is reachable on: 'ios' 12.2 and later, 'maccatalyst' 12.2 and later, 'macOS/OSX' 12.0 and later, 'tvos' 12.2 and later. 'CVPixelFormatKeys.ContainsSenselArray.get' is only supported on: 'ios' 16.0 and later, 'maccatalyst' 16.0 and later, 'macOS/OSX' 13.0 and later, 'tvos' 16.0 and later.
+		public static readonly NSString ContainsSenselArray = CVPixelFormatKeys.ContainsSenselArray;
+#pragma warning restore CA1416
+#endif // !XAMCORE_5_0
 
 		// note: bad documentation, ref: https://bugzilla.xamarin.com/show_bug.cgi?id=13917
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static/* CFArrayRef __nullable */ IntPtr CVPixelFormatDescriptionArrayCreateWithAllPixelFormatTypes (
 			/* CFAllocatorRef __nullable */ IntPtr allocator);
 
+		/// <summary>Get all the known pixel format types.</summary>
 		public static NSNumber [] AllTypes {
 			get {
-				return NSArray.ArrayFromHandle <NSNumber> (CVPixelFormatDescriptionArrayCreateWithAllPixelFormatTypes (IntPtr.Zero));
+				return NSArray.NonNullArrayFromHandleDropNullElements<NSNumber> (CVPixelFormatDescriptionArrayCreateWithAllPixelFormatTypes (IntPtr.Zero), releaseHandle: true);
+			}
+		}
+
+		/// <summary>Get all the known pixel format types.</summary>
+		public static CVPixelFormatType [] AllPixelFormatTypes {
+			get {
+				var all = AllTypes;
+				var rv = new CVPixelFormatType [all.Length];
+				for (var i = 0; i < rv.Length; i++)
+					rv [i] = (CVPixelFormatType) all [i].Int32Value;
+				return rv;
 			}
 		}
 
@@ -135,39 +227,106 @@ namespace CoreVideo {
 		extern static /* CFDictionaryRef __nullable */ IntPtr CVPixelFormatDescriptionCreateWithPixelFormatType (
 			/* CFAllocatorRef __nullable */ IntPtr allocator, int /* OSType = int32_t */ pixelFormat);
 
-#if !XAMCORE_3_0
-		public static NSDictionary Create (int pixelFormat)
+		/// <summary>Create a description of the specified pixel format.</summary>
+		/// <param name="pixelFormat">The pixel format to create a description of.</param>
+		public static NSDictionary? Create (CVPixelFormatType pixelFormat)
 		{
-			return Runtime.GetNSObject<NSDictionary> (CVPixelFormatDescriptionCreateWithPixelFormatType (IntPtr.Zero, pixelFormat));
+			return Runtime.GetNSObject<NSDictionary> (CVPixelFormatDescriptionCreateWithPixelFormatType (IntPtr.Zero, (int) pixelFormat), true);
 		}
-#endif
 
-		public static NSDictionary Create (CVPixelFormatType pixelFormat) 
+		/// <summary>Create a description of the specified pixel format.</summary>
+		/// <param name="pixelFormat">The pixel format to create a description of.</param>
+		public static CVPixelFormatDescription? CreatePixelFormat (CVPixelFormatType pixelFormat)
 		{
-			return Runtime.GetNSObject<NSDictionary> (CVPixelFormatDescriptionCreateWithPixelFormatType (IntPtr.Zero, (int) pixelFormat));
+			var dict = Create (pixelFormat);
+			if (dict is null)
+				return null;
+			return new CVPixelFormatDescription (dict);
 		}
 
 		[DllImport (Constants.CoreVideoLibrary)]
 		extern static void CVPixelFormatDescriptionRegisterDescriptionWithPixelFormatType (
 			/* CFDictionaryRef __nonnull */ IntPtr description, int /* OSType = int32_t */ pixelFormat);
 
-#if !XAMCORE_3_0
-		public static void Register (NSDictionary description, int pixelFormat)
-		{
-			if (description == null)
-				throw new ArgumentNullException ("description");
-
-			CVPixelFormatDescriptionRegisterDescriptionWithPixelFormatType (description.Handle, pixelFormat);
-		}
-#endif
-
+		/// <summary>Register a new pixel format with CoreVideo.</summary>
+		/// <param name="description">The pixel format description for the pixel format to register.</param>
+		/// <param name="pixelFormat">The pixel format to register.</param>
 		public static void Register (NSDictionary description, CVPixelFormatType pixelFormat)
 		{
-			if (description == null)
-				throw new ArgumentNullException ("description");
+			if (description is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (description));
 
 			CVPixelFormatDescriptionRegisterDescriptionWithPixelFormatType (description.Handle, (int) pixelFormat);
+			GC.KeepAlive (description);
 		}
+
+		/// <summary>Register a new pixel format with CoreVideo.</summary>
+		/// <param name="description">The pixel format description for the pixel format to register.</param>
+		/// <param name="pixelFormat">The pixel format to register.</param>
+		public static void Register (CVPixelFormatDescription description, CVPixelFormatType pixelFormat)
+		{
+			Register (description?.Dictionary!, pixelFormat);
+		}
+
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreVideoLibrary)]
+		extern static byte CVIsCompressedPixelFormatAvailable (int /* OSType = int32_t */ pixelFormat);
+
+		/// <summary>Check if the specified pixel format is supported on this platform.</summary>
+		/// <param name="pixelFormat">The pixel format to check.</param>
+		/// <returns>Whether the specified pixel format is supported or not.</returns>
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static bool IsPixelFormatAvailable (CVPixelFormatType pixelFormat)
+		{
+			return CVIsCompressedPixelFormatAvailable ((int) pixelFormat) != 0;
+		}
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		public CVFillExtendedPixelsCallBackDataStruct? FillExtendedPixelsCallbackStruct {
+			get {
+				var data = FillExtendedPixelsCallback;
+				if (data is null)
+					return null;
+				var bytes = data.ToArray ();
+				unsafe {
+					if (bytes.Length < sizeof (CVFillExtendedPixelsCallBackDataStruct))
+						throw new InvalidOperationException ($"The size of the callback data structure is smaller than expected (got {bytes.Length} bytes, expected at least {sizeof (CVFillExtendedPixelsCallBackDataStruct)} bytes)");
+					fixed (byte* ptr = bytes)
+						return Marshal.PtrToStructure<CVFillExtendedPixelsCallBackDataStruct> ((IntPtr) ptr);
+				}
+			}
+			set {
+				if (value is null) {
+					FillExtendedPixelsCallback = null;
+					return;
+				}
+				NSData data;
+				CVFillExtendedPixelsCallBackDataStruct v = value.Value;
+				unsafe {
+					data = NSData.FromBytes ((IntPtr) (&v), (nuint) sizeof (CVFillExtendedPixelsCallBackDataStruct));
+				}
+				FillExtendedPixelsCallback = data;
+			}
+		}
+
+#if !XAMCORE_5_0
+		[Obsolete ("Use 'ComponentRangeValue' instead, the property type is incorrect for this property.")]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		public CVPixelFormatComponentRange? ComponentRange {
+			get => null;
+			set { }
+		}
+#endif // !XAMCORE_5_0
+
 #endif // !COREBUILD
 	}
 }

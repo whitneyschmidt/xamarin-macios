@@ -6,63 +6,61 @@
 //
 // Copyright 2012 Xamarin Inc
 
-using System;
-using ObjCRuntime;
+#nullable enable
 
 namespace AppKit {
 
-	[Native]
-	public enum NSTextLayoutOrientation : long {
-		Horizontal,
-		Vertical
-	}
-
-#if !XAMCORE_2_0
-	[Flags]
-	[Native]
-	public enum NSTableViewAnimationOptions : ulong {
-		EffectFade = 0x1,
-		EffectGap = 0x2,
-
-		// these cannot be combined
-		SlideUp = 0x10,
-		SlideDown = 0x20,
-		SlideLeft = 0x30,
-		SlideRight = 0x40,
-	}
-#endif
-
+	[NoMacCatalyst]
 	[Native]
 	public enum NSPrintRenderingQuality : long {
+		/// <summary>To be added.</summary>
 		Best,
-		Responsive
+		/// <summary>To be added.</summary>
+		Responsive,
 	}
 
+	[NoMacCatalyst]
 	[Native]
 	public enum NSCorrectionIndicatorType : long {
+		/// <summary>To be added.</summary>
 		Default = 0,
+		/// <summary>To be added.</summary>
 		Reversion,
-		Guesses
+		/// <summary>To be added.</summary>
+		Guesses,
 	}
 
+	[NoMacCatalyst]
 	[Native]
 	public enum NSCorrectionResponse : long {
+		/// <summary>To be added.</summary>
 		None,
+		/// <summary>To be added.</summary>
 		Accepted,
+		/// <summary>To be added.</summary>
 		Rejected,
+		/// <summary>To be added.</summary>
 		Ignored,
+		/// <summary>To be added.</summary>
 		Edited,
-		Reverted
+		/// <summary>To be added.</summary>
+		Reverted,
 	}
 
+	[NoMacCatalyst]
 	[Native]
 	public enum NSTextFinderMatchingType : long {
+		/// <summary>To be added.</summary>
 		Contains = 0,
+		/// <summary>To be added.</summary>
 		StartsWith = 1,
+		/// <summary>To be added.</summary>
 		FullWord = 2,
-		EndsWith = 3
+		/// <summary>To be added.</summary>
+		EndsWith = 3,
 	}
 
+	[NoMacCatalyst]
 	[Native]
 	public enum NSCharacterCollection : ulong {
 		/// <summary>Identity mapping (CID == NSGlyph)</summary>
@@ -81,21 +79,18 @@ namespace AppKit {
 		AdobeJapan2 = 4,
 
 		/// <summary>Adobe-Korea1</summary>
-		AdobeKorea1 = 5
+		AdobeKorea1 = 5,
 	}
 
-	// Untyped enum (NSAttributedString.h). Only used as a convience enum in our API.
+	[NoMacCatalyst]
 	[Flags]
-	public enum NSSpellingState :
-#if XAMCORE_4_0
-		nint
-#else
-		int
-#endif
-	{
+	[Native]
+	public enum NSSpellingState : long {
+		/// <summary>To be added.</summary>
 		None = 0x0,
+		/// <summary>To be added.</summary>
 		Spelling = 0x1,
-		Grammar = 0x2
+		/// <summary>To be added.</summary>
+		Grammar = 0x2,
 	}
 }
-

@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Microsoft",
+  "classifications": [
+    "iOS",
+    "Mobile"
+  ],
+  "groupIdentity": "Microsoft.iOS.iOSApp",
+  "identity": "Microsoft.iOS.iOSApp.VisualBasic",
+  "name": "iOS Application",
+  "description": "A project for creating a .NET iOS application",
+  "shortName": "ios",
+  "tags": {
+    "language": "VB",
+    "type": "project"
+  },
+  "sourceName": "iOSApp1",
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "copyOnly": "**/*.png"
+    }
+  ],
+  "preferNameDirectory": true,
+  "primaryOutputs": [
+    {
+      "path": "iOSApp1.vbproj"
+    }
+  ],
+  "symbols": {
+    "bundleId": {
+      "type": "parameter",
+      "displayName": "Bundle ID",
+      "description": "Overrides CFBundleIdentifier in the Info.plist",
+      "datatype": "string",
+      "replaces": "com.companyname.iOSApp1"
+    },
+    "minOSVersion": {
+      "type": "parameter",
+      "displayName": "Minimum OS version",
+      "description": "Overrides SupportedOSPlatformVersion in the project file",
+      "replaces": "minOSVersion",
+      "datatype": "string",
+      "defaultValue": "15.0"
+    },
+    "deviceFamily": {
+      "type": "parameter",
+      "displayName": "Device family",
+      "datatype": "choice",
+      "defaultValue": "universal",
+      "choices": [
+        {
+          "choice": "universal",
+          "displayName": "Universal",
+          "description": "Support both iPhone and iPad devices"
+        },
+        {
+          "choice": "iphone",
+          "displayName": "iPhone",
+          "description": "Support only iPhone devices"
+        },
+        {
+          "choice": "ipad",
+          "displayName": "iPad",
+          "description": "Support only iPad devices"
+        }
+      ]
+    },
+    "Framework": {
+      "type": "parameter",
+      "description": "The target framework for the project.",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "net12.0-ios",
+          "description": "Target net12.0-ios"
+        },
+        {
+          "choice": "net11.0-ios",
+          "description": "Target net11.0-ios"
+        }
+      ],
+      "replaces": "TFM",
+      "defaultValue": "net12.0-ios"
+    }
+  },
+  "defaultName": "iOSApp1"
+}

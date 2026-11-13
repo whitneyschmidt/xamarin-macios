@@ -7,13 +7,8 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
+using CoreGraphics;
 #if MONOMAC
 using AppKit;
 using UIColor = AppKit.NSColor;
@@ -21,22 +16,7 @@ using UIColor = AppKit.NSColor;
 using UIKit;
 #endif
 using SpriteKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.SpriteKit;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.SpriteKit {
 
@@ -46,19 +26,18 @@ namespace MonoTouchFixtures.SpriteKit {
 
 		void CheckEmpty (SKSpriteNode n)
 		{
-			Assert.IsNotNull (n.Color, "Color");
-			Assert.Null (n.Name, "Name");
-			Assert.True (n.Size.IsEmpty, "Size");
-			Assert.Null (n.Texture, "Texture");
+			Assert.That (n.Color, Is.Not.Null, "Color");
+			Assert.That (n.Name, Is.Null, "Name");
+			Assert.That (n.Size.IsEmpty, Is.True, "Size");
+			Assert.That (n.Texture, Is.Null, "Texture");
 		}
 
 		[SetUp]
 		public void VersionCheck ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.TvOS, 9, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 9, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.WatchOS, 3, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.TVOS, 9, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 9, throwIfOtherPlatform: false);
 		}
 
 		[Test]
@@ -72,7 +51,7 @@ namespace MonoTouchFixtures.SpriteKit {
 		[Test]
 		public void CtorColor ()
 		{
-			using (var n = new SKSpriteNode ((UIColor) null, SizeF.Empty)) {
+			using (var n = new SKSpriteNode (UIColor.Green, CGSize.Empty)) {
 				CheckEmpty (n);
 			}
 		}
@@ -94,7 +73,7 @@ namespace MonoTouchFixtures.SpriteKit {
 		[Test]
 		public void CtorTextureColor ()
 		{
-			using (var n = new SKSpriteNode (null, null, SizeF.Empty)) {
+			using (var n = new SKSpriteNode (null, UIColor.Green, CGSize.Empty)) {
 				CheckEmpty (n);
 			}
 		}
@@ -102,7 +81,7 @@ namespace MonoTouchFixtures.SpriteKit {
 		[Test]
 		public void Color ()
 		{
-			using (var n = new SKSpriteNode (UIColor.Blue, SizeF.Empty)) {
+			using (var n = new SKSpriteNode (UIColor.Blue, CGSize.Empty)) {
 #if MONOMAC
 				Assert.That (n.Color.ToString (), Is.EqualTo ("Device RGB(0.016804177314043,0.198350995779037,1,1)").Or.EqualTo ("Device RGB(0,0,1,1)").Or.EqualTo ("Device RGB(0.016804177314043,0.198350965976715,1,1)"), "Color-1");
 #else
@@ -122,12 +101,10 @@ namespace MonoTouchFixtures.SpriteKit {
 		{
 			using (var t = SKTexture.FromImageNamed ("basn3p08.png"))
 			using (var n = new SKSpriteNode (t)) {
-				Assert.AreSame (n.Texture, t, "Texture-1");
+				Assert.That (t, Is.SameAs (n.Texture), "Texture-1");
 				n.Texture = null;
-				Assert.IsNull (n.Texture, "Texture-2");
+				Assert.That (n.Texture, Is.Null, "Texture-2");
 			}
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -1,24 +1,17 @@
-﻿using System;
 using System.Threading;
-
-#if __UNIFIED__
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-
-using NUnit.Framework;
 
 using Bindings.Test;
 
-namespace Xamarin.Tests
-{
+namespace Xamarin.Tests {
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class RuntimeTest
-	{
+	public class RuntimeTest {
+		[Test]
+		public void GlobalStringTest ()
+		{
+			Assert.That ((string) Globals.GlobalString, Is.EqualTo ("There's nothing cruvus here!"), "Global string");
+		}
+
 		[Test]
 		public void WrapperTypeLookupTest ()
 		{
@@ -73,11 +66,89 @@ namespace Xamarin.Tests
 			}
 		}
 
+		[Test]
+		public void MainThreadDeallocationTestQOS ()
+		{
+#if OPTIMIZEALL
+			if (!TestRuntime.IsLinkAll)
+				Assert.Ignore ("This test must be processed by the linker if all optimizations are turned on.");
+#endif
+
+			ObjCBlockTester.CallAssertMainThreadBlockReleaseQOS ((callback) => {
+				callback (42);
+			});
+
+			using (var main_thread_tester = new MainThreadTest ()) {
+				main_thread_tester.CallAssertMainThreadBlockReleaseCallbackQOS ();
+			}
+		}
+
 		class MainThreadTest : ObjCBlockTester {
 			public override void AssertMainThreadBlockReleaseCallback (InnerBlock completionHandler)
 			{
 				completionHandler (42);
 			}
+		}
+
+		[Test]
+		public void SwiftTest ()
+		{
+			TestRuntime.AssertXcodeVersion (13, 0);
+			using var obj = new SwiftTestClass ();
+			Assert.That (obj.SayHello (), Is.EqualTo ("Hello from Swift"), "Hello");
+		}
+
+		[Test]
+		public void SwiftTypeEncodings ()
+		{
+			TestRuntime.AssertXcodeVersion (13, 0);
+
+			using var obj = new SwiftTestClass ();
+
+			Assert.That (obj.DoSomething ("42"), Is.EqualTo ("42"), "DoSomething");
+
+			string? asyncResult = null;
+			obj.DoSomethingAsync ("dolphins", (v) => asyncResult = v);
+			var done = TestRuntime.RunAsync (TimeSpan.FromSeconds (5), () => asyncResult is not null);
+			Assert.That (asyncResult, Is.EqualTo ("dolphins"), "DoSomethingAsync");
+			Assert.That (done, Is.True, "Done");
+
+			obj.DoSomethingComplexAsync ("fish", IntPtr.Zero, (v) => asyncResult = v);
+			done = TestRuntime.RunAsync (TimeSpan.FromSeconds (5), () => asyncResult is not null);
+			Assert.That (asyncResult, Is.EqualTo ("fish"), "DoSomethingComplexAsync");
+			Assert.That (done, Is.True, "Done 2");
+		}
+
+		[Test]
+		public void SwiftTestClass2 ()
+		{
+			TestRuntime.AssertXcodeVersion (13, 0);
+			using var obj = new SwiftTestClass2 ();
+			Assert.That (obj.SayHello2 (), Is.EqualTo ("Hello from Swift 2"), "Hello");
+		}
+
+		[Test]
+		public void VeryGeneric ()
+		{
+			Assert.Multiple (() => {
+				using var obj = VeryGenericFactory.GetConsumer ();
+
+				using var first = obj.First;
+				Assert.That (first, Is.Not.Null, "first");
+				Assert.That ((int) first.Count, Is.EqualTo (1), "first Count");
+				var firstObject = first.GetElement ((NSString) "whatever");
+				Assert.That (firstObject, Is.Not.Null, "first element 1");
+				Assert.That ((int) firstObject.Number, Is.EqualTo (42), "first element 1 - number");
+				Assert.That (firstObject.When.SecondsSince1970, Is.EqualTo (-62135769600d), "first element 1 - when");
+
+				using var second = obj.Second;
+				Assert.That (second, Is.Not.Null, "second");
+				Assert.That ((int) second.Count, Is.EqualTo (1), "second Count");
+				var secondObject = second.GetElement ((NSString) "whatever");
+				Assert.That (secondObject, Is.Not.Null, "second element 1");
+				Assert.That (secondObject.Animal, Is.EqualTo ("Sand cat"), "second element 1 - animal");
+				Assert.That (secondObject.When.SecondsSince1970, Is.EqualTo (64092211200d), "second element 1 - when");
+			});
 		}
 	}
 }

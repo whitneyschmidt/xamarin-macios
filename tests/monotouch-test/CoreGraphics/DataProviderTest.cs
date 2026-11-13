@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGDataProvider
 //
 // Authors:
@@ -7,19 +7,9 @@
 // Copyright 2014-2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.IO;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
+using System.Text;
 using CoreGraphics;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
@@ -58,22 +48,63 @@ namespace MonoTouchFixtures.CoreGraphics {
 			Assert.That (CGDataProviderCreateWithFilename (null), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithFilename");
 			Assert.That (CGDataProviderCreateWithURL (IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataConsumerCreateWithURL");
 			Assert.That (CGDataProviderCreateWithCFData (IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithCFData");
-			Assert.That (CGDataProviderCreateWithData (IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithData");
+			// crash with iOS 13 beta 3
+			// Assert.That (CGDataProviderCreateWithData (IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero), Is.EqualTo (IntPtr.Zero), "CGDataProviderCreateWithData");
 		}
 
 		[Test]
 		public void Create_ReleaseCallback ()
 		{
 			IntPtr memory = Marshal.AllocHGlobal (20);
-			using (var provider = new CGDataProvider (memory, 20, ((IntPtr mem) => 
-				{
-					Assert.AreEqual (memory, mem, "mem");
-					Marshal.FreeHGlobal (mem);
-					memory = IntPtr.Zero;
-				}))) {
+			using (var provider = new CGDataProvider (memory, 20, ((IntPtr mem) => {
+				Assert.That (mem, Is.EqualTo (memory), "mem");
+				Marshal.FreeHGlobal (mem);
+				memory = IntPtr.Zero;
+			}))) {
 			}
 
-			Assert.AreEqual (IntPtr.Zero, memory, "mem freed");
+			Assert.That (memory, Is.EqualTo (IntPtr.Zero), "mem freed");
+		}
+
+		[TestCase (false)]
+		[TestCase (true)]
+		public void CreateWithReleaseCallback (bool useCallback)
+		{
+			var memory = Marshal.AllocHGlobal (1);
+			var callbackCount = 0;
+			try {
+				Marshal.WriteByte (memory, 42);
+				Action<IntPtr> callback = useCallback ? _ => callbackCount++ : null;
+				using (var provider = new CGDataProvider (memory, 1, callback)) {
+					Assert.That (provider.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
+					Marshal.WriteByte (memory, 43);
+					using var data = provider.CopyData ();
+					Assert.That (data [0], Is.EqualTo (43), "Data is not copied");
+					Assert.That (callbackCount, Is.EqualTo (0), "Callback before disposal");
+				}
+				Assert.That (callbackCount, Is.EqualTo (useCallback ? 1 : 0), "Callback after disposal");
+				Assert.That (Marshal.ReadByte (memory), Is.EqualTo (43), "Memory remains accessible");
+			} finally {
+				Marshal.FreeHGlobal (memory);
+			}
+		}
+
+		[Test]
+		public void CreateWithUnownedMemory ()
+		{
+			const string canary = "canary";
+			var source = Encoding.UTF8.GetBytes (canary);
+			IntPtr memory = Marshal.AllocHGlobal (20);
+			Marshal.Copy (source, 0, memory, source.Length);
+			using (var provider = new CGDataProvider (memory, 20, false)) {
+				// `memory` is copied, but not freed (but the copy is freed)
+				Assert.That (provider.Handle, Is.Not.EqualTo (IntPtr.Zero), "Handle");
+			}
+			// so `memory` still accessible afterward and must be freed
+			// using `canary.Length` since the allocated memory might not be zero'ed
+			// so reading back the string would not hit a null after what we copied
+			Assert.That (Marshal.PtrToStringAuto (memory, canary.Length), Is.EqualTo (canary), "canary check");
+			Marshal.FreeHGlobal (memory);
 		}
 	}
 }

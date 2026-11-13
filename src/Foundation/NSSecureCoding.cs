@@ -1,15 +1,11 @@
 // NSSecureCoding support
 
-using System;
-using ObjCRuntime;
+#nullable enable
 
 namespace Foundation {
-
-#if XAMCORE_4_0
-	static
-#endif
-	public partial class NSSecureCoding {
-
+	/// <summary>Implementors handle encoding and decoding in a manner robust against object-substitution attacks.</summary>
+	///     <!-- 2015-01-05: Our NSCoding doesn't bind decodeObjectOfClass:forKey:, which is needed for NSSecureCoding. -->
+	public static partial class NSSecureCoding {
 		const string selConformsToProtocol = "conformsToProtocol:";
 		const string selSupportsSecureCoding = "supportsSecureCoding";
 #if !MONOMAC
@@ -17,17 +13,17 @@ namespace Foundation {
 		static IntPtr selSupportsSecureCodingHandle = Selector.GetHandle (selSupportsSecureCoding);
 #endif
 
-		[iOS (6,0)]
+		/// <summary>Whether the class supports secure coding and decoding.</summary>
+		/// <param name="type">The type.</param>
 		public static bool SupportsSecureCoding (Type type)
 		{
-			if (type == null)
-				throw new ArgumentNullException ("type");
+			if (type is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (type));
 
 #if MONOMAC
 			try {
 				return SupportsSecureCoding (new Class (type));
-			}
-			catch (ArgumentException) {
+			} catch (ArgumentException) {
 				// unlike XI the current registration will throw for protocols
 				// until that's fixed we'll only report correctly properly bound protocol types
 				// the workaround is important since this method is used to validate our bindings
@@ -38,12 +34,15 @@ namespace Foundation {
 #endif
 		}
 
-		[iOS (6,0)]
+		/// <summary>Whether the class supports secure coding and decoding.</summary>
+		/// <param name="klass">The klass.</param>
 		public static bool SupportsSecureCoding (Class klass)
 		{
-			if (klass == null)
-				throw new ArgumentNullException ("klass");
-			return SupportsSecureCoding (klass.Handle);
+			if (klass is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (klass));
+			bool result = SupportsSecureCoding (klass.Handle);
+			GC.KeepAlive (klass);
+			return result;
 		}
 
 		internal static bool SupportsSecureCoding (IntPtr ptr)
@@ -53,15 +52,15 @@ namespace Foundation {
 			if (secure_coding == IntPtr.Zero)
 				return false;
 #if MONOMAC
-			if (!Messaging.bool_objc_msgSend_IntPtr (ptr, Selector.GetHandle ("conformsToProtocol:"), secure_coding))
+			if (Messaging.bool_objc_msgSend_IntPtr (ptr, Selector.GetHandle ("conformsToProtocol:"), secure_coding) == 0)
 				return false;
 
-			return Messaging.bool_objc_msgSend (ptr, Selector.GetHandle ("supportsSecureCoding"));
+			return Messaging.bool_objc_msgSend (ptr, Selector.GetHandle ("supportsSecureCoding")) != 0;
 #else
-			if (!Messaging.bool_objc_msgSend_IntPtr (ptr, selConformsToProtocolHandle, secure_coding))
+			if (Messaging.bool_objc_msgSend_IntPtr (ptr, selConformsToProtocolHandle, secure_coding) == 0)
 				return false;
 
-			return Messaging.bool_objc_msgSend (ptr, selSupportsSecureCodingHandle);
+			return Messaging.bool_objc_msgSend (ptr, selSupportsSecureCodingHandle) != 0;
 #endif
 		}
 	}

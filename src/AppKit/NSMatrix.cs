@@ -21,7 +21,9 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 	public partial class NSMatrix {
@@ -31,5 +33,6 @@ namespace AppKit {
 			}
 		}
 	}
-	
+
 }
+#endif // !__MACCATALYST__

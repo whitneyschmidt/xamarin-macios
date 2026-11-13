@@ -6,181 +6,455 @@
 // Copyright 2012-2014 Xamarin Inc
 //
 
-using System;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace CoreMedia {
 
-	// untyped enum (used as OSStatus) -> CMSync.h
-	public enum CMClockError : int
-	{
-		None = 0,
-		MissingRequiredParameter	= -12745,
-		InvalidParameter			= -12746,
-		AllocationFailed			= -12747,
-		UnsupportedOperation		= -12756,
-	}
-
 	// CMSync.h
-	[iOS (6,0)]
-	public class CMClock : CMClockOrTimebase
-	{
-		public CMClock (IntPtr handle) : base (handle)
-		{
-		}
-
-		internal CMClock (IntPtr handle, bool owns) 
+	/// <summary>A source of time information, such as the system clock.</summary>
+	///     <remarks>Audio devices may also be treated as clocks, since they sample at a specific frequency. The <see cref="CoreMedia.CMClock" /> can calculate drift between instances. </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public partial class CMClock : CMClockOrTimebase {
+		[Preserve (Conditional = true)]
+		internal CMClock (NativeHandle handle, bool owns)
 			: base (handle, owns)
 		{
 		}
+#if !COREBUILD
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* CMClockRef */ IntPtr CMClockGetHostTimeClock ();
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public static CMClock HostTimeClock {
 			get {
 				return new CMClock (CMClockGetHostTimeClock (), false);
 			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMClockGetTime (/* CMClockRef */ IntPtr clock);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CMTime CurrentTime {
 			get {
 				return CMClockGetTime (Handle);
 			}
 		}
 
-#if MONOMAC && !XAMCORE_2_0
-		// avoid breaking change on MonoMac.dll
-		[Obsolete ("The 'CMAudioClockCreate' API is only available on iOS.")]
-		public static CMClock CreateAudioClock (out CMClockError clockError)
-		{
-			throw new NotSupportedException ();
-		}
-#elif !MONOMAC
+#if !MONOMAC
 		// CMAudioClock.h
-		[Mac (10,10)]
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMClockError CMAudioClockCreate (/* CFAllocatorRef */ IntPtr allocator, /* CMClockRef* */ out IntPtr clockOut);
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMClockError CMAudioClockCreate (/* CFAllocatorRef */ IntPtr allocator, /* CMClockRef* */ IntPtr* clockOut);
 
-		public static CMClock CreateAudioClock (out CMClockError clockError)
+		/// <param name="clockError">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CMClock? CreateAudioClock (out CMClockError clockError)
 		{
 			IntPtr ptr;
-			clockError = CMAudioClockCreate (IntPtr.Zero, out ptr);
-			return clockError == CMClockError.None ? new CMClock (ptr) : null;
+			unsafe {
+				clockError = CMAudioClockCreate (IntPtr.Zero, &ptr);
+			}
+			return clockError == CMClockError.None ? new CMClock (ptr, true) : null;
 		}
 #endif
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMClockError CMClockGetAnchorTime (/* CMClockRef */ IntPtr clock, out CMTime outClockTime, out CMTime outReferenceClockTime);
+#if __MACOS__ || __MACCATALYST__
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static /* CMClockRef */ IntPtr CMClockCreateGenlockClock ();
 
+		/// <summary>Creates a clock that follows an external genlock signal when synchronized, or host time otherwise.</summary>
+		/// <returns>A genlock clock, or <see langword="null" /> if the clock could not be created.</returns>
+		/// <remarks>
+		///   Dispose the clock when it is no longer needed, because monitoring the genlock signal may increase energy use.
+		///   Multiple calls may return clocks backed by the same native clock.
+		/// </remarks>
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		public static CMClock? CreateGenlockClock ()
+		{
+			var handle = CMClockCreateGenlockClock ();
+			return handle == IntPtr.Zero ? null : new CMClock (handle, owns: true);
+		}
+
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static /* Boolean */ byte CMIsAnyDisplaySynchronizedToLockedGenlockSignal ();
+
+		/// <summary>Gets whether any display is synchronized to a locked external genlock signal.</summary>
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("tvos")]
+		public static bool IsAnyDisplaySynchronizedToLockedGenlockSignal {
+			get {
+				return CMIsAnyDisplaySynchronizedToLockedGenlockSignal () != 0;
+			}
+		}
+#endif
+
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMClockError CMClockGetAnchorTime (/* CMClockRef */ IntPtr clock, CMTime* outClockTime, CMTime* outReferenceClockTime);
+
+		/// <param name="clockTime">To be added.</param>
+		///         <param name="referenceClockTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMClockError GetAnchorTime (out CMTime clockTime, out CMTime referenceClockTime)
 		{
-			return CMClockGetAnchorTime (Handle, out clockTime, out referenceClockTime);
+			clockTime = default;
+			referenceClockTime = default;
+			unsafe {
+				fixed (CMTime* clockTimePtr = &clockTime, referenceClockTimePtr = &referenceClockTime) {
+					return CMClockGetAnchorTime (Handle, clockTimePtr, referenceClockTimePtr);
+				}
+			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* Boolean */ bool CMClockMightDrift (/* CMClockRef */ IntPtr clock, /* CMClockRef */ IntPtr otherClock);
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static /* Boolean */ byte CMClockMightDrift (/* CMClockRef */ IntPtr clock, /* CMClockRef */ IntPtr otherClock);
 
+		/// <param name="otherClock">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool MightDrift (CMClock otherClock)
 		{
-			if (otherClock == null)
-				throw new ArgumentNullException ("otherClock");
+			if (otherClock is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (otherClock));
 
-			return CMClockMightDrift (Handle, otherClock.Handle);
+			bool result = CMClockMightDrift (Handle, otherClock.Handle) != 0;
+			GC.KeepAlive (otherClock);
+			return result;
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static /* Boolean */ byte CMClockImplementsGetPreferredStartTimePattern (/* CMClockRef */ IntPtr clock);
+
+		/// <summary>Gets whether this clock implements <see cref="GetPreferredStartTimePattern" />.</summary>
+		/// <exception cref="ObjectDisposedException">This clock has been disposed.</exception>
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		public bool ImplementsGetPreferredStartTimePattern {
+			get {
+				var result = CMClockImplementsGetPreferredStartTimePattern (GetCheckedHandle ()) != 0;
+				GC.KeepAlive (this);
+				return result;
+			}
+		}
+
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMClockError CMClockGetPreferredStartTimePattern (
+			/* CMClockRef */ IntPtr clock,
+			CMTime* outClockStartTime,
+			CMTime* outHostClockStartTime,
+			CMTime* outDeltaBetweenPreferredStartTimes);
+
+		/// <summary>Gets the pattern of preferred start times for synchronization with an external signal.</summary>
+		/// <param name="clockStartTime">Receives the next preferred start time in this clock's time.</param>
+		/// <param name="hostClockStartTime">Receives the matching preferred start time in host-clock time.</param>
+		/// <param name="deltaBetweenPreferredStartTimes">Receives the interval between successive preferred start times.</param>
+		/// <returns>
+		///   <see cref="CMClockError.None" /> on success, <see cref="CMClockError.UnsupportedOperation" /> if unsupported,
+		///   or <see cref="CMClockError.PreferredStartTimeNotAvailable" /> if the system is not synchronized to a present signal.
+		/// </returns>
+		/// <exception cref="ObjectDisposedException">This clock has been disposed.</exception>
+		/// <remarks>
+		///   The output values are meaningful only on success. Add integer multiples of
+		///   <paramref name="deltaBetweenPreferredStartTimes" /> to both start times to calculate subsequent preferred start times in the near future.
+		/// </remarks>
+		[SupportedOSPlatform ("ios27.0")]
+		[SupportedOSPlatform ("maccatalyst27.0")]
+		[SupportedOSPlatform ("macos27.0")]
+		[SupportedOSPlatform ("tvos27.0")]
+		public CMClockError GetPreferredStartTimePattern (out CMTime clockStartTime, out CMTime hostClockStartTime, out CMTime deltaBetweenPreferredStartTimes)
+		{
+			clockStartTime = default;
+			hostClockStartTime = default;
+			deltaBetweenPreferredStartTimes = default;
+			unsafe {
+				fixed (CMTime* clockStartTimePtr = &clockStartTime, hostClockStartTimePtr = &hostClockStartTime, deltaPtr = &deltaBetweenPreferredStartTimes) {
+					var result = CMClockGetPreferredStartTimePattern (GetCheckedHandle (), clockStartTimePtr, hostClockStartTimePtr, deltaPtr);
+					GC.KeepAlive (this);
+					return result;
+				}
+			}
+		}
+
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static void CMClockInvalidate (/* CMClockRef */ IntPtr clock);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Invalidate ()
 		{
 			CMClockInvalidate (Handle);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary, EntryPoint="CMClockConvertHostTimeToSystemUnits")]
+		/// <param name="hostTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[DllImport (Constants.CoreMediaLibrary, EntryPoint = "CMClockConvertHostTimeToSystemUnits")]
 		public extern static /* uint64_t */ ulong ConvertHostTimeToSystemUnits (CMTime hostTime);
 
-		[DllImport(Constants.CoreMediaLibrary, EntryPoint="CMClockMakeHostTimeFromSystemUnits")]
+		/// <param name="hostTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[DllImport (Constants.CoreMediaLibrary, EntryPoint = "CMClockMakeHostTimeFromSystemUnits")]
 		public extern static CMTime CreateHostTimeFromSystemUnits (/* uint64_t */ ulong hostTime);
+#endif // !COREBUILD
 	}
 
-	// untyped enum (used as OSStatus) -> CMSync.h
-	public enum CMTimebaseError : int
-	{
-		None = 0,
-		MissingRequiredParameter	= -12748,
-		InvalidParameter			= -12749,
-		AllocationFailed			= -12750,
-		TimerIntervalTooShort		= -12751,
-		ReadOnly					= -12757,
-	}
-
-	[iOS (6,0)]
-	public class CMTimebase : CMClockOrTimebase
-	{
-		public CMTimebase (IntPtr handle)
-			: base (handle)
-		{
-		}
-
-		private CMTimebase (IntPtr handle, bool owns) 
+	/// <summary>Encapsulates an application-controlled timeline.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CMTimebase : CMClockOrTimebase {
+		[Preserve (Conditional = true)]
+		private CMTimebase (NativeHandle handle, bool owns)
 			: base (handle, owns)
 		{
 		}
+#if !COREBUILD
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMTimebaseError CMTimebaseCreateWithMasterClock (/* CFAllocatorRef */ IntPtr allocator, /* CMClockRef */ IntPtr masterClock, /* CMTimebaseRef* */ out IntPtr timebaseOut);
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMTimebaseError CMTimebaseCreateWithMasterClock (/* CFAllocatorRef */ IntPtr allocator, /* CMClockRef */ IntPtr masterClock, /* CMTimebaseRef* */ IntPtr* timebaseOut);
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCreateWithSourceClock' instead.")]
+		static IntPtr Create (CMClock masterClock)
+		{
+			if (masterClock is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (masterClock));
+
+			CMTimebaseError error;
+			IntPtr handle;
+			unsafe {
+				error = CMTimebaseCreateWithMasterClock (IntPtr.Zero, masterClock.Handle, &handle);
+				GC.KeepAlive (masterClock);
+			}
+			if (error != CMTimebaseError.None)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
+			return handle;
+		}
+
+		/// <param name="masterClock">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use the (CFAllocator, CMClock) overload instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use the (CFAllocator, CMClock) overload instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use the (CFAllocator, CMClock) overload instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use the (CFAllocator, CMClock) overload instead.")]
 		public CMTimebase (CMClock masterClock)
+			: base (Create (masterClock), true)
 		{
-			if (masterClock == null)
-				throw new ArgumentNullException ("masterClock");
-
-			var error = CMTimebaseCreateWithMasterClock (IntPtr.Zero, masterClock.Handle, out handle);
-			if (error != CMTimebaseError.None)
-				throw new ArgumentException (error.ToString ());
-
-			CFObject.CFRetain (Handle);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMTimebaseError CMTimebaseCreateWithMasterTimebase (/* CFAllocatorRef */ IntPtr allocator, /* CMTimebaseRef */ IntPtr masterTimebase, /* CMTimebaseRef* */ out IntPtr timebaseOut);
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMTimebaseError CMTimebaseCreateWithMasterTimebase (/* CFAllocatorRef */ IntPtr allocator, /* CMTimebaseRef */ IntPtr masterTimebase, /* CMTimebaseRef* */ IntPtr* timebaseOut);
 
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCreateWithSourceTimebase' instead.")]
+		static IntPtr Create (CMTimebase masterTimebase)
+		{
+			if (masterTimebase is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (masterTimebase));
+
+			CMTimebaseError error;
+			IntPtr handle;
+			unsafe {
+				error = CMTimebaseCreateWithMasterTimebase (IntPtr.Zero, masterTimebase.Handle, &handle);
+				GC.KeepAlive (masterTimebase);
+			}
+			if (error != CMTimebaseError.None)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
+			return handle;
+		}
+
+		/// <param name="masterTimebase">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use the (CFAllocator, CMTimebase) overload instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use the (CFAllocator, CMTimebase) overload instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use the (CFAllocator, CMTimebase) overload instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use the (CFAllocator, CMTimebase) overload instead.")]
 		public CMTimebase (CMTimebase masterTimebase)
+			: base (Create (masterTimebase), true)
 		{
-			if (masterTimebase == null)
-				throw new ArgumentNullException ("masterTimebase");
-
-			var error = CMTimebaseCreateWithMasterTimebase (IntPtr.Zero, masterTimebase.Handle, out handle);
-			if (error != CMTimebaseError.None)
-				throw new ArgumentException (error.ToString ());
-
-			CFObject.CFRetain (Handle);
 		}
 
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe static extern CMTimebaseError CMTimebaseCreateWithSourceClock (/* [NullAllowed] CFAllocatorRef */ IntPtr allocator, /* CMClock */ IntPtr sourceClock, /* CMTimebase */ IntPtr* timebaseOut);
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		static IntPtr Create (CFAllocator? allocator, CMClock sourceClock)
+		{
+			if (sourceClock is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (sourceClock));
+
+			CMTimebaseError error;
+			IntPtr handle;
+			unsafe {
+				error = CMTimebaseCreateWithSourceClock (allocator.GetHandle (), sourceClock.Handle, &handle);
+				GC.KeepAlive (allocator);
+				GC.KeepAlive (sourceClock);
+			}
+			if (error != CMTimebaseError.None)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
+			return handle;
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CMTimebase (CFAllocator? allocator, CMClock sourceClock)
+			: base (Create (allocator, sourceClock), true)
+		{
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe static extern CMTimebaseError CMTimebaseCreateWithSourceTimebase (/* [NullAllowed] CFAllocatorRef */ IntPtr allocator, /* CMTimebase */ IntPtr sourceTimebase, /* CMTimebase */ IntPtr* timebaseOut);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		static IntPtr Create (CFAllocator? allocator, CMTimebase sourceTimebase)
+		{
+			if (sourceTimebase is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (sourceTimebase));
+
+			CMTimebaseError error;
+			IntPtr handle;
+			unsafe {
+				error = CMTimebaseCreateWithSourceTimebase (allocator.GetHandle (), sourceTimebase.Handle, &handle);
+				GC.KeepAlive (allocator);
+				GC.KeepAlive (sourceTimebase);
+			}
+			if (error != CMTimebaseError.None)
+				ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
+			return handle;
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CMTimebase (CFAllocator? allocator, CMTimebase sourceTimebase)
+			: base (Create (allocator, sourceTimebase), true)
+		{
+		}
+
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* Float64 */ double CMTimebaseGetEffectiveRate (/* CMTimebaseRef */ IntPtr timebase);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double EffectiveRate {
 			get {
 				return CMTimebaseGetEffectiveRate (Handle);
 			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* Float64 */ double CMTimebaseGetRate (/* CMTimebaseRef */ IntPtr timebase);
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseSetRate (/* CMTimebaseRef */ IntPtr timebase, /* Float64 */ double rate);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double Rate {
 			get {
 				return CMTimebaseGetRate (Handle);
@@ -188,16 +462,19 @@ namespace CoreMedia {
 			set {
 				var error = CMTimebaseSetRate (Handle, value);
 				if (error != CMTimebaseError.None)
-					throw new ArgumentException (error.ToString ());				
+					ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
 			}
-		} 
+		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMTimebaseGetTime (/* CMTimebaseRef */ IntPtr timebase);
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseSetTime (/* CMTimebaseRef */ IntPtr timebase, CMTime time);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public new CMTime Time {
 			get {
 				return CMTimebaseGetTime (Handle);
@@ -205,32 +482,64 @@ namespace CoreMedia {
 			set {
 				var error = CMTimebaseSetTime (Handle, value);
 				if (error != CMTimebaseError.None)
-					throw new ArgumentException (error.ToString ());
+					ObjCRuntime.ThrowHelper.ThrowArgumentException (error.ToString ());
 			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* CMTimebaseRef */ IntPtr CMTimebaseGetMasterTimebase (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (6, 0)]
-		[Deprecated (PlatformName.iOS, 9, 0, message : "Use 'CopyMasterTimebase' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Use 'CopyMasterTimebase' instead.")]
-		public CMTimebase GetMasterTimebase ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.10", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", "Use 'SourceTimebase' instead.")]
+		public CMTimebase? GetMasterTimebase ()
 		{
 			var ptr = CMTimebaseGetMasterTimebase (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
 
-			return new CMTimebase (ptr, false);			
+			return new CMTimebase (ptr, false);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCopySourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* CMClockRef */ IntPtr CMTimebaseGetMasterClock (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (6, 0)]
-		[Deprecated (PlatformName.iOS, 9, 0, message : "Use 'CopyMasterClock' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Use 'CopyMasterClock' instead.")]
-		public CMClock GetMasterClock ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'SourceClock' instead.")]
+		public CMClock? GetMasterClock ()
 		{
 			var ptr = CMTimebaseGetMasterClock (Handle);
 			if (ptr == IntPtr.Zero)
@@ -239,13 +548,29 @@ namespace CoreMedia {
 			return new CMClock (ptr, false);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", message: "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCopySource' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* CMClockOrTimebaseRef */ IntPtr CMTimebaseGetMaster (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (6, 0)]
-		[Deprecated (PlatformName.iOS, 9, 0, message : "Use 'CopyMaster' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Use 'CopyMaster' instead.")]
-		public CMClockOrTimebase GetMaster ()
+		/// <summary>Developers should not use this deprecated method. Developers should use 'CopyMaster' instead.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CopyMaster' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CopyMaster' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CopyMaster' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", "Use 'CopyMaster' instead.")]
+		public CMClockOrTimebase? GetMaster ()
 		{
 			var ptr = CMTimebaseGetMaster (Handle);
 			if (ptr == IntPtr.Zero)
@@ -254,207 +579,380 @@ namespace CoreMedia {
 			return new CMClockOrTimebase (ptr, false);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", message: "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", message: "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* CMClockRef */ IntPtr CMTimebaseGetUltimateMasterClock (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (6, 0)]
-		[Deprecated (PlatformName.iOS, 9, 0, message : "Use 'CopyUltimateMasterClock' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 11, message : "Use 'CopyUltimateMasterClock' instead.")]
-		public CMClock GetUltimateMasterClock ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", "Use 'UltimateSourceClock' instead.")]
+		public CMClock? GetUltimateMasterClock ()
 		{
-			var ptr  = CMTimebaseGetUltimateMasterClock (Handle);
+			var ptr = CMTimebaseGetUltimateMasterClock (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
 
 			return new CMClock (ptr, false);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMTimebaseGetTimeWithTimeScale (/* CMTimebaseRef */ IntPtr timebase, CMTimeScale timescale, CMTimeRoundingMethod method);
 
+		/// <param name="timeScale">To be added.</param>
+		///         <param name="roundingMethod">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTime GetTime (CMTimeScale timeScale, CMTimeRoundingMethod roundingMethod)
 		{
 			return CMTimebaseGetTimeWithTimeScale (Handle, timeScale, roundingMethod);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseSetAnchorTime (/* CMTimebaseRef */ IntPtr timebase, CMTime timebaseTime, CMTime immediateMasterTime);
 
+		/// <param name="timebaseTime">To be added.</param>
+		///         <param name="immediateMasterTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError SetAnchorTime (CMTime timebaseTime, CMTime immediateMasterTime)
 		{
 			return CMTimebaseSetAnchorTime (Handle, timebaseTime, immediateMasterTime);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMTimebaseError CMTimebaseGetTimeAndRate (/* CMTimebaseRef */ IntPtr timebase, out CMTime time, /* Float64* */ out double rate);
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMTimebaseError CMTimebaseGetTimeAndRate (/* CMTimebaseRef */ IntPtr timebase, CMTime* time, /* Float64* */ double* rate);
 
+		/// <param name="time">To be added.</param>
+		///         <param name="rate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError GetTimeAndRate (out CMTime time, out double rate)
 		{
-			return CMTimebaseGetTimeAndRate (Handle, out time, out rate);
+			time = default;
+			rate = default;
+			unsafe {
+				fixed (CMTime* timePtr = &time) {
+					fixed (double* ratePtr = &rate) {
+						return CMTimebaseGetTimeAndRate (Handle, timePtr, ratePtr);
+					}
+				}
+			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */  CMTimebaseError CMTimebaseSetRateAndAnchorTime (/* CMTimebaseRef */ IntPtr timebase, /* Float64 */ double rate, CMTime timebaseTime, CMTime immediateMasterTime);
 
+		/// <param name="rate">To be added.</param>
+		///         <param name="timebaseTime">To be added.</param>
+		///         <param name="immediateMasterTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError SetRateAndAnchorTime (double rate, CMTime timebaseTime, CMTime immediateMasterTime)
 		{
 			return CMTimebaseSetRateAndAnchorTime (Handle, rate, timebaseTime, immediateMasterTime);
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseNotificationBarrier (/* CMTimebaseRef */ IntPtr timebase);
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError NotificationBarrier ()
 		{
-			return CMTimebaseNotificationBarrier (handle);
+			return CMTimebaseNotificationBarrier (Handle);
 		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public const double VeryLongTimeInterval = 256.0 * 365.0 * 24.0 * 60.0 * 60.0;
 
- #if !COREBUILD
-		[DllImport(Constants.CoreMediaLibrary)]
+#if !COREBUILD
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseAddTimer (/* CMTimebaseRef */ IntPtr timebase, /* CFRunLoopTimerRef */ IntPtr timer, /* CFRunLoopRef */ IntPtr runloop);
 
+		/// <param name="timer">To be added.</param>
+		///         <param name="runloop">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError AddTimer (NSTimer timer, NSRunLoop runloop)
 		{
-			if (timer == null)
-				throw new ArgumentNullException ("timer");
-			if (runloop == null)
-				throw new ArgumentNullException ("runloop");
+			if (timer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (timer));
+			if (runloop is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (runloop));
 
 			// NSRunloop and CFRunloop[Ref] are NOT toll free bridged types
-			using (var cf = runloop.GetCFRunLoop ())
-				return CMTimebaseAddTimer (Handle, timer.Handle, cf.Handle);
+			using (var cf = runloop.GetCFRunLoop ()) {
+				CMTimebaseError result = CMTimebaseAddTimer (Handle, timer.Handle, cf.Handle);
+				GC.KeepAlive (timer);
+				return result;
+			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseRemoveTimer (/* CMTimebaseRef */ IntPtr timebase, /* CFRunLoopTimerRef */ IntPtr timer);
 
+		/// <param name="timer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError RemoveTimer (NSTimer timer)
 		{
-			if (timer == null)
-				throw new ArgumentNullException ("timer");
+			if (timer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (timer));
 
-			return CMTimebaseRemoveTimer (Handle, timer.Handle);
+			CMTimebaseError result = CMTimebaseRemoveTimer (Handle, timer.Handle);
+			GC.KeepAlive (timer);
+			return result;
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseSetTimerNextFireTime (/* CMTimebaseRef */ IntPtr timebase, /* CFRunLoopTimerRef */ IntPtr timer, CMTime fireTime, /* uint32_t */ uint flags);
 
+		/// <param name="timer">To be added.</param>
+		///         <param name="fireTime">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError SetTimerNextFireTime (NSTimer timer, CMTime fireTime)
 		{
-			if (timer == null)
-				throw new ArgumentNullException ("timer");
+			if (timer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (timer));
 
-			return CMTimebaseSetTimerNextFireTime (Handle, timer.Handle, fireTime, 0);
+			CMTimebaseError result = CMTimebaseSetTimerNextFireTime (Handle, timer.Handle, fireTime, 0);
+			GC.KeepAlive (timer);
+			return result;
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* OSStatus */ CMTimebaseError CMTimebaseSetTimerToFireImmediately (/* CMTimebaseRef */ IntPtr timebase, /* CFRunLoopTimerRef */ IntPtr timer);
 
+		/// <param name="timer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CMTimebaseError SetTimerToFireImmediately (NSTimer timer)
 		{
-			if (timer == null)
-				throw new ArgumentNullException ("timer");
+			if (timer is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (timer));
 
-			return CMTimebaseSetTimerToFireImmediately (Handle, timer.Handle);
+			CMTimebaseError result = CMTimebaseSetTimerToFireImmediately (Handle, timer.Handle);
+			GC.KeepAlive (timer);
+			return result;
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseSetSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseSetSourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'CMTimebaseSetSourceTimebase' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static CMTimebaseError CMTimebaseSetMasterTimebase (/* CMTimebaseRef* */ IntPtr timebase, /* CMTimebaseRef* */ IntPtr newMasterTimebase);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'SourceTimebase' instead.")]
+		public CMTimebaseError SetMasterTimebase (CMTimebase newMasterTimebase)
+		{
+			if (newMasterTimebase is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (newMasterTimebase));
+
+			var result = CMTimebaseSetMasterTimebase (Handle, newMasterTimebase.Handle);
+			GC.KeepAlive (newMasterTimebase);
+			return result;
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'CMTimebaseSetSourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'CMTimebaseSetSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'CMTimebaseSetSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'CMTimebaseSetSourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static CMTimebaseError CMTimebaseSetMasterClock (/* CMTimebaseRef* */ IntPtr timebase, /* CMClockRef* */ IntPtr newMasterClock);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.10", message: "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios8.0", message: "Use 'SourceClock' instead.")]
+		public CMTimebaseError SetMasterClock (CMClock newMasterClock)
+		{
+			if (newMasterClock is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (newMasterClock));
+
+			var result = CMTimebaseSetMasterClock (Handle, newMasterClock.Handle);
+			GC.KeepAlive (newMasterClock);
+			return result;
 		}
 #endif
 
 #if !COREBUILD
-#if MONOMAC // CheckVersion
-		const int GetMethodDeprecatedMajor = 10;
-		const int GetMethodDeprecatedMinor = 11;
-#elif IOS
-		const int GetMethodDeprecatedMajor = 9;
-		const int GetMethodDeprecatedMinor = 0;
-#endif
-
-		bool IsDeprecated ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'SourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'SourceTimebase' instead.")]
+		public CMTimebase? CopyMasterTimebase ()
 		{
-#if IOS || MONOMAC
-			return PlatformHelper.CheckSystemVersion (GetMethodDeprecatedMajor, GetMethodDeprecatedMinor);
-#elif TVOS
-			return true;
-#endif
-		}
-
-		public CMTimebase CopyMasterTimebase ()
-		{
-			IntPtr ptr;
-			bool deprecated = IsDeprecated ();
-			if (deprecated)
-				ptr = CMTimebaseCopyMasterTimebase (Handle);
-			else
-				ptr = CMTimebaseGetMasterTimebase (Handle);
-
+			var ptr = CMTimebaseCopyMasterTimebase (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
-
-			return new CMTimebase (ptr, deprecated);
+			return new CMTimebase (ptr, true);
 		}
 
-		public CMClock CopyMasterClock ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'SourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'SourceClock' instead.")]
+		public CMClock? CopyMasterClock ()
 		{
-			IntPtr ptr;
-			bool deprecated = IsDeprecated ();
-			if (deprecated)
-				ptr = CMTimebaseCopyMasterClock (Handle);
-			else
-				ptr = CMTimebaseGetMasterClock (Handle);
-
+			var ptr = CMTimebaseCopyMasterClock (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
-
-			return new CMClock (ptr, deprecated);
+			return new CMClock (ptr, true);
 		}
 
-		public CMClockOrTimebase CopyMaster ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CopySource' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CopySource' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CopySource' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'CopySource' instead.")]
+		public CMClockOrTimebase? CopyMaster ()
 		{
-			IntPtr ptr;
-			bool deprecated = IsDeprecated ();
-			if (deprecated)
-				ptr = CMTimebaseCopyMaster (Handle);
-			else
-				ptr = CMTimebaseGetMaster (Handle);
-
+			var ptr = CMTimebaseCopyMaster (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
-
-			return new CMClockOrTimebase (ptr, deprecated);
+			return new CMClockOrTimebase (ptr, true);
 		}
 
-		public CMClock CopyUltimateMasterClock ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CMClockOrTimebase? CopySource ()
 		{
-			IntPtr ptr;
-			bool deprecated = IsDeprecated ();
-			if (deprecated)
-				ptr = CMTimebaseCopyUltimateMasterClock (Handle);
-			else
-				ptr = CMTimebaseGetUltimateMasterClock (Handle);
-
+			var ptr = CMTimebaseCopySource (Handle);
 			if (ptr == IntPtr.Zero)
 				return null;
-
-			return new CMClock (ptr, deprecated);
+			return new CMClockOrTimebase (ptr, true);
 		}
 
-		[iOS (9,0)][Mac (10,11)]
-		[DllImport(Constants.CoreMediaLibrary)]
-		static extern unsafe /* CMTimebaseRef */ IntPtr  CMTimebaseCopyMasterTimebase (/* CMTimebaseRef */ IntPtr timebase);
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'UltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'UltimateSourceClock' instead.")]
+		public CMClock? CopyUltimateMasterClock ()
+		{
+			var ptr = CMTimebaseCopyUltimateMasterClock (Handle);
+			if (ptr == IntPtr.Zero)
+				return null;
+			return new CMClock (ptr, true);
+		}
 
-		[iOS (9,0)][Mac (10,11)]
-		[DllImport(Constants.CoreMediaLibrary)]
-		static extern unsafe /* CMClockRef */ IntPtr  CMTimebaseCopyMasterClock (/* CMTimebaseRef */ IntPtr timebase);
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'CMTimebaseCopySourceTimebase' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern unsafe /* CMTimebaseRef */ IntPtr CMTimebaseCopyMasterTimebase (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (9,0)][Mac (10,11)]
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("maccatalyst13.0", "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CMTimebaseCopySourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CMTimebaseCopySourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern unsafe /* CMClockRef */ IntPtr CMTimebaseCopyMasterClock (/* CMTimebaseRef */ IntPtr timebase);
+
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CMTimebaseCopySource' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'CMTimebaseCopySource' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		static extern unsafe IntPtr /* void* */ CMTimebaseCopyMaster (/* CMTimebaseRef */ IntPtr timebase);
 
-		[iOS (9,0)][Mac (10,11)]
-		[DllImport(Constants.CoreMediaLibrary)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("tvos9.0", "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("macos10.11", "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("ios9.0", "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst", "Use 'CMTimebaseCopyUltimateSourceClock' instead.")]
+		[DllImport (Constants.CoreMediaLibrary)]
 		static extern unsafe /* CMClockRef */ IntPtr CMTimebaseCopyUltimateMasterClock (/* CMTimebaseRef */ IntPtr timebase);
 #endif
+
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern unsafe IntPtr /* CMClockOrTimebaseRef * */ CMTimebaseCopySource (/* CMTimebaseRef */ IntPtr timebase);
+
 		//
 		// Dispatch timers not supported
 		//
@@ -462,129 +960,221 @@ namespace CoreMedia {
 		// CMTimebaseRemoveTimerDispatchSource
 		// CMTimebaseSetTimerDispatchSourceNextFireTime
 		// CMTimebaseSetTimerDispatchSourceToFireImmediately
+#endif // !COREBUILD
 	}
 
-	// untyped enum (used as OSStatus) -> CMSync.h
-	public enum CMSyncError : int {
-		None = 0,
-		MissingRequiredParameter	= -12752,
-		InvalidParameter			= -12753,
-		AllocationFailed			= -12754,
-		RateMustBeNonZero			= -12755,
-	}
-
-	[iOS (6,0)]
-	public class CMClockOrTimebase : IDisposable, INativeObject
-	{
-		internal IntPtr handle;
-
-		internal CMClockOrTimebase ()
+	/// <summary>The base class for <see cref="CoreMedia.CMClock" /> and <see cref="CoreMedia.CMTimebase" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CMClockOrTimebase : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CMClockOrTimebase (NativeHandle handle, bool owns)
+			: base (handle, owns)
 		{
 		}
 
-		public CMClockOrTimebase (IntPtr handle) : this (handle, false)
-		{
-		}
-
-		internal CMClockOrTimebase (IntPtr handle, bool owns)
-		{
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
-		}
-
-		~CMClockOrTimebase ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (Handle != IntPtr.Zero){
-				CFObject.CFRelease (Handle);
-				handle = IntPtr.Zero;
-			}
-		}
-
-		public IntPtr Handle { 
-			get {
-				return handle;
-			}
-		}
-
-		[DllImport(Constants.CoreMediaLibrary)]
+#if !COREBUILD
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMSyncGetTime (/* CMClockOrTimebaseRef */ IntPtr clockOrTimebase);
 
-		public CMTime Time { 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CMTime Time {
 			get {
-				return CMSyncGetTime (handle);
+				return CMSyncGetTime (Handle);
 			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static /* Float64 */ double CMSyncGetRelativeRate (/* CMClockOrTimebaseRef */ IntPtr ofClockOrTimebase, /* CMClockOrTimebaseRef */ IntPtr relativeToClockOrTimebase);
 
+		/// <param name="clockOrTimebaseA">To be added.</param>
+		///         <param name="clockOrTimebaseB">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static double GetRelativeRate (CMClockOrTimebase clockOrTimebaseA, CMClockOrTimebase clockOrTimebaseB)
 		{
-			if (clockOrTimebaseA == null)
-				throw new ArgumentNullException ("clockOrTimebaseA");
+			if (clockOrTimebaseA is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseA));
 
-			if (clockOrTimebaseB == null)
-				throw new ArgumentNullException ("clockOrTimebaseB");
+			if (clockOrTimebaseB is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseB));
 
-			return CMSyncGetRelativeRate (clockOrTimebaseA.Handle, clockOrTimebaseB.Handle);
+			double result = CMSyncGetRelativeRate (clockOrTimebaseA.Handle, clockOrTimebaseB.Handle);
+			GC.KeepAlive (clockOrTimebaseA);
+			GC.KeepAlive (clockOrTimebaseB);
+			return result;
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* OSStatus */ CMSyncError CMSyncGetRelativeRateAndAnchorTime (
-			/* CMClockOrTimebaseRef */ IntPtr ofClockOrTimebase, 
+		[DllImport (Constants.CoreMediaLibrary)]
+		unsafe extern static /* OSStatus */ CMSyncError CMSyncGetRelativeRateAndAnchorTime (
+			/* CMClockOrTimebaseRef */ IntPtr ofClockOrTimebase,
 			/* CMClockOrTimebaseRef */ IntPtr relativeToClockOrTimebase,
-			/* Float64* */ out double outRelativeRate, 
-			out CMTime outOfClockOrTimebaseAnchorTime, 
-			out CMTime outRelativeToClockOrTimebaseAnchorTime);
+			/* Float64* */ double* outRelativeRate,
+			CMTime* outOfClockOrTimebaseAnchorTime,
+			CMTime* outRelativeToClockOrTimebaseAnchorTime);
 
-		public static CMSyncError GetRelativeRateAndAnchorTime (CMClockOrTimebase clockOrTimebaseA, CMClockOrTimebase clockOrTimebaseB,  out double relativeRate, out CMTime timeA, out CMTime timeB)
+		/// <param name="clockOrTimebaseA">To be added.</param>
+		///         <param name="clockOrTimebaseB">To be added.</param>
+		///         <param name="relativeRate">To be added.</param>
+		///         <param name="timeA">To be added.</param>
+		///         <param name="timeB">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static CMSyncError GetRelativeRateAndAnchorTime (CMClockOrTimebase clockOrTimebaseA, CMClockOrTimebase clockOrTimebaseB, out double relativeRate, out CMTime timeA, out CMTime timeB)
 		{
-			if (clockOrTimebaseA == null)
-				throw new ArgumentNullException ("clockOrTimebaseA");
+			if (clockOrTimebaseA is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseA));
 
-			if (clockOrTimebaseB == null)
-				throw new ArgumentNullException ("clockOrTimebaseB");
+			if (clockOrTimebaseB is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseB));
 
-			return CMSyncGetRelativeRateAndAnchorTime (clockOrTimebaseA.Handle, clockOrTimebaseB.handle, out relativeRate, out timeA, out timeB);
+			relativeRate = default;
+			timeA = default;
+			timeB = default;
+			unsafe {
+				fixed (double* relativeRatePtr = &relativeRate) {
+					fixed (CMTime* timeAPtr = &timeA, timeBPtr = &timeB) {
+						CMSyncError result = CMSyncGetRelativeRateAndAnchorTime (
+							clockOrTimebaseA.Handle,
+							clockOrTimebaseB.Handle,
+							relativeRatePtr,
+							timeAPtr,
+							timeBPtr);
+						GC.KeepAlive (clockOrTimebaseA);
+						GC.KeepAlive (clockOrTimebaseB);
+						return result;
+					}
+				}
+			}
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
+		[DllImport (Constants.CoreMediaLibrary)]
 		extern static CMTime CMSyncConvertTime (CMTime time, /* CMClockOrTimebaseRef */ IntPtr fromClockOrTimebase, /* CMClockOrTimebaseRef */ IntPtr toClockOrTimebase);
 
+		/// <param name="time">To be added.</param>
+		///         <param name="from">To be added.</param>
+		///         <param name="to">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static CMTime ConvertTime (CMTime time, CMClockOrTimebase from, CMClockOrTimebase to)
 		{
-			if (from == null)
-				throw new ArgumentNullException ("from");
-			if (to == null)
-				throw new ArgumentNullException ("to");
+			if (from is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (from));
+			if (to is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (to));
 
-			return CMSyncConvertTime (time, from.Handle, to.Handle);
+			CMTime result = CMSyncConvertTime (time, from.Handle, to.Handle);
+			GC.KeepAlive (from);
+			GC.KeepAlive (to);
+			return result;
 		}
 
-		[DllImport(Constants.CoreMediaLibrary)]
-		extern static /* Boolean */ bool CMSyncMightDrift (/* CMClockOrTimebaseRef */ IntPtr clockOrTimebase1, /* CMClockOrTimebaseRef */ IntPtr clockOrTimebase2);
+		[DllImport (Constants.CoreMediaLibrary)]
+		extern static /* Boolean */ byte CMSyncMightDrift (/* CMClockOrTimebaseRef */ IntPtr clockOrTimebase1, /* CMClockOrTimebaseRef */ IntPtr clockOrTimebase2);
 
+		/// <param name="clockOrTimebaseA">To be added.</param>
+		///         <param name="clockOrTimebaseB">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public static bool MightDrift (CMClockOrTimebase clockOrTimebaseA, CMClockOrTimebase clockOrTimebaseB)
 		{
-			if (clockOrTimebaseA == null)
-				throw new ArgumentNullException ("clockOrTimebaseA");
+			if (clockOrTimebaseA is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseA));
 
-			if (clockOrTimebaseB == null)
-				throw new ArgumentNullException ("clockOrTimebaseB");
+			if (clockOrTimebaseB is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (clockOrTimebaseB));
 
-			return CMSyncMightDrift (clockOrTimebaseA.Handle, clockOrTimebaseB.Handle);
+			bool result = CMSyncMightDrift (clockOrTimebaseA.Handle, clockOrTimebaseB.Handle) != 0;
+			GC.KeepAlive (clockOrTimebaseA);
+			GC.KeepAlive (clockOrTimebaseB);
+			return result;
 		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern /* CMTimebase */ IntPtr CMTimebaseCopySourceTimebase (/* CMTimebase */ IntPtr timebase);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern int CMTimebaseSetSourceTimebase (/* CMTimebase */ IntPtr timebase, /* CMTimebase */ IntPtr newSourceTimebase);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CMTimebase? SourceTimebase {
+			get {
+				var source = CMTimebaseCopySourceTimebase (Handle);
+				return Runtime.GetINativeObject<CMTimebase> (source, true);
+			}
+			set {
+				CMTimebaseSetSourceTimebase (Handle, value.GetHandle ());
+				GC.KeepAlive (value);
+			}
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern /* CMClock */ IntPtr CMTimebaseCopySourceClock (/* CMTimebase */ IntPtr timebase);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern int CMTimebaseSetSourceClock (/* CMTimebase */ IntPtr timebase, /* CMClock */ IntPtr newSourceClock);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CMClock? SourceClock {
+			get {
+				var clock = CMTimebaseCopySourceClock (Handle);
+				return Runtime.GetINativeObject<CMClock> (clock, true);
+			}
+			set {
+				CMTimebaseSetSourceClock (Handle, value.GetHandle ());
+				GC.KeepAlive (value);
+			}
+		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.CoreMediaLibrary)]
+		static extern /* CMClock */ IntPtr CMTimebaseCopyUltimateSourceClock (/* CMTimebase */ IntPtr timebase);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public CMClock? UltimateSourceClock {
+			get {
+				var clock = CMTimebaseCopyUltimateSourceClock (Handle);
+				return Runtime.GetINativeObject<CMClock> (clock, true);
+			}
+		}
+
+#endif // !COREBUILD
 	}
 }

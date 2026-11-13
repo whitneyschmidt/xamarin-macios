@@ -1,18 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLIndirectCommandBufferDescriptorTest {
 		MTLIndirectCommandBufferDescriptor descriptor = null;
 
@@ -26,7 +18,7 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (descriptor != null)
+			if (descriptor is not null)
 				descriptor.Dispose ();
 			descriptor = null;
 		}
@@ -35,7 +27,7 @@ namespace MonoTouchFixtures.Metal {
 		public void GetSetCommandTypesTest ()
 		{
 			descriptor.CommandTypes = MTLIndirectCommandType.Draw;
-			Assert.AreEqual (MTLIndirectCommandType.Draw, descriptor.CommandTypes);
+			Assert.That (descriptor.CommandTypes, Is.EqualTo (MTLIndirectCommandType.Draw));
 		}
 
 #if MONOMAC
@@ -43,7 +35,7 @@ namespace MonoTouchFixtures.Metal {
 		public void GetSetInheritPipelineStateTest ()
 		{
 			descriptor.InheritPipelineState = true;
-			Assert.AreEqual (true, descriptor.InheritPipelineState);
+			Assert.That (descriptor.InheritPipelineState, Is.EqualTo (true));
 		}
 #endif
 
@@ -51,23 +43,21 @@ namespace MonoTouchFixtures.Metal {
 		public void GetSetInheritBuffersTest ()
 		{
 			descriptor.InheritBuffers = true;
-			Assert.AreEqual (true, descriptor.InheritBuffers);
+			Assert.That (descriptor.InheritBuffers, Is.EqualTo (true));
 		}
 
 		[Test]
 		public void GetSetMaxVertexBufferBindCountTest ()
 		{
 			descriptor.MaxVertexBufferBindCount = 1;
-			Assert.AreEqual (1, descriptor.MaxVertexBufferBindCount);
+			Assert.That (descriptor.MaxVertexBufferBindCount, Is.EqualTo ((nuint) 1));
 		}
 
 		[Test]
 		public void GetSetMaxFragmentBufferBindCountTest ()
 		{
 			descriptor.MaxFragmentBufferBindCount = 1;
-			Assert.AreEqual (1, descriptor.MaxFragmentBufferBindCount);
+			Assert.That (descriptor.MaxFragmentBufferBindCount, Is.EqualTo ((nuint) 1));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

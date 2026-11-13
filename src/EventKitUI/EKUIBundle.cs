@@ -1,4 +1,4 @@
-﻿//
+//
 // EventKitUIBundle C# bindings
 //
 // Authors:
@@ -7,21 +7,23 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace EventKitUI {
+	/// <summary>Provides access to the EventKit UI framework bundle.</summary>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public static class EKUIBundle {
 
-		[iOS (11,0)]
 		[DllImport (Constants.EventKitUILibrary)]
 		static extern IntPtr EventKitUIBundle ();
 
-		[iOS (11,0)]
-		public static NSBundle UIBundle { get; } = Runtime.GetNSObject<NSBundle> (EventKitUIBundle ());
+		/// <summary>Gets the EventKit UI framework bundle.</summary>
+		/// <value>The <see cref="NSBundle" /> for the EventKit UI framework, or <see langword="null" /> if unavailable.</value>
+		public static NSBundle? UIBundle {
+			get {
+				return Runtime.GetNSObject<NSBundle> (EventKitUIBundle ());
+			}
+		}
 	}
 }
-#endif

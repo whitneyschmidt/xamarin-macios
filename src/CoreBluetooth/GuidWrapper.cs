@@ -6,12 +6,10 @@
 //
 // Copyright 2011-2014 Xamarin Inc
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
+
+#nullable enable
 
 namespace CoreBluetooth {
 
@@ -20,139 +18,52 @@ namespace CoreBluetooth {
 		// CFUUID.h
 		[DllImport (Constants.CoreFoundationLibrary)]
 		public extern static /* CFUUIDRef */ IntPtr CFUUIDCreateFromString ( /* CFAllocatorRef */ IntPtr alloc, /* CFStringRef */ IntPtr uuidStr);
+	}
 
-#if !XAMCORE_2_0
-		[DllImport (Constants.CoreFoundationLibrary)]
-		extern static /* CFUUIDRef */ IntPtr CFUUIDCreateWithBytes (/* CFAllocatorRef */ IntPtr alloc, 
-			/* Uint8 */ byte byte0, /* Uint8 */ byte byte1, /* Uint8 */ byte byte2, /* Uint8 */ byte byte3, 
-			/* Uint8 */ byte byte4, /* Uint8 */ byte byte5, /* Uint8 */ byte byte6, /* Uint8 */ byte byte7,
-			/* Uint8 */ byte byte8, /* Uint8 */ byte byte9, /* Uint8 */ byte byte10, /* Uint8 */ byte byte11,
-			/* Uint8 */byte  byte12, /* Uint8 */ byte byte13, /* Uint8 */ byte byte14, /* Uint8 */ byte byte15);
-		
-		internal unsafe static void WithArray (Guid [] uuids, string argName, Action<NSArray> action)
-		{
-			if (uuids == null)
-				throw new ArgumentNullException (argName);
-			var ptrs = new IntPtr [uuids.Length];
-			for (int i = 0; i < uuids.Length; i++){
-				var ba = uuids [i].ToByteArray ();
-				ptrs [i] = CFUUID.CFUUIDCreateWithBytes (IntPtr.Zero, ba [0], ba [1], ba [2], ba [3], ba [4], 
-					ba [5], ba [6], ba [7], ba [8], ba [9], ba [10], ba [11], ba [12], ba [13], ba [14], ba [15]);
-			}
-			using (var arr = NSArray.FromIntPtrs (ptrs))
-				action (arr);
-			
-			foreach (var h in ptrs){
-				if (h == IntPtr.Zero)
-					continue;
-				CFObject.CFRelease (h);
-			}
-		}
-#endif
-	}		
-	
 	public partial class CBCentralManager {
 
-		public void ConnectPeripheral (CBPeripheral peripheral, PeripheralConnectionOptions options = null)
+		/// <include file="../../docs/api/CoreBluetooth/CBCentralManager.xml" path="/Documentation/Docs[@DocId='M:CoreBluetooth.CBCentralManager.ConnectPeripheral(CoreBluetooth.CBPeripheral,CoreBluetooth.PeripheralConnectionOptions)']/*" />
+		public void ConnectPeripheral (CBPeripheral peripheral, PeripheralConnectionOptions? options = null)
 		{
-			ConnectPeripheral (peripheral, options == null ? null : options.Dictionary);
+			ConnectPeripheral (peripheral, options?.Dictionary);
 		}
 
-#if !TVOS && !WATCH
-		[Deprecated (PlatformName.iOS, 7, 0)]
-		[Obsoleted (PlatformName.iOS, 9, 0, message : "Use 'RetrievePeripheralsWithIdentifiers' instead.")]
-		public void RetrievePeripherals (CBUUID [] peripheralUuids)
+		/// <summary>Scans for peripherals that are advertising any of the specified <paramref name="peripheralUuids" /> with the specified <paramref name="options" />.</summary>
+		/// <param name="peripheralUuids">An array of advertised UUIDs to scan for.</param>
+		/// <param name="options">Any custom options for the scan.</param>
+		public void ScanForPeripherals (CBUUID []? peripheralUuids, NSDictionary? options)
 		{
-			if (peripheralUuids == null)
-				throw new ArgumentNullException ("peripheralUuids");
-			var ptrs = new IntPtr [peripheralUuids.Length];	
-			for (int i =0; i < peripheralUuids.Length; i++) {
-				using (var s = new NSString (peripheralUuids[i].ToString(true)))
-					ptrs [i] = CFUUID.CFUUIDCreateFromString (IntPtr.Zero, s.Handle);
-			}	
-			using (var arr = NSArray.FromIntPtrs (ptrs)) 
-				RetrievePeripherals (arr);
-
-			foreach (var p in ptrs) 
-				CFObject.CFRelease (p);
-		}
-
-		public void RetrievePeripherals (CBUUID peripheralUuid)
-		{
-			RetrievePeripherals (new [] { peripheralUuid });
-		}
-#endif
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void RetrievePeripherals (Guid [] peripheralUuids)
-		{
-			CFUUID.WithArray (peripheralUuids, "peripheralUuids", x => RetrievePeripherals (x));
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void RetrievePeripherals (Guid peripheralUuid)
-		{
-			RetrievePeripherals (new [] { peripheralUuid });
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void ScanForPeripherals (Guid [] serviceUuids, NSDictionary options)
-		{
-			if (serviceUuids == null)
-				ScanForPeripherals ((NSArray) null, options);
-			else
-				CFUUID.WithArray (serviceUuids, "serviceUuids", x => ScanForPeripherals (x, options));
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void ScanForPeripherals (Guid[] serviceUuids, PeripheralScanningOptions options = null)
-		{
-			ScanForPeripherals (serviceUuids, options == null ? null : options.Dictionary);
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void ScanForPeripherals (Guid [] serviceUuids)
-		{
-			ScanForPeripherals (serviceUuids, null as NSDictionary);
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void ScanForPeripherals (Guid serviceUuid, NSDictionary options)
-		{
-			ScanForPeripherals (new [] { serviceUuid }, options);
-		}
-
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void ScanForPeripherals (Guid serviceUuid)
-		{
-			ScanForPeripherals (new [] { serviceUuid }, null as NSDictionary);
-		}
-#endif
-
-		public void ScanForPeripherals (CBUUID [] peripheralUuids, NSDictionary options)
-		{
-			if (peripheralUuids == null)
-				ScanForPeripherals ((NSArray) null, options);
+			if (peripheralUuids is null)
+				ScanForPeripherals ((NSArray?) null, options);
 			else
 				ScanForPeripherals (NSArray.FromObjects (peripheralUuids), options);
 		}
 
-		public void ScanForPeripherals (CBUUID[] peripheralUuids, PeripheralScanningOptions options = null)
+		/// <summary>Scans for peripherals that are advertising any of the specified <paramref name="peripheralUuids" /> with the specified <paramref name="options" />.</summary>
+		/// <param name="peripheralUuids">An array of advertised UUIDs to scan for.</param>
+		/// <param name="options">Any custom options for the scan.</param>
+		public void ScanForPeripherals (CBUUID []? peripheralUuids, PeripheralScanningOptions? options = null)
 		{
-			ScanForPeripherals (peripheralUuids, options == null ? null : options.Dictionary);
+			ScanForPeripherals (peripheralUuids, options?.Dictionary);
 		}
 
-		public void ScanForPeripherals (CBUUID [] peripheralUuids)
+		/// <summary>Scans for peripherals that are advertising any of the specified <paramref name="peripheralUuids" />.</summary>
+		/// <param name="peripheralUuids">An array of advertised UUIDs to scan for.</param>
+		public void ScanForPeripherals (CBUUID []? peripheralUuids)
 		{
 			ScanForPeripherals (peripheralUuids, null as NSDictionary);
 		}
 
-		public void ScanForPeripherals (CBUUID serviceUuid, NSDictionary options)
+		/// <summary>Scans for peripherals that are advertising the specified <paramref name="serviceUuid" /> with the specified <paramref name="options" />.</summary>
+		/// <param name="serviceUuid">The advertised UUID to scan for.</param>
+		/// <param name="options">Any custom options for the scan.</param>
+		public void ScanForPeripherals (CBUUID serviceUuid, NSDictionary? options)
 		{
 			ScanForPeripherals (new [] { serviceUuid }, options);
 		}
 
+		/// <summary>Scans for peripherals that are advertising the specified <paramref name="serviceUuid" />.</summary>
+		/// <param name="serviceUuid">The advertised UUID to scan for.</param>
 		public void ScanForPeripherals (CBUUID serviceUuid)
 		{
 			ScanForPeripherals (new [] { serviceUuid }, null as NSDictionary);
@@ -161,69 +72,79 @@ namespace CoreBluetooth {
 
 	public partial class CBPeripheral {
 
+		/// <summary>Discovers all available services.</summary>
 		public void DiscoverServices ()
 		{
-			DiscoverServices ((NSArray) null);
+			DiscoverServices ((NSArray?) null);
 		}
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void DiscoverServices (Guid [] services)
+		/// <summary>Discovers services with the specified UUIDs, or all services if <paramref name="services" /> is <see langword="null" />.</summary>
+		/// <param name="services">The service UUIDs to discover, or <see langword="null" /> to discover all services.</param>
+		public void DiscoverServices (CBUUID []? services)
 		{
-			if (services == null)
-				DiscoverServices ((NSArray) null);
-			else
-				CFUUID.WithArray (services, "services", x => DiscoverServices (x));
-		}
-#endif
-
-		public void DiscoverServices (CBUUID [] services)
-		{
-			if (services == null)
-				DiscoverServices ((NSArray) null);
+			if (services is null)
+				DiscoverServices ((NSArray?) null);
 			else
 				DiscoverServices (NSArray.FromObjects (services));
 		}
-		
-#if !XAMCORE_2_0
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void DiscoverIncludedServices (Guid [] includedServiceUUIDs, CBService forService)
-		{
-			if (includedServiceUUIDs == null)
-				DiscoverIncludedServices ((NSArray) null, forService);
-			else
-				CFUUID.WithArray (includedServiceUUIDs, "includedServiceUUIDs", x => DiscoverIncludedServices (x, forService));
-		}
-#endif
 
-		public void DiscoverIncludedServices (CBUUID [] includedServiceUUIDs, CBService forService)
+		/// <summary>Discovers included services with the specified UUIDs, or all included services if <paramref name="includedServiceUUIDs" /> is <see langword="null" />.</summary>
+		/// <param name="includedServiceUUIDs">The service UUIDs to discover, or <see langword="null" /> to discover all included services.</param>
+		/// <param name="forService">The service whose included services to discover.</param>
+		public void DiscoverIncludedServices (CBUUID []? includedServiceUUIDs, CBService forService)
 		{
-			if (includedServiceUUIDs == null)
-				DiscoverIncludedServices ((NSArray) null, forService);
+			if (includedServiceUUIDs is null)
+				DiscoverIncludedServices ((NSArray?) null, forService);
 			else
 				DiscoverIncludedServices (NSArray.FromObjects (includedServiceUUIDs), forService);
 		}
 
+		/// <param name="forService">Service that you want to discover all the characteristics for.</param>
+		///         <summary>Discover all characteristics in a service (slow).</summary>
+		///         <remarks>
+		///           <para>
+		/// 	    When the characteristics are discovered, the event
+		/// 	    DiscoverCharacteristic is raised (or alternatively, if you
+		/// 	    set a Delegate, the method DiscoverCharacteristic on the
+		/// 	    delegate is invoked with the results).
+		/// 	  </para>
+		///           <para>
+		/// 	    Once the characterstics have been discovered, they are
+		/// 	    available on the <see cref="CoreBluetooth.CBService.Characteristics" />
+		/// 	    property.
+		/// 	  </para>
+		///           <para>
+		/// 	    This method is potentially slow and will return all the
+		/// 	    characteristics supported by the service.  Ideally, you
+		/// 	    should use the overload that allows you to specifify an
+		/// 	    array of CBUUIDs as that will be faster.
+		/// 	  </para>
+		///         </remarks>
 		public void DiscoverCharacteristics (CBService forService)
 		{
-			DiscoverCharacteristics ((NSArray)null, forService);
+			DiscoverCharacteristics ((NSArray?) null, forService);
 		}
 
-#if !XAMCORE_2_0
-		[Obsolete ("Use the 'CBUUID' overload since Guid internal memory representation is different.")]
-		public void DiscoverCharacteristics (Guid [] charactersticUUIDs, CBService forService)
+		/// <param name="charactersticUUIDs">Array of CBUUIDs containing the characteristics that you are probing for.</param>
+		///         <param name="forService">Service that you want to discover the characteristics for.</param>
+		///         <summary>Discovers the list of characteristics in the specified service.</summary>
+		///         <remarks>
+		///           <para>
+		/// 	    When the characteristics are discovered, the event
+		/// 	    DiscoverCharacteristic is raised (or alternatively, if you
+		/// 	    set a Delegate, the method DiscoverCharacteristic on the
+		/// 	    delegate is invoked with the results).
+		/// 	  </para>
+		///           <para>
+		/// 	    Once the characterstics have been discovered, they are
+		/// 	    available on the <see cref="CoreBluetooth.CBService.Characteristics" />
+		/// 	    property.
+		/// 	  </para>
+		///         </remarks>
+		public void DiscoverCharacteristics (CBUUID []? charactersticUUIDs, CBService forService)
 		{
-			if (charactersticUUIDs == null)
-				DiscoverCharacteristics ((NSArray) null, forService);
-			else
-				CFUUID.WithArray (charactersticUUIDs, "charactersticUUIDs", x => DiscoverCharacteristics (x, forService));
-		}
-#endif
-		
-		public void DiscoverCharacteristics (CBUUID [] charactersticUUIDs, CBService forService)
-		{
-			if (charactersticUUIDs == null)
-				DiscoverCharacteristics ((NSArray) null, forService);
+			if (charactersticUUIDs is null)
+				DiscoverCharacteristics ((NSArray?) null, forService);
 			else
 				DiscoverCharacteristics (NSArray.FromObjects (charactersticUUIDs), forService);
 		}

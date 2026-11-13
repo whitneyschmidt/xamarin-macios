@@ -1,0 +1,2 @@
+# This selector takes an AVAudioSession, which isn't available on macOS.
+!missing-selector! CHHapticEngine::initWithAudioSession:error: not bound

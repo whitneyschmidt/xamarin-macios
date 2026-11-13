@@ -7,15 +7,6 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-
-#if XAMCORE_2_0
-using Foundation;
-#else
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
@@ -30,7 +21,7 @@ namespace MonoTouchFixtures.Foundation {
 			Assert.That (z.Name, Is.EqualTo ("DefaultMallocZone"), "Name");
 
 			// crash on iOS 10 beta 2
-			if (TestRuntime.CheckXcodeVersion (8,0))
+			if (TestRuntime.CheckXcodeVersion (8, 0))
 				return;
 			z.Name = "default";
 			Assert.That (z.Name, Is.EqualTo ("default"), "Name-modified");

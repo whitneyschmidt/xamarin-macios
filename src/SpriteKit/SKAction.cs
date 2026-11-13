@@ -7,42 +7,21 @@
 // Copyright 2013 Xamarin Inc.
 //
 
-using System;
 using CoreGraphics;
 using CoreFoundation;
 
+#nullable enable
+
 namespace SpriteKit {
-
-#if !XAMCORE_4_0
-	[Obsolete ("Use 'SKActionTimingFunction2' instead.")]
-	public delegate void SKActionTimingFunction (float /* float, not CGFloat */ time);
-#endif
-
-#if XAMCORE_2_0 || !MONOMAC
 	public partial class SKAction {
 
+		/// <summary>Creates an action that resizes a node to the specified size over the given duration.</summary>
+		/// <param name="size">The target size to resize to.</param>
+		/// <param name="duration">The duration of the resize animation in seconds.</param>
+		/// <returns>A new resize action.</returns>
 		public static SKAction ResizeTo (CGSize size, double duration)
 		{
 			return SKAction.ResizeTo (size.Width, size.Height, duration);
 		}
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'Run(Action)' instead.")]
-		public static SKAction RunBlock (Action block)
-		{
-			return Run (block);
-		}
-
-		[Obsolete ("Use 'Run(Action,DispatchQueue)' instead.")]
-		public static SKAction RunBlock (Action block, DispatchQueue queue)
-		{
-			return Run (block, queue);
-		}
-#endif
-#if !XAMCORE_4_0
-		[Obsolete ("Use 'TimingFunction2' instead.")]
-		public virtual SKActionTimingFunction TimingFunction { get; set; }
-#endif
 	}
-#endif
 }

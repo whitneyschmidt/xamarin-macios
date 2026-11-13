@@ -26,39 +26,64 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using ObjCRuntime;
-using Foundation;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSMenuItem {
-		NSObject target;
-		Selector action;
+		NSObject? target;
+		Selector? action;
 
+		/// <param name="title">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMenuItem (string title, EventHandler handler) : this (title, "", handler)
 		{
 		}
-		
+
+		/// <param name="title">To be added.</param>
+		///         <param name="charCode">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMenuItem (string title, string charCode, EventHandler handler) : this (title, null, charCode)
 		{
 			Activated += handler;
 		}
 
-		public NSMenuItem (string title, string charCode, EventHandler handler, Func <NSMenuItem, bool> validator) : this (title, null, charCode)
+		/// <param name="title">To be added.</param>
+		///         <param name="charCode">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <param name="validator">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public NSMenuItem (string title, string charCode, EventHandler handler, Func<NSMenuItem, bool> validator) : this (title, null, charCode)
 		{
 			Activated += handler;
 			ValidateMenuItem = validator;
 		}
 
+		/// <param name="title">To be added.</param>
+		///         <param name="charCode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMenuItem (string title, string charCode) : this (title, null, charCode)
 		{
 		}
 
+		/// <param name="title">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NSMenuItem (string title) : this (title, null, "")
 		{
 		}
-		
+
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler Activated {
 			add {
 				target = ActionDispatcher.SetupAction (Target, value);
@@ -76,18 +101,22 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Advice ("The 'Activated' event must be set before setting 'ValidateMenuItem'.")]
-		public Func <NSMenuItem, bool> ValidateMenuItem {
+		public Func<NSMenuItem, bool>? ValidateMenuItem {
 			get {
 				return (target as ActionDispatcher)?.ValidateMenuItemFunc;
 			}
 			set {
-				if (!(target is ActionDispatcher))
+				if (!(target is ActionDispatcher dispatcher))
 					throw new InvalidOperationException ("Target is not an 'ActionDispatcher'. 'ValidateMenuItem' may only be set after setting the 'Activated' event.");
 
-				(target as ActionDispatcher).ValidateMenuItemFunc = value;
+				dispatcher.ValidateMenuItemFunc = value;
 			}
 		}
 
 	}
 }
+#endif // !__MACCATALYST__

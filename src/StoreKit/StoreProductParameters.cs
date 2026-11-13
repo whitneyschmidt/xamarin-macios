@@ -25,27 +25,48 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if !MONOMAC
+#nullable enable
 
-using System;
-
-using Foundation;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using CoreFoundation;
-using ObjCRuntime;
 
 namespace StoreKit {
 
-	[iOS (6,0)]
-	public partial class StoreProductParameters : DictionaryContainer
-	{
+#if __TVOS__
+	/// <summary>A subclass of <see cref="Foundation.DictionaryContainer" /> that specifies the product to be displayed.</summary>
+#else
+	/// <summary>A subclass of <see cref="Foundation.DictionaryContainer" /> that, when passed to <see cref="StoreKit.SKStoreProductViewController.LoadProduct(StoreKit.StoreProductParameters,System.Action{System.Boolean,Foundation.NSError})" />, specifies the product to be displayed.</summary>
+#endif
+	public partial class StoreProductParameters : DictionaryContainer {
 #if !COREBUILD
+#if !XAMCORE_5_0
+		/// <summary>Creates a new <see cref="StoreKit.StoreProductParameters" /> for the specified iTunes identifier.</summary>
+		/// <param name="iTunesItemIdentifier">The 32-bit App Store item identifier to display.</param>
+		/// <remarks>Use <see cref="StoreProductParameters(long)" /> to support identifiers larger than <see cref="int.MaxValue" />.</remarks>
+		[OverloadResolutionPriorityAttribute (-1)]
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'StoreProductParameters (long)' instead.")]
 		public StoreProductParameters (int iTunesItemIdentifier)
+			: this ((long) iTunesItemIdentifier)
+		{
+		}
+#endif
+
+		/// <summary>Creates a new <see cref="StoreKit.StoreProductParameters" /> for the specified 64-bit iTunes identifier.</summary>
+		/// <param name="iTunesItemIdentifier">The App Store item identifier to display.</param>
+		public StoreProductParameters (long iTunesItemIdentifier)
 			: this ()
 		{
-			ITunesItemIdentifier = iTunesItemIdentifier;
+			ITunesItemIdentifierLong = iTunesItemIdentifier;
 		}
 
-		// TODO: What is real iTunes Store item identifier length
+#if !XAMCORE_5_0
+		/// <summary>Gets or sets the legacy 32-bit iTunes item identifier for the App Store product to display.</summary>
+		/// <value>The 32-bit App Store item identifier, or <see langword="null" /> if not set.</value>
+		/// <remarks>Use <see cref="ITunesItemIdentifierLong" /> for current identifiers and values larger than <see cref="int.MaxValue" />.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use 'ITunesItemIdentifierLong' instead.")]
 		public int? ITunesItemIdentifier {
 			set {
 				SetNumberValue (SKStoreProductParameterKey.ITunesItemIdentifier, value);
@@ -54,8 +75,22 @@ namespace StoreKit {
 				return GetInt32Value (SKStoreProductParameterKey.ITunesItemIdentifier);
 			}
 		}
+#endif
 
-		public string AffiliateToken {
+		/// <summary>Gets or sets the 64-bit iTunes item identifier for the App Store product to display.</summary>
+		/// <value>The App Store item identifier, or <see langword="null" /> if not set.</value>
+		public long? ITunesItemIdentifierLong {
+			set {
+				SetNumberValue (SKStoreProductParameterKey.ITunesItemIdentifier, value);
+			}
+			get {
+				return GetLongValue (SKStoreProductParameterKey.ITunesItemIdentifier);
+			}
+		}
+
+		/// <summary>Gets or sets the affiliate token used to track App Store referrals.</summary>
+		/// <value>The affiliate token string, or <see langword="null" /> if not set.</value>
+		public string? AffiliateToken {
 			get {
 				return GetStringValue (SKStoreProductParameterKey.AffiliateToken);
 			}
@@ -64,7 +99,9 @@ namespace StoreKit {
 			}
 		}
 
-		public string CampaignToken {
+		/// <summary>Gets or sets the campaign token used to track App Store marketing campaigns.</summary>
+		/// <value>The campaign token string, or <see langword="null" /> if not set.</value>
+		public string? CampaignToken {
 			get {
 				return GetStringValue (SKStoreProductParameterKey.CampaignToken);
 			}
@@ -75,5 +112,3 @@ namespace StoreKit {
 #endif
 	}
 }
-
-#endif // !MONOMAC

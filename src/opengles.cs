@@ -8,54 +8,93 @@
 // Copyright 2009, Novell, Inc.
 // Copyright 2015 Xamarin Inc.
 //
-using ObjCRuntime;
-using Foundation;
 using CoreGraphics;
 using CoreLocation;
 using UIKit;
-using System;
 
 namespace OpenGLES {
 
-	[Deprecated (PlatformName.iOS, 12,0, message: "Use 'Metal' instead.")]
-	[Deprecated (PlatformName.TvOS, 12,0, message: "Use 'Metal' instead.")]
+	/// <summary>Manages resources that can be used by more than one EAGLContext (textures, buffers, framebuffers, renderbuffers, shaders and programs).</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/OpenGLES/Reference/EAGLSharegroup_ClassRef/index.html">Apple documentation for <c>EAGLSharegroup</c></related>
+	[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'Metal' instead.")]
+	[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'Metal' instead.")]
 	[BaseType (typeof (NSObject))]
 	// <quote>It is created when an EAGLContext object is initialized and disposed of when the last EAGLContext object that references it is released.</quote>
 	[DisableDefaultCtor]
 	interface EAGLSharegroup {
 
-		[iOS (6,0)]
+		/// <summary>Gets or sets a descriptive label for the share group for debugging.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Export ("debugLabel")]
 		[NullAllowed]
 		string DebugLabel { get; set; }
 	}
 
-	[Deprecated (PlatformName.iOS, 12,0, message: "Use 'Metal' instead.")]
-	[Deprecated (PlatformName.TvOS, 12,0, message: "Use 'Metal' instead.")]
+	/// <summary>Holds the state necessary to render using OpenGL ES.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/OpenGLES/Reference/EAGLContext_ClassRef/index.html">Apple documentation for <c>EAGLContext</c></related>
+	[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'Metal' instead.")]
+	[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'Metal' instead.")]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // init now marked with NS_UNAVAILABLE
 	interface EAGLContext {
+		/// <param name="api">To be added.</param>
+		/// <summary>Creates a new EAGL context that supports the specified rendering API.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithAPI:")]
-		IntPtr Constructor (EAGLRenderingAPI api);
+		NativeHandle Constructor (EAGLRenderingAPI api);
 
+		/// <param name="api">To be added.</param>
+		/// <param name="sharegroup">To be added.</param>
+		/// <summary>Creates a new EAGL context in the specified share group and that supports the specified rendering API.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
 		[Export ("initWithAPI:sharegroup:")]
-		IntPtr Constructor (EAGLRenderingAPI api, EAGLSharegroup sharegroup);
+		NativeHandle Constructor (EAGLRenderingAPI api, EAGLSharegroup sharegroup);
 
-		[Static, Export("setCurrentContext:")]
-		bool SetCurrentContext([NullAllowed] EAGLContext context);
+		/// <param name="context">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Makes the supplied <paramref name="context" /> the context that contains the OpenGL ES state.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static, Export ("setCurrentContext:")]
+		bool SetCurrentContext ([NullAllowed] EAGLContext context);
 
-		[Static, Export("currentContext")]
+		/// <summary>Gets the current EAGL context.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Static, Export ("currentContext")]
 		[NullAllowed]
 		EAGLContext CurrentContext { get; }
 
-		[Export("API")]
+		/// <summary>Gets the OpenGL ES rendering API version with which the EAGL context was created.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("API")]
 		EAGLRenderingAPI API { get; }
 
-		[Export("sharegroup")]
+		/// <summary>Gets the share group to which the EAGL context belongs.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("sharegroup")]
 		EAGLSharegroup ShareGroup { get; }
 
-		[iOS (6,0)]
+		/// <summary>Gets or sets a label that is used to identify the context for debugging.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Export ("debugLabel")]
 		[NullAllowed]
 		string DebugLabel { get; set; }
@@ -64,42 +103,120 @@ namespace OpenGLES {
 		// These are from @interface EAGLContext (EAGLContextDrawableAdditions)
 		//
 
+		/// <param name="target">To be added.</param>
+		/// <param name="drawable">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("renderbufferStorage:fromDrawable:")]
 		bool RenderBufferStorage (nuint target, [NullAllowed] CoreAnimation.CAEAGLLayer drawable);
 
+		/// <param name="target">To be added.</param>
+		/// <summary>Displays the contents of a render buffer.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("presentRenderbuffer:")]
 		bool PresentRenderBuffer (nuint target);
 
-		[iOS (10,0)][TV (10,0)]
 		[Internal]
 		[Export ("presentRenderbuffer:atTime:")]
 		bool _PresentRenderbufferAtTime (nuint target, double presentationTime);
 
-		[iOS (10,3)][TV (10,2)]
 		[Internal]
 		[Export ("presentRenderbuffer:afterMinimumDuration:")]
 		bool _PresentRenderbufferAfterMinimumDuration (nuint target, double duration);
 
-		[iOS (7,1)]
+		/// <summary>Gets or sets a Boolean value that controls whether OpenGL ES uses other threads to perform work.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("multiThreaded")]
 		bool IsMultiThreaded { [Bind ("isMultiThreaded")] get; set; }
 
 		// IOSurface (EAGLContext)
 
-		[iOS (11,0)]
-		[TV (11,0)]
+		/// <param name="ioSurface">To be added.</param>
+		/// <param name="target">To be added.</param>
+		/// <param name="internalFormat">To be added.</param>
+		/// <param name="width">To be added.</param>
+		/// <param name="height">To be added.</param>
+		/// <param name="format">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="plane">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("texImageIOSurface:target:internalFormat:width:height:format:type:plane:")]
 		bool TexImage (IOSurface.IOSurface ioSurface, nuint target, nuint internalFormat, uint width, uint height, nuint format, nuint type, uint plane);
 	}
 
-	[Deprecated (PlatformName.iOS, 12,0, message: "Use 'Metal' instead.")]
-	[Deprecated (PlatformName.TvOS, 12,0, message: "Use 'Metal' instead.")]
+	[NoMac]
+	[NoMacCatalyst]
+	[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'Metal' instead.")]
+	[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'Metal' instead.")]
 	[Protocol]
 	// no [Model] because "The EAGLDrawable protocol is not intended to be implemented by objects outside of the iOS."
 	interface EAGLDrawable {
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[NullAllowed] // by default this property is null
 		[Export ("drawableProperties", ArgumentSemantic.Copy)]
 		NSDictionary DrawableProperties { get; set; }
+	}
+
+	[NoMac, NoMacCatalyst]
+	[Static, Partial]
+	interface EAGLDrawableProperty {
+#if !XAMCORE_5_0
+		[Internal]
+		[Field ("kEAGLDrawablePropertyColorFormat")]
+		NSString _ColorFormat { get; }
+
+		[Internal]
+		[Field ("kEAGLDrawablePropertyRetainedBacking")]
+		NSString _RetainedBacking { get; }
+#endif
+#if XAMCORE_5_0
+		/// <summary>Can be used to configure the internal color format for drawables.</summary>
+		[Field ("kEAGLDrawablePropertyColorFormat")]
+		[NullAllowed]
+		NSString ColorFormat { get; }
+
+		/// <summary>Can be used to configure whether drawables retain their contents after displaying them.</summary>
+		[Field ("kEAGLDrawablePropertyRetainedBacking")]
+		[NullAllowed]
+		NSString RetainedBacking { get; }
+#endif
+	}
+
+	[NoMac, NoMacCatalyst]
+	[Static, Partial]
+	interface EAGLColorFormat {
+#if !XAMCORE_5_0
+		[Internal]
+		[Field ("kEAGLColorFormatRGB565")]
+		NSString _RGB565 { get; }
+
+		[Internal]
+		[Field ("kEAGLColorFormatRGBA8")]
+		NSString _RGBA8 { get; }
+#endif
+#if XAMCORE_5_0
+		/// <summary>16-bit RGB color format.</summary>
+		/// <remarks>This format uses 5 bits for the red components, 6 bits for the green component and 5 bits for the blue component. Corresponds to the OpenGL ES GL_RGB565 format.</remarks>
+		[Field ("kEAGLColorFormatRGB565")]
+		[NullAllowed]
+		NSString RGB565 { get; }
+
+		/// <summary>32-bit RGBA format.</summary>
+		/// <remarks>This is a 32 bit format that uses 8 bits for red, green, blue and alpha channels. Corresponds to the OpenGL ES GL_RGBA8888 value.</remarks>
+		[Field ("kEAGLColorFormatRGBA8")]
+		[NullAllowed]
+		NSString RGBA8 { get; }
+#endif
 	}
 }

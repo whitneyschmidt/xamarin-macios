@@ -27,23 +27,25 @@
 //
 //
 
-using System;
-
-namespace Foundation
-{
+namespace Foundation {
+	/// <summary>An attribute that can be used to give programming advice to a user of a function or class.</summary>
+	/// <remarks>Development tools can display the advice during code analysis to suggest improvements.</remarks>
 	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct |
 		AttributeTargets.Enum | AttributeTargets.Constructor |
 		AttributeTargets.Method | AttributeTargets.Property |
 		AttributeTargets.Field | AttributeTargets.Event |
 		AttributeTargets.Interface | AttributeTargets.Delegate,
-		Inherited=false)]
-	public class AdviceAttribute : Attribute
-	{
+		Inherited = false, AllowMultiple = true)]
+	public class AdviceAttribute : Attribute {
+		/// <summary>Creates an advice attribute with the specified message.</summary>
+		/// <param name="message">The programming advice to present to developers.</param>
 		public AdviceAttribute (string message)
 		{
 			Message = message;
 		}
 
+		/// <summary>Gets the programming advice.</summary>
+		/// <value>The message to present to developers.</value>
 		public string Message { get; private set; }
 	}
 }

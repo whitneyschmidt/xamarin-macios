@@ -1,28 +1,18 @@
-using System;
-using NUnit.Framework;
-#if XAMCORE_2_0
-using Foundation;
 using CloudKit;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.CloudKit;
-#endif
+using Xamarin.Utils;
 
-namespace MonoTouchFixtures.CloudKit
-{
+namespace MonoTouchFixtures.CloudKit {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class CKModifyRecordsOperationTest
-	{
+	public class CKModifyRecordsOperationTest {
 		CKModifyRecordsOperation op = null;
 
 		[SetUp]
 		public void SetUp ()
 		{
 			TestRuntime.AssertXcodeVersion (6, 0);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 10, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacOSX, 10, 10, throwIfOtherPlatform: false);
 			op = new CKModifyRecordsOperation (null, null);
 		}
 
@@ -35,22 +25,22 @@ namespace MonoTouchFixtures.CloudKit
 		[Test]
 		public void PerRecordProgressSetter ()
 		{
-			op.PerRecordProgress = (record, p) => { Console.WriteLine ("Progress");};
-			Assert.NotNull (op.PerRecordProgress);
+			op.PerRecordProgress = (record, p) => { Console.WriteLine ("Progress"); };
+			Assert.That (op.PerRecordProgress, Is.Not.Null);
 		}
-		
+
 		[Test]
 		public void PerRecordCompletionSetter ()
 		{
-			op.PerRecordCompletion = (record, e) => { Console.WriteLine ("Notification");};
-			Assert.NotNull (op.PerRecordCompletion);
+			op.PerRecordCompletion = (record, e) => { Console.WriteLine ("Notification"); };
+			Assert.That (op.PerRecordCompletion, Is.Not.Null);
 		}
 
 		[Test]
 		public void TestCompletedSetter ()
 		{
-			op.Completed = (saved, deleted, e) => { Console.WriteLine ("Completed");};
-			Assert.NotNull (op.Completed);
+			op.Completed = (saved, deleted, e) => { Console.WriteLine ("Completed"); };
+			Assert.That (op.Completed, Is.Not.Null);
 		}
 
 		[Test]

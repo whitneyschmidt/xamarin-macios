@@ -1,4 +1,4 @@
-﻿//
+//
 // GKState.cs: Implements some nicer methods for GKState
 //
 // Authors:
@@ -6,18 +6,16 @@
 //
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
-#if XAMCORE_2_0 || !MONOMAC
-using System;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace GameplayKit {
 	public partial class GKState {
 
 		internal static Class GetClass (Type type, string parameterName)
 		{
-			if (type == null)
-				throw new ArgumentNullException (parameterName);
+			if (type is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (parameterName));
 
 			var klass = new Class (type);
 			// most API do not accept null so we throw in managed code instead of crashing the app
@@ -29,27 +27,30 @@ namespace GameplayKit {
 
 		internal static Class GetClass (NSObject instance, string parameterName)
 		{
-			if (instance == null)
-				throw new ArgumentNullException (parameterName);
-			
-			var klass = instance.Class; 
-			if ((klass == null) || (klass.Handle == IntPtr.Zero))
+			if (instance is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (parameterName));
+
+			var klass = instance.Class;
+			if ((klass is null) || (klass.Handle == IntPtr.Zero))
 				throw new ArgumentException ("Not an type exposed to ObjC", parameterName);
-			
+
 			return klass;
 		}
 
 		// helper - cannot be virtual as it would not be called from GameplayKit/ObjC
+		/// <summary>Whether the <see cref="GameplayKit.GKState.StateMachine" /> can transition from this <see cref="GameplayKit.GKState" /> to <paramref name="stateType" />.</summary>
+		/// <param name="stateType">The state type.</param>
 		public bool IsValidNextState (Type stateType)
 		{
 			return IsValidNextState (GetClass (stateType, "stateType"));
 		}
 
 		// helper [#32844] - cannot be virtual as it would not be called from GameplayKit/ObjC
+		/// <summary>Whether the <see cref="GameplayKit.GKState.StateMachine" /> can transition from this <see cref="GameplayKit.GKState" /> to <paramref name="state" />.</summary>
+		/// <param name="state">The state.</param>
 		public bool IsValidNextState (GKState state)
 		{
 			return IsValidNextState (GetClass (state, "state"));
 		}
 	}
 }
-#endif

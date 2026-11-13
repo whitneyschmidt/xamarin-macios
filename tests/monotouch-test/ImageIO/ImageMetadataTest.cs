@@ -7,18 +7,9 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using ImageIO;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ImageIO;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+
+using CGImageProperties = ImageIO.CGImageProperties;
 
 namespace MonoTouchFixtures.ImageIO {
 
@@ -44,7 +35,7 @@ namespace MonoTouchFixtures.ImageIO {
 
 				using (var meta = new CGImageMetadata (mutable.CreateXMPData ())) {
 					// not surprising since it's all empty
-					Assert.Null (meta.CopyTagMatchingImageProperty (CGImageProperties.ExifDictionary, CGImageProperties.ExifDateTimeOriginal), "CopyTagMatchingImageProperty");
+					Assert.That (meta.CopyTagMatchingImageProperty (CGImageProperties.ExifDictionary, CGImageProperties.ExifDateTimeOriginal), Is.Null, "CopyTagMatchingImageProperty");
 				}
 			}
 		}

@@ -6,27 +6,44 @@
 // Copyright (C) 2009 Novell, Inc
 //
 
-using System;
+#nullable enable
 
 using AddressBook;
-using Foundation;
-using ObjCRuntime;
 
 namespace AddressBookUI {
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
+	/// <summary>Provides data for the <see cref="AddressBookUI.ABUnknownPersonViewController.PersonCreated" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[ObsoletedOSPlatform ("ios", "Use the 'Contacts' API instead.")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("macos")]
+	[UnsupportedOSPlatform ("tvos")]
 	public class ABUnknownPersonCreatedEventArgs : EventArgs {
 
-		public ABUnknownPersonCreatedEventArgs (ABPerson person)
+		/// <param name="person">To be added.</param>
+		///         <summary>Initializes a new instance of the ABUnknownPersonCreatedEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
+		public ABUnknownPersonCreatedEventArgs (ABPerson? person)
 		{
 			Person = person;
 		}
 
-		public ABPerson Person {get; private set;}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public ABPerson? Person { get; private set; }
 	}
 
+	[SupportedOSPlatform ("ios")]
+	[ObsoletedOSPlatform ("ios", "Use the 'Contacts' API instead.")]
+	[UnsupportedOSPlatform ("maccatalyst")]
+	[UnsupportedOSPlatform ("macos")]
+	[UnsupportedOSPlatform ("tvos")]
 	class InternalABUnknownPersonViewControllerDelegate : ABUnknownPersonViewControllerDelegate {
-		internal EventHandler<ABPersonViewPerformDefaultActionEventArgs> performDefaultAction;
-		internal EventHandler<ABUnknownPersonCreatedEventArgs> personCreated;
+		internal EventHandler<ABPersonViewPerformDefaultActionEventArgs>? performDefaultAction;
+		internal EventHandler<ABUnknownPersonCreatedEventArgs>? personCreated;
 
 		public InternalABUnknownPersonViewControllerDelegate ()
 		{
@@ -34,42 +51,30 @@ namespace AddressBookUI {
 		}
 
 		[Preserve (Conditional = true)]
-#if XAMCORE_2_0
-		public override void DidResolveToPerson (ABUnknownPersonViewController personViewController, ABPerson person)
+		public override void DidResolveToPerson (ABUnknownPersonViewController personViewController, ABPerson? person)
 		{
 			personViewController.OnPersonCreated (new ABUnknownPersonCreatedEventArgs (person));
 		}
-#else
-		public override void DidResolveToPerson (ABUnknownPersonViewController personViewController, IntPtr person)
-		{
-			personViewController.OnPersonCreated (
-				new ABUnknownPersonCreatedEventArgs (person == IntPtr.Zero ? null : new ABPerson (person, personViewController.AddressBook)));
-		}
-#endif
 
 		[Preserve (Conditional = true)]
-#if XAMCORE_2_0
 		public override bool ShouldPerformDefaultActionForPerson (ABUnknownPersonViewController personViewController, ABPerson person, int propertyId, int identifier)
 		{
-#else
-		public override bool ShouldPerformDefaultActionForPerson (ABUnknownPersonViewController personViewController, IntPtr personId, int propertyId, int identifier)
-		{
-			ABPerson person = personId == IntPtr.Zero ? null : new ABPerson (personId, personViewController.AddressBook);
-#endif
 			ABPersonProperty property = ABPersonPropertyId.ToPersonProperty (propertyId);
 			int? id = identifier == ABRecord.InvalidPropertyId ? null : (int?) identifier;
-			
+
 			var e = new ABPersonViewPerformDefaultActionEventArgs (person, property, id);
 			personViewController.OnPerformDefaultAction (e);
 			return e.ShouldPerformDefaultAction;
 		}
 	}
 
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
 	partial class ABUnknownPersonViewController {
 
-		ABPerson displayedPerson;
-		public ABPerson DisplayedPerson {
+		ABPerson? displayedPerson;
+		/// <summary>Gets or sets the <see cref="AddressBook.ABPerson" /> whose data is being displayed.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public ABPerson? DisplayedPerson {
 			get {
 				MarkDirty ();
 				return BackingField.Get (ref displayedPerson, _DisplayedPerson, h => new ABPerson (h, AddressBook));
@@ -80,8 +85,11 @@ namespace AddressBookUI {
 			}
 		}
 
-		ABAddressBook addressBook;
-		public ABAddressBook AddressBook {
+		ABAddressBook? addressBook;
+		/// <summary>Gets or sets the <see cref="AddressBook.ABAddressBook" /> to which the controller will save data.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public ABAddressBook? AddressBook {
 			get {
 				MarkDirty ();
 				return BackingField.Get (ref addressBook, _AddressBook, h => new ABAddressBook (h, false));
@@ -95,36 +103,45 @@ namespace AddressBookUI {
 		InternalABUnknownPersonViewControllerDelegate EnsureEventDelegate ()
 		{
 			var d = WeakDelegate as InternalABUnknownPersonViewControllerDelegate;
-			if (d == null) {
+			if (d is null) {
 				d = new InternalABUnknownPersonViewControllerDelegate ();
 				WeakDelegate = d;
 			}
 			return d;
 		}
 
+		/// <param name="e">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		protected internal virtual void OnPerformDefaultAction (ABPersonViewPerformDefaultActionEventArgs e)
 		{
 			var h = EnsureEventDelegate ().performDefaultAction;
-			if (h != null)
+			if (h is not null)
 				h (this, e);
 		}
 
+		/// <param name="e">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		protected internal virtual void OnPersonCreated (ABUnknownPersonCreatedEventArgs e)
 		{
 			var h = EnsureEventDelegate ().personCreated;
-			if (h != null)
+			if (h is not null)
 				h (this, e);
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<ABPersonViewPerformDefaultActionEventArgs> PerformDefaultAction {
-			add {EnsureEventDelegate ().performDefaultAction += value;}
-			remove {EnsureEventDelegate ().performDefaultAction -= value;}
+			add { EnsureEventDelegate ().performDefaultAction += value; }
+			remove { EnsureEventDelegate ().performDefaultAction -= value; }
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<ABUnknownPersonCreatedEventArgs> PersonCreated {
-			add {EnsureEventDelegate ().personCreated += value;}
-			remove {EnsureEventDelegate ().personCreated -= value;}
+			add { EnsureEventDelegate ().personCreated += value; }
+			remove { EnsureEventDelegate ().personCreated -= value; }
 		}
 	}
 }
-

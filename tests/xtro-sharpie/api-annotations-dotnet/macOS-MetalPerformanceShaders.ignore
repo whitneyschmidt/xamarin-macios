@@ -1,0 +1,20 @@
+## The DesignatedInitializer is now deprecated in favor of a new one
+!missing-designated-initializer! MPSCNNNeuronELU::initWithDevice:a: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronExponential::initWithDevice:a:b:c: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronLinear::initWithDevice:a:b: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronLogarithm::initWithDevice:a:b:c: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronPower::initWithDevice:a:b:c: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronReLU::initWithDevice:a: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronReLUN::initWithDevice:a:b: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronSigmoid::initWithDevice: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronSoftPlus::initWithDevice:a:b: is missing an [DesignatedInitializer] attribute
+!missing-designated-initializer! MPSCNNNeuronTanH::initWithDevice:a:b: is missing an [DesignatedInitializer] attribute
+
+## bound selectors with no native declaration reachable from the class in the current SDK headers:
+## private/SPI selectors, protocol/category members Apple inlines without declaring the conformance on
+## the class, managed callback infrastructure, or API Apple removed/privatized - kept for compatibility
+## (baseline for https://github.com/dotnet/macios/issues/26053)
+!unknown-selector! MPSCNNKernel::sourceRegionForDestinationSize: not found
+!missing-null-allowed! 'System.String MetalPerformanceShaders.IMPSCnnInstanceNormalizationDataSource::get_Label()' is missing an [NullAllowed] on return type
+!missing-null-allowed! 'MetalPerformanceShaders.MPSImage MetalPerformanceShaders.MPSNNGraph::Execute(MetalPerformanceShaders.MPSImage[],System.Action`2<MetalPerformanceShaders.MPSImage,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'MetalPerformanceShaders.MPSImage MetalPerformanceShaders.MPSNNGraph::Execute(MetalPerformanceShaders.MPSImage[],System.Action`2<MetalPerformanceShaders.MPSImage,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGPDFOperatorTable
 //
 // Authors:
@@ -7,15 +7,7 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using CoreGraphics;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 

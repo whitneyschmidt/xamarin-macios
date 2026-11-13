@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">	
+	<Import Project="$(MSBuildThisFileDirectory)Xamarin.Messaging.targets" Condition="'$(MessagingBuildTargetsImported)' != 'true'" />
+
+	<PropertyGroup>
+		<RebuildDependsOn>
+			EvaluateRemoteBuild;
+			$(RebuildDependsOn);
+		</RebuildDependsOn>
+		<CleanDependsOn>
+			EvaluateRemoteBuild;
+			$(CleanDependsOn);
+		</CleanDependsOn>
+		<BuildDependsOn>
+			EvaluateRemoteBuild;
+			$(BuildDependsOn);
+		</BuildDependsOn>
+	</PropertyGroup>
+	
+	<Target Name="EvaluateRemoteBuild">
+		<PropertyGroup>
+			<IsRemoteBuild>True</IsRemoteBuild>
+			<IsRemoteBuild Condition="'$(BundleOriginalResources)' == 'true' And '$(_CanOutputAppBundle)' != 'true' And '$(BuildBindingProjectLocally)' != 'false'">False</IsRemoteBuild>
+		</PropertyGroup>
+	</Target>
+
+	<PropertyGroup>
+		<MessagingAppleTargetsImported>True</MessagingAppleTargetsImported>
+	</PropertyGroup>
+</Project>

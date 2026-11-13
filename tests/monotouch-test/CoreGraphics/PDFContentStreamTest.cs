@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGPDFContentStream
 //
 // Authors:
@@ -7,15 +7,7 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using CoreGraphics;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 
@@ -35,7 +27,7 @@ namespace MonoTouchFixtures.CoreGraphics {
 				Assert.That (streams.Length, Is.EqualTo (1), "GetStreams.Length");
 				Assert.That (streams [0].Handle, Is.Not.EqualTo (cs.Handle), "GetStreams");
 
-				Assert.Null (cs.GetResource ("XObject", ""), "GetResource");
+				Assert.That (cs.GetResource ("XObject", ""), Is.Null, "GetResource");
 			}
 		}
 	}

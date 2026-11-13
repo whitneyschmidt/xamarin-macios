@@ -1,16 +1,32 @@
-using System;
+
+#nullable enable
 
 namespace Foundation {
 	public partial class NSNull {
 
-		static NSNull _null;
+		static NSNull? _null;
 
-		// helper to avoid all, but one, native calls when called repeatedly
+		/// <summary>
+		/// Gets the singleton <see cref="NSNull"/> instance.
+		/// </summary>
+		/// <value>The singleton <see cref="NSNull"/> instance representing a null value in Objective-C collections.</value>
+		/// <remarks>
+		/// This property caches the native <see cref="NSNull"/> instance to avoid repeated native calls.
+		/// </remarks>
 		static public NSNull Null {
 			get {
-				if (_null == null)
+				if (_null is null)
 					_null = _Null;
 				return _null;
+			}
+		}
+
+		static IntPtr nullHandle;
+		internal static IntPtr NullHandle {
+			get {
+				if (nullHandle == IntPtr.Zero)
+					nullHandle = _NullHandle;
+				return nullHandle;
 			}
 		}
 	}

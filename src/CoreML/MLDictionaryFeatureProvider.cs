@@ -1,4 +1,4 @@
-﻿//
+//
 // MLDictionaryFeatureProvider.cs
 //
 // Authors:
@@ -7,19 +7,16 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0
-
-using System;
-using Foundation;
-using ObjCRuntime;
+#nullable enable
 
 namespace CoreML {
 	public partial class MLDictionaryFeatureProvider {
 
-		[Watch (4,0), TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-		public MLFeatureValue this [string featureName] {
+		/// <param name="featureName">The feature name of the requested value.</param>
+		/// <summary>Retrieves the <see cref="MLFeatureValue" /> for the specified <paramref name="featureName" />.</summary>
+		/// <value>The feature value associated with the specified name, or <see langword="null" /> if not found.</value>
+		public MLFeatureValue? this [string featureName] {
 			get { return GetFeatureValue (featureName); }
 		}
 	}
 }
-#endif

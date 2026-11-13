@@ -1,0 +1,65 @@
+//
+// ExtensionKit.cs: This file describes the API that the generator will produce for ExtensionKit
+//
+// Copyright 2022 Microsoft Corp. All rights reserved
+//
+
+#if MONOMAC
+using AppKit;
+using UIView = AppKit.NSView;
+using UIViewController = AppKit.NSViewController;
+#else
+using UIKit;
+#endif
+
+namespace ExtensionKit {
+	[iOS (26, 0), MacCatalyst (26, 0), NoTV]
+	[BaseType (typeof (UIViewController))]
+	interface EXAppExtensionBrowserViewController {
+		[DesignatedInitializer]
+		[Export ("initWithNibName:bundle:")]
+		NativeHandle Constructor ([NullAllowed] string nibNameOrNull, [NullAllowed] NSBundle nibBundleOrNull);
+	}
+
+	interface IEXHostViewControllerDelegate { }
+
+	[iOS (26, 0), MacCatalyst (26, 0), NoTV]
+	[Protocol, Model]
+	[BaseType (typeof (NSObject))]
+	interface EXHostViewControllerDelegate {
+		[Export ("hostViewControllerDidActivate:")]
+		void DidActivate (EXHostViewController viewController);
+
+		[Export ("hostViewControllerWillDeactivate:error:")]
+		void WillDeactivate (EXHostViewController viewController, [NullAllowed] NSError error);
+
+#if !XAMCORE_5_0
+		[NoiOS, NoMacCatalyst, NoTV]
+		[Obsoleted (PlatformName.MacOSX, 14, 0, message: "No longer required.")]
+		[Export ("shouldAcceptXPCConnection:")]
+		bool ShouldAcceptXpcConnection (NSXpcConnection connection);
+#endif
+	}
+
+	// @interface EXHostViewController : NSViewController
+	[iOS (26, 0), MacCatalyst (26, 0), NoTV]
+	[BaseType (typeof (UIViewController))]
+	interface EXHostViewController {
+		[DesignatedInitializer]
+		[Export ("initWithNibName:bundle:")]
+		NativeHandle Constructor ([NullAllowed] string nibNameOrNull, [NullAllowed] NSBundle nibBundleOrNull);
+
+		[NullAllowed, Wrap ("WeakDelegate")]
+		IEXHostViewControllerDelegate Delegate { get; set; }
+
+		[NullAllowed, Export ("delegate", ArgumentSemantic.Weak)]
+		NSObject WeakDelegate { get; set; }
+
+		[Export ("placeholderView", ArgumentSemantic.Strong)]
+		UIView PlaceholderView { get; set; }
+
+		[Export ("makeXPCConnectionWithError:")]
+		[return: NullAllowed]
+		NSXpcConnection MakeXpcConnection ([NullAllowed] out NSError error);
+	}
+}

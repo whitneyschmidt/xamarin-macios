@@ -1,4 +1,4 @@
-#if !defined (__i386__) && !defined (__x86_64__) && !(defined (__arm64__) && !defined(__ILP32__))
+#if !defined (__x86_64__) && !(defined (__arm64__) && !defined(__ILP32__))
 #define __VARARGS_TRAMPOLINES__ 1
 #endif
 
@@ -31,7 +31,7 @@ dump_state (struct XamarinCallState *state)
 #endif
 
 static void
-param_iter_next (enum IteratorAction action, void *context, const char *type, size_t size, void *target, guint32 *exception_gchandle)
+param_iter_next (enum IteratorAction action, void *context, const char *type, size_t size, void *target, GCHandle *exception_gchandle)
 {
 	struct ParamIterator *it = (struct ParamIterator *) context;
 	struct XamarinCallState *state = it->state;
@@ -47,7 +47,7 @@ param_iter_next (enum IteratorAction action, void *context, const char *type, si
 	if (target == NULL) {
 		LOGZ("skipping over %lu bytes\n", size);
 		if (size % sizeof (void *) != 0)
-			xamarin_assertion_message ("Cannot marshal structure of type '%s' with size %i since it's not a multiple of %i.\n", type, size, sizeof (void *));
+			xamarin_assertion_message ("Cannot marshal structure of type '%s' with size %i since it's not a multiple of %i.\n", type, (int) size, (int) sizeof (void *));
 
 		do {
 			va_arg (it->ap, void *);
@@ -59,7 +59,7 @@ param_iter_next (enum IteratorAction action, void *context, const char *type, si
 	void **target_ptr = (void **) target;
 	if (size > sizeof (void *)) {
 		if (size % sizeof (void *) != 0)
-			xamarin_assertion_message ("Cannot marshal structure of type '%s' with size %i since it's not a multiple of %i.\n", type, size, sizeof (void *));
+			xamarin_assertion_message ("Cannot marshal structure of type '%s' with size %i since it's not a multiple of %i.\n", type, (int) size, (int) sizeof (void *));
 
 		size_t size_left = size;
 		do {
@@ -74,7 +74,7 @@ param_iter_next (enum IteratorAction action, void *context, const char *type, si
 }
 
 static void
-marshal_return_value (void *context, const char *type, size_t size, void *vvalue, MonoType *mtype, bool retain, MonoMethod *method, MethodDescription *desc, guint32 *exception_gchandle)
+marshal_return_value (void *context, const char *type, size_t size, void *vvalue, MonoType *mtype, bool retain, MonoMethod *method, MethodDescription *desc, GCHandle *exception_gchandle)
 {
 	MonoObject *value = (MonoObject *) vvalue;
 	struct ParamIterator *it = (struct ParamIterator *) context;
@@ -128,7 +128,7 @@ marshal_return_value (void *context, const char *type, size_t size, void *vvalue
 	case _C_ULNG:
 	case _C_LNG_LNG:
 	case _C_ULNG_LNG:
-		state->longlong_ret = *(uint64_t *) mono_object_unbox (value);
+		state->longlong_ret = *(int64_t *) mono_object_unbox (value);
 		break;
 	
 	// For pointer types we get the value itself.

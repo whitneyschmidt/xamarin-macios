@@ -7,35 +7,23 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-#if XAMCORE_2_0
-using Foundation;
 using AudioToolbox;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.AudioToolbox;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.AudioToolbox {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class AudioFormatAvailabilityTest
-	{
+	public class AudioFormatAvailabilityTest {
 		[Test]
 		public void GetDecoders ()
 		{
-			Assert.IsNotNull (AudioFormatAvailability.GetDecoders (AudioFormatType.LinearPCM));
+			Assert.That (AudioFormatAvailability.GetDecoders (AudioFormatType.LinearPCM), Is.Not.Null);
 		}
 
 		[Test]
 		public void GetEncoders ()
 		{
-			Assert.IsNotNull (AudioFormatAvailability.GetEncoders (AudioFormatType.AC3));
+			Assert.That (AudioFormatAvailability.GetEncoders (AudioFormatType.AC3), Is.Not.Null);
 		}
 	}
 }
-
-#endif // !__WATCHOS__

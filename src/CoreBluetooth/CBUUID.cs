@@ -8,9 +8,9 @@
 // Copyright 2012-2014 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.Text;
-using Foundation;
+
+#nullable enable
 
 namespace CoreBluetooth {
 
@@ -21,12 +21,18 @@ namespace CoreBluetooth {
 		const string format128bits = "{0:x2}{1:x2}{2:x2}{3:x2}-0000-1000-8000-00805f9b34fb";
 
 		const ulong highServiceBits = 0xfb349b5f80000080UL;
-		const ulong lowServiceMask =  0x0010000000000000UL;
+		const ulong lowServiceMask = 0x0010000000000000UL;
 
+		/// <param name="bytes">Array of 2, 4 or 16 bytes containing the universal unique identifier.</param>
+		///         <summary>Creates a new CBUIID from the specified array of bytes.</summary>
+		///         <returns>New instance;   Throws an exception if the bytes array is null or is not 2, 4 or 16 bytes.</returns>
+		///         <remarks>
+		/// 	  Creates a CBUUID from the specified array of bytes.
+		/// 	</remarks>
 		public static CBUUID FromBytes (byte [] bytes)
 		{
-			if (bytes == null) {
-				throw new ArgumentNullException ("bytes");
+			if (bytes is null) {
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (bytes));
 			} else if (bytes.Length != 2 && bytes.Length != 4 && bytes.Length != 16) {
 				throw new ArgumentException ("must either be 2, 4, or 16 bytes long", "bytes");
 			}
@@ -35,22 +41,45 @@ namespace CoreBluetooth {
 				return CBUUID.FromData (data);
 		}
 
+		/// <param name="servicePart">16-bit service part.</param>
+		///         <summary>Creates a new CBUUID for a commonly used CoreBluetooth service.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///           <para>
+		/// 	    While CBUUID objects are 128-bit long, many common services are created just by specifying using 16 bits.
+		/// 	  </para>
+		///           <para>
+		/// 	    For example, if the service part is (ushort)1234, then the CBUUID becomes: (CBUUID)00001234-0000-1000-8000-00805f9b34fb.
+		/// 	  </para>
+		///         </remarks>
 		public static CBUUID FromPartial (ushort servicePart)
 		{
 			return FromBytes (new [] {
 				(byte)(servicePart >> 8),
-				(byte)servicePart
+				(byte)servicePart,
 			});
 		}
 
 		// allow roundtripping CBUUID.FromString (uuid.ToString ());
 		// without string operations, ref: bug #7986
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public override string ToString ()
 		{
 			return ToString (false);
 		}
 
 		// note: having IEquatable<CBUUID> should be enough IMO
+		/// <param name="a">First CBUUID to compare.</param>
+		/// <param name="b">Second CBUUID to compare.</param>
+		/// <summary>Determines if two CBUUID are equal.</summary>
+		/// <returns>
+		///         </returns>
+		/// <remarks>True if they are equal (either because they are the same object, or because they represent the same UUID value).</remarks>
 		public static bool operator == (CBUUID a, CBUUID b)
 		{
 			if (ReferenceEquals (a, null)) {
@@ -65,125 +94,51 @@ namespace CoreBluetooth {
 			return !(a == b);
 		}
 
-#if XAMCORE_2_0
 		// to satisfy IEquatable<T>
-		public unsafe bool Equals (CBUUID obj)
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public unsafe bool Equals (CBUUID? obj)
 		{
 			return base.Equals (obj);
 		}
 
 		// base class Equals is good enough
 		// this fixes a compiler warning: CS0660: `CoreBluetooth.CBUUID' defines operator == or operator != but does not override Object.Equals(object o)
-		public override bool Equals (object obj)
+		/// <param name="obj">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public override bool Equals (object? obj)
 		{
 			return base.Equals (obj);
 		}
 
 		// base class GetHashCode is good enough
 		// this fixes a compiler warning: CS0661: `CoreBluetooth.CBUUID' defines operator == or operator != but does not override Object.GetHashCode()
+		/// <summary>Generates a hash code for the current instance.</summary>
+		///         <returns>A int containing the hash code for this instance.</returns>
+		///         <remarks>The algorithm used to generate the hash code is unspecified.</remarks>
 		public override int GetHashCode ()
 		{
 			return base.GetHashCode ();
 		}
-#else
-		public override bool Equals (object obj)
-		{
-			if (ReferenceEquals (this, obj)) {
-				return true;
-			}
 
-			var other = obj as CBUUID;
-			if (other != null) {
-				return Equals (other);
-			}
-
-			return false;
-		}
-
-		public unsafe bool Equals (CBUUID obj)
-		{
-			if (obj == null) {
-				return false;
-			} else if (Data == null && obj.Data == null) {
-				return true;
-			} else if (Data == null || obj.Data == null) {
-				return false;
-			}
-
-			var ad = Data;
-			var bd = obj.Data;
-
-			nuint a_len, b_len;
-			IntPtr a, b;
-
-			// Sort so that a is always smaller than b to reduce logic below
-			if (ad.Length < bd.Length) {
-				a_len = ad.Length;
-				a = ad.Bytes;
-				b_len = bd.Length;
-				b = bd.Bytes;
-			} else {
-				a_len = bd.Length;
-				a = bd.Bytes;
-				b_len = ad.Length;
-				b = ad.Bytes;
-			}
-
-			// If UUIDs are the same length, compare directly for each
-			// supported size, 16, 32, and 128 bits. If the sizes differ,
-			// one must be either 16 or 32 bits and the other 128 bits,
-			// so mask the 16 and 32 bit ones with the Bluetooth Base UUID
-			// (lowServiceMask . highServiceBits) and compare with the
-			// other 128 bit UUID. Comparing 16-bit vs 32-bit UUIDs is
-			// not supported.
-			//
-			// From what I gather from the googles and "Specification of
-			// the Bluetooth System", Supplement to the Bluetooth Core
-			// Specification, Version 1, 27 December 2011, 16 and 32 bit
-			// service UUIDs cannot be equal, given that "The Service UUID
-			// data types corresponding to 32-bit Service UUIDs shall not
-			// be sent in advertising data packets." Therefore we just
-			// return false, and we're really likely never to encounter a
-			// 32-bit Service UUID in this API... --abock
-
-			if (a_len == b_len) {
-				switch (a_len) {
-				case 2:
-					return *((ushort *)a) == *((ushort *)b);
-				case 4:
-					return *((uint *)a) == *((uint *)b);
-				case 16:
-					return *((ulong *)a) == *((ulong *)b) &&
-						*((ulong *)(a + 8)) == *((ulong *)(b + 8));
-				}
-			} else if (a_len == 2 && b_len == 16) {
-				return *((ulong *)(b + 8)) == highServiceBits &&
-					*((ulong *)b) == ((uint)(*((ushort *)a) << 16)
-						| lowServiceMask);
-			} else if (a_len == 4 && b_len == 16) {
-				return *((ulong *)(b + 8)) == highServiceBits &&
-					*((ulong *)b) == (*((uint *)a) | lowServiceMask);
-			}
-
-			return false;
-		}
-
-		public unsafe override int GetHashCode ()
-		{
-			// ensure we return something that satisfy:
-			// "Two objects that are equal return hash codes that are equal."
-			return (int) GetNativeHash ();
-		}
-#endif
-
+		/// <param name="fullUuid">If true, this renders 16-bit UUIS as a 128-bit constant, otherwise they are rendered as a 16-bit one.   128-bit UUIDS are always rendered as 128-bit values.</param>
+		///         <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public unsafe string ToString (bool fullUuid)
 		{
 			NSData d = Data;
-			if (d == null)
+			if (d is null)
 				return String.Empty;
 
 			StringBuilder sb = new StringBuilder ();
-			byte *p = (byte*) d.Bytes;
+			byte* p = (byte*) d.Bytes;
 
 			switch (d.Length) {
 			case 2:
@@ -205,16 +160,5 @@ namespace CoreBluetooth {
 
 			return sb.ToString ();
 		}
-
-#if MONOMAC
-		// workaround for 27160443 – Trello: https://trello.com/c/oqB27JA6
-		// try new constant (10.13+) and fallback to the old/misnamed one
-		[Mac (10, 13)]
-		public static NSString CharacteristicValidRangeString {
-			get {
-				return CBUUIDCharacteristicValidRangeString ?? CBUUIDValidRangeString;
-			}
-		}
-#endif
 	}
 }

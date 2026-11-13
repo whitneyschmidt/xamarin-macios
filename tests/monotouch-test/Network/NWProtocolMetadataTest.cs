@@ -1,10 +1,4 @@
-﻿#if !__WATCHOS__
-using System;
-using Foundation;
 using Network;
-using ObjCRuntime;
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Network {
 
@@ -15,20 +9,19 @@ namespace MonoTouchFixtures.Network {
 		[SetUp]
 		public void SetUp ()
 		{
-			TestRuntime.AssertXcodeVersion (10,0);
+			TestRuntime.AssertXcodeVersion (10, 0);
 		}
 
 		[Test]
 		public void IP ()
 		{
-			using (var m = NWProtocolMetadata.CreateIPMetadata ()) {
-				Assert.That (m.IPMetadataEcnFlag, Is.EqualTo (NWIPEcnFlag.NonEct), "IPMetadataEcnFlag");
-				Assert.That (m.IPMetadataReceiveTime, Is.EqualTo (0), "IPMetadataReceiveTime");
-				Assert.True (m.IsIP, "IsIP");
-				Assert.False (m.IsTcp, "IsTcp");
-				Assert.False (m.IsUdp, "IsUdp");
-				Assert.NotNull (m.ProtocolDefinition, "ProtocolDefinition");
-				Assert.NotNull (m.SecProtocolMetadata, "SecProtocolMetadata");
+			using (var m = new NWIPMetadata ()) {
+				Assert.That (m.EcnFlag, Is.EqualTo (NWIPEcnFlag.NonEct), "IPMetadataEcnFlag");
+				Assert.That (m.ReceiveTime, Is.EqualTo (TimeSpan.Zero), "IPMetadataReceiveTime");
+				Assert.That (m.IsIP, Is.True, "IsIP");
+				Assert.That (m.IsTcp, Is.False, "IsTcp");
+				Assert.That (m.IsUdp, Is.False, "IsUdp");
+				Assert.That (m.ProtocolDefinition, Is.Not.Null, "ProtocolDefinition");
 				Assert.That (m.ServiceClass, Is.EqualTo (NWServiceClass.BestEffort), "ServiceClass");
 			}
 		}
@@ -36,17 +29,28 @@ namespace MonoTouchFixtures.Network {
 		[Test]
 		public void Udp ()
 		{
-			using (var m = NWProtocolMetadata.CreateUdpMetadata ()) {
-				Assert.That (m.IPMetadataEcnFlag, Is.EqualTo (NWIPEcnFlag.NonEct), "IPMetadataEcnFlag");
-				Assert.That (m.IPMetadataReceiveTime, Is.EqualTo (0), "IPMetadataReceiveTime");
-				Assert.False (m.IsIP, "IsIP");
-				Assert.False (m.IsTcp, "IsTcp");
-				Assert.True (m.IsUdp, "IsUdp");
-				Assert.NotNull (m.ProtocolDefinition, "ProtocolDefinition");
-				Assert.NotNull (m.SecProtocolMetadata, "SecProtocolMetadata");
+			using (var m = new NWUdpMetadata ()) {
+				Assert.That (m.IsIP, Is.False, "IsIP");
+				Assert.That (m.IsTcp, Is.False, "IsTcp");
+				Assert.That (m.IsUdp, Is.True, "IsUdp");
+				Assert.That (m.ProtocolDefinition, Is.Not.Null, "ProtocolDefinition");
+			}
+		}
+
+		[Test]
+		public void Quic ()
+		{
+			TestRuntime.AssertXcodeVersion (13, 0);
+			using (var m = new NWIPMetadata ()) {
+				Assert.That (m.EcnFlag, Is.EqualTo (NWIPEcnFlag.NonEct), "IPMetadataEcnFlag");
+				Assert.That (m.ReceiveTime, Is.EqualTo (TimeSpan.Zero), "IPMetadataReceiveTime");
+				Assert.That (m.IsIP, Is.True, "IsIP");
+				Assert.That (m.IsTcp, Is.False, "IsTcp");
+				Assert.That (m.IsUdp, Is.False, "IsUdp");
+				Assert.That (m.IsQuic, Is.False, "IsQuic");
+				Assert.That (m.ProtocolDefinition, Is.Not.Null, "ProtocolDefinition");
 				Assert.That (m.ServiceClass, Is.EqualTo (NWServiceClass.BestEffort), "ServiceClass");
 			}
 		}
 	}
 }
-#endif

@@ -2,105 +2,213 @@ TOP=../..
 
 include $(TOP)/Make.config
 
-# a 64bits mono is required because of the clang requirement
-MONO ?= mono64 --debug
+SHARPIE ?= $(TOP)/tools/sharpie/Sharpie.Bind.Tool/bin/Release/osx-arm64/publish/Sharpie.Bind.Tool
 
 XCODE=$(abspath $(XCODE_DEVELOPER_ROOT)/../..)
+
+XTRO_DOTNET_PLATFORMS=$(DOTNET_PLATFORMS)
+
+ANNOTATIONS_DIR=.
+DOTNET_ANNOTATIONS_DIR=api-annotations-dotnet
 
 all-local::
 
 clean-local::
-	rm -f xtro-report/bin/Debug/xtro-report.exe bin/Debug/xtro-sharpie.exe
+	rm -rf */bin */obj
 	rm -f *.tmp
-	rm -rf *os*.pch*
 
-bin/Debug/xtro-sharpie.exe xtro-report/bin/Debug/xtro-report.exe build:
-	$(Q) $(SYSTEM_XIBUILD) -t -- /Library/Frameworks/Mono.framework/Versions/Current/lib/mono/nuget/NuGet.exe restore xtro-sharpie.sln
-	$(Q_BUILD) $(SYSTEM_MSBUILD) $(MSBUILD_VERBOSITY) xtro-sharpie.sln
+XTRO_REPORT=xtro-report/bin/Debug/xtro-report
+XTRO_REPORT_EXEC=$(XTRO_REPORT)
+XTRO_SANITY=xtro-sanity/bin/Debug/xtro-sanity
+XTRO_SANITY_EXEC=$(XTRO_SANITY)
+XTRO_SHARPIE=xtro-sharpie/bin/Debug/xtro-sharpie
+XTRO_SHARPIE_EXEC=$(XTRO_SHARPIE)
 
-XIOS ?= $(TOP)/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/git/lib/64bits/Xamarin.iOS.dll
-XIOS_GL ?= $(TOP)/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/OpenTK-1.0.dll
-XIOS_ARCH = arm64
-XIOS_PCH = iphoneos$(IOS_SDK_VERSION)-$(XIOS_ARCH).pch
+build: $(XTRO_SHARPIE) $(XTRO_REPORT) $(XTRO_SANITY)
 
-$(XIOS_PCH): .stamp-check-sharpie
-	sharpie sdk-db --xcode $(XCODE) -s iphoneos$(IOS_SDK_VERSION) -a $(XIOS_ARCH)
+$(XTRO_SHARPIE): $(wildcard xtro-sharpie/*.cs) $(wildcard xtro-sharpie/*.csproj) $(XTRO_REPORT)
+	$(Q_GEN) unset MSBUILD_EXE_PATH && $(DOTNET) build xtro-sharpie/xtro-sharpie.csproj /bl:xtro-sharpie.binlog $(DOTNET_BUILD_VERBOSITY)
 
+$(XTRO_REPORT): $(wildcard xtro-report/*.cs) $(wildcard xtro-report/*.csproj) xtro-sharpie/Filter.cs Makefile
+	$(Q_GEN) unset MSBUILD_EXE_PATH && $(DOTNET) build xtro-report/xtro-report.csproj /bl:xtro-report.binlog $(DOTNET_BUILD_VERBOSITY)
 
-XWATCHOS ?= $(TOP)/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/git/lib/32bits/Xamarin.WatchOS.dll
-XWATCHOS_ARCH = armv7
-XWATCHOS_PCH = watchos$(WATCH_SDK_VERSION)-$(XWATCHOS_ARCH).pch
+$(XTRO_SANITY): $(wildcard xtro-sanity/*.cs) $(wildcard xtro-sanity/*.csproj) $(wildcard $(TOP)/tools/common/*.cs) Makefile
+	$(Q_GEN) unset MSBUILD_EXE_PATH && $(DOTNET) build xtro-sanity/xtro-sanity.csproj /bl:xtro-sanity.binlog $(DOTNET_BUILD_VERBOSITY)
 
-$(XWATCHOS_PCH): .stamp-check-sharpie
-	sharpie sdk-db --xcode $(XCODE) -s watchos$(WATCH_SDK_VERSION) -a $(XWATCHOS_ARCH)
+define DotNetAssemblyPath
+X$(2)_DOTNET ?= $(DOTNET_DIR)/packs/$($(2)_NUGET_RUNTIME_MANAGED_NAME)/$($(2)_NUGET_VERSION_NO_METADATA)/runtimes/$(DOTNET_$(2)_RUNTIME_IDENTIFIERS_NO_ARCH)/lib/$(DOTNET_TFM)/$(DOTNET_$(2)_ASSEMBLY_NAME).dll
+endef
+$(foreach platform,$(XTRO_DOTNET_PLATFORMS),$(eval $(call DotNetAssemblyPath,$(platform),$(call uppercase,$(platform)))))
 
-XTVOS ?= $(TOP)/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/git/lib/mono/Xamarin.TVOS/Xamarin.TVOS.dll
-XTVOS_GL ?= $(TOP)/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/git/lib/mono/Xamarin.TVOS/OpenTK-1.0.dll
-XTVOS_ARCH = arm64
-XTVOS_PCH = appletvos$(TVOS_SDK_VERSION)-$(XTVOS_ARCH).pch
+CORETELEPHONY_HEADERS = \
+	-i CoreTelephony/CoreTelephonyDefines.h \
+	-i CoreTelephony/CTCall.h \
+	-i CoreTelephony/CTCallCenter.h \
+	-i CoreTelephony/CTCarrier.h \
+	-i CoreTelephony/CTCellularData.h \
+	-i CoreTelephony/CTCellularPlanProperties.h \
+	-i CoreTelephony/CTCellularPlanProvisioning.h \
+	-i CoreTelephony/CTCellularPlanProvisioningRequest.h \
+	-i CoreTelephony/CTCellularPlanStatus.h \
+	-i CoreTelephony/CTSubscriber.h \
+	-i CoreTelephony/CTSubscriberInfo.h \
+	-i CoreTelephony/CTTelephonyNetworkInfo.h \
 
-$(XTVOS_PCH): .stamp-check-sharpie
-	sharpie sdk-db --xcode $(XCODE) -s appletvos$(TVOS_SDK_VERSION) -a $(XTVOS_ARCH)
+SWIFT_FRAMEWORKS = \
+	AppManagedFeatures \
+	CoreTransferable \
+	LockedCameraCapture \
+	TranslationUIProvider \
 
+COMMON_IGNORED_FRAMEWORKS = \
+	$(SWIFT_FRAMEWORKS) \
+	_CoreNFC_UIKit \
+	AssetsLibrary \
+	BrowserKit \
+	FactoryOTALogger \
+	FactoryOTANetworkUtils \
+	FactoryOTAWifiUtils \
+	JavaNativeFoundation \
+	Matter \
+	ParavirtualizedGraphics \
 
-XMAC ?= $(TOP)/_mac-build/Library/Frameworks/Xamarin.Mac.framework/Versions/git/lib/$(XMAC_ARCH)/mobile/Xamarin.Mac.dll
-XMAC_ARCH = x86_64
-XMAC_PCH = macosx$(OSX_SDK_VERSION)-$(XMAC_ARCH).pch
+IGNORED_IOS_FRAMEWORKS = \
+	$(COMMON_IGNORED_FRAMEWORKS) \
+	ClockKit \
 
-$(XMAC_PCH): .stamp-check-sharpie
-	sharpie sdk-db --xcode $(XCODE) -s macosx$(OSX_SDK_VERSION) -a $(XMAC_ARCH)
+IGNORED_TVOS_FRAMEWORKS = \
+	$(COMMON_IGNORED_FRAMEWORKS) \
 
+IGNORED_MACOS_FRAMEWORKS = \
+	$(COMMON_IGNORED_FRAMEWORKS) \
+	AccessorySetupKit \
+	CompositorServices \
+	DriverKit \
+	Kerberos \
+	IOUSBHost \
+	Ruby \
+	Tk \
 
+IGNORED_MACCATALYST_FRAMEWORKS = \
+	$(COMMON_IGNORED_FRAMEWORKS) \
+	_CoreNFC_UIKit \
+	AccessoryAccess \
+	AccessorySetupKit \
+	AGL \
+	AudioVideoBridging \
+	CalendarStore \
+	Carbon \
+	ClockKit \
+	CompositorServices \
+	DiscRecordingUI \
+	DriverKit \
+	FSKit \
+	GLKit \
+	Hypervisor \
+	ICADevices \
+	InputMethodKit \
+	InstallerPlugins \
+	IOBluetooth \
+	IOBluetoothUI \
+	IOUSBHost \
+	Kerberos \
+	LDAP \
+	Python \
+	Quartz \
+	QuickLookUI \
+	Ruby \
+	SecurityInterface \
+	Tk \
+	Virtualization \
 
-ios-$(IOS_SDK_VERSION).g.cs: $(XIOS_PCH)
+COMMON_SHARPIE_ARGUMENTS = \
+	-a arm64 \
+	-modules true \
+	--custom-delegates \
+	--clang-resource-dir $(TOP)/tools/sharpie/clang \
 
-gen-ios: ios-$(IOS_SDK_VERSION).g.cs .stamp-check-sharpie
-	sharpie query -bind $(XIOS_PCH) > ios-$(IOS_SDK_VERSION).g.cs
+IOS_SHARPIE_ARGUMENTS = \
+	$(COMMON_SHARPIE_ARGUMENTS) \
+	$(CORETELEPHONY_HEADERS) \
+	--platform-assembly $(XIOS_DOTNET) \
 
-tvos-$(TVOS_SDK_VERSION).g.cs: $(XTVOS_PCH)
+TVOS_SHARPIE_ARGUMENTS = \
+	$(COMMON_SHARPIE_ARGUMENTS) \
+	--platform-assembly $(XTVOS_DOTNET) \
 
-gen-tvos: tvos-$(TVOS_SDK_VERSION).g.cs .stamp-check-sharpie
-	sharpie query -bind $(XTVOS_PCH) > tvos-$(TVOS_SDK_VERSION).g.cs
+MACCATALYST_SHARPIE_ARGUMENTS = \
+	$(COMMON_SHARPIE_ARGUMENTS) \
+	$(CORETELEPHONY_HEADERS) \
+	--platform-assembly $(XMACCATALYST_DOTNET) \
 
-watchos-$(WATCH_SDK_VERSION).g.cs: $(XWATCHOS_PCH)
+MACOS_SHARPIE_ARGUMENTS = \
+	$(COMMON_SHARPIE_ARGUMENTS) \
+	$(CORETELEPHONY_HEADERS) \
+	--platform-assembly $(XMACOS_DOTNET) \
 
-gen-watchos: watchos-$(WATCH_SDK_VERSION).g.cs .stamp-check-sharpie
-	sharpie query -bind $(XWATCHOS_PCH) > watchos-$(WATCH_SDK_VERSION).g.cs
+IOS_PLATFORM=iphoneos$(IOS_SDK_VERSION)
+TVOS_PLATFORM=appletvos$(TVOS_SDK_VERSION)
+MACOS_PLATFORM=macosx$(MACOS_SDK_VERSION)
+MACCATALYST_PLATFORM=ios$(MACCATALYST_SDK_VERSION)-macabi
 
-macos-$(OSX_SDK_VERSION).g.cs: $(XMAC_PCH)
+XIOS_RID = ios-arm64
+XTVOS_RID = tvos-arm64
+XMACOS_RID = osx-arm64
+XMACCATALYST_RID = maccatalyst-arm64
 
-gen-macos: macos-$(OSX_SDK_VERSION).g.cs .stamp-check-sharpie
-	sharpie query -bind $(XMAC_PCH) > macos-$(OSX_SDK_VERSION).g.cs
+define DotNetAssembly
+$(1).rsp: Makefile
+	$$(Q_GEN) echo \
+		-s $($(2)_PLATFORM) $$($(2)_SHARPIE_ARGUMENTS) $$(foreach framework,$$(IGNORED_$(2)_FRAMEWORKS),-exclude $$(framework)) \
+		--output api/$(1) \
+		> $$@
 
-gen-all: gen-ios gen-tvos gen-watchos gen-macos
-	
+api/$(1)/ApiDefinition.cs: $(1).rsp
+	$$(Q_GEN) $$(SHARPIE) sdk-db @$(1).rsp
 
-wrench: classify
+gen-$(3): api/$(1)/ApiDefinition.cs
+gen-all:: gen-$(3)
+endef
+$(foreach platform,$(XTRO_DOTNET_PLATFORMS),$(eval $(call DotNetAssembly,$(platform),$(call uppercase,$(platform)),$(call lowercase,$(platform)))))
 
-report: build
-	rm -rf report/
-	$(MONO) xtro-report/bin/Debug/xtro-report.exe .
+ifeq ($(XCODE_IS_STABLE),false)
+all: gen-all
+endif
+
+report-dotnet/index.html: $(XTRO_REPORT) .stamp-dotnet-classify
+	$(Q) rm -rf report-dotnet
+	$(Q_GEN) $(XTRO_REPORT_EXEC) $(DOTNET_ANNOTATIONS_DIR) report-dotnet
+
+report-dotnet/report.zip:
+	$(Q) rm -f "$@"
+	$(Q) cd report-dotnet && zip -r9 report.zip . -x report.zip
+
+dotnet-report: report-dotnet/index.html
 
 report-short:
 	JENKINS_SERVER_COOKIE=1 make report
 
-classify-ios:
-	$(MONO) bin/Debug/xtro-sharpie.exe $(XIOS_PCH) $(XIOS) $(XIOS_GL)
+define DotNetClassify
+xtro-sharpie-$(1).rsp: Makefile $(1).rsp
+	$$(Q_GEN) echo \
+		--output-directory $$(DOTNET_ANNOTATIONS_DIR) --lib $(DOTNET_BCL_DIR) $$(X$(2)_DOTNET) --rsp $(abspath $(1).rsp) \
+		> $$@
 
-classify-tvos:
-	$(MONO) bin/Debug/xtro-sharpie.exe $(XTVOS_PCH) $(XTVOS) $(XTVOS_GL)
+.stamp-dotnet-classify-$(1): $(XTRO_SHARPIE) $$(X$(2)_DOTNET) xtro-sharpie-$(1).rsp
+	$$(Q) rm -f $$(DOTNET_ANNOTATIONS_DIR)/$(1)-*.raw
+	$$(Q_GEN) $(XTRO_SHARPIE_EXEC) @xtro-sharpie-$(1).rsp
+	$$(Q) touch $$@
 
-classify-watchos:
-	$(MONO) bin/Debug/xtro-sharpie.exe $(XWATCHOS_PCH) $(XWATCHOS)
+dotnet-classify-$(1): .stamp-dotnet-classify-$(1)
+DOTNET_CLASSIFY += .stamp-dotnet-classify-$(1)
+endef
+$(foreach platform,$(XTRO_DOTNET_PLATFORMS),$(eval $(call DotNetClassify,$(platform),$(call uppercase,$(platform)))))
 
-classify-macos:
-	$(MONO) bin/Debug/xtro-sharpie.exe $(XMAC_PCH) $(XMAC)
+.stamp-dotnet-classify: $(XTRO_SANITY) $(DOTNET_CLASSIFY)
+	$(Q_GEN) $(XTRO_SANITY_EXEC) $(abspath $(DOTNET_ANNOTATIONS_DIR)) "$(ALL_DOTNET_PLATFORMS)" $(XTRO_DOTNET_PLATFORMS)
+	$(Q) touch $@
 
-classify: build $(XIOS_PCH) $(XWATCHOS_PCH) $(XTVOS_PCH) $(XMAC_PCH)
-	rm -f *.unclassified
-	$(MAKE) -j4 classify-ios classify-tvos classify-watchos classify-macos
-	$(MONO) xtro-sanity/bin/Debug/xtro-sanity.exe .
-	rm -f *.raw
+dotnet-classify: .stamp-dotnet-classify
 
 insane:
 	XTRO_SANITY_SKIP=1 make all
@@ -108,15 +216,27 @@ insane:
 remove-empty:
 	find . -size 0 | xargs git rm
 
-all: classify report
+all: dotnet-report
 
-.stamp-check-sharpie:
-	@$(TOP)/system-dependencies.sh --ignore-all --enforce-sharpie
-	@touch $@
-	
 remove-empty-files:
 	find . -empty -exec git rm -f {} \;
 
-unclassified2todo:
-	$(SYSTEM_CSC) Filter.cs u2todo/u2todo.cs
-	$(MONO) u2todo.exe
+U2TODO = u2todo/bin/Debug/u2todo.dll
+$(U2TODO): $(wildcard u2todo/*.cs u2todo/*.csproj xtro-sharpie/Filter.cs)
+	$(Q) unset MSBUILD_EXE_PATH && $(DOTNET) build u2todo/u2todo.csproj $(DOTNET_BUILD_VERBOSITY) /bl:$@.binlog
+	$(Q) touch $@
+
+unclassified2todo: $(U2TODO)
+	cd $(DOTNET_ANNOTATIONS_DIR) && $(DOTNET) exec $(abspath $(U2TODO))
+
+unclassified2ignore: $(U2TODO)
+	cd $(DOTNET_ANNOTATIONS_DIR) && $(DOTNET) exec $(abspath $(U2TODO)) --ignore
+
+run-tests run-unit-tests:
+	$(Q) $(MAKE) -C UnitTests $@
+
+PROFILE_PATH:=/tmp/clangsharp-$(shell date "+%Y-%m-%d_%H-%M-%S").trace
+profile: MacCatalyst.rsp
+	dotnet publish $(TOP)/tools/sharpie/Sharpie.Bind.Tool
+	xctrace record --output $(PROFILE_PATH) --template 'Time Profiler' --target-stdout - --launch -- $(TOP)/tools/sharpie/Sharpie.Bind.Tool/bin/Release/osx-arm64/publish/Sharpie.Bind.Tool sdk-db @MacCatalyst.rsp
+	@echo "Created: $(PROFILE_PATH)"

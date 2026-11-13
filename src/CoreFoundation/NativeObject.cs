@@ -6,13 +6,10 @@
 //   Alex Soto
 //   Miguel de Icaza
 //
-// Copyrigh 2018 Microsoft Inc
+// Copyright 2018, 2020 Microsoft Corp
 //
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
-using Foundation;
-using CoreFoundation;
+
+#nullable enable
 
 namespace CoreFoundation {
 	//
@@ -27,64 +24,49 @@ namespace CoreFoundation {
 	// base class to be reused for other patterns that use other retain/release
 	// systems.
 	//
-	public abstract class NativeObject : INativeObject, IDisposable {
-		IntPtr handle;
-		public IntPtr Handle {
-			get => handle;
-			protected set => InitializeHandle (value);
-		}
-
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public abstract class NativeObject : DisposableObject {
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		protected NativeObject ()
 		{
 		}
 
-		protected NativeObject (IntPtr handle, bool owns)
+		protected NativeObject (NativeHandle handle, bool owns)
+			: this (handle, owns, true)
 		{
-			Handle = handle;
-			if (!owns)
+		}
+
+		protected NativeObject (NativeHandle handle, bool owns, bool verify)
+			: base (handle, owns, verify)
+		{
+			if (!owns && handle != NativeHandle.Zero)
 				Retain ();
 		}
 
-		~NativeObject ()
+		/// <inheritdoc />
+		protected override void Dispose (bool disposing)
 		{
-			Dispose (false);
-		}
-
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (Handle != IntPtr.Zero) {
+			if (Handle != NativeHandle.Zero)
 				Release ();
-				handle = IntPtr.Zero;
-			}
+			base.Dispose (disposing);
 		}
 
-		protected virtual void Retain () => CFObject.CFRetain (Handle);
-		protected virtual void Release () => CFObject.CFRelease (Handle);
+		// <quote>If cf is NULL, this will cause a runtime error and your application will crash.</quote>
+		// https://developer.apple.com/documentation/corefoundation/1521269-cfretain?language=occ
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		protected internal virtual void Retain () => CFObject.CFRetain (GetCheckedHandle ());
 
-		protected virtual void InitializeHandle (IntPtr handle)
-		{
-#if !COREBUILD
-			if (handle == IntPtr.Zero && Class.ThrowOnInitFailure) {
-				throw new Exception ($"Could not initialize an instance of the type '{GetType ().FullName}': handle is null.\n" +
-				    "It is possible to ignore this condition by setting ObjCRuntime.Class.ThrowOnInitFailure to false.");
-			}
-#endif
-			this.handle = handle;
-		}
-
-		void Throw () => throw new ObjectDisposedException (GetType ().ToString ());
-
-		internal IntPtr GetCheckedHandle ()
-		{
-			if (handle == IntPtr.Zero)
-				Throw ();
-			return handle;
-		}
+		// <quote>If cf is NULL, this will cause a runtime error and your application will crash.</quote>
+		// https://developer.apple.com/documentation/corefoundation/1521153-cfrelease
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		protected internal virtual void Release () => CFObject.CFRelease (GetCheckedHandle ());
 	}
 }

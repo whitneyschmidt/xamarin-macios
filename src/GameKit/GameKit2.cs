@@ -8,95 +8,47 @@
 // Copyright 2014 Xamarin Inc. All rights reserved
 //
 
-using System;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
+#nullable enable
+
 namespace GameKit {
-#if !MONOMAC && !TVOS && !WATCH
+#if !MONOMAC && !TVOS
+	/// <summary>Provides data for the <see cref="GameKit.GKSession.ReceiveData" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
 	public class GKDataReceivedEventArgs : EventArgs {
+		/// <param name="data">To be added.</param>
+		///         <param name="peer">To be added.</param>
+		///         <param name="session">To be added.</param>
+		///         <summary>Initializes a new instance of the GKDataReceivedEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public GKDataReceivedEventArgs (NSData data, string peer, GKSession session)
 		{
 			Data = data;
 			PeerID = peer;
 			Session = session;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NSData Data { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public string PeerID { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public GKSession Session { get; private set; }
 	}
 
-#if !XAMCORE_2_0
-	public partial class GKVoiceChatService {
-		public bool StartVoiceChat (string participantID, out NSError error)
-		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
-
-				var ret = StartVoiceChat (participantID, ptrtohandle);
-				if (errhandle != IntPtr.Zero)
-					error = (NSError) Runtime.GetNSObject (errhandle);
-				else
-					error = null;
-				return ret;
-			}
-		}
-
-		public bool AcceptCall (int callId, out NSError error)
-		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
-
-				var ret = AcceptCall (callId, ptrtohandle);
-				if (errhandle != IntPtr.Zero)
-					error = (NSError) Runtime.GetNSObject (errhandle);
-				else
-					error = null;
-				return ret;
-			}
-		}
-	}
-#endif
-
-#if !TVOS && !WATCH
+#if !TVOS
 	public partial class GKSession {
-#if !XAMCORE_2_0
-		public bool SendData (NSData data, string [] peers, GKSendDataMode mode, out NSError error)
-		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
-
-				var ret = SendData (data, peers, mode, ptrtohandle);
-				if (errhandle != IntPtr.Zero)
-					error = (NSError) Runtime.GetNSObject (errhandle);
-				else
-					error = null;
-				return ret;
-			}
-		}
-
-		public bool SendDataToAllPeers (NSData data, GKSendDataMode mode, out NSError error)
-		{
-			unsafe {
-				IntPtr errhandle;
-				IntPtr ptrtohandle = (IntPtr) (&errhandle);
-
-				var ret = SendDataToAllPeers (data, mode, ptrtohandle);
-				if (errhandle != IntPtr.Zero)
-					error = (NSError) Runtime.GetNSObject (errhandle);
-				else
-					error = null;
-				return ret;
-			}
-		}
-#endif
 		[Register ("MonoTouch_GKSession_ReceivedObject")]
 		internal class ReceiverObject : NSObject {
-			internal EventHandler<GKDataReceivedEventArgs> receiver;
+			internal EventHandler<GKDataReceivedEventArgs>? receiver;
 
 			public ReceiverObject ()
 			{
@@ -107,32 +59,38 @@ namespace GameKit {
 			[Preserve (Conditional = true)]
 			void Receive (NSData data, string peer, GKSession session, IntPtr context)
 			{
-				if (receiver != null)
+				if (receiver is not null)
 					receiver (session, new GKDataReceivedEventArgs (data, peer, session));
 			}
-				
+
 		}
 
 		//
 		// This delegate is used by the 
-		ReceiverObject receiver;
-		public event EventHandler<GKDataReceivedEventArgs> ReceiveData {
+		ReceiverObject? receiver;
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		public event EventHandler<GKDataReceivedEventArgs>? ReceiveData {
 			add {
-				if (receiver == null){
+				if (receiver is null) {
 					receiver = new ReceiverObject ();
 					_SetDataReceiveHandler (receiver, IntPtr.Zero);
 					MarkDirty ();
 				}
 				receiver.receiver += value;
 			}
-			
+
 			remove {
-				if (receiver == null)
+				if (receiver is null)
 					return;
 				receiver.receiver -= value;
 			}
 		}
 
+		/// <param name="obj">To be added.</param>
+		///         <param name="context">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void SetDataReceiveHandler (NSObject obj, IntPtr context)
 		{
 			receiver = null;
@@ -144,14 +102,16 @@ namespace GameKit {
 		//
 		Mono_GKSessionDelegate EnsureDelegate ()
 		{
-                      NSObject del = WeakDelegate;
-                        if (del == null || (!(del is Mono_GKSessionDelegate))){
-                                del = new Mono_GKSessionDelegate ();
-                                WeakDelegate = del;
-                        }
-                        return (Mono_GKSessionDelegate) del;
+			var del = WeakDelegate;
+			if (del is null || (!(del is Mono_GKSessionDelegate))) {
+				del = new Mono_GKSessionDelegate ();
+				WeakDelegate = del;
+			}
+			return (Mono_GKSessionDelegate) del;
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<GKPeerChangedStateEventArgs> PeerChanged {
 			add {
 				EnsureDelegate ().cbPeerChanged += value;
@@ -161,7 +121,9 @@ namespace GameKit {
 				EnsureDelegate ().cbPeerChanged -= value;
 			}
 		}
-		
+
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<GKPeerConnectionEventArgs> ConnectionRequest {
 			add {
 				EnsureDelegate ().cbConnectionRequest += value;
@@ -172,6 +134,8 @@ namespace GameKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<GKPeerConnectionEventArgs> ConnectionFailed {
 			add {
 				EnsureDelegate ().cbConnectionFailed += value;
@@ -181,6 +145,8 @@ namespace GameKit {
 				EnsureDelegate ().cbConnectionFailed -= value;
 			}
 		}
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		public event EventHandler<GKPeerConnectionEventArgs> Failed {
 			add {
 				EnsureDelegate ().cbFailedWithError += value;
@@ -193,8 +159,10 @@ namespace GameKit {
 	}
 
 	class Mono_GKSessionDelegate : GKSessionDelegate {
-		internal EventHandler<GKPeerChangedStateEventArgs> cbPeerChanged;
-		internal EventHandler<GKPeerConnectionEventArgs> cbConnectionRequest, cbConnectionFailed, cbFailedWithError;
+		internal EventHandler<GKPeerChangedStateEventArgs>? cbPeerChanged;
+		internal EventHandler<GKPeerConnectionEventArgs>? cbConnectionRequest;
+		internal EventHandler<GKPeerConnectionEventArgs>? cbConnectionFailed;
+		internal EventHandler<GKPeerConnectionEventArgs>? cbFailedWithError;
 
 		public Mono_GKSessionDelegate ()
 		{
@@ -204,35 +172,44 @@ namespace GameKit {
 		[Preserve (Conditional = true)]
 		public override void PeerChangedState (GKSession session, string peerID, GKPeerConnectionState state)
 		{
-			if (cbPeerChanged != null)
+			if (cbPeerChanged is not null)
 				cbPeerChanged (session, new GKPeerChangedStateEventArgs (session, peerID, state));
 		}
-		
+
 		[Preserve (Conditional = true)]
 		public override void PeerConnectionRequest (GKSession session, string peerID)
 		{
-			if (cbConnectionRequest != null)
+			if (cbConnectionRequest is not null)
 				cbConnectionRequest (session, new GKPeerConnectionEventArgs (session, peerID, null));
 		}
-			
+
 		[Preserve (Conditional = true)]
 		public override void PeerConnectionFailed (GKSession session, string peerID, NSError error)
 		{
-			if (cbConnectionFailed != null)
+			if (cbConnectionFailed is not null)
 				cbConnectionFailed (session, new GKPeerConnectionEventArgs (session, peerID, error));
 
 		}
-			
+
 		[Preserve (Conditional = true)]
 		public override void FailedWithError (GKSession session, NSError error)
 		{
-			if (cbFailedWithError != null)
+			if (cbFailedWithError is not null)
 				cbFailedWithError (session, new GKPeerConnectionEventArgs (session, null, error));
 		}
 	}
 #endif // !TVOS
 
+	/// <summary>Provides data for the <see cref="GameKit.GKSession.PeerChanged" /> event.</summary>
+	///     <remarks>
+	///     </remarks>
 	public class GKPeerChangedStateEventArgs : EventArgs {
+		/// <param name="session">To be added.</param>
+		///         <param name="peerID">To be added.</param>
+		///         <param name="state">To be added.</param>
+		///         <summary>Initializes a new instance of the GKPeerChangedStateEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
 		public GKPeerChangedStateEventArgs (GKSession session, string peerID, GKPeerConnectionState state)
 		{
 			Session = session;
@@ -240,56 +217,61 @@ namespace GameKit {
 			State = state;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public GKSession Session { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public string PeerID { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public GKPeerConnectionState State { get; private set; }
 	}
 
+	/// <summary>Provides data for the <see cref="GameKit.GKSession.Failed" />, <see cref="GameKit.GKSession.ConnectionRequest" /> and <see cref="GameKit.GKSession.ConnectionFailed" /> events.</summary>
+	///     <remarks>
+	///     </remarks>
 	public class GKPeerConnectionEventArgs : EventArgs {
-		public GKPeerConnectionEventArgs (GKSession session, string peerID, NSError error)
+		/// <param name="session">To be added.</param>
+		///         <param name="peerID">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>Initializes a new instance of the GKPeerConnectionEventArgs class.</summary>
+		///         <remarks>
+		///         </remarks>
+		public GKPeerConnectionEventArgs (GKSession session, string? peerID, NSError? error)
 		{
 			Session = session;
 			PeerID = peerID;
 			Error = error;
 		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public GKSession Session { get; private set; }
-		public string PeerID { get; private set; }
-		public NSError Error { get; private set; }
-	}
-#endif
-	
-#if !XAMCORE_2_0
-	public partial class GKPlayer {
-		// mistake, non-static
-		public NSString DidChangeNotificationName {
-			get {
-				return DidChangeNotificationNameNotification;
-			}
-		}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public string? PeerID { get; private set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSError? Error { get; private set; }
 	}
 #endif
 
 	public partial class GKVoiceChat {
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'PlayerStateUpdateHandler' property.")]
-		public virtual void SetPlayerStateUpdateHandler (GKPlayerStateUpdateHandler handler)
-		{
-			PlayerStateUpdateHandler = handler;
-		}
-#endif
-
-#if !XAMCORE_3_0
-		[Obsolete ("Use 'SetMute (bool, string)' method.")]
-		public virtual void SetMute (bool isMuted, GKPlayer player)
-		{
-			SetMute (isMuted, player == null ? null : player.PlayerID);
-		}
-#endif
 	}
 
 	public partial class GKTurnBasedExchange {
 
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public override string ToString ()
 		{
 			return "GKTurnBasedExchange";
@@ -298,28 +280,24 @@ namespace GameKit {
 
 	public partial class GKTurnBasedExchangeReply {
 
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public override string ToString ()
 		{
 			return "GKTurnBasedExchangeReply";
 		}
 	}
 
-#if !XAMCORE_2_0
-	public partial class GKLeaderboardViewController {
-
-		[Obsolete ("Apple never shipped the `initWithTimeScope:playerScope:` selector. Use the default constructor.")]
-		public GKLeaderboardViewController (GKLeaderboardTimeScope timeScope, GKLeaderboardPlayerScope playerScope) : 
-			base (NSObjectFlag.Empty)
-		{
-			// we can't set `playerScope` with the existing API and
-			// setting `timeScope` does not work at this stage either so...
-			throw new NotSupportedException ();
-		}
-	}
-#endif
-
 	public partial class GKChallenge {
 
+		/// <summary>Returns a string representation of the value of the current instance.</summary>
+		///         <returns>
+		///         </returns>
+		///         <remarks>
+		///         </remarks>
 		public override string ToString ()
 		{
 			return GetType ().ToString ();
@@ -327,42 +305,5 @@ namespace GameKit {
 	}
 
 	public partial class GKMatch {
-#if !XAMCORE_3_0
-		// Compatbility with the broken API, it is deprecated, so that is good.
-		public virtual bool SendData (NSData data, string [] players, GKMatchSendDataMode mode, NSError error)
-		{
-			return SendData (data, players, mode, out error);
-		}
-#endif
-
-#if !XAMCORE_2_0
-		[Obsolete ("Use 'SendDataToAllPlayers'.")]
-		public virtual bool SendDataToAllPlayer (NSData data, GKMatchSendDataMode mode, out NSError error)
-		{
-			return SendDataToAllPlayers (data, mode, out error);
-		}
-
-#if MONOMAC
-		// never been released with XI
-		[Obsolete ("Use 'SendDataToAllPlayers' that takes out NSError.")]
-		public bool SendDataToAllPlayers (NSData data, GKMatchSendDataMode mode, IntPtr ptrToNSErrorHandle)
-		{
-			NSError error = new NSError (ptrToNSErrorHandle);
-			return SendDataToAllPlayers (data, mode, out error);
-		}
-#endif
-#endif
-
 	}
-
-#if !XAMCORE_2_0
-	public partial class GKScore {
-		[Deprecated (PlatformName.iOS, 8, 0, message : "Use 'LeaderboardIdentifier' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 10, message : "Use 'LeaderboardIdentifier' instead.")]
-		public string Category {
-			get { return category; }
-			set { category = value; }
-		}
-	}
-#endif
 }

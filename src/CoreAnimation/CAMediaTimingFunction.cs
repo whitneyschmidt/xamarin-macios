@@ -26,38 +26,22 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
-using Foundation;
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreAnimation {
 	public unsafe partial class CAMediaTimingFunction {
-
-#if !XAMCORE_2_0
-#if !MONOMAC
-		[Obsolete ("This type is not meant to be created by application code")]
-		public CAMediaTimingFunction () : base (IntPtr.Zero)
-		{
-			IsDirectBinding = GetType () == typeof (CAMediaTimingFunction);
-		}
-#endif
-
-		[Advice ("Use 'FromName(NSString)' with one of the CAMediaTimingFunction fields.")]
-		static public CAMediaTimingFunction FromName (string name)
-		{
-			using (NSString s = new NSString (name))
-				return FromName (s);
-		}
-#endif
-
+		/// <summary>Gets the control point at the specified index.</summary>
+		/// <param name="index">The index of the control point (0-3).</param>
+		/// <returns>The control point at the specified index.</returns>
 		public CGPoint GetControlPoint (nint index)
 		{
 			if ((index < 0) || (index > 3))
 				throw new ArgumentOutOfRangeException ("index");
 
 			float [] values = new float [2];
-			fixed (float *p = &values [0])
+			fixed (float* p = values)
 				GetControlPointAtIndex (index, (IntPtr) p /* float[2] */);
 			return new CGPoint (values [0], values [1]);
 		}

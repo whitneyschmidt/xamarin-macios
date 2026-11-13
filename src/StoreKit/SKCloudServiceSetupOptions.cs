@@ -1,20 +1,21 @@
-#if __IOS__
+#nullable enable
 
-using System;
-using ObjCRuntime;
-using Foundation;
+#if __IOS__
 
 namespace StoreKit {
 
 	partial class SKCloudServiceSetupOptions {
 
-		[iOS (10,1)]
+		/// <summary>Gets or sets the setup action.</summary>
+		/// <value>The cloud service setup action, or <see langword="null" /> if not set.</value>
 		public virtual SKCloudServiceSetupAction? Action {
 			get {
+				if (_Action is null)
+					return null;
 				return (SKCloudServiceSetupAction?) (SKCloudServiceSetupActionExtensions.GetValue (_Action));
 			}
 			set {
-				_Action = value != null ? SKCloudServiceSetupActionExtensions.GetConstant (value.Value) : null;
+				_Action = value is not null ? SKCloudServiceSetupActionExtensions.GetConstant (value.Value) : null;
 			}
 		}
 	}

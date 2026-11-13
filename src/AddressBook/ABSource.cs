@@ -27,85 +27,54 @@
 //
 //
 
+#nullable enable
+
 #if !MONOMAC
 
-using System;
-using System.Runtime.InteropServices;
-
 using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
 
 namespace AddressBook {
-	
-	// note: not a true flag
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	public enum ABSourceType : int /* typedef int */ {
-		Local		= 0x0,
-		Exchange	= 0x1,
-		ExchangeGAL	= Exchange | SearchableMask,
-		MobileMe	= 0x2,
-		LDAP		= 0x3 | SearchableMask,
-		CardDAV		= 0x4,
-		DAVSearch	= CardDAV | SearchableMask,
 
-		SearchableMask = 0x01000000
-	};	
-	
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
+	/// <summary>A data source that produces address book data. (See <see cref="AddressBook.ABSourceType" />.)</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[ObsoletedOSPlatform ("ios", "Use the 'Contacts' API instead.")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[ObsoletedOSPlatform ("maccatalyst", "Use the 'Contacts' API instead.")]
+	[UnsupportedOSPlatform ("macos")]
+	[UnsupportedOSPlatform ("tvos")]
 	public class ABSource : ABRecord {
-#if !XAMCORE_2_0
-		[Advice ("Use ABSourceType.SearchableMask")]
-		public const int SearchableMask = 0x01000000;
-#endif
-
-		internal ABSource (IntPtr handle, bool owns)
+		[Preserve (Conditional = true)]
+		internal ABSource (NativeHandle handle, bool owns)
 			: base (handle, owns)
 		{
 		}
-		
-		internal ABSource (IntPtr handle, ABAddressBook addressbook)
+
+		internal ABSource (NativeHandle handle, ABAddressBook addressbook)
 			: base (handle, false)
 		{
 			AddressBook = addressbook;
 		}
-		
-		public string Name {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public string? Name {
 			get { return PropertyToString (ABSourcePropertyId.Name); }
 			set { SetValue (ABSourcePropertyId.Name, value); }
 		}
-		
+
 		// Type is already a property in ABRecord
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public ABSourceType SourceType {
 			get { return (ABSourceType) (int) PropertyTo<NSNumber> (ABSourcePropertyId.Type); }
 			set { SetValue (ABSourcePropertyId.Type, new NSNumber ((int) value)); }
 		}
 	}
 
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	public enum ABSourceProperty {
-		Name,
-		Type,
-	}
-	
-	[Deprecated (PlatformName.iOS, 9, 0, message : "Use the 'Contacts' API instead.")]
-	static class ABSourcePropertyId {
-
-		public static int Name { get; private set;}
-		public static int Type { get; private set;}
-		
-		static ABSourcePropertyId ()
-		{
-			InitConstants.Init ();
-		}
-
-		internal static void Init ()
-		{
-			var handle = Libraries.AddressBook.Handle;
-			Name = Dlfcn.GetInt32 (handle, "kABSourceNameProperty");
-			Type = Dlfcn.GetInt32 (handle, "kABSourceTypeProperty");
-		}
-
+	static partial class ABSourcePropertyId {
 		public static int ToId (ABSourceProperty property)
 		{
 			switch (property) {

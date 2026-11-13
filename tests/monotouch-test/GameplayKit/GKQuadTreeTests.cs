@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for GKQuadTreeTests
 //
 // Authors:
@@ -8,14 +8,9 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && XAMCORE_2_0
-
-using System;
-using OpenTK;
-using NUnit.Framework;
-
-using Foundation;
 using GameplayKit;
+
+using System.Numerics;
 
 namespace MonoTouchFixtures.GamePlayKit {
 	[TestFixture]
@@ -27,7 +22,7 @@ namespace MonoTouchFixtures.GamePlayKit {
 		{
 			if (!TestRuntime.CheckXcodeVersion (8, 0))
 				Assert.Ignore ("Ignoring GameplayKit tests: Requires iOS10+");
-			
+
 			var quad = new GKQuad {
 				Max = new Vector2 (10, 10),
 				Min = new Vector2 (1, 1)
@@ -39,14 +34,13 @@ namespace MonoTouchFixtures.GamePlayKit {
 			};
 			var foo = new NSString ("Foo");
 			using (var quadTree = new GKQuadTree (quad, 1)) {
-				Assert.NotNull (quadTree, "quadTree is null");
+				Assert.That (quadTree, Is.Not.Null, "quadTree is null");
 				var node = quadTree.AddElement (foo, quad);
-				Assert.AreEqual (expectedQuad, node.Quad, $"quads are different");
+				Assert.That (node.Quad, Is.EqualTo (expectedQuad), $"quads are different");
 				var strs = quadTree.GetElements (quad);
 				Assert.That (strs.Length, Is.GreaterThan (0), "Must have elements");
-				Assert.AreSame (foo, strs [0], "must be the same object");
+				Assert.That (strs [0], Is.SameAs (foo), "must be the same object");
 			}
 		}
 	}
 }
-#endif

@@ -21,48 +21,82 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if MONOMAC
+using System.Text;
 
-using System;
+#nullable enable
 
-namespace Foundation {
+namespace ObjCRuntime {
+	/// <summary>Represents an Objective-C exception that has been caught and wrapped as a managed exception.</summary>
 	public class ObjCException : Exception {
 		NSException native_exc;
 
+		/// <summary>Initializes a new instance of the <see cref="ObjCException" /> class with a default NSException.</summary>
 		public ObjCException () : base ()
 		{
 			native_exc = new NSException ("default", String.Empty, null);
 		}
 
+		/// <summary>Initializes a new instance of the <see cref="ObjCException" /> class wrapping the specified Objective-C exception.</summary>
+		/// <param name="exc">The native <see cref="Foundation.NSException" /> to wrap.</param>
 		public ObjCException (NSException exc) : base ()
 		{
 			native_exc = exc;
 		}
 
-		public NSException NSException {
+		/// <summary>Gets the underlying <see cref="Foundation.NSException" /> that this exception wraps.</summary>
+		/// <value>The native Objective-C exception, or <see langword="null" /> if not available.</value>
+		public NSException? NSException {
 			get {
 				return native_exc;
 			}
 		}
 
-		public string Reason {
+		/// <summary>Gets the reason string from the underlying Objective-C exception.</summary>
+		/// <value>The reason for the exception, or <see langword="null" /> if not available.</value>
+		public string? Reason {
 			get {
-				return native_exc.Reason;
+				return native_exc?.Reason;
 			}
 		}
 
-		public string Name {
+		/// <summary>Gets the name of the underlying Objective-C exception.</summary>
+		/// <value>The exception name, or <see langword="null" /> if not available.</value>
+		public string? Name {
 			get {
-				return native_exc.Name;
+				return native_exc?.Name;
 			}
 		}
 
+		/// <summary>Gets a message that includes the exception name, reason, and native stack trace.</summary>
+		/// <value>A formatted string describing the Objective-C exception.</value>
 		public override string Message {
 			get {
-				return string.Format ("{0}: {1}", Name, Reason);
+				var sb = new StringBuilder ("Objective-C exception thrown.  Name: ").Append (Name);
+				sb.Append (" Reason: ").AppendLine (Reason);
+				AppendNativeStackTrace (sb);
+				return sb.ToString ();
 			}
+		}
+
+		void AppendNativeStackTrace (StringBuilder sb)
+		{
+			if (native_exc?.CallStackSymbols?.Length > 0) {
+				sb.AppendLine ("Native stack trace:");
+				foreach (var symbol in native_exc.CallStackSymbols)
+					sb.Append ('\t').AppendLine (symbol);
+			}
+		}
+
+		public override string ToString ()
+		{
+			var msg = base.ToString ();
+			if (native_exc is null)
+				return msg;
+
+			var sb = new StringBuilder (msg);
+			sb.AppendLine ();
+			AppendNativeStackTrace (sb);
+			return sb.ToString ();
 		}
 	}
 }
-
-#endif // MONOMAC

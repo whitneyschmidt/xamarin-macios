@@ -9,40 +9,29 @@
 
 #if !__TVOS__
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
 using EventKit;
-#else
-using MonoTouch.EventKit;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
 using System.Threading;
 using System.Linq;
 
 namespace MonoTouchFixtures.EventKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class EventStoreTest
-	{
+	public class EventStoreTest {
 		[Test]
 		[Ignore ("fail on a cleaned iOS 6 simulator and (differently) on devices")]
 		public void DefaultCalendar ()
 		{
 			var store = new EKEventStore ();
-			Assert.AreEqual ("Calendar", store.DefaultCalendarForNewEvents.Title, "DefaultCalendarForNewEvents");
-			Assert.IsNull (store.DefaultCalendarForNewReminders, "DefaultCalendarForNewReminders");
+			Assert.That (store.DefaultCalendarForNewEvents.Title, Is.EqualTo ("Calendar"), "DefaultCalendarForNewEvents");
+			Assert.That (store.DefaultCalendarForNewReminders, Is.Null, "DefaultCalendarForNewReminders");
 #if !MONOMAC // Not available on Mac
-			Assert.IsNotNull (store.Calendars, "Calendars");
+			Assert.That (store.Calendars, Is.Not.Null, "Calendars");
 #endif
-			Assert.IsNotNull (store.Sources, "Sources");
+			Assert.That (store.Sources, Is.Not.Null, "Sources");
 		}
 
-#if false 
+#if false
 		// The EKEventStore constructor is no longer availble on iOS 6 Beta 4
 
 		[Test]
@@ -50,10 +39,10 @@ namespace MonoTouchFixtures.EventKit {
 		public void DefaultReminder ()
 		{
 			var store = new EKEventStore (EKEntityMask.Reminder);
-			Assert.AreEqual ("Reminders", store.DefaultCalendarForNewReminders.Title, "DefaultCalendarForNewReminders");
-			Assert.IsNull (store.DefaultCalendarForNewEvents, "DefaultCalendarForNewEvents");
-			Assert.IsNotNull (store.Calendars, "Calendars");
-			Assert.IsNotNull (store.Sources, "Sources");
+			Assert.That (store.DefaultCalendarForNewReminders.Title, Is.EqualTo ("Reminders"), "DefaultCalendarForNewReminders");
+			Assert.That (store.DefaultCalendarForNewEvents, Is.Null, "DefaultCalendarForNewEvents");
+			Assert.That (store.Calendars, Is.Not.Null, "Calendars");
+			Assert.That (store.Sources, Is.Not.Null, "Sources");
 		}
 
 		[Test]
@@ -62,10 +51,10 @@ namespace MonoTouchFixtures.EventKit {
 		{
 			var store = new EKEventStore (EKEntityMask.Reminder);
 			var calendars = store.GetCalendars (EKEntityType.Reminder);
-			Assert.AreEqual ("Reminders", calendars[0].Title, "#1");
+			Assert.That (calendars[0].Title, Is.EqualTo ("Reminders"), "#1");
 
 			calendars = store.GetCalendars (EKEntityType.Event);
-			Assert.AreEqual (0, calendars.Length, "#2");
+			Assert.That (calendars.Length, Is.EqualTo (0), "#2");
 		}
 
 		[Test]
@@ -79,7 +68,7 @@ namespace MonoTouchFixtures.EventKit {
 			rem.Calendar = store.DefaultCalendarForNewReminders;
 
 			NSError error;
-			Assert.IsTrue (store.SaveReminder (rem, true, out error), "SaveReminder");
+			Assert.That (store.SaveReminder (rem, true, out error), Is.True, "SaveReminder");
 
 			var predicate = store.PredicateForIncompleteReminders (null, null, new [] { rem.Calendar });
 			var mre = new ManualResetEvent (false);
@@ -89,22 +78,22 @@ namespace MonoTouchFixtures.EventKit {
 				mre.Set ();
 			});
 
-			Assert.IsTrue (mre.WaitOne (3000), "#1");
-			Assert.IsTrue (found, "#2");
+			Assert.That (mre.WaitOne (3000), Is.True, "#1");
+			Assert.That (found, Is.True, "#2");
 
 			mre.Reset ();
 			predicate = store.PredicateForReminders (null);
 
 			store.FetchReminders (predicate, l => mre.Set ());
-			Assert.IsTrue (mre.WaitOne (3000), "#10");
+			Assert.That (mre.WaitOne (3000), Is.True, "#10");
 
 			mre.Reset ();
 			predicate = store.PredicateForCompleteReminders (null, null, null);
 
 			store.FetchReminders (predicate, l => mre.Set ());
-			Assert.IsTrue (mre.WaitOne (3000), "#20");
+			Assert.That (mre.WaitOne (3000), Is.True, "#20");
 
-			Assert.IsTrue (store.RemoveReminder (rem, true, out error), "RemoveReminder");
+			Assert.That (store.RemoveReminder (rem, true, out error), Is.True, "RemoveReminder");
 		}
 #endif
 	}

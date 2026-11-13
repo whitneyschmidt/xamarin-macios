@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for AVMetadataObject
 //
 // Authors:
@@ -7,34 +7,12 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
-using System.Drawing;
-using System.IO;
-using System.Threading;
-#if XAMCORE_2_0
-using Foundation;
+using System.Reflection;
+using CoreGraphics;
 using AVFoundation;
-using CoreMedia;
-using ObjCRuntime;
-#else
-using MonoTouch.AVFoundation;
-using MonoTouch.CoreMedia;
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.AVFoundation {
 
@@ -46,50 +24,73 @@ namespace MonoTouchFixtures.AVFoundation {
 		public void Defaults ()
 		{
 			using (var obj = new AVCaptureMetadataOutput ()) {
-#if XAMCORE_2_0
-				Assert.AreEqual (AVMetadataObjectType.None, obj.AvailableMetadataObjectTypes, "AvailableMetadataObjectTypes");
-				Assert.AreEqual (AVMetadataObjectType.None, obj.MetadataObjectTypes, "MetadataObjectTypes");
+				Assert.That (obj.AvailableMetadataObjectTypes, Is.EqualTo (AVMetadataObjectType.None), "AvailableMetadataObjectTypes");
+				Assert.That (obj.MetadataObjectTypes, Is.EqualTo (AVMetadataObjectType.None), "MetadataObjectTypes");
 
-				Assert.IsNotNull (obj.WeakAvailableMetadataObjectTypes, "WeakAvailableMetadataObjectTypes");
-				Assert.AreEqual (0, obj.WeakAvailableMetadataObjectTypes.Length, "WeakAvailableMetadataObjectTypes#");
-				Assert.IsNotNull (obj.WeakMetadataObjectTypes, "WeakMetadataObjectTypes");
-				Assert.AreEqual (0, obj.WeakMetadataObjectTypes.Length, "WeakMetadataObjectTypes#");
-#else
-				Assert.IsNotNull (obj.AvailableMetadataObjectTypes, "AvailableMetadataObjectTypes");
-				Assert.AreEqual (0, obj.AvailableMetadataObjectTypes.Length, "AvailableMetadataObjectTypes#");
-				Assert.IsNotNull (obj.MetadataObjectTypes, "MetadataObjectTypes");
-				Assert.AreEqual (0, obj.MetadataObjectTypes.Length, "MetadataObjectTypes#");
-#endif
-				if (TestRuntime.CheckSystemVersion (PlatformName.iOS, 7, 0, throwIfOtherPlatform: false))
-					Assert.AreEqual (new RectangleF (0, 0, 1, 1), obj.RectOfInterest, "RectOfInterest");
+				Assert.That (obj.WeakAvailableMetadataObjectTypes, Is.Not.Null, "WeakAvailableMetadataObjectTypes");
+				Assert.That (obj.WeakAvailableMetadataObjectTypes.Length, Is.EqualTo (0), "WeakAvailableMetadataObjectTypes#");
+				Assert.That (obj.WeakMetadataObjectTypes, Is.Not.Null, "WeakMetadataObjectTypes");
+				Assert.That (obj.WeakMetadataObjectTypes.Length, Is.EqualTo (0), "WeakMetadataObjectTypes#");
+				if (TestRuntime.CheckSystemVersion (ApplePlatform.iOS, 7, 0, throwIfOtherPlatform: false))
+					Assert.That (obj.RectOfInterest, Is.EqualTo (new CGRect (0, 0, 1, 1)), "RectOfInterest");
 
-#if XAMCORE_2_0
-				obj.WeakMetadataObjectTypes = null;
-				Assert.AreEqual (AVMetadataObjectType.None, obj.MetadataObjectTypes, "MetadataObjectTypes");
-				obj.MetadataObjectTypes = AVMetadataObjectType.None;
-				Assert.AreEqual (AVMetadataObjectType.None, obj.MetadataObjectTypes, "MetadataObjectTypes");
-#else
-				obj.MetadataObjectTypes = null;
-				Assert.IsNotNull (obj.MetadataObjectTypes, "MetadataObjectTypes");
-				Assert.AreEqual (0, obj.MetadataObjectTypes.Length, "MetadataObjectTypes#");
-#endif
-				obj.SetDelegate (null, null);
+				if (TestRuntime.CheckXcodeVersion (13, 0)) {
+					obj.WeakMetadataObjectTypes = null;
+					Assert.That (obj.MetadataObjectTypes, Is.EqualTo (AVMetadataObjectType.None), "MetadataObjectTypes");
+					obj.MetadataObjectTypes = AVMetadataObjectType.None;
+					Assert.That (obj.MetadataObjectTypes, Is.EqualTo (AVMetadataObjectType.None), "MetadataObjectTypes");
+					obj.SetDelegate (null, null);
+				}
 			}
 		}
 
-#if XAMCORE_2_0
+		[Test]
+		public void Flags ()
+		{
+			// single
+			var flags = AVMetadataObjectType.Face;
+			var result = AVMetadataObjectTypeExtensions.ToFlags (new NSString [] { flags.GetConstant () });
+			Assert.That (result, Is.EqualTo (flags), "a2e 1");
+
+			var back = result.ToArray ();
+			Assert.That (back.Length, Is.EqualTo (1), "l 1");
+			Assert.That (back [0], Is.EqualTo (flags.GetConstant ()), "e2a 1");
+
+			// constants are only available in recent xcode (and not on any 32bits OS)
+			if (TestRuntime.CheckXcodeVersion (11, 0)) {
+				// multiple (flags)
+				flags = AVMetadataObjectType.CatBody | AVMetadataObjectType.DogBody | AVMetadataObjectType.HumanBody;
+				var array = new NSString [] {
+					AVMetadataObjectType.CatBody.GetConstant (),
+					AVMetadataObjectType.DogBody.GetConstant (),
+					AVMetadataObjectType.HumanBody.GetConstant ()
+				};
+				result = AVMetadataObjectTypeExtensions.ToFlags (array);
+				Assert.That (result, Is.EqualTo (flags), "a2e 3");
+				back = result.ToArray ();
+				Assert.That (back.Length, Is.EqualTo (3), "l 3");
+				Assert.That (back [0], Is.EqualTo (array [0]), "e2a 3a");
+				Assert.That (back [1], Is.EqualTo (array [1]), "e2a 3b");
+				Assert.That (back [2], Is.EqualTo (array [2]), "e2a 3c");
+			}
+
+			var all = (AVMetadataObjectType) ulong.MaxValue;
+			var someArray = all.ToArray (); // converting all flags to an array will only return strings for flags that exist in the current OS.
+			Assert.That (someArray.Length, Is.GreaterThan (1), "some back");
+			var someFlags = AVMetadataObjectTypeExtensions.ToFlags (someArray);
+			Assert.That (someFlags, Is.Not.EqualTo (AVMetadataObjectType.None), "Some, but not None");
+			Assert.That (someFlags, Is.Not.EqualTo (all), "Some, but not all");
+		}
+
 		[Test]
 		public void MetadataObjectTypesTest ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-
-			if (Runtime.Arch != Arch.DEVICE)
-				Assert.Ignore ("This test only runs on device (requires camera access)");
-
-			TestRuntime.RequestCameraPermission (AVMediaType.Video, true);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
+			TestRuntime.AssertDevice ("This test only runs on device (requires camera access)");
+			TestRuntime.RequestCameraPermission (AVMediaTypes.Video.GetConstant (), true);
 
 			using (var captureSession = new AVCaptureSession ()) {
-				using (var videoDevice = AVCaptureDevice.DefaultDeviceWithMediaType (AVMediaType.Video)) {
+				using (var videoDevice = AVCaptureDevice.GetDefaultDevice (AVMediaTypes.Video.GetConstant ())) {
 
 					NSError error;
 					using (var videoInput = new AVCaptureDeviceInput (videoDevice, out error)) {
@@ -102,20 +103,45 @@ namespace MonoTouchFixtures.AVFoundation {
 								captureSession.AddOutput (metadataOutput);
 
 							AVMetadataObjectType all = AVMetadataObjectType.None;
-							foreach (AVMetadataObjectType val in Enum.GetValues (typeof (AVMetadataObjectType))) {
+							foreach (var val in Enum.GetValues<AVMetadataObjectType> ()) {
+								switch (val) {
+								case AVMetadataObjectType.CatBody:
+								case AVMetadataObjectType.DogBody:
+								case AVMetadataObjectType.HumanBody:
+								case AVMetadataObjectType.SalientObject:
+									break;
+								case AVMetadataObjectType.CodabarCode:
+								case AVMetadataObjectType.GS1DataBarCode:
+								case AVMetadataObjectType.GS1DataBarExpandedCode:
+								case AVMetadataObjectType.GS1DataBarLimitedCode:
+								case AVMetadataObjectType.MicroQRCode:
+								case AVMetadataObjectType.MicroPdf417Code:
+									if (!TestRuntime.CheckXcodeVersion (13, 3))
+										continue;
+									break;
+								case AVMetadataObjectType.CatHead:
+								case AVMetadataObjectType.DogHead:
+									if (!TestRuntime.CheckXcodeVersion (26, 0))
+										continue;
+									break;
+								case AVMetadataObjectType.FocusTrackedObject:
+								case AVMetadataObjectType.CinematicVideoMetadata:
+									if (!TestRuntime.CheckXcodeVersion (27, 0) || (metadataOutput.AvailableMetadataObjectTypes & val) != val)
+										continue;
+									break;
+								}
 								metadataOutput.MetadataObjectTypes = val;
 								all |= val;
-								Assert.AreEqual (val, metadataOutput.MetadataObjectTypes, val.ToString ());
+								Assert.That (metadataOutput.MetadataObjectTypes, Is.EqualTo (val), val.ToString ());
 							}
 							metadataOutput.MetadataObjectTypes = all;
-							Assert.AreEqual (all, metadataOutput.MetadataObjectTypes, all.ToString ());
+							Assert.That (metadataOutput.MetadataObjectTypes, Is.EqualTo (all), all.ToString ());
 						}
 					}
 				}
 			}
 		}
-#endif
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !MONOMAC

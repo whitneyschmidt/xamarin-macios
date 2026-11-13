@@ -7,55 +7,37 @@
 // Copyright 2012 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-using System.IO;
-#if XAMCORE_2_0
-using Foundation;
 using AudioToolbox;
-using CoreFoundation;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MediaPlayer;
-using MonoTouch.AudioToolbox;
-using MonoTouch.CoreFoundation;
-#endif
-using NUnit.Framework;
-using System.Threading;
 
 namespace MonoTouchFixtures.AudioToolbox {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class AudioStreamBasicDescriptionTest
-	{
+	public class AudioStreamBasicDescriptionTest {
 		[Test]
 		public void CreateLinearPCM ()
 		{
 			var pcm = AudioStreamBasicDescription.CreateLinearPCM ();
-			Assert.IsNotNull (pcm.FormatName);
-			Assert.IsFalse (pcm.IsVariableBitrate);
+			Assert.That (pcm.FormatName, Is.Not.Null);
+			Assert.That (pcm.IsVariableBitrate, Is.False);
 		}
 
 		[Test]
 		public void VBR ()
 		{
 			var mp3 = new AudioStreamBasicDescription (AudioFormatType.MPEGLayer3);
-			Assert.IsTrue (mp3.IsVariableBitrate);
+			Assert.That (mp3.IsVariableBitrate, Is.True);
 		}
 
 		[Test]
 		public void GetFormatInfo ()
 		{
 			var asbd = new AudioStreamBasicDescription (AudioFormatType.MPEG4AAC);
-			Assert.AreEqual (AudioFormatError.None, AudioStreamBasicDescription.GetFormatInfo (ref asbd));
+			Assert.That (AudioStreamBasicDescription.GetFormatInfo (ref asbd), Is.EqualTo (AudioFormatError.None));
 
-			Assert.IsNotNull (AudioStreamBasicDescription.GetAvailableEncodeChannelLayoutTags (asbd));
-			Assert.IsNotNull (AudioStreamBasicDescription.GetAvailableEncodeNumberChannels (asbd));
-			Assert.IsNotNull (asbd.GetOutputFormatList ());
+			Assert.That (AudioStreamBasicDescription.GetAvailableEncodeChannelLayoutTags (asbd), Is.Not.Null);
+			Assert.That (AudioStreamBasicDescription.GetAvailableEncodeNumberChannels (asbd), Is.Not.Null);
+			Assert.That (asbd.GetOutputFormatList (), Is.Not.Null);
 		}
 	}
 }
-
-#endif // !__WATCHOS__

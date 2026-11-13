@@ -1,33 +1,25 @@
 // Copyright 2012 Xamarin Inc. All rights reserved
 
-#if !__WATCHOS__ && !MONOMAC
+#if !MONOMAC
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class DictationPhraseTest {
-		
+
 		[Test]
 		public void Defaults ()
 		{
 			using (UIDictationPhrase dp = new UIDictationPhrase ()) {
-				Assert.Null (dp.AlternativeInterpretations, "AlternativeInterpretations");
-				Assert.Null (dp.Text, "Text");
+				Assert.That (dp.AlternativeInterpretations, Is.Null, "AlternativeInterpretations");
+				Assert.That (dp.Text, Is.Null, "Text");
 			}
 		}
 	}
 }
 
-#endif // !__WATCHOS__
+#endif // !MONOMAC

@@ -6,126 +6,170 @@
 //
 // Copyrigh 2018 Microsoft Inc
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
 
-namespace Network {
+using OS_nw_path_monitor = System.IntPtr;
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+namespace Network {
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public class NWPathMonitor : NativeObject {
-		public NWPathMonitor (IntPtr handle, bool owns) : base (handle, owns) {}
+		[Preserve (Conditional = true)]
+		internal NWPathMonitor (NativeHandle handle, bool owns) : base (handle, owns)
+		{
+			_SetUpdatedSnapshotHandler (SetUpdatedSnapshotHandlerWrapper);
+		}
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static IntPtr nw_path_monitor_create ();
 
+		NWPath? currentPath;
+		public NWPath? CurrentPath => currentPath;
+
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NWPathMonitor ()
+			: this (nw_path_monitor_create (), true)
 		{
-			InitializeHandle (nw_path_monitor_create ());
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static IntPtr nw_path_monitor_create_with_type (NWInterfaceType interfaceType);
 
+		/// <param name="interfaceType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public NWPathMonitor (NWInterfaceType interfaceType)
+			: this (nw_path_monitor_create_with_type (interfaceType), true)
 		{
-			InitializeHandle (nw_path_monitor_create_with_type (interfaceType));
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static void nw_path_monitor_cancel (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Cancel () => nw_path_monitor_cancel (GetCheckedHandle ());
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static void nw_path_monitor_start (IntPtr handle);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void Start () => nw_path_monitor_start (GetCheckedHandle ());
 
 		[DllImport (Constants.NetworkLibrary)]
 		extern static void nw_path_monitor_set_queue (IntPtr handle, IntPtr queue);
 
+		/// <param name="queue">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public void SetQueue (DispatchQueue queue)
 		{
-			if (queue == null)
-				throw new ArgumentNullException (nameof (queue));
+			if (queue is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (queue));
 			nw_path_monitor_set_queue (GetCheckedHandle (), queue.Handle);
+			GC.KeepAlive (queue);
 		}
 
-		delegate void nw_path_monitor_update_handler_t (IntPtr block, IntPtr path);
-		static nw_path_monitor_update_handler_t static_UpdateSnapshot = TrampolineUpdatedSnapshot;
-
-		[MonoPInvokeCallback (typeof (nw_path_monitor_update_handler_t))]
+		[UnmanagedCallersOnly]
 		static void TrampolineUpdatedSnapshot (IntPtr block, IntPtr path)
 		{
 			var del = BlockLiteral.GetTarget<Action<NWPath>> (block);
-			if (del != null) {
+			if (del is not null) {
 				var nwPath = new NWPath (path, owns: false);
 				del (nwPath);
 			}
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern unsafe void nw_path_monitor_set_update_handler (IntPtr handle, void *callback);
+		static extern unsafe void nw_path_monitor_set_update_handler (IntPtr handle, BlockLiteral* callback);
 
 		[BindingImpl (BindingImplOptions.Optimizable)]
-		public void SetUpdatedSnapshotHandler (Action<NWPath> callback)
+		void _SetUpdatedSnapshotHandler (Action<NWPath> callback)
 		{
 			unsafe {
-				if (callback == null) {
+				if (callback is null) {
 					nw_path_monitor_set_update_handler (GetCheckedHandle (), null);
 					return;
 				}
 
-				BlockLiteral block_handler = new BlockLiteral ();
-				BlockLiteral *block_ptr_handler = &block_handler;
-				block_handler.SetupBlockUnsafe (static_UpdateSnapshot, callback);
-
-				try {
-					nw_path_monitor_set_update_handler (GetCheckedHandle (), (void*) block_ptr_handler);
-				} finally {
-					block_handler.CleanupBlock ();
-				}
+				delegate* unmanaged<IntPtr, IntPtr, void> trampoline = &TrampolineUpdatedSnapshot;
+				using var block = new BlockLiteral (trampoline, callback, typeof (NWPathMonitor), nameof (TrampolineUpdatedSnapshot));
+				nw_path_monitor_set_update_handler (GetCheckedHandle (), &block);
 			}
 		}
 
-		delegate void nw_path_monitor_cancel_handler_t (IntPtr block);
-		static nw_path_monitor_cancel_handler_t static_MonitorCanceled = TrampolineMonitorCanceled;
+		Action<NWPath>? userSnapshotHandler;
+		public Action<NWPath>? SnapshotHandler {
+			get => userSnapshotHandler;
+			set => userSnapshotHandler = value;
+		}
 
-		[MonoPInvokeCallback (typeof (nw_path_monitor_cancel_handler_t))]
-		static void TrampolineMonitorCanceled (IntPtr block)
+		void SetUpdatedSnapshotHandlerWrapper (NWPath path)
 		{
-			var del = BlockLiteral.GetTarget<Action> (block);
-			if (del != null) {
-				del ();
+			currentPath = path;
+			if (userSnapshotHandler is not null) {
+				userSnapshotHandler (currentPath);
 			}
 		}
 
 		[DllImport (Constants.NetworkLibrary)]
-		static extern unsafe void nw_path_monitor_set_cancel_handler (IntPtr handle, void *callback);
+		static extern unsafe void nw_path_monitor_set_cancel_handler (IntPtr handle, BlockLiteral* callback);
 
+		/// <param name="callback">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[BindingImpl (BindingImplOptions.Optimizable)]
 		public void SetMonitorCanceledHandler (Action callback)
 		{
 			unsafe {
-				if (callback == null) {
+				if (callback is null) {
 					nw_path_monitor_set_cancel_handler (GetCheckedHandle (), null);
 					return;
 				}
 
-				BlockLiteral block_handler = new BlockLiteral ();
-				BlockLiteral *block_ptr_handler = &block_handler;
-				block_handler.SetupBlockUnsafe (static_MonitorCanceled, callback);
-
-				try {
-					nw_path_monitor_set_cancel_handler (GetCheckedHandle (), (void*) block_ptr_handler);
-				} finally {
-					block_handler.CleanupBlock ();
-				}
+				using var block = BlockStaticDispatchClass.CreateBlock (callback);
+				nw_path_monitor_set_cancel_handler (GetCheckedHandle (), &block);
 			}
 		}
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern void nw_path_monitor_prohibit_interface_type (OS_nw_path_monitor monitor, NWInterfaceType interfaceType);
+
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public void ProhibitInterfaceType (NWInterfaceType interfaceType)
+			=> nw_path_monitor_prohibit_interface_type (GetCheckedHandle (), interfaceType);
+
+#if MONOMAC
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		[DllImport (Constants.NetworkLibrary)]
+		static extern OS_nw_path_monitor nw_path_monitor_create_for_ethernet_channel ();
+
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("tvos")]
+		[UnsupportedOSPlatform ("ios")]
+		[UnsupportedOSPlatform ("maccatalyst")]
+		public static NWPathMonitor CreateForEthernetChannel ()
+			=> new NWPathMonitor (nw_path_monitor_create_for_ethernet_channel (), true);
+#endif
 	}
+
 }

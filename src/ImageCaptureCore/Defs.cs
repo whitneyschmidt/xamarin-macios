@@ -24,10 +24,6 @@
 //
 // Defs.cs: Enumerations and definitions for ImageCaptureCore
 //
-using System;
-
-using Foundation;
-using ObjCRuntime;
 
 namespace ImageCaptureCore {
 
@@ -43,7 +39,12 @@ namespace ImageCaptureCore {
 		Orientation8 = 8,
 	}
 
+#if XAMCORE_5_0
+	[Native]
+	public enum ICReturnCodeOffset : long {
+#else
 	public enum ICReturnCodeOffset {
+#endif
 		Thumbnail = -21000,
 		Metadata = -21050,
 		Download = -21100,
@@ -51,6 +52,12 @@ namespace ImageCaptureCore {
 		ExFat = -21200,
 		Ptp = -21250,
 		System = -21300,
+		/// <summary>The device error code offset.</summary>
+		Device = -21350,
+		/// <summary>The device connection error code offset.</summary>
+		DeviceConnection = -21400,
+		/// <summary>The object error code offset.</summary>
+		Object = -21450,
 	}
 
 	[Native]
@@ -275,15 +282,19 @@ namespace ImageCaptureCore {
 	}
 
 	enum ICTransportType {
-	    [Field ("ICTransportTypeUSB")]
-	    Usb,
-	    [Field ("ICTransportTypeFireWire")]
-	    FireWire,
-	    [Field ("ICTransportTypeBluetooth")]
-	    Bluetooth,
-	    [Field ("ICTransportTypeTCPIP")]
-	    TcpIp,
-	    [Field ("ICTransportTypeMassStorage")]
-	    MassStorage,
+		[Field ("ICTransportTypeUSB")]
+		Usb,
+		[Field ("ICTransportTypeFireWire")]
+		FireWire,
+		[Field ("ICTransportTypeBluetooth")]
+		Bluetooth,
+		[Field ("ICTransportTypeTCPIP")]
+		TcpIp,
+		[Field ("ICTransportTypeMassStorage")]
+		MassStorage,
+		/// <summary>Represents a proximity transport type for devices.</summary>
+		[Mac (14, 0)]
+		[Field ("ICTransportTypeProximity")]
+		Proximity,
 	}
 }

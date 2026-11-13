@@ -22,17 +22,15 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
 using System.Threading;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Foundation {
 
 #if !COREBUILD
 	// Use this for synchronous operations
-	internal abstract class NSDispatcher : NSObject
-	{
+	internal abstract class NSDispatcher : NSObject {
 		public const string SelectorName = "xamarinApplySelector";
 		public static readonly Selector Selector = new Selector (SelectorName);
 
@@ -53,8 +51,8 @@ namespace Foundation {
 
 		public NSActionDispatcher (Action action)
 		{
-			if (action == null)
-				throw new ArgumentNullException ("action");
+			if (action is null)
+				throw new ArgumentNullException (nameof (action));
 
 			this.action = action;
 		}
@@ -64,14 +62,13 @@ namespace Foundation {
 
 	// Use this for synchronous operations
 	[Register ("__MonoMac_NSSynchronizationContextDispatcher")]
-	internal sealed class NSSynchronizationContextDispatcher : NSDispatcher
-	{
+	internal sealed class NSSynchronizationContextDispatcher : NSDispatcher {
 		readonly SendOrPostCallback d;
-		readonly object state;
+		readonly object? state;
 
-		public NSSynchronizationContextDispatcher (SendOrPostCallback d, object state)
+		public NSSynchronizationContextDispatcher (SendOrPostCallback d, object? state)
 		{
-			if (d == null)
+			if (d is null)
 				throw new ArgumentNullException (nameof (d));
 
 			this.d = d;
@@ -91,8 +88,8 @@ namespace Foundation {
 
 		public NSTimerActionDispatcher (Action<NSTimer> action)
 		{
-			if (action == null)
-				throw new ArgumentNullException ("action");
+			if (action is null)
+				throw new ArgumentNullException (nameof (action));
 
 			this.action = action;
 			IsDirectBinding = false;
@@ -117,30 +114,18 @@ namespace Foundation {
 		public override void Apply ()
 		{
 			gch.Free ();
-
-			//
-			// Although I would like to call Dispose here, to
-			// reduce the load on the GC, we have some useful diagnostic
-			// code in our runtime that is useful to track down
-			// problems, so we are removing the Dispose and letting
-			// the GC and our pipeline do their job.
-			// 
-#if MONOTOUCH
-			// MonoTouch has fixed the above problems, and we can call
-			// Dispose here.
 			Dispose ();
-#endif
 		}
 	}
 
 	// Use this for asynchronous operations
 	[Register ("__MonoMac_NSAsyncActionDispatcher")]
 	internal sealed class NSAsyncActionDispatcher : NSAsyncDispatcher {
-		Action action;
+		Action? action;
 
 		public NSAsyncActionDispatcher (Action action)
 		{
-			if (action == null)
+			if (action is null)
 				throw new ArgumentNullException (nameof (action));
 
 			this.action = action;
@@ -149,7 +134,8 @@ namespace Foundation {
 		public override void Apply ()
 		{
 			try {
-				action ();
+				if (action is not null)
+					action ();
 			} finally {
 				action = null;
 				base.Apply ();
@@ -160,12 +146,12 @@ namespace Foundation {
 	// Use this for asynchronous operations
 	[Register ("__MonoMac_NSAsyncSynchronizationContextDispatcher")]
 	internal sealed class NSAsyncSynchronizationContextDispatcher : NSAsyncDispatcher {
-		SendOrPostCallback d;
-		object state;
+		SendOrPostCallback? d;
+		object? state;
 
-		public NSAsyncSynchronizationContextDispatcher (SendOrPostCallback d, object state)
+		public NSAsyncSynchronizationContextDispatcher (SendOrPostCallback d, object? state)
 		{
-			if (d == null)
+			if (d is null)
 				throw new ArgumentNullException (nameof (d));
 
 			this.d = d;
@@ -175,7 +161,8 @@ namespace Foundation {
 		public override void Apply ()
 		{
 			try {
-				d (state);
+				if (d is not null)
+					d (state);
 			} finally {
 				d = null; // this is a one-shot dispatcher
 				state = null;
@@ -185,4 +172,3 @@ namespace Foundation {
 	}
 #endif // !COREBUILD
 }
-

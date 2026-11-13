@@ -20,12 +20,23 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 namespace AppKit {
+	/// <summary>Defines the inset distances for views.</summary>
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("maccatalyst")]
 	[StructLayout (LayoutKind.Sequential)]
 	public struct NSEdgeInsets {
-		public nfloat Top, Left, Bottom, Right;
+		/// <summary>The top edge inset value.</summary>
+		public nfloat Top;
+		/// <summary>The left edge inset value.</summary>
+		public nfloat Left;
+		/// <summary>The bottom edge inset value.</summary>
+		public nfloat Bottom;
+		/// <summary>The right edge inset value.</summary>
+		public nfloat Right;
 
 		public NSEdgeInsets (nfloat top, nfloat left, nfloat bottom, nfloat right)
 		{

@@ -1,0 +1,116 @@
+
+using System.Collections;
+
+namespace MonoTouchFixtures.Foundation {
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class NSOperatingSystemVersionTest {
+
+		// IEqual Tests
+
+		public static IEnumerable<(NSOperatingSystemVersion VersionOne, NSOperatingSystemVersion VersionTwo, bool Result)> VersionCasesEqual {
+			get {
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1), Result: true);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 2), Result: false);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1), Result: false);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 0), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1), Result: true);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 1, patchVersion: (nint) 2), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), Result: false);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), Result: true);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 0), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2), Result: true);
+
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesEqual")]
+		public void NSVersionEqual ((NSOperatingSystemVersion v1, NSOperatingSystemVersion v2, bool res) sample)
+		{
+			Assert.That (sample.res, Is.EqualTo (sample.v1 == sample.v2), $"{sample.v1}=={sample.v2}");
+			Assert.That (sample.res, Is.EqualTo (sample.v2 == sample.v1), $"{sample.v2}=={sample.v1}");
+			Assert.That (sample.res, Is.Not.EqualTo (sample.v1 != sample.v2), $"{sample.v1}!={sample.v2}");
+		}
+
+		// Object Equal Tests
+
+		public static IEnumerable<(Object VersionOne, bool Result)> VersionCasesObjectEqual {
+			get {
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), Result: true);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 2), Result: false);
+				yield return (VersionOne: "hello", Result: false);
+				yield return (VersionOne: null, Result: false);
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesObjectEqual")]
+		public void NSVersionObject ((Object obj, bool res) sample)
+		{
+			NSOperatingSystemVersion v1 = new NSOperatingSystemVersion ((nint) 1, (nint) 2, (nint) 3);
+			Assert.That (sample.res, Is.EqualTo (v1.Equals (sample.obj)));
+		}
+
+		// Object Compare Tests
+
+		public static IEnumerable<(Object VersionOne, int Result)> VersionCasesObjectCompare {
+			get {
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), Result: 0);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 2), Result: -1);
+				yield return (VersionOne: "hello", Result: 1);
+				yield return (VersionOne: null, Result: 1);
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesObjectCompare")]
+		public void NSVersionCompareObject ((Object obj, int result) sample)
+		{
+			NSOperatingSystemVersion v1 = new NSOperatingSystemVersion ((nint) 1, (nint) 2, (nint) 3);
+			Assert.That (sample.result, Is.EqualTo (v1.CompareTo (sample.obj)));
+		}
+
+		// Hash Tests
+
+		public static IEnumerable<NSOperatingSystemVersion> VersionCasesHashCode {
+			get {
+				yield return (new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3));
+				yield return (new NSOperatingSystemVersion (major: (nint) 2));
+				yield return (new NSOperatingSystemVersion (major: (nint) 2, minor: (nint) 5));
+				yield return (new NSOperatingSystemVersion (major: (nint) 2, minor: (nint) 9, patchVersion: (nint) 10));
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesHashCode")]
+		public void NSVersionHashCode (NSOperatingSystemVersion version)
+			=> Assert.That (version.GetHashCode (), Is.EqualTo (version.GetHashCode ()));
+
+
+		// ToString Tests
+
+		public static IEnumerable<(NSOperatingSystemVersion, string)> VersionCasesString {
+			get {
+				yield return (new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), "1.2.3");
+				yield return (new NSOperatingSystemVersion (major: (nint) 2), "2.0.0");
+				yield return (new NSOperatingSystemVersion (major: (nint) 2, minor: (nint) 5), "2.5.0");
+				yield return (new NSOperatingSystemVersion (major: (nint) 2, minor: (nint) 9, patchVersion: (nint) 10), "2.9.10");
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesString")]
+		public void NSVersionToString ((NSOperatingSystemVersion version, string versionStr) sample)
+			=> Assert.That (sample.versionStr, Is.EqualTo (sample.version.ToString ()));
+
+
+		// ICompare Tests
+
+		public static IEnumerable<(NSOperatingSystemVersion VersionOne, NSOperatingSystemVersion VersionTwo, int Result)> VersionCasesCompare {
+			get {
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1), Result: 0);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 2), Result: -1);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 1), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1), Result: 1);
+				yield return (VersionOne: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 2), VersionTwo: new NSOperatingSystemVersion (major: (nint) 1, minor: (nint) 2, patchVersion: (nint) 3), Result: -1);
+			}
+		}
+
+		[Test, TestCaseSource ("VersionCasesCompare")]
+		public void NSVersionCompare ((NSOperatingSystemVersion v1, NSOperatingSystemVersion v2, int res) sample)
+			=> Assert.That (sample.res, Is.EqualTo (sample.v1.CompareTo (sample.v2)));
+
+	}
+}

@@ -1,31 +1,30 @@
-using System;
-#if !NO_SYSTEM_DRAWING
+#if !__MACCATALYST__
 using System.Drawing;
-#endif
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace AppKit {
-	
+
 	public partial class NSOpenGLContext {
 
 		unsafe void SetValue (int /* GLint */ val, NSOpenGLContextParameter par)
 		{
-			int *p = &val;
+			int* p = &val;
 			SetValues ((IntPtr) p, par);
 		}
-			
+
 		unsafe int /* GLint */ GetValue (NSOpenGLContextParameter par)
 		{
 			int ret;
-			int *p = &ret;
-			GetValues ((IntPtr)p, par);
+			int* p = &ret;
+			GetValues ((IntPtr) p, par);
 
 			return ret;
 		}
 
-#if !NO_SYSTEM_DRAWING
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		unsafe public Rectangle SwapRectangle {
 			get {
 				Rectangle ret;
@@ -36,8 +35,10 @@ namespace AppKit {
 				SetValues ((IntPtr) (&value), NSOpenGLContextParameter.SwapRectangle);
 			}
 		}
-#endif
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool SwapRectangleEnabled {
 			get {
 				return GetValue (NSOpenGLContextParameter.SwapRectangleEnable) != 0;
@@ -47,6 +48,9 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool RasterizationEnabled {
 			get {
 				return GetValue (NSOpenGLContextParameter.RasterizationEnable) != 0;
@@ -56,6 +60,9 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool SwapInterval {
 			get {
 				return GetValue (NSOpenGLContextParameter.SwapInterval) != 0;
@@ -65,9 +72,12 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NSSurfaceOrder SurfaceOrder {
 			get {
-				switch (GetValue (NSOpenGLContextParameter.SurfaceOrder)){
+				switch (GetValue (NSOpenGLContextParameter.SurfaceOrder)) {
 				case -1:
 					return NSSurfaceOrder.BelowWindow;
 				default:
@@ -79,6 +89,9 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool SurfaceOpaque {
 			get {
 				return GetValue (NSOpenGLContextParameter.SurfaceOpacity) != 0;
@@ -88,6 +101,9 @@ namespace AppKit {
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public bool StateValidation {
 			get {
 				return GetValue (NSOpenGLContextParameter.StateValidation) != 0;
@@ -98,3 +114,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

@@ -1,33 +1,15 @@
-﻿#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-using Photos;
 using CoreGraphics;
-using RectangleF = CoreGraphics.CGRect;
-using SizeF = CoreGraphics.CGSize;
-using PointF = CoreGraphics.CGPoint;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-using MonoTouch.Photos;
-using System.Drawing;
-using MonoTouch.AssetsLibrary;
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
-using NUnit.Framework;
+using Photos;
 
 namespace MonoTouchFixtures.Photos {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class PHLivePhotoEditingContextTest {
+	public unsafe class PHLivePhotoEditingContextTest {
 
 		[SetUp]
 		public void Setup ()
@@ -38,12 +20,12 @@ namespace MonoTouchFixtures.Photos {
 
 		static NSError error_faker;
 
-		static PHLivePhotoFrameProcessingBlock2 managed = (IPHLivePhotoFrame frame, ref NSError error) => {
+		static PHLivePhotoFrameProcessingBlock managed = (IPHLivePhotoFrame frame, ref NSError error) => {
 			error = error_faker;
 			return null;
 		};
 
-		delegate IntPtr DPHLivePhotoFrameProcessingBlock2 (IntPtr block, IntPtr frame, ref IntPtr error);
+		delegate NativeHandle DPHLivePhotoFrameProcessingBlock2 (IntPtr block, NativeHandle frame, NativeHandle* error);
 
 #if !MONOMAC
 		// on macOS `initWithLivePhotoEditingInput:` returns `nil` and we throw
@@ -54,45 +36,52 @@ namespace MonoTouchFixtures.Photos {
 			using (var cei = new PHContentEditingInput ())
 			using (var lpec = new PHLivePhotoEditingContext (cei)) {
 				// not much but it means the linker cannot remove it
-				Assert.Null (lpec.FrameProcessor2, "FrameProcessor2");
+				Assert.That (lpec.FrameProcessor, Is.Null, "FrameProcessor");
 			}
 		}
 
+		[UnconditionalSuppressMessage ("Trimming", "IL2026", Justification = "This test pokes at internals, so it's expected to not be trimmer safe. It works though, so unless something changes, we're going to assume it's trimmer-compatible.")]
+		[UnconditionalSuppressMessage ("Trimming", "IL2075", Justification = "This test pokes at internals, so it's expected to not be trimmer safe. It works though, so unless something changes, we're going to assume it's trimmer-compatible.")]
 		[Test]
+#if __MACOS__
+		[DynamicDependency ("Invoke", "ObjCRuntime.Trampolines.SDPHLivePhotoFrameProcessingBlock", "Microsoft.macOS")]
+#elif __TVOS__
+		[DynamicDependency ("Invoke", "ObjCRuntime.Trampolines.SDPHLivePhotoFrameProcessingBlock", "Microsoft.tvOS")]
+#elif __MACCATALYST__
+		[DynamicDependency ("Invoke", "ObjCRuntime.Trampolines.SDPHLivePhotoFrameProcessingBlock", "Microsoft.MacCatalyst")]
+#elif __IOS__
+		[DynamicDependency ("Invoke", "ObjCRuntime.Trampolines.SDPHLivePhotoFrameProcessingBlock", "Microsoft.iOS")]
+#else
+#error Unknown platform
+#endif
 		public unsafe void FrameProcessingBlock2 ()
 		{
 			if (!Runtime.DynamicRegistrationSupported)
 				Assert.Ignore ("This test requires support for the dynamic registrar to setup the block");
 
-			var t = typeof (NSObject).Assembly.GetType ("ObjCRuntime.Trampolines/SDPHLivePhotoFrameProcessingBlock2");
-			Assert.NotNull (t, "SDPHLivePhotoFrameProcessingBlock2");
+			var t = typeof (NSObject).Assembly.GetType ("ObjCRuntime.Trampolines+SDPHLivePhotoFrameProcessingBlock");
+			Assert.That (t, Is.Not.Null, "SDPHLivePhotoFrameProcessingBlock2");
 
 			var m = t.GetMethod ("Invoke", BindingFlags.Static | BindingFlags.NonPublic);
-			Assert.NotNull (m, "Invoke");
+			Assert.That (m, Is.Not.Null, "Invoke");
 			var d = m.CreateDelegate (typeof (DPHLivePhotoFrameProcessingBlock2));
+			var fptr = m.MethodHandle.GetFunctionPointer ();
+			var del = new DPHLivePhotoFrameProcessingBlock2 ((IntPtr a, NativeHandle b, NativeHandle* c) => (NativeHandle) global::Bindings.Test.CFunctions.x_call_func_3 (fptr, (IntPtr) a, (IntPtr) b, (IntPtr) (void*) c));
 
-			Action userDelegate = new Action (() => Console.WriteLine ("Hello world!"));
+			using var bl = new BlockLiteral ((void*) fptr, managed, t, "Invoke");
+			var block = &bl;
+			var b = (IntPtr) block;
 
-			BlockLiteral bl = new BlockLiteral ();
-			bl.SetupBlock (d, managed);
-			try {
-				var block = &bl;
-				var b = (IntPtr) block;
+			// simulate a call that does not produce an error
+			error_faker = null;
+			Assert.That (del (b, NativeHandle.Zero, null), Is.EqualTo (NativeHandle.Zero), "1");
 
-				// simulate a call that does not produce an error
-				var args = new object [] { b, IntPtr.Zero, IntPtr.Zero };
-				error_faker = null;
-				Assert.That (m.Invoke (null, args), Is.EqualTo (IntPtr.Zero), "1");
-
-				// simulate a call that does produce an error
-				error_faker = new NSError ((NSString) "domain", 42);
-				Assert.That (m.Invoke (null, args), Is.EqualTo (IntPtr.Zero), "2");
-				Assert.That (args [2], Is.EqualTo (error_faker.Handle), "error");
-			}
-			finally {
-				bl.CleanupBlock ();
-			}
- 		}
+			// simulate a call that does produce an error
+			error_faker = new NSError ((NSString) "domain", 42);
+			NativeHandle ptr = NativeHandle.Zero;
+			Assert.That (del (b, NativeHandle.Zero, &ptr), Is.EqualTo (NativeHandle.Zero), "2");
+			Assert.That ((IntPtr) ptr, Is.EqualTo ((IntPtr) error_faker.Handle), "error 2");
+		}
 	}
 }
 

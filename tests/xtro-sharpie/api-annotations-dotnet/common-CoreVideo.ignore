@@ -1,0 +1,13 @@
+!missing-field! kCVImageBufferICCProfileKey not bound
+!missing-field! kCVPixelBufferPoolFreeBufferNotification not bound
+
+!missing-pinvoke! CVPixelBufferRelease is not bound
+!missing-pinvoke! CVPixelBufferRetain is not bound
+
+# iOS and tvOS
+
+!missing-field! kCVPixelBufferIOSurfaceCoreAnimationCompatibilityKey not bound
+
+## *GetTypeID are generally not bound
+!missing-pinvoke! CVMetalTextureCacheGetTypeID is not bound
+!missing-pinvoke! CVMetalTextureGetTypeID is not bound

@@ -26,17 +26,18 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
+
 using CoreFoundation;
 
 namespace CoreFoundation {
 
 	class CFDataBuffer : IDisposable {
-		byte[] buffer;
-		CFData data;
+		byte [] buffer;
+		CFData? data;
 
-		public unsafe CFDataBuffer (byte[] buffer)
+		public unsafe CFDataBuffer (byte [] buffer)
 		{
 			this.buffer = buffer;
 
@@ -47,9 +48,14 @@ namespace CoreFoundation {
 				data = CFData.FromData ((IntPtr) ptr, buffer.Length);
 		}
 
-		public CFDataBuffer (IntPtr ptr)
+		public CFDataBuffer (IntPtr ptr) : this (ptr, false)
 		{
-			data = new CFData (ptr, false);
+		}
+
+
+		public CFDataBuffer (IntPtr ptr, bool owns)
+		{
+			data = new CFData (ptr, owns);
 			buffer = data.GetBuffer ();
 		}
 
@@ -65,10 +71,12 @@ namespace CoreFoundation {
 		}
 
 		public IntPtr Handle {
-			get { return data.Handle; }
+			get {
+				return Runtime.RetainAndAutoreleaseHandle (data);
+			}
 		}
 
-		public byte[] Data {
+		public byte [] Data {
 			get { return buffer; }
 		}
 
@@ -78,11 +86,10 @@ namespace CoreFoundation {
 
 		protected virtual void Dispose (bool disposing)
 		{
-			if (data != null) {
+			if (data is not null) {
 				data.Dispose ();
 				data = null;
 			}
 		}
 	}
 }
-

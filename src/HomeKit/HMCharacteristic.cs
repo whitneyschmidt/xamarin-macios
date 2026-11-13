@@ -1,26 +1,23 @@
-using System;
-using ObjCRuntime;
-using Foundation;
+#nullable enable
 
 namespace HomeKit {
 
-	[iOS (8,0)]
-	[TV (10,0)]
-	partial class HMCharacteristic 
-	{
+	partial class HMCharacteristic {
+		/// <summary>Gets a value that tells whether the characteristic supports event notifications.</summary>
 		public bool SupportsEventNotification {
 			get {
-				foreach (var p in Properties){
+				foreach (var p in Properties) {
 					if (p == HMCharacteristicPropertyInternal.SupportsEventNotification)
 						return true;
 				}
 				return false;
 			}
 		}
-		
+
+		/// <summary>Gets a value that tells whether the characteristic value is readable.</summary>
 		public bool Readable {
 			get {
-				foreach (var p in Properties){
+				foreach (var p in Properties) {
 					if (p == HMCharacteristicPropertyInternal.Readable)
 						return true;
 				}
@@ -28,9 +25,10 @@ namespace HomeKit {
 			}
 		}
 
+		/// <summary>Gets a value that tells whether the characteristic is writable.</summary>
 		public bool Writable {
 			get {
-				foreach (var p in Properties){
+				foreach (var p in Properties) {
 					if (p == HMCharacteristicPropertyInternal.Writable)
 						return true;
 				}
@@ -38,8 +36,10 @@ namespace HomeKit {
 			}
 		}
 
-		[iOS (9,3)][Watch (2,2)]
-		[TV (10,0)]
+		/// <summary>If <see langword="true" />, the property should not be displayed to the user.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		public bool Hidden {
 			get {
 				foreach (var p in Properties) {

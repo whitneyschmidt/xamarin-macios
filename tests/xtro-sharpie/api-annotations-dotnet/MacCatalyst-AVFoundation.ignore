@@ -1,0 +1,63 @@
+# not possible with the generator but added INSFastEnumeration for whenever is supported.
+!missing-protocol-conformance! AVCaptureSynchronizedDataCollection should conform to NSFastEnumeration
+
+# ignored in mac os too
+!missing-protocol-conformance! AVSampleBufferDisplayLayer should conform to AVQueuedSampleBufferRendering (defined in 'AVSampleBufferDisplayLayerQueueManagement' category)
+
+## deprecated in all Mac Catalyst versions we support, and there's a viable alternative to use instead.
+!missing-protocol-member! AVAudioRecorderDelegate::audioRecorderEndInterruption:withFlags: not found
+
+## this API is to have cute Objective-C syntax for something that's (according to the docs) identical to what another method does (which we've bound).
+!missing-selector! AVCaptureSynchronizedDataCollection::objectForKeyedSubscript: not bound
+
+### deprecated in iOS8
+!missing-protocol-member! AVAudioPlayerDelegate::audioPlayerEndInterruption:withFlags: not found
+
+## I have no idea where these come from, I can't find them neither online, nor in any headers.
+!missing-selector! AVAudioSession::isAVAudioSessionAvailable not bound
+!missing-selector! AVAudioSession::preferredAVAudioSessionMode not bound
+!missing-selector! AVAudioSession::setPreferredAVAudioSessionMode:error: not bound
+
+# Introspection says this selector isn't there on Mac Catalyst, so not binding it.
+!missing-selector! AVAudioSession::setPrefersEchoCancelledInput:error: not bound
+
+# isEqual: is already exposed from NSObject, no need to expose again
+!missing-selector! AVCaptionRegion::isEqual: not bound
+
+!missing-null-allowed! 'System.Void AVFoundation.AVCaptionConversionValidator::ValidateCaptionConversion(System.Action`1<AVFoundation.AVCaptionConversionWarning>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVCapturePhotoOutput::SetPreparedPhotoSettings(AVFoundation.AVCapturePhotoSettings[],System.Action`2<System.Boolean,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTrack(AVFoundation.AVFragmentedMovie,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTracksWithMediaCharacteristic(AVFoundation.AVFragmentedMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTracksWithMediaCharacteristic(AVFoundation.AVFragmentedMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTracksWithMediaType(AVFoundation.AVFragmentedMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTracksWithMediaType(AVFoundation.AVFragmentedMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTrack(AVFoundation.AVMovie,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTracksWithMediaCharacteristic(AVFoundation.AVMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTracksWithMediaCharacteristic(AVFoundation.AVMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTracksWithMediaType(AVFoundation.AVMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTracksWithMediaType(AVFoundation.AVMovie,System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMutableCompositionTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTrack(System.Int32,System.Action`2<AVFoundation.AVMovieTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTracksWithMediaCharacteristic(System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMovieTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTracksWithMediaCharacteristic(System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMovieTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTracksWithMediaType(System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMovieTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTracksWithMediaType(System.String,System.Action`2<Foundation.NSArray`1<AVFoundation.AVMovieTrack>,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVAudioSession::Activate(AVFoundation.AVAudioSessionActivationOptions,System.Action`2<System.Boolean,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVAudioSession::Deactivate(AVFoundation.AVAudioSessionDeactivationOptions,System.Action`2<System.Boolean,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void AVFoundation.AVPlayerItem::FetchAccessLog(System.Action`1<AVFoundation.AVPlayerItemAccessLog>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVPlayerItem::FetchErrorLog(System.Action`1<AVFoundation.AVPlayerItemErrorLog>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+
+# AVAudioRoutingArbitrationCategory is macOS-only natively (API_UNAVAILABLE on the typedef), but the managed enum is bound and used by AVAudioRoutingArbiter.BeginArbitration.
+!unknown-native-enum! AVAudioRoutingArbitrationCategory bound
+!missing-null-allowed! 'AVFoundation.AVAudioConverterOutputStatus AVFoundation.AVAudioConverter::ConvertToBuffer(AVFoundation.AVAudioBuffer,Foundation.NSError&,AVFoundation.AVAudioConverterInputHandler)' is missing a '?' on parameter 'inputHandler' block return type
+!missing-null-allowed! 'System.Boolean AVFoundation.AVAudioInputNode::SetManualRenderingInputPcmFormat(AVFoundation.AVAudioFormat,AVFoundation.AVAudioIONodeInputBlock)' is missing a '?' on parameter 'block' block return type
+!missing-null-allowed! 'System.Boolean AVFoundation.AVAudioInputNode::SetRealtimeSafeManualRenderingInputPcmFormat(AVFoundation.AVAudioFormat,AVFoundation.AVAudioIONodeInputBlock)' is missing a '?' on parameter 'block' block return type
+!missing-null-allowed! 'System.Void AVFoundation.AVAsset::LoadMediaSelectionGroup(System.String,System.Action`2<AVFoundation.AVMediaSelectionGroup,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVAsset::LoadTrack(System.Int32,System.Action`2<AVFoundation.AVCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVAssetTrack::LoadSegment(CoreMedia.CMTime,System.Action`2<AVFoundation.AVAssetTrackSegment,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedAsset_AVFragmentedAssetTrackInspection::LoadTrack(AVFoundation.AVFragmentedAsset,System.Int32,System.Action`2<AVFoundation.AVFragmentedAssetTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableComposition_AVMutableCompositionTrackInspection::LoadTrack(AVFoundation.AVMutableComposition,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMutableMovie::LoadTrack(System.Int32,System.Action`2<AVFoundation.AVMovieTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVUrlAsset::FindCompatibleTrack(AVFoundation.AVCompositionTrack,System.Action`2<AVFoundation.AVAssetTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVComposition_AVCompositionTrackInspection::LoadTrack(AVFoundation.AVComposition,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVFragmentedMovie_AVFragmentedMovieTrackInspection::LoadTrack(AVFoundation.AVFragmentedMovie,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0
+!missing-null-allowed! 'System.Void AVFoundation.AVMovie_AVMovieTrackInspection::LoadTrack(AVFoundation.AVMovie,System.Int32,System.Action`2<AVFoundation.AVMutableCompositionTrack,Foundation.NSError>)' is missing a '?' on parameter 'completionHandler' block parameter #0

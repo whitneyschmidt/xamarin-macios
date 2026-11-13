@@ -25,9 +25,15 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#nullable enable
+
+using System.ComponentModel;
+
+using CoreFoundation;
 using CoreText;
-using ObjCRuntime;
+#if MONOMAC || __MACCATALYST__
+using AppKit;
+#endif
 #if !MONOMAC
 using UIKit;
 #endif
@@ -35,145 +41,400 @@ using UIKit;
 namespace Foundation {
 	public partial class NSAttributedString {
 
-		public string Value {
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="url">A url to the document to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="resultDocumentAttributes">Upon return, a dictionary of document-specific keys.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSUrl url, NSDictionary options, out NSDictionary resultDocumentAttributes, out NSError? error)
+		{
+			var rv = new NSAttributedString (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithUrl (url, options, out resultDocumentAttributes, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
+			}
+			return rv;
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="url">A url to the document to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="resultDocumentAttributes">Upon return, a dictionary of document-specific keys.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSUrl url, NSAttributedStringDocumentAttributes options, out NSDictionary resultDocumentAttributes, out NSError? error)
+		{
+			return Create (url, options.Dictionary, out resultDocumentAttributes, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="url">A url to the document to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSUrl url, NSAttributedStringDocumentAttributes options, out NSError? error)
+		{
+			return Create (url, options.Dictionary, out var _, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="url">A url to the document to load.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSUrl url, out NSError? error)
+		{
+			return Create (url, new NSDictionary (), out var _, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="data">The data to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="resultDocumentAttributes">Upon return, a dictionary of document-specific keys.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSData data, NSDictionary options, out NSDictionary resultDocumentAttributes, out NSError? error)
+		{
+			var rv = new NSAttributedString (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithData (data, options, out resultDocumentAttributes, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
+			}
+			return rv;
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="data">The data to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="resultDocumentAttributes">Upon return, a dictionary of document-specific keys.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSData data, NSAttributedStringDocumentAttributes options, out NSDictionary resultDocumentAttributes, out NSError? error)
+		{
+			return Create (data, options.Dictionary, out resultDocumentAttributes, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="data">The data to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSData data, NSAttributedStringDocumentAttributes options, out NSError? error)
+		{
+			return Create (data, options.Dictionary, out var _, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" />.</summary>
+		/// <param name="data">The data to load.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		public static NSAttributedString? Create (NSData data, out NSError? error)
+		{
+			return Create (data, new NSDictionary (), out var _, out error);
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" /> from a markdown file.</summary>
+		/// <param name="markdownFile">The url of the file to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="baseUrl">The base url to use when resolving markdown urls.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public static NSAttributedString? Create (NSUrl markdownFile, NSAttributedStringMarkdownParsingOptions? options, NSUrl? baseUrl, out NSError? error)
+		{
+			var rv = new NSAttributedString (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithContentsOfMarkdownFile (markdownFile, options, baseUrl, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
+			}
+			return rv;
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" /> from markdown data.</summary>
+		/// <param name="markdown">The markdown data to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="baseUrl">The base url to use when resolving markdown urls.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public static NSAttributedString? Create (NSData markdown, NSAttributedStringMarkdownParsingOptions? options, NSUrl? baseUrl, out NSError? error)
+		{
+			var rv = new NSAttributedString (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithMarkdown (markdown, options, baseUrl, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
+			}
+			return rv;
+		}
+
+		/// <summary>Create a new <see cref="NSAttributedString" /> from a string with markdown.</summary>
+		/// <param name="markdownString">The markdown string to load.</param>
+		/// <param name="options">A dictionary of attributes that specifies how to interpret the document contents.</param>
+		/// <param name="baseUrl">The base url to use when resolving markdown urls.</param>
+		/// <param name="error">The error if an error occurred.</param>
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		public static NSAttributedString? Create (string markdownString, NSAttributedStringMarkdownParsingOptions? options, NSUrl? baseUrl, out NSError? error)
+		{
+			var rv = new NSAttributedString (NSObjectFlag.Empty);
+			rv.InitializeHandle (rv._InitWithMarkdownString (markdownString, options, baseUrl, out error), string.Empty, false);
+			if (rv.Handle == IntPtr.Zero) {
+				rv.Dispose ();
+				return null;
+			}
+			return rv;
+		}
+
+#if __MACOS__ || XAMCORE_5_0
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSUrl url, NSAttributedStringDocumentAttributes documentAttributes, out NSError error)
+		: this (url, documentAttributes, out var _, out error) { }
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSData data, NSAttributedStringDocumentAttributes documentAttributes, out NSError error)
+		: this (data, documentAttributes, out var _, out error) { }
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSUrl url, out NSError error)
+		: this (url, new NSDictionary (), out var _, out error) { }
+
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSData data, out NSError error)
+		: this (data, new NSDictionary (), out var _, out error) { }
+#else
+		/// <param name="url">To be added.</param>
+		///         <param name="documentAttributes">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSUrl url, NSAttributedStringDocumentAttributes documentAttributes, ref NSError error)
+		: this (url, documentAttributes, out var _, ref error) { }
+
+		/// <param name="data">To be added.</param>
+		///         <param name="documentAttributes">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSData data, NSAttributedStringDocumentAttributes documentAttributes, ref NSError error)
+		: this (data, documentAttributes, out var _, ref error) { }
+
+		/// <param name="url">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSUrl url, ref NSError error)
+		: this (url, new NSDictionary (), out var _, ref error) { }
+
+		/// <param name="data">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[EditorBrowsable (EditorBrowsableState.Never)]
+		[Obsolete ("Use the 'Create' method instead, because there's no way to return an error from a constructor.")]
+		public NSAttributedString (NSData data, ref NSError error)
+		: this (data, new NSDictionary (), out var _, ref error) { }
+#endif
+
+#if __MACOS__
+		/// <param name="str">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public NSAttributedString (string str, NSStringAttributes? attributes)
+			: this (str, attributes?.Dictionary)
+		{
+		}
+#endif // __MACOS__
+
+		/// <summary>Contents of the object as a string.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>
+		/// 	  Contains the string representation of the attributed string, without including any attributes in the return value.
+		/// 	</remarks>
+		public string? Value {
 			get {
-				return NSString.FromHandle (LowLevelValue);
+				return CFString.FromHandle (LowLevelValue);
 			}
 		}
 
-		public NSDictionary GetAttributes (nint location, out NSRange effectiveRange)
+		/// <param name="location">To be added.</param>
+		/// <param name="effectiveRange">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		public NSDictionary? GetAttributes (nint location, out NSRange effectiveRange)
 		{
 			return Runtime.GetNSObject<NSDictionary> (LowLevelGetAttributes (location, out effectiveRange));
 		}
-		
-		public NSAttributedString (string str, CTStringAttributes attributes)
-			: this (str, attributes != null ? attributes.Dictionary : null)
+
+		/// <include file="../../docs/api/Foundation/NSAttributedString.xml" path="/Documentation/Docs[@DocId='M:Foundation.NSAttributedString.LowLevelGetAttributes(System.IntPtr,Foundation.NSRange@)']/*" />
+		public IntPtr LowLevelGetAttributes (nint location, out NSRange effectiveRange)
+		{
+			unsafe {
+				fixed (NSRange* effectiveRangePtr = &effectiveRange) {
+					return LowLevelGetAttributes (location, (IntPtr) effectiveRangePtr);
+				}
+			}
+		}
+
+		/// <param name="str">String.</param>
+		///         <param name="attributes">CoreText string attributes.</param>
+		///         <summary>Creates an NSAttributedString for use with CoreText rendering functions.</summary>
+		///         <remarks>
+		///         </remarks>
+		public NSAttributedString (string str, CTStringAttributes? attributes)
+			: this (str, attributes?.Dictionary)
 		{
 		}
 
-		public CTStringAttributes GetCoreTextAttributes (nint location, out NSRange effectiveRange)
+		/// <param name="location">To be added.</param>
+		/// <param name="effectiveRange">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		public CTStringAttributes? GetCoreTextAttributes (nint location, out NSRange effectiveRange)
 		{
 			var attr = GetAttributes (location, out effectiveRange);
-			return attr == null ? null : new CTStringAttributes (attr);
+			return attr is null ? null : new CTStringAttributes (attr);
 		}
 
-		public CTStringAttributes GetCoreTextAttributes (nint location, out NSRange longestEffectiveRange, NSRange rangeLimit)
+		/// <param name="location">To be added.</param>
+		/// <param name="longestEffectiveRange">To be added.</param>
+		/// <param name="rangeLimit">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		public CTStringAttributes? GetCoreTextAttributes (nint location, out NSRange longestEffectiveRange, NSRange rangeLimit)
 		{
 			var attr = GetAttributes (location, out longestEffectiveRange, rangeLimit);
-			return attr == null ? null : new CTStringAttributes (attr);			
+			return attr is null ? null : new CTStringAttributes (attr);
 		}
 
+		/// <param name="start">To be added.</param>
+		/// <param name="len">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		public NSAttributedString Substring (nint start, nint len)
 		{
 			return Substring (new NSRange (start, len));
 		}
 
 #if !MONOMAC
-		public NSAttributedString (string str, UIStringAttributes attributes)
-			: this (str, attributes != null ? attributes.Dictionary : null)
+		/// <param name="str">To be added.</param>
+		///         <param name="attributes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public NSAttributedString (string str, UIStringAttributes? attributes)
+			: this (str, attributes?.Dictionary)
 		{
 		}
 
-		public UIStringAttributes GetUIKitAttributes (nint location, out NSRange effectiveRange)
+		/// <param name="location">To be added.</param>
+		/// <param name="effectiveRange">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		public UIStringAttributes? GetUIKitAttributes (nint location, out NSRange effectiveRange)
 		{
 			var attr = GetAttributes (location, out effectiveRange);
-			return attr == null ? null : new UIStringAttributes (attr);
+			return attr is null ? null : new UIStringAttributes (attr);
 		}
 
-		public UIStringAttributes GetUIKitAttributes (nint location, out NSRange longestEffectiveRange, NSRange rangeLimit)
+		/// <param name="location">To be added.</param>
+		/// <param name="longestEffectiveRange">To be added.</param>
+		/// <param name="rangeLimit">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		public UIStringAttributes? GetUIKitAttributes (nint location, out NSRange longestEffectiveRange, NSRange rangeLimit)
 		{
 			var attr = GetAttributes (location, out longestEffectiveRange, rangeLimit);
-			return attr == null ? null : new UIStringAttributes (attr);			
+			return attr is null ? null : new UIStringAttributes (attr);
 		}
 
-		static internal NSDictionary ToDictionary (
-						  UIFont font,
-						  UIColor foregroundColor,
-						  UIColor backgroundColor,
-						  UIColor strokeColor,
-						  NSParagraphStyle paragraphStyle,
+		static internal NSDictionary? ToDictionary (
+						  UIFont? font,
+						  UIColor? foregroundColor,
+						  UIColor? backgroundColor,
+						  UIColor? strokeColor,
+						  NSParagraphStyle? paragraphStyle,
 						  NSLigatureType ligature,
 						  float kerning,
 						  NSUnderlineStyle underlineStyle,
-#if !WATCH
-						  NSShadow shadow,
-#endif
+						  NSShadow? shadow,
 						  float strokeWidth,
 						  NSUnderlineStyle strikethroughStyle)
 		{
 			var attr = new UIStringAttributes ();
-			if (font != null){
+			if (font is not null) {
 				attr.Font = font;
 			}
-			if (foregroundColor != null){
+			if (foregroundColor is not null) {
 				attr.ForegroundColor = foregroundColor;
 			}
-			if (backgroundColor != null){
+			if (backgroundColor is not null) {
 				attr.BackgroundColor = backgroundColor;
 			}
-			if (strokeColor != null){
+			if (strokeColor is not null) {
 				attr.StrokeColor = strokeColor;
 			}
-			if (paragraphStyle != null){
+			if (paragraphStyle is not null) {
 				attr.ParagraphStyle = paragraphStyle;
 			}
-			if (ligature != NSLigatureType.Default){
+			if (ligature != NSLigatureType.Default) {
 				attr.Ligature = ligature;
 			}
-			if (kerning != 0){
+			if (kerning != 0) {
 				attr.KerningAdjustment = kerning;
 			}
-			if (underlineStyle != NSUnderlineStyle.None){
+			if (underlineStyle != NSUnderlineStyle.None) {
 				attr.UnderlineStyle = underlineStyle;
 			}
-#if !WATCH
-			if (shadow != null){
+			if (shadow is not null) {
 				attr.Shadow = shadow;
 			}
-#endif
-			if (strokeWidth != 0){
+			if (strokeWidth != 0) {
 				attr.StrokeWidth = strokeWidth;
 			}
-			if (strikethroughStyle != NSUnderlineStyle.None){
+			if (strikethroughStyle != NSUnderlineStyle.None) {
 				attr.StrikethroughStyle = strikethroughStyle;
 			}
 			var dict = attr.Dictionary;
 			return dict.Count == 0 ? null : dict;
-		}				
+		}
 
+		/// <include file="../../docs/api/Foundation/NSAttributedString.xml" path="/Documentation/Docs[@DocId='M:Foundation.NSAttributedString.#ctor(System.String,UIKit.UIFont,UIKit.UIColor,UIKit.UIColor,UIKit.UIColor,UIKit.NSParagraphStyle,Foundation.NSLigatureType,System.Single,Foundation.NSUnderlineStyle,UIKit.NSShadow,System.Single,Foundation.NSUnderlineStyle)']/*" />
 		public NSAttributedString (string str,
-					   UIFont font = null,
-					   UIColor foregroundColor = null,
-					   UIColor backgroundColor = null,
-					   UIColor strokeColor = null,
-					   NSParagraphStyle paragraphStyle = null,
-					   NSLigatureType ligatures = NSLigatureType.Default,
-					   float kerning = 0,
-					   NSUnderlineStyle underlineStyle = NSUnderlineStyle.None,
-#if !WATCH
-					   NSShadow shadow = null,
-#endif
-					   float strokeWidth = 0,
-					   NSUnderlineStyle strikethroughStyle = NSUnderlineStyle.None)
-		: this (str, ToDictionary (font, foregroundColor, backgroundColor, strokeColor, paragraphStyle, ligatures, kerning, underlineStyle,
-#if !WATCH
-			shadow,
-#endif
-			strokeWidth, strikethroughStyle))
+						   UIFont? font = null,
+						   UIColor? foregroundColor = null,
+						   UIColor? backgroundColor = null,
+						   UIColor? strokeColor = null,
+						   NSParagraphStyle? paragraphStyle = null,
+						   NSLigatureType ligatures = NSLigatureType.Default,
+						   float kerning = 0,
+						   NSUnderlineStyle underlineStyle = NSUnderlineStyle.None,
+						   NSShadow? shadow = null,
+						   float strokeWidth = 0,
+						   NSUnderlineStyle strikethroughStyle = NSUnderlineStyle.None)
+			: this (str, ToDictionary (font, foregroundColor, backgroundColor, strokeColor, paragraphStyle, ligatures, kerning, underlineStyle,
+				shadow,
+				strokeWidth, strikethroughStyle))
 		{
 		}
-
-#if !XAMCORE_3_0
-		// This is a [Category] -> C# extension method (see uikit.cs) but it targets on static selector
-		// the resulting syntax does not look good in user code so we provide a better looking API
-		// https://bugzilla.xamarin.com/show_bug.cgi?id=15268
-		// https://trello.com/c/iQpXOxCd/227-category-and-static-methods-selectors
-		// note: we cannot reuse the same method name - as it would break compilation of existing apps
-		public static NSAttributedString CreateFrom (NSTextAttachment attachment)
-		{
-			return (null as NSAttributedString).FromTextAttachment (attachment);
-		}
 #endif
-#endif						      
 	}
 }

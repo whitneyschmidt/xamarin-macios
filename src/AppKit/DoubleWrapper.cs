@@ -22,12 +22,15 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using Foundation;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSBrowser {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -40,6 +43,7 @@ namespace AppKit {
 	}
 
 	public partial class NSMatrix {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -52,6 +56,7 @@ namespace AppKit {
 	}
 
 	public partial class NSPathCell {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -64,6 +69,7 @@ namespace AppKit {
 	}
 
 	public partial class NSPathControl {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -76,6 +82,7 @@ namespace AppKit {
 	}
 
 	public partial class NSStatusItem {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -86,8 +93,9 @@ namespace AppKit {
 			}
 		}
 	}
-	
+
 	public partial class NSTableView {
+		/// <summary>Occurs when the user double-clicks the control.</summary>
 		public event EventHandler DoubleClick {
 			add {
 				Target = ActionDispatcher.SetupDoubleAction (Target, value);
@@ -99,3 +107,4 @@ namespace AppKit {
 		}
 	}
 }
+#endif // !__MACCATALYST__

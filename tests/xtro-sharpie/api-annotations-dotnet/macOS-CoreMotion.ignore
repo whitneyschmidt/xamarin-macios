@@ -1,0 +1,17 @@
+## available in headers but not used in any (available) API
+!missing-enum! CMAttitudeReferenceFrame not bound
+
+## available in headers but do not make much sense for macOS
+!missing-selector! CMAmbientPressureData::pressure not bound
+!missing-selector! CMAmbientPressureData::temperature not bound
+!missing-selector! CMRecordedRotationRateData::startDate not bound
+!missing-selector! CMRotationRateData::rotationRate not bound
+!missing-type! CMAmbientPressureData not bound
+!missing-type! CMRecordedRotationRateData not bound
+!missing-type! CMRotationRateData not bound
+
+# added in 13 and deprecated in 14 so we will just ignore them
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::QueryPedometerData(Foundation.NSDate,Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::QueryPedometerData(Foundation.NSDate,Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerUpdates(Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #0
+!missing-null-allowed! 'System.Void CoreMotion.CMPedometer::StartPedometerUpdates(Foundation.NSDate,System.Action`2<CoreMotion.CMPedometerData,Foundation.NSError>)' is missing a '?' on parameter 'handler' block parameter #1

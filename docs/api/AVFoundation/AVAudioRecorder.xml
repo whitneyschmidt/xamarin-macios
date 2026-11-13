@@ -1,0 +1,27 @@
+<Documentation>
+  <Docs DocId="T:AVFoundation.AVAudioRecorder">
+    <summary>Audio recording class.</summary>
+    <remarks>
+      <para>
+	To create instances of this class use the factory method <see cref="Create(Foundation.NSUrl,AudioSettings,out Foundation.NSError)" /></para>
+      <example>
+        <code lang="csharp lang-csharp"><![CDATA[
+var settings = new AudioSettings () {
+	AudioFormat = AudioFormatType.LinearPCM,
+	AudioQuality = AVAudioQuality.High,
+	SampleRate = 44100f,
+	NumberChannels = 1,
+};
+var recorder = AVAudioRecorder.Create (url, settings, out error);
+if (recorder == null) {
+    Console.WriteLine (error);
+    return;
+}
+recorder.PrepareToRecord ();
+recorder.Record ();
+]]></code>
+      </example>
+    </remarks>
+    <related type="externalDocumentation" href="https://developer.apple.com/documentation/avfaudio/avaudiorecorder">Apple documentation for <c>AVAudioRecorder</c></related>
+  </Docs>
+</Documentation>

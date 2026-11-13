@@ -1,0 +1,45 @@
+using System.IO;
+using System.Diagnostics;
+using System.Linq;
+using Metal;
+
+namespace MonoTouchFixtures.Metal {
+	[Preserve (AllMembers = true)]
+	public class MTLIOCompressionContextTest {
+
+		[SetUp]
+		public void SetUp ()
+		{
+			TestRuntime.AssertXcodeVersion (15, 0);
+		}
+
+
+		[Test]
+		public void DefaultChunkSize ()
+		{
+			TestRuntime.AssertNotSimulator (); // metal api not supported on the sim
+			Assert.That (MTLIOCompressionContext.DefaultChunkSize, Is.Not.EqualTo (-1));
+		}
+
+		[Test]
+		public void CreateAndFlushTest ()
+		{
+			TestRuntime.AssertNotSimulator (); // metal api not supported on the sim
+			var outputPath = Path.GetTempFileName ();
+			try {
+				// create and flush, test should simple pass, no need to asserts
+				var compressIO = MTLIOCompressionContext.Create (outputPath, MTLIOCompressionMethod.Lzfse,
+					MTLIOCompressionContext.DefaultChunkSize);
+				Assert.That (compressIO, Is.Not.Null, "Null compress IO");
+				// add data
+				var data = Enumerable.Repeat ((byte) 0x20, 20).ToArray ();
+				compressIO!.AppendData (data);
+				compressIO!.FlushAndDestroy ();
+				// ensure we do not have issues with a second flush and destroy
+				compressIO.Dispose ();
+			} finally {
+				File.Delete (outputPath);
+			}
+		}
+	}
+}

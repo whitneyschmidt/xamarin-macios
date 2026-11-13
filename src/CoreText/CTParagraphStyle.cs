@@ -26,71 +26,103 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
+using System.Collections.Generic;
+
 using CoreFoundation;
-using CoreGraphics;
 
 namespace CoreText {
 
-#region Paragraph Style Values
+	#region Paragraph Style Values
 
 	// defined as uint8_t - /System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h
+	/// <summary>An enumeration whose values specify options for text alignment.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreText.CTParagraphStyle.Alignment" />
+	///     <altmember cref="CoreText.CTParagraphStyleSettings.Alignment" />
+	///     <altmember cref="CoreText.CTTextTab(CoreText.CTTextAlignment,System.Double)" />
 	public enum CTTextAlignment : byte {
-		Left      = 0,
-		Right     = 1,
-		Center    = 2,
+		/// <summary>To be added.</summary>
+		Left = 0,
+		/// <summary>To be added.</summary>
+		Right = 1,
+		/// <summary>To be added.</summary>
+		Center = 2,
+		/// <summary>To be added.</summary>
 		Justified = 3,
-		Natural   = 4,
+		/// <summary>To be added.</summary>
+		Natural = 4,
 	}
 
 	// defined as uint8_t - /System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h
+	/// <summary>An enumeration whose values specify line-breaking options.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreText.CTParagraphStyle.LineBreakMode" />
+	///     <altmember cref="CoreText.CTParagraphStyleSettings.LineBreakMode" />
 	public enum CTLineBreakMode : byte {
-		WordWrapping      = 0,
-		CharWrapping      = 1,
-		Clipping          = 2,
-		TruncatingHead    = 3,
-		TruncatingTail    = 4,
-		TruncatingMiddle  = 5,
+		/// <summary>To be added.</summary>
+		WordWrapping = 0,
+		/// <summary>To be added.</summary>
+		CharWrapping = 1,
+		/// <summary>To be added.</summary>
+		Clipping = 2,
+		/// <summary>To be added.</summary>
+		TruncatingHead = 3,
+		/// <summary>To be added.</summary>
+		TruncatingTail = 4,
+		/// <summary>To be added.</summary>
+		TruncatingMiddle = 5,
 	}
 
+	/// <summary>An enumeration whose values can be used as flags indicating writing directions.</summary>
+	///     <remarks>To be added.</remarks>
 	[Flags]
 	// defined as int8_t - /System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h
 	public enum CTWritingDirection : sbyte {
-		Natural     = -1,
+		/// <summary>To be added.</summary>
+		Natural = -1,
+		/// <summary>To be added.</summary>
 		LeftToRight = 0,
+		/// <summary>To be added.</summary>
 		RightToLeft = 1,
 
+		// part of an unnamed enum inside CTStringAttributes.h
+		/// <summary>To be added.</summary>
 		Embedding = (0 << 1),
-		Override = (1 << 1)
+		/// <summary>To be added.</summary>
+		Override = (1 << 1),
 	}
 
 	// defined as uint32_t - /System/Library/Frameworks/CoreText.framework/Headers/CTParagraphStyle.h
 	internal enum CTParagraphStyleSpecifier : uint {
-		Alignment               = 0,
-		FirstLineHeadIndent     = 1,
-		HeadIndent              = 2,
-		TailIndent              = 3,
-		TabStops                = 4,
-		DefaultTabInterval      = 5,
-		LineBreakMode           = 6,
-		LineHeightMultiple      = 7,
-		MaximumLineHeight       = 8,
-		MinimumLineHeight       = 9,
-		[Deprecated (PlatformName.iOS, 6, 0, message : "Please use MaximumLineSpacing")]
-		[Deprecated (PlatformName.MacOSX, 10, 8, message : "Please use MaximumLineSpacing")]
-		LineSpacing             = 10,
-		ParagraphSpacing        = 11,
-		ParagraphSpacingBefore  = 12,
-		BaseWritingDirection    = 13,
-		MaximumLineSpacing      = 14,
-		MinimumLineSpacing      = 15,
-		LineSpacingAdjustment   = 16,
-		LineBoundsOptions       = 17,
+		Alignment = 0,
+		FirstLineHeadIndent = 1,
+		HeadIndent = 2,
+		TailIndent = 3,
+		TabStops = 4,
+		DefaultTabInterval = 5,
+		LineBreakMode = 6,
+		LineHeightMultiple = 7,
+		MaximumLineHeight = 8,
+		MinimumLineHeight = 9,
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.8", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("tvos16.0", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'MaximumLineSpacing' instead.")]
+		LineSpacing = 10,
+		ParagraphSpacing = 11,
+		ParagraphSpacingBefore = 12,
+		BaseWritingDirection = 13,
+		MaximumLineSpacing = 14,
+		MinimumLineSpacing = 15,
+		LineSpacingAdjustment = 16,
+		LineBoundsOptions = 17,
 
 		Count = 18,
 	}
@@ -100,13 +132,13 @@ namespace CoreText {
 		public nuint /* size_t */ valueSize;
 		public IntPtr value;
 	}
-#endregion
+	#endregion
 
 	[StructLayout (LayoutKind.Explicit)]
 	internal struct CTParagraphStyleSettingValue {
 		[FieldOffset (0)] public byte int8;
 		[FieldOffset (0)] public nfloat single;
-		[FieldOffset (0)] public nuint  native_uint;
+		[FieldOffset (0)] public nuint native_uint;
 		[FieldOffset (0)] public IntPtr pointer;
 	}
 
@@ -117,12 +149,12 @@ namespace CoreText {
 			Spec = spec;
 		}
 
-		internal CTParagraphStyleSpecifier Spec {get; private set;}
+		internal CTParagraphStyleSpecifier Spec { get; private set; }
 
-		internal abstract int ValueSize {get;}
-		internal abstract void WriteValue (CTParagraphStyleSettingValue[] values, int index);
+		internal abstract int ValueSize { get; }
+		internal abstract void WriteValue (CTParagraphStyleSettingValue [] values, int index);
 
-		public virtual void Dispose (CTParagraphStyleSettingValue[] values, int index)
+		public virtual void Dispose (CTParagraphStyleSettingValue [] values, int index)
 		{
 		}
 	}
@@ -137,10 +169,10 @@ namespace CoreText {
 		}
 
 		internal override int ValueSize {
-			get {return sizeof (byte);}
+			get { return sizeof (byte); }
 		}
 
-		internal override void WriteValue (CTParagraphStyleSettingValue[] values, int index)
+		internal override void WriteValue (CTParagraphStyleSettingValue [] values, int index)
 		{
 			values [index].int8 = value;
 		}
@@ -156,10 +188,10 @@ namespace CoreText {
 		}
 
 		internal override int ValueSize {
-			get {return IntPtr.Size;}
+			get { return IntPtr.Size; }
 		}
 
-		internal override void WriteValue (CTParagraphStyleSettingValue[] values, int index)
+		internal override void WriteValue (CTParagraphStyleSettingValue [] values, int index)
 		{
 			values [index].native_uint = value;
 		}
@@ -175,10 +207,10 @@ namespace CoreText {
 		}
 
 		internal override int ValueSize {
-			get {return IntPtr.Size;}
+			get { return IntPtr.Size; }
 		}
 
-		internal override void WriteValue (CTParagraphStyleSettingValue[] values, int index)
+		internal override void WriteValue (CTParagraphStyleSettingValue [] values, int index)
 		{
 			values [index].single = value;
 		}
@@ -187,59 +219,121 @@ namespace CoreText {
 	internal class CTParagraphStyleSpecifierIntPtrsValue : CTParagraphStyleSpecifierValue {
 		CFArray value;
 
-		public CTParagraphStyleSpecifierIntPtrsValue (CTParagraphStyleSpecifier spec, IntPtr[] value)
+		public CTParagraphStyleSpecifierIntPtrsValue (CTParagraphStyleSpecifier spec, NativeHandle [] value)
 			: base (spec)
 		{
 			this.value = CFArray.FromIntPtrs (value);
 		}
 
 		internal override int ValueSize {
-			get {return IntPtr.Size;}
+			get { return IntPtr.Size; }
 		}
 
-		internal override void WriteValue (CTParagraphStyleSettingValue[] values, int index)
+		internal override void WriteValue (CTParagraphStyleSettingValue [] values, int index)
 		{
 			values [index].pointer = value.Handle;
 		}
 
-		public override void Dispose (CTParagraphStyleSettingValue[] values, int index)
+		/// <inheritdoc />
+		public override void Dispose (CTParagraphStyleSettingValue [] values, int index)
 		{
 			values [index].pointer = IntPtr.Zero;
 			value.Dispose ();
-			value = null;
 		}
 	}
 
+	/// <summary>A class that can be used to override elements of a <see cref="CoreText.CTParagraphStyle" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CTParagraphStyleSettings {
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTParagraphStyleSettings ()
 		{
 		}
 
-		public IEnumerable<CTTextTab> TabStops {get; set;}
-		public CTTextAlignment? Alignment {get; set;}
-		public CTLineBreakMode? LineBreakMode {get; set;}
-		public CTWritingDirection? BaseWritingDirection {get; set;}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public IEnumerable<CTTextTab>? TabStops { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CTTextAlignment? Alignment { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CTLineBreakMode? LineBreakMode { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public CTWritingDirection? BaseWritingDirection { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTLineBoundsOptions? LineBoundsOptions { get; set; }
-		public nfloat? FirstLineHeadIndent {get; set;}
-		public nfloat? HeadIndent {get; set;}
-		public nfloat? TailIndent {get; set;}
-		public nfloat? DefaultTabInterval {get; set;}
-		public nfloat? LineHeightMultiple {get; set;}
-		public nfloat? MaximumLineHeight {get; set;}
-		public nfloat? MinimumLineHeight {get; set;}
-		public nfloat? LineSpacing {get; set;}
-		public nfloat? ParagraphSpacing {get; set;}
-		public nfloat? ParagraphSpacingBefore {get; set;}
-		public nfloat? MaximumLineSpacing { get; set;}
-		public nfloat? MinimumLineSpacing { get; set;}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? FirstLineHeadIndent { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? HeadIndent { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? TailIndent { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? DefaultTabInterval { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? LineHeightMultiple { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? MaximumLineHeight { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? MinimumLineHeight { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? LineSpacing { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? ParagraphSpacing { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? ParagraphSpacingBefore { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? MaximumLineSpacing { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat? MinimumLineSpacing { get; set; }
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public nfloat? LineSpacingAdjustment { get; set; }
 
 		internal List<CTParagraphStyleSpecifierValue> GetSpecifiers ()
 		{
 			var values = new List<CTParagraphStyleSpecifierValue> ();
 
-			if (TabStops != null)
+			if (TabStops is not null)
 				values.Add (CreateValue (CTParagraphStyleSpecifier.TabStops, TabStops));
 			if (Alignment.HasValue)
 				values.Add (CreateValue (CTParagraphStyleSpecifier.Alignment, (byte) Alignment.Value));
@@ -263,8 +357,10 @@ namespace CoreText {
 				values.Add (CreateValue (CTParagraphStyleSpecifier.MaximumLineHeight, MaximumLineHeight.Value));
 			if (MinimumLineHeight.HasValue)
 				values.Add (CreateValue (CTParagraphStyleSpecifier.MinimumLineHeight, MinimumLineHeight.Value));
+#pragma warning disable CA1422 // This call site is reachable on: 'ios' 12.2 and later, 'maccatalyst' 12.2 and later, 'macOS/OSX' 12.0 and later, 'tvos' 12.2 and later. 'CTParagraphStyleSpecifier.LineSpacing' is obsoleted on: 'ios' 6.0 and later (Use 'MaximumLineSpacing' instead.), 'maccatalyst' 6.0 and later (Use 'MaximumLineSpacing' instead.), 'macOS/OSX' 10.8 and later (Use 'MaximumLineSpacing' instead.), 'tvos' 16.0 and later (Use 'MaximumLineSpacing' instead.).
 			if (LineSpacing.HasValue)
 				values.Add (CreateValue (CTParagraphStyleSpecifier.LineSpacing, LineSpacing.Value));
+#pragma warning restore CA1422
 			if (ParagraphSpacing.HasValue)
 				values.Add (CreateValue (CTParagraphStyleSpecifier.ParagraphSpacing, ParagraphSpacing.Value));
 			if (ParagraphSpacingBefore.HasValue)
@@ -280,10 +376,16 @@ namespace CoreText {
 
 		static CTParagraphStyleSpecifierValue CreateValue (CTParagraphStyleSpecifier spec, IEnumerable<CTTextTab> value)
 		{
-			var handles = new List<IntPtr>();
-			foreach (var ts in value)
+			// The analyzer cannot deal with arrays, we manually keep alive the whole array below
+#pragma warning disable RBI0014
+			var handles = new List<NativeHandle> ();
+			foreach (var ts in value) {
 				handles.Add (ts.Handle);
-			return new CTParagraphStyleSpecifierIntPtrsValue (spec, handles.ToArray ());
+			}
+			CTParagraphStyleSpecifierValue result = new CTParagraphStyleSpecifierIntPtrsValue (spec, handles.ToArray ());
+			GC.KeepAlive (value);
+			return result;
+#pragma warning restore RBI0014
 		}
 
 		static CTParagraphStyleSpecifierValue CreateValue (CTParagraphStyleSpecifier spec, byte value)
@@ -302,53 +404,29 @@ namespace CoreText {
 		}
 	}
 
-	public class CTParagraphStyle : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		internal CTParagraphStyle (IntPtr handle, bool owns)
+	/// <summary>Describes the style of paragraphs.</summary>
+	///     <remarks>To be added.</remarks>
+	///     <altmember cref="CoreText.CTStringAttributes.ParagraphStyle" />
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CTParagraphStyle : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CTParagraphStyle (NativeHandle handle, bool owns)
+			: base (handle, owns, true)
 		{
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.ArgumentNull (this, "handle");
-
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
-		}
-		
-		public IntPtr Handle {
-			get {return handle;}
 		}
 
-		~CTParagraphStyle ()
-		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
-		}
-
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
-
-#region Paragraph Style Creation
+		#region Paragraph Style Creation
 		[DllImport (Constants.CoreTextLibrary)]
-		static extern IntPtr CTParagraphStyleCreate (CTParagraphStyleSetting[] settings, nint settingCount);
-		public CTParagraphStyle (CTParagraphStyleSettings settings)
+		static extern IntPtr CTParagraphStyleCreate (CTParagraphStyleSetting []? settings, nint settingCount);
+		/// <param name="settings">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CTParagraphStyle (CTParagraphStyleSettings? settings)
+			: base (settings is null ? CTParagraphStyleCreate (null, 0) : CreateFromSettings (settings), true, true)
 		{
-			handle = settings == null 
-				? CTParagraphStyleCreate (null, 0)
-				: CreateFromSettings (settings);
-
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
 		}
 
 		static unsafe IntPtr CreateFromSettings (CTParagraphStyleSettings s)
@@ -357,22 +435,22 @@ namespace CoreText {
 
 			var specifiers = s.GetSpecifiers ();
 
-			var settings  = new CTParagraphStyleSetting [specifiers.Count];
-			var values    = new CTParagraphStyleSettingValue [specifiers.Count];
+			var settings = new CTParagraphStyleSetting [specifiers.Count];
+			var values = new CTParagraphStyleSettingValue [specifiers.Count];
 
 			int i = 0;
 			foreach (var e in specifiers) {
 				e.WriteValue (values, i);
-				settings [i].spec       = e.Spec;
-				settings [i].valueSize  = (uint) e.ValueSize;
+				settings [i].spec = e.Spec;
+				settings [i].valueSize = (uint) e.ValueSize;
 				++i;
 			}
 
 			fixed (CTParagraphStyleSettingValue* pv = values) {
 				for (i = 0; i < settings.Length; ++i) {
 					// TODO: is this safe on the ARM?
-					byte* p = &pv[i].int8;
-					settings[i].value = (IntPtr) p;
+					byte* p = &pv [i].int8;
+					settings [i].value = (IntPtr) p;
 				}
 				handle = CTParagraphStyleCreate (settings, settings.Length);
 			}
@@ -387,6 +465,8 @@ namespace CoreText {
 			return handle;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTParagraphStyle ()
 			: this (null)
 		{
@@ -394,164 +474,146 @@ namespace CoreText {
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTParagraphStyleCreateCopy (IntPtr paragraphStyle);
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public CTParagraphStyle Clone ()
 		{
-			return new CTParagraphStyle (CTParagraphStyleCreateCopy (handle), true);
+			return new CTParagraphStyle (CTParagraphStyleCreateCopy (Handle), true);
 		}
-#endregion
+		#endregion
 
-#region Paragraph Style Access
+		#region Paragraph Style Access
 		[DllImport (Constants.CoreTextLibrary)]
-		static extern unsafe bool CTParagraphStyleGetValueForSpecifier (IntPtr paragraphStyle, CTParagraphStyleSpecifier spec, nuint valueBufferSize, void* valueBuffer);
+		static extern unsafe byte CTParagraphStyleGetValueForSpecifier (IntPtr paragraphStyle, CTParagraphStyleSpecifier spec, nuint valueBufferSize, void* valueBuffer);
 
-		public unsafe CTTextTab[] GetTabStops ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public unsafe CTTextTab? []? GetTabStops ()
 		{
 			IntPtr cfArrayRef;
-			if (!CTParagraphStyleGetValueForSpecifier (handle, CTParagraphStyleSpecifier.TabStops, (uint) IntPtr.Size, (void*) &cfArrayRef))
+			if (CTParagraphStyleGetValueForSpecifier (Handle, CTParagraphStyleSpecifier.TabStops, (uint) IntPtr.Size, (void*) &cfArrayRef) == 0)
 				throw new InvalidOperationException ("Unable to get property value.");
 			if (cfArrayRef == IntPtr.Zero)
-				return new CTTextTab [0];
+				return Array.Empty<CTTextTab> ();
 			return NSArray.ArrayFromHandle (cfArrayRef, p => new CTTextTab (p, false));
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTTextAlignment Alignment {
-			get {return (CTTextAlignment) GetByteValue (CTParagraphStyleSpecifier.Alignment);}
+			get { return (CTTextAlignment) GetByteValue (CTParagraphStyleSpecifier.Alignment); }
 		}
 
 		unsafe byte GetByteValue (CTParagraphStyleSpecifier spec)
 		{
 			byte value;
-			if (!CTParagraphStyleGetValueForSpecifier (handle, spec, sizeof (byte), &value))
+			if (CTParagraphStyleGetValueForSpecifier (Handle, spec, sizeof (byte), &value) == 0)
 				throw new InvalidOperationException ("Unable to get property value.");
 			return value;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTLineBreakMode LineBreakMode {
-			get {return (CTLineBreakMode) GetByteValue (CTParagraphStyleSpecifier.LineBreakMode);}
+			get { return (CTLineBreakMode) GetByteValue (CTParagraphStyleSpecifier.LineBreakMode); }
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTWritingDirection BaseWritingDirection {
-			get {return (CTWritingDirection) GetByteValue (CTParagraphStyleSpecifier.BaseWritingDirection);}
+			get { return (CTWritingDirection) GetByteValue (CTParagraphStyleSpecifier.BaseWritingDirection); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		FirstLineHeadIndent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat FirstLineHeadIndent {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.FirstLineHeadIndent); }
 		}
 
-		unsafe
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		GetFloatValue (CTParagraphStyleSpecifier spec)
+		unsafe nfloat GetFloatValue (CTParagraphStyleSpecifier spec)
 		{
 			nfloat value;
-			if (!CTParagraphStyleGetValueForSpecifier (handle, spec, (nuint) sizeof (nfloat), &value))
+			if (CTParagraphStyleGetValueForSpecifier (Handle, spec, (nuint) sizeof (nfloat), &value) == 0)
 				throw new InvalidOperationException ("Unable to get property value.");
-			return
-#if !XAMCORE_4_0
-			(float)
-#endif
-			value;
+			return value;
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		HeadIndent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat HeadIndent {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.HeadIndent); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		TailIndent {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat TailIndent {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.TailIndent); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		DefaultTabInterval {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat DefaultTabInterval {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.DefaultTabInterval); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		LineHeightMultiple {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat LineHeightMultiple {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.LineHeightMultiple); }
 		}
 
-public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		MaximumLineHeight {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat MaximumLineHeight {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.MaximumLineHeight); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		MinimumLineHeight {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat MinimumLineHeight {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.MinimumLineHeight); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		LineSpacing {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[ObsoletedOSPlatform ("macos10.8", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("ios6.0", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("tvos16.0", "Use 'MaximumLineSpacing' instead.")]
+		[ObsoletedOSPlatform ("maccatalyst13.1", "Use 'MaximumLineSpacing' instead.")]
+		public nfloat LineSpacing {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.LineSpacing); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		ParagraphSpacing {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat ParagraphSpacing {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.ParagraphSpacing); }
 		}
 
-		public
-#if XAMCORE_4_0
-		nfloat
-#else
-		float
-#endif
-		ParagraphSpacingBefore {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public nfloat ParagraphSpacingBefore {
 			get { return GetFloatValue (CTParagraphStyleSpecifier.ParagraphSpacingBefore); }
 		}
-#endregion
+		#endregion
 	}
 }
-

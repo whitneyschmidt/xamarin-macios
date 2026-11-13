@@ -7,23 +7,26 @@
 // Copyright 2013-2014, Xamarin Inc.
 //
 
-using System;
-using System.Runtime.InteropServices;
+#nullable enable
 
 using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
 
 namespace ImageIO {
-
-	[iOS (7,0)]
+	/// <summary>A mutable container of metadata. (See <see cref="ImageIO.CGImageMetadata" />.)</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CGMutableImageMetadata : CGImageMetadata {
 
 		[DllImport (Constants.ImageIOLibrary)]
 		extern static /* CGMutableImageMetadataRef __nonnull */ IntPtr CGImageMetadataCreateMutable ();
 
-		public CGMutableImageMetadata () : 
-			base (CGImageMetadataCreateMutable ())
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CGMutableImageMetadata ()
+			: base (CGImageMetadataCreateMutable (), true)
 		{
 		}
 
@@ -31,100 +34,154 @@ namespace ImageIO {
 		extern static /* CGMutableImageMetadataRef __nullable */ IntPtr CGImageMetadataCreateMutableCopy (
 			/* CGImageMetadataRef __nonnull */ IntPtr metadata);
 
-		public CGMutableImageMetadata (CGImageMetadata metadata) :
-			base (CGImageMetadataCreateMutableCopy (metadata.Handle))
+		/// <param name="metadata">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CGMutableImageMetadata (CGImageMetadata metadata)
+			: base (CGImageMetadataCreateMutableCopy (metadata.GetNonNullHandle (nameof (metadata))), true)
 		{
-			if (metadata == null)
-				throw new ArgumentNullException ("metadata");
+			GC.KeepAlive (metadata);
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageMetadataRegisterNamespaceForPrefix (
+		unsafe extern static byte CGImageMetadataRegisterNamespaceForPrefix (
 			/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata, /* CFStringRef __nonnull */ IntPtr xmlns,
-			/* CFStringRef __nonnull */ IntPtr prefix, /* CFErrorRef __nullable */ out IntPtr error);
+			/* CFStringRef __nonnull */ IntPtr prefix, /* CFErrorRef __nullable */ IntPtr* error);
 
-		public bool RegisterNamespace (NSString xmlns, NSString prefix, out NSError error)
+		/// <param name="xmlns">To be added.</param>
+		///         <param name="prefix">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool RegisterNamespace (NSString xmlns, NSString prefix, out NSError? error)
 		{
-			if (xmlns == null)
-				throw new ArgumentNullException ("xmlns");
-			if (prefix == null)
-				throw new ArgumentNullException ("prefix");
+			if (xmlns is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (xmlns));
+			if (prefix is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (prefix));
+			byte result;
 			IntPtr err;
-			bool result = CGImageMetadataRegisterNamespaceForPrefix (Handle, xmlns.Handle, prefix.Handle, out err);
-			error = err == IntPtr.Zero ? null : new NSError (err);
+			unsafe {
+				result = CGImageMetadataRegisterNamespaceForPrefix (Handle, xmlns.Handle, prefix.Handle, &err);
+				GC.KeepAlive (xmlns);
+				GC.KeepAlive (prefix);
+			}
+			error = Runtime.GetNSObject<NSError> (err);
+			return result != 0;
+		}
+
+		[DllImport (Constants.ImageIOLibrary)]
+		extern static byte CGImageMetadataSetTagWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
+			/* CGImageMetadataTagRef __nullable */ IntPtr parent, /* CFStringRef __nonnull */ IntPtr path,
+			/* CGImageMetadataTagRef __nonnull */ IntPtr tag);
+
+		/// <param name="parent">To be added.</param>
+		///         <param name="path">To be added.</param>
+		///         <param name="tag">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool SetTag (CGImageMetadataTag? parent, NSString path, CGImageMetadataTag tag)
+		{
+			if (path is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (path));
+			if (tag is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (tag));
+			bool result = CGImageMetadataSetTagWithPath (Handle, parent.GetHandle (), path.Handle, tag.Handle) != 0;
+			GC.KeepAlive (parent);
+			GC.KeepAlive (path);
+			GC.KeepAlive (tag);
 			return result;
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageMetadataSetTagWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
-			/* CGImageMetadataTagRef __nullable */ IntPtr parent, /* CFStringRef __nonnull */ IntPtr path,
-			/* CGImageMetadataTagRef __nonnull */ IntPtr tag);
-
-		public bool SetTag (CGImageMetadataTag parent, NSString path, CGImageMetadataTag tag)
-		{
-			IntPtr p = parent == null ? IntPtr.Zero : parent.Handle;
-			if (path == null)
-				throw new ArgumentNullException ("path");
-			if (tag == null)
-				throw new ArgumentNullException ("tag");
-			return CGImageMetadataSetTagWithPath (Handle, p, path.Handle, tag.Handle);
-		}
-
-		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageMetadataSetValueWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
+		extern static byte CGImageMetadataSetValueWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
 			/* CGImageMetadataTagRef __nullable */ IntPtr parent, /* CFStringRef __nonnull */ IntPtr path,
 			/* CFTypeRef __nonnull */ IntPtr value);
 
-		public bool SetValue (CGImageMetadataTag parent, NSString path, NSObject value)
+		/// <param name="parent">To be added.</param>
+		///         <param name="path">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool SetValue (CGImageMetadataTag? parent, NSString path, NSObject value)
 		{
-			if (value == null)
-				throw new ArgumentNullException ("value");
-			return SetValue (parent, path, value.Handle);
+			if (value is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
+			bool result = SetValue (parent, path, value.Handle);
+			GC.KeepAlive (value);
+			return result;
 		}
 
-		public bool SetValue (CGImageMetadataTag parent, NSString path, bool value)
+		/// <param name="parent">To be added.</param>
+		///         <param name="path">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool SetValue (CGImageMetadataTag? parent, NSString path, bool value)
 		{
 			return SetValue (parent, path, value ? CFBoolean.TrueHandle : CFBoolean.FalseHandle);
 		}
 
-		bool SetValue (CGImageMetadataTag parent, NSString path, IntPtr value)
+		bool SetValue (CGImageMetadataTag? parent, NSString path, IntPtr value)
 		{
-			IntPtr p = parent == null ? IntPtr.Zero : parent.Handle;
-			if (path == null)
-				throw new ArgumentNullException ("path");
-			return CGImageMetadataSetValueWithPath (Handle, p, path.Handle, value);
+			if (path is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (path));
+			bool result = CGImageMetadataSetValueWithPath (Handle, parent.GetHandle (), path.Handle, value) != 0;
+			GC.KeepAlive (parent);
+			GC.KeepAlive (path);
+			return result;
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageMetadataRemoveTagWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
+		extern static byte CGImageMetadataRemoveTagWithPath (/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
 			/* CGImageMetadataTagRef __nullable */ IntPtr parent, /* CFStringRef __nonnull */ IntPtr path);
 
-		public bool RemoveTag (CGImageMetadataTag parent, NSString path)
+		/// <param name="parent">To be added.</param>
+		///         <param name="path">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public bool RemoveTag (CGImageMetadataTag? parent, NSString path)
 		{
-			IntPtr p = parent == null ? IntPtr.Zero : parent.Handle;
-			if (path == null)
-				throw new ArgumentNullException ("path");
-			return CGImageMetadataRemoveTagWithPath (Handle, p, path.Handle);
+			if (path is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (path));
+			bool result = CGImageMetadataRemoveTagWithPath (Handle, parent.GetHandle (), path.Handle) != 0;
+			GC.KeepAlive (parent);
+			GC.KeepAlive (path);
+			return result;
 		}
 
 		[DllImport (Constants.ImageIOLibrary)]
-		[return: MarshalAs (UnmanagedType.I1)]
-		extern static bool CGImageMetadataSetValueMatchingImageProperty (
+		extern static byte CGImageMetadataSetValueMatchingImageProperty (
 			/* CGMutableImageMetadataRef __nonnull */ IntPtr metadata,
 			/* CFStringRef __nonnull */ IntPtr dictionaryName, /* CFStringRef __nonnull */ IntPtr propertyName,
 			/* CFTypeRef __nonnull */ IntPtr value);
 
+		/// <param name="dictionaryName">To be added.</param>
+		///         <param name="propertyName">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool SetValueMatchingImageProperty (NSString dictionaryName, NSString propertyName, NSObject value)
 		{
-			if (value == null)
-				throw new ArgumentNullException ("value");
-			return SetValueMatchingImageProperty (dictionaryName, propertyName, value.Handle);
+			if (value is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (value));
+			bool result = SetValueMatchingImageProperty (dictionaryName, propertyName, value.Handle);
+			GC.KeepAlive (value);
+			return result;
 		}
 
+		/// <param name="dictionaryName">To be added.</param>
+		///         <param name="propertyName">To be added.</param>
+		///         <param name="value">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		public bool SetValueMatchingImageProperty (NSString dictionaryName, NSString propertyName, bool value)
 		{
 			return SetValueMatchingImageProperty (dictionaryName, propertyName, value ? CFBoolean.TrueHandle : CFBoolean.FalseHandle);
@@ -132,11 +189,14 @@ namespace ImageIO {
 
 		bool SetValueMatchingImageProperty (NSString dictionaryName, NSString propertyName, IntPtr value)
 		{
-			if (dictionaryName == null)
-				throw new ArgumentNullException ("dictionaryName");
-			if (propertyName == null)
-				throw new ArgumentNullException ("propertyName");
-			return CGImageMetadataSetValueMatchingImageProperty (Handle, dictionaryName.Handle, propertyName.Handle, value);
+			if (dictionaryName is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (dictionaryName));
+			if (propertyName is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (propertyName));
+			bool result = CGImageMetadataSetValueMatchingImageProperty (Handle, dictionaryName.Handle, propertyName.Handle, value) != 0;
+			GC.KeepAlive (dictionaryName);
+			GC.KeepAlive (propertyName);
+			return result;
 		}
 	}
 }

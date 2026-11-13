@@ -25,16 +25,22 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using ObjCRuntime;
-using Foundation;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSSlider {
-		NSActionDispatcher dispatcher;
+		NSActionDispatcher? dispatcher;
 
-		[Mac (10,12)]
+		/// <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
 		public static NSSlider FromTarget (Action action)
 		{
 			var dispatcher = new NSActionDispatcher (action);
@@ -43,7 +49,15 @@ namespace AppKit {
 			return control;
 		}
 
-		[Mac (10,12)]
+		/// <param name="value">To be added.</param>
+		///         <param name="minValue">To be added.</param>
+		///         <param name="maxValue">To be added.</param>
+		///         <param name="action">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("macos")]
+		[UnsupportedOSPlatform ("maccatalyst")]
 		public static NSSlider FromValue (double value, double minValue, double maxValue, Action action)
 		{
 			var dispatcher = new NSActionDispatcher (action);
@@ -53,4 +67,4 @@ namespace AppKit {
 		}
 	}
 }
-
+#endif // !__MACCATALYST__

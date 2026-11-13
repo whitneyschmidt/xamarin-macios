@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for HKQuantityTypeIdentifier
 //
 // Authors:
@@ -7,20 +7,14 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !MONOMAC
+#if HAS_HEALTHKIT
 
-using System;
-
-#if XAMCORE_2_0
-using Foundation;
 using HealthKit;
-using UIKit;
+#if MONOMAC
+using AppKit;
 #else
-using MonoTouch.Foundation;
-using MonoTouch.HealthKit;
-using MonoTouch.UIKit;
+using UIKit;
 #endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.HealthKit {
 
@@ -31,9 +25,15 @@ namespace MonoTouchFixtures.HealthKit {
 		[Test]
 		public void EnumValues_22351 ()
 		{
+#if MONOMAC
+			TestRuntime.AssertXcodeVersion (14, 0);
+#else
 			TestRuntime.AssertXcodeVersion (6, 0);
+#endif
 
-			foreach (HKQuantityTypeIdentifier value in Enum.GetValues (typeof (HKQuantityTypeIdentifier))) {
+			var failures = new List<string> ();
+
+			foreach (var value in Enum.GetValues<HKQuantityTypeIdentifier> ()) {
 
 				// we need to have version checks for anything added after iOS 8.0
 				switch (value) {
@@ -60,11 +60,77 @@ namespace MonoTouchFixtures.HealthKit {
 				case HKQuantityTypeIdentifier.RestingHeartRate:
 				case HKQuantityTypeIdentifier.WalkingHeartRateAverage:
 				case HKQuantityTypeIdentifier.HeartRateVariabilitySdnn:
-					if (!TestRuntime.CheckXcodeVersion(9, 0))
+					if (!TestRuntime.CheckXcodeVersion (9, 0))
 						continue;
 					break;
 				case HKQuantityTypeIdentifier.DistanceDownhillSnowSports:
 					if (!TestRuntime.CheckXcodeVersion (9, 2))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.AppleStandTime:
+				case HKQuantityTypeIdentifier.EnvironmentalAudioExposure:
+				case HKQuantityTypeIdentifier.HeadphoneAudioExposure:
+					if (!TestRuntime.CheckXcodeVersion (11, 0))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.SixMinuteWalkTestDistance:
+				case HKQuantityTypeIdentifier.StairAscentSpeed:
+				case HKQuantityTypeIdentifier.StairDescentSpeed:
+				case HKQuantityTypeIdentifier.WalkingAsymmetryPercentage:
+				case HKQuantityTypeIdentifier.WalkingDoubleSupportPercentage:
+				case HKQuantityTypeIdentifier.WalkingSpeed:
+				case HKQuantityTypeIdentifier.WalkingStepLength:
+					if (!TestRuntime.CheckXcodeVersion (12, TestRuntime.MinorXcode12APIMismatch))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.AppleMoveTime:
+					if (!TestRuntime.CheckXcodeVersion (12, 5))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.AppleWalkingSteadiness:
+				case HKQuantityTypeIdentifier.NumberOfAlcoholicBeverages:
+					if (!TestRuntime.CheckXcodeVersion (13, 0))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.HeartRateRecoveryOneMinute:
+				case HKQuantityTypeIdentifier.RunningGroundContactTime:
+				case HKQuantityTypeIdentifier.RunningStrideLength:
+				case HKQuantityTypeIdentifier.RunningVerticalOscillation:
+				case HKQuantityTypeIdentifier.RunningPower:
+				case HKQuantityTypeIdentifier.RunningSpeed:
+				case HKQuantityTypeIdentifier.AtrialFibrillationBurden:
+				case HKQuantityTypeIdentifier.AppleSleepingWristTemperature:
+				case HKQuantityTypeIdentifier.UnderwaterDepth:
+				case HKQuantityTypeIdentifier.WaterTemperature:
+					// These are all available in iOS 16.0, but lets bump to 14.1 to test only on macOS 13
+					if (!TestRuntime.CheckXcodeVersion (14, 1))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.CyclingCadence:
+				case HKQuantityTypeIdentifier.CyclingFunctionalThresholdPower:
+				case HKQuantityTypeIdentifier.CyclingPower:
+				case HKQuantityTypeIdentifier.CyclingSpeed:
+				case HKQuantityTypeIdentifier.EnvironmentalSoundReduction:
+				case HKQuantityTypeIdentifier.PhysicalEffort:
+				case HKQuantityTypeIdentifier.TimeInDaylight:
+					if (!TestRuntime.CheckXcodeVersion (15, 0))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.AppleSleepingBreathingDisturbances:
+				case HKQuantityTypeIdentifier.CrossCountrySkiingSpeed:
+				case HKQuantityTypeIdentifier.DistanceCrossCountrySkiing:
+				case HKQuantityTypeIdentifier.DistancePaddleSports:
+				case HKQuantityTypeIdentifier.DistanceRowing:
+				case HKQuantityTypeIdentifier.DistanceSkatingSports:
+				case HKQuantityTypeIdentifier.EstimatedWorkoutEffortScore:
+				case HKQuantityTypeIdentifier.PaddleSportsSpeed:
+				case HKQuantityTypeIdentifier.RowingSpeed:
+				case HKQuantityTypeIdentifier.WorkoutEffortScore:
+					if (!TestRuntime.CheckXcodeVersion (16, 0))
+						continue;
+					break;
+				case HKQuantityTypeIdentifier.HeartRateVariabilityRmssd:
+					if (!TestRuntime.CheckXcodeVersion (27, 0))
 						continue;
 					break;
 				}
@@ -73,13 +139,14 @@ namespace MonoTouchFixtures.HealthKit {
 					using (var ct = HKQuantityType.Create (value)) {
 						Assert.That (ct.Handle, Is.Not.EqualTo (IntPtr.Zero), value.ToString ());
 					}
-				}
-				catch (Exception e) {
-					Assert.Fail ("{0} could not be created: {1}", value, e);
+				} catch (Exception e) {
+					failures.Add ($"{value} could not be created: {e}");
 				}
 			}
+
+			Assert.That (failures, Is.Empty, "No failures");
 		}
 	}
 }
 
-#endif // !__TVOS__
+#endif // HAS_HEALTHKIT

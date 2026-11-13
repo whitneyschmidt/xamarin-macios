@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for SCNNode
 //
 // Authors:
@@ -7,36 +7,14 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
 using CoreAnimation;
-using Foundation;
 using SceneKit;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.CoreAnimation;
-using MonoTouch.Foundation;
-using MonoTouch.SceneKit;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.SceneKit {
 
@@ -47,8 +25,7 @@ namespace MonoTouchFixtures.SceneKit {
 		[Test]
 		public void AddAnimation ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 8, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
 
 			using (var a = CAAnimation.CreateAnimation ())
 			using (var n = SCNNode.Create ()) {
@@ -64,7 +41,7 @@ namespace MonoTouchFixtures.SceneKit {
 		[Test]
 		public void AddAnimation_Overload ()
 		{
-			TestRuntime.AssertXcodeVersion (9,0);
+			TestRuntime.AssertXcodeVersion (9, 0);
 
 			using (var ca = CAAnimation.CreateAnimation ())
 			using (var a = SCNAnimation.FromCAAnimation (ca))
@@ -78,5 +55,3 @@ namespace MonoTouchFixtures.SceneKit {
 		}
 	}
 }
-
-#endif // !__WATCHOS__

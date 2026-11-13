@@ -1,11 +1,10 @@
-using ObjCRuntime;
-using Foundation;
 using CoreFoundation;
-using System;
 
-namespace PushKit 
-{
-	[iOS (8,0)]
+namespace PushKit {
+	/// <summary>Holds the <see cref="PushKit.PKPushCredentials.Token" /> that holds the user's credentials.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/PushKit/Reference/PKPushCredentials_Class/index.html">Apple documentation for <c>PKPushCredentials</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface PKPushCredentials {
@@ -16,7 +15,10 @@ namespace PushKit
 		NSData Token { get; }
 	}
 
-	[iOS (8,0)]
+	/// <summary>Contains a dictionary of data for a push operation.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/PushKit/Reference/PKPushPayload_Class/index.html">Apple documentation for <c>PKPushPayload</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface PKPushPayload {
@@ -27,62 +29,136 @@ namespace PushKit
 		NSDictionary DictionaryPayload { get; }
 	}
 
-	[iOS (8,0)]
+	/// <summary>Allows the developer to register for remote pushes.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/PushKit/Reference/PKPushRegistry_Class/index.html">Apple documentation for <c>PKPushRegistry</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface PKPushRegistry {
+		/// <summary>An instance of the PushKit.IPKPushRegistryDelegate model class which acts as the class delegate.</summary>
+		///         <value>The instance of the PushKit.IPKPushRegistryDelegate model class</value>
+		///         <remarks>
+		///           <para>The delegate instance assigned to this object will be used to handle events or provide data on demand to this class.</para>
+		///           <para>When setting the Delegate or WeakDelegate values events will be delivered to the specified instance instead of being delivered to the C#-style events</para>
+		///           <para>This is the strongly typed version of the object, developers should use the WeakDelegate property instead if they want to merely assign a class derived from NSObject that has been decorated with [Export] attributes.</para>
+		///         </remarks>
 		[Wrap ("WeakDelegate")]
-		[Protocolize]
-		PKPushRegistryDelegate Delegate { get; set; }
+		IPKPushRegistryDelegate Delegate { get; set; }
 
-		[Export ("delegate", ArgumentSemantic.Weak)][NullAllowed]
+		[Export ("delegate", ArgumentSemantic.Weak)]
+		[NullAllowed]
 		NSObject WeakDelegate { get; set; }
 
-		[Export ("desiredPushTypes", ArgumentSemantic.Copy)][NullAllowed]
+		[Export ("desiredPushTypes", ArgumentSemantic.Copy)]
+		[NullAllowed]
 		NSSet DesiredPushTypes { get; set; }
 
 		[Export ("pushTokenForType:")]
+		[return: NullAllowed]
 		NSData PushToken (string type);
 
 		[DesignatedInitializer]
 		[Export ("initWithQueue:")]
-		IntPtr Constructor (DispatchQueue queue);
+		NativeHandle Constructor ([NullAllowed] DispatchQueue queue);
 	}
-	
-	[iOS (8,0)]
+
+	/// <summary>Holds the transports available for Push Kit (currently only Voice Over IP).</summary>
+	[MacCatalyst (13, 1)]
 	[Static]
 	interface PKPushType {
-		
+
+		/// <summary>Represents the value associated with the constant PKPushTypeVoIP</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>To be added.</remarks>
+		[Introduced (PlatformName.MacCatalyst, 14, 0)]
+		[NoMac]
 		[Field ("PKPushTypeVoIP")]
 		NSString Voip { get; }
 
-		[iOS (9,0)]
+		/// <summary>Gets the WatchKit complication push type, <c>PKPushTypeComplication</c>.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.iOS, 13, 0, message: "Use directly from watchOS instead.")]
+		[NoMac]
+		[NoMacCatalyst]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use directly from watchOS instead.")]
 		[Field ("PKPushTypeComplication")]
 		NSString Complication { get; }
 
-		[iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Field ("PKPushTypeFileProvider")]
 		NSString FileProvider { get; }
 	}
 
-	[iOS (8,0)]
+	/// <summary>An object that contains metadata about a received PushKit VoIP notification.</summary>
+	[NoTV, iOS (26, 4), Mac (26, 4), MacCatalyst (26, 4)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface PKVoIPPushMetadata {
+		/// <summary>Gets a value that indicates whether the app must report a call or live conversation in response to receiving this VoIP notification.</summary>
+		[Export ("mustReport")]
+		bool MustReport { get; }
+	}
+
+	interface IPKPushRegistryDelegate { }
+
+	/// <summary>Completion handler for registering a push operation.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/PushKit/Reference/PKPushRegistryDelegate_Protocol/index.html">Apple documentation for <c>PKPushRegistryDelegate</c></related>
+	[MacCatalyst (13, 1)]
 	[Model]
 	[Protocol]
 	[BaseType (typeof (NSObject))]
 	interface PKPushRegistryDelegate {
+		/// <param name="registry">To be added.</param>
+		/// <param name="credentials">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("pushRegistry:didUpdatePushCredentials:forType:"), EventArgs ("PKPushRegistryUpdated"), EventName ("CredentialsUpdated")]
 		void DidUpdatePushCredentials (PKPushRegistry registry, PKPushCredentials credentials, string type);
 
-		[Abstract] // now optional in iOS 11
-		[Deprecated (PlatformName.iOS, 11,0, message: "Use the 'DidReceiveIncomingPushWithPayload' overload accepting an 'Action' argument instead.")]
+		/// <param name="registry">To be added.</param>
+		/// <param name="payload">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <summary>Developers should not use this deprecated method. Developers should use the 'DidReceiveIncomingPushWithPayload' overload accepting an 'Action' argument instead.</summary>
+		/// <remarks>To be added.</remarks>
+		[NoMac]
+		[Deprecated (PlatformName.iOS, 11, 0, message: "Use the 'DidReceiveIncomingPushWithPayload' overload accepting an 'Action' argument instead.")]
+		[NoMacCatalyst]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use the 'DidReceiveIncomingPushWithPayload' overload accepting an 'Action' argument instead.")]
 		[Export ("pushRegistry:didReceiveIncomingPushWithPayload:forType:"), EventArgs ("PKPushRegistryRecieved"), EventName ("IncomingPushReceived")]
 		void DidReceiveIncomingPush (PKPushRegistry registry, PKPushPayload payload, string type);
 
-		[iOS (11,0)]
+		/// <param name="registry">To be added.</param>
+		/// <param name="payload">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="completion">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("pushRegistry:didReceiveIncomingPushWithPayload:forType:withCompletionHandler:")]
 		void DidReceiveIncomingPush (PKPushRegistry registry, PKPushPayload payload, string type, Action completion);
 
+		/// <summary>Tells the delegate that a VoIP push notification arrived with metadata.</summary>
+		/// <param name="registry">The push registry that received the notification.</param>
+		/// <param name="payload">The push payload for the notification.</param>
+		/// <param name="metadata">The metadata associated with the VoIP push notification.</param>
+		/// <param name="completion">The completion handler to call when you finish processing the notification.</param>
+		[NoTV, iOS (26, 4), Mac (26, 4), MacCatalyst (26, 4)]
+		[Export ("pushRegistry:didReceiveIncomingVoIPPushWithPayload:metadata:withCompletionHandler:")]
+		void DidReceiveIncomingVoIPPush (PKPushRegistry registry, PKPushPayload payload, PKVoIPPushMetadata metadata, Action completion);
+
+		/// <param name="registry">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("pushRegistry:didInvalidatePushTokenForType:"), EventArgs ("PKPushRegistryRecieved"), EventName ("PushTokenInvalidated")]
 		void DidInvalidatePushToken (PKPushRegistry registry, string type);
 	}

@@ -25,29 +25,36 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if !WATCH
-
-using System;
-
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
-
-	public class AVUrlAssetOptions : DictionaryContainer
-	{
+	/// <summary>Represents options used to construct <see cref="AVFoundation.AVUrlAsset" /> object</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class AVUrlAssetOptions : DictionaryContainer {
 #if !COREBUILD
+		/// <summary>Creates a new instance of <see cref="AVUrlAssetOptions" /> with an empty dictionary.</summary>
 		public AVUrlAssetOptions ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
+		/// <summary>Creates a new instance of <see cref="AVUrlAssetOptions" /> from the specified dictionary.</summary>
+		/// <param name="dictionary">The dictionary containing the asset options.</param>
 		public AVUrlAssetOptions (NSDictionary dictionary)
 			: base (dictionary)
 		{
 		}
-
+		/// <summary>Indicates whether the asset should be prepared to indicate a precise duration and provide precise random access by time.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant AVURLAssetPreferPreciseDurationAndTimingKey value to access the underlying dictionary.</remarks>
 		public bool? PreferPreciseDurationAndTiming {
 			set {
 				SetBooleanValue (AVUrlAsset.PreferPreciseDurationAndTimingKey, value);
@@ -57,6 +64,10 @@ namespace AVFoundation {
 			}
 		}
 
+		/// <summary>Represents the restrictions used by the asset when resolving references to external media data.</summary>
+		///         <value>
+		///         </value>
+		///         <remarks>The property uses constant AVURLAssetReferenceRestrictionsKey value to access the underlying dictionary.</remarks>
 		public AVAssetReferenceRestrictions? ReferenceRestrictions {
 			set {
 				SetNumberValue (AVUrlAsset.ReferenceRestrictionsKey, (nuint?) (ulong?) value);
@@ -68,5 +79,3 @@ namespace AVFoundation {
 #endif
 	}
 }
-
-#endif

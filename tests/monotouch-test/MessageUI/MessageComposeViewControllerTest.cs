@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for MFMessageComposeViewController
 //
 // Authors:
@@ -7,21 +7,12 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if HAS_MESSAGE
 
-using System;
 using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
 
 using MessageUI;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.MessageUI;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.MessageUI {
 
@@ -36,13 +27,12 @@ namespace MonoTouchFixtures.MessageUI {
 				Assert.Inconclusive ("Not configured to send text");
 
 			using (var mail = new MFMessageComposeViewController ()) {
-				Assert.Null (mail.MessageComposeDelegate, "MessageComposeDelegate");
+				Assert.That (mail.MessageComposeDelegate, Is.Null, "MessageComposeDelegate");
 				mail.Finished += (sender, e) => { };
-				Assert.NotNull (mail.MessageComposeDelegate, "MessageComposeDelegate");
+				Assert.That (mail.MessageComposeDelegate, Is.Not.Null, "MessageComposeDelegate");
 			}
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
-
+#endif // HAS_MESSAGE

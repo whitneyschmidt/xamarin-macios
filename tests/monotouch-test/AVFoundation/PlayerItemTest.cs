@@ -7,23 +7,12 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__
-
-using System;
-#if XAMCORE_2_0
 using AVFoundation;
-using Foundation;
 #if MONOMAC
 using AppKit;
 #else
 using UIKit;
 #endif
-#else
-using MonoTouch.AVFoundation;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.AVFoundation {
 
@@ -36,12 +25,10 @@ namespace MonoTouchFixtures.AVFoundation {
 		{
 			TestRuntime.AssertXcodeVersion (5, 1);
 			// Apple's AVCustomEdit samples calls this with `nil`
-			Assert.Null (AVPlayerItem.FromAsset (null), "1");
+			Assert.That (AVPlayerItem.FromAsset (null), Is.Null, "1");
 
 			if (TestRuntime.CheckXcodeVersion (5, 0, 1))
-				Assert.Null (AVPlayerItem.FromAsset (null, null), "2");
+				Assert.That (AVPlayerItem.FromAsset (null, null), Is.Null, "2");
 		}
 	}
 }
-
-#endif // !__WATCHOS__

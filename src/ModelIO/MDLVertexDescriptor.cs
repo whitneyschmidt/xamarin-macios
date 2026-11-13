@@ -1,40 +1,55 @@
-﻿#if XAMCORE_2_0 || !MONOMAC
-using System;
-using System.Runtime.InteropServices;
 
-using Foundation;
 using ModelIO;
-using ObjCRuntime;
 using Metal;
+
+#nullable enable
 
 namespace ModelIO {
 	public partial class MDLVertexDescriptor {
 		[DllImport (Constants.MetalKitLibrary)]
 		static extern  /* MDLVertexDescriptor __nonnull */ IntPtr MTKModelIOVertexDescriptorFromMetal (/* MTLVertexDescriptor __nonnull */ IntPtr mtlDescriptor);
 
-		public static MDLVertexDescriptor FromMetal (MTLVertexDescriptor descriptor)
+		/// <param name="descriptor">To be added.</param>
+		///         <summary>Creates a new vertex descriptor from a Metal vertex descriptor.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public static MDLVertexDescriptor? FromMetal (MTLVertexDescriptor descriptor)
 		{
-			if (descriptor == null)
-				throw new ArgumentException ("descriptor");
-			return Runtime.GetNSObject<MDLVertexDescriptor> (MTKModelIOVertexDescriptorFromMetal (descriptor.Handle));
+			if (descriptor is null)
+				throw new ArgumentException (nameof (descriptor));
+			MDLVertexDescriptor? result = Runtime.GetNSObject<MDLVertexDescriptor> (MTKModelIOVertexDescriptorFromMetal (descriptor.Handle));
+			GC.KeepAlive (descriptor);
+			return result;
 		}
 
-		[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
-		[TV (10,0)]
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
 		[DllImport (Constants.MetalKitLibrary)]
-		static extern /* MDLVertexDescriptor __nonnull */ IntPtr MTKModelIOVertexDescriptorFromMetalWithError (/* MTLVertexDescriptor __nonnull */ IntPtr metalDescriptor, out /* NSError */ IntPtr error);
+		unsafe static extern /* MDLVertexDescriptor __nonnull */ IntPtr MTKModelIOVertexDescriptorFromMetalWithError (/* MTLVertexDescriptor __nonnull */ IntPtr metalDescriptor, /* NSError */ IntPtr* error);
 
-		[iOS (10,0)][Mac (10,12, onlyOn64 : true)]
-		[TV (10,0)]
-		public static MDLVertexDescriptor FromMetal (MTLVertexDescriptor descriptor, out NSError error)
+		/// <param name="descriptor">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>Creates a Model IO vertex descriptor from the specified metal vertex descriptor.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("tvos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		public static MDLVertexDescriptor? FromMetal (MTLVertexDescriptor descriptor, out NSError? error)
 		{
-			if (descriptor == null)
-				throw new ArgumentException ("descriptor");
+			if (descriptor is null)
+				throw new ArgumentException (nameof (descriptor));
 			IntPtr err;
-			var vd = Runtime.GetNSObject<MDLVertexDescriptor> (MTKModelIOVertexDescriptorFromMetalWithError (descriptor.Handle, out err));
+			MDLVertexDescriptor? vd;
+			unsafe {
+				vd = Runtime.GetNSObject<MDLVertexDescriptor> (MTKModelIOVertexDescriptorFromMetalWithError (descriptor.Handle, &err));
+				GC.KeepAlive (descriptor);
+			}
 			error = Runtime.GetNSObject<NSError> (err);
 			return vd;
 		}
 	}
 }
-#endif

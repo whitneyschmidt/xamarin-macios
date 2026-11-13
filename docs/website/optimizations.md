@@ -1,12 +1,12 @@
 ---
 title: "Build optimizations"
 description: "This document explains the various optimizations that are applied at build time for Xamarin.iOS and Xamarin.Mac apps."
-ms.prod: xamarin
+ms.service: xamarin
 ms.assetid: 84B67E31-B217-443D-89E5-CFE1923CB14E
-ms.technology: xamarin-cross-platform
-author: bradumbaugh
-ms.author: brumbaug
-dateupdated: 04/16/2018
+author: davidortinau
+ms.author: daortin
+ms.date: 04/16/2018
+no-loc: [Objective-C, registrar, Registrar]
 ---
 
 # Build optimizations
@@ -16,16 +16,23 @@ Xamarin.iOS and Xamarin.Mac apps.
 
 ## Remove UIApplication.EnsureUIThread / NSApplication.EnsureUIThread
 
-Removes calls to [UIApplication.EnsureUIThread][1] (for Xamarin.iOS) or
-`NSApplication.EnsureUIThread` (for Xamarin.Mac).
+> [!NOTE]
+> This optimization has been replaced by the `CheckForIllegalCrossThreadCalls`
+> MSBuild property, which sets the
+> `ObjCRuntime.Runtime.CheckForIllegalCrossThreadCalls` trimmer feature switch.
+> The `--optimize=[+|-]remove-uithread-checks` flag is no longer applied and has
+> no effect.
+
+Removes calls to [UIApplication.EnsureUIThread][1] (for .NET for iOS) or
+`NSApplication.EnsureUIThread` (for .NET for macOS).
 
 This optimization will change the following type of code:
 
 ```csharp
 public virtual void AddChildViewController (UIViewController childController)
 {
-	global::UIKit.UIApplication.EnsureUIThread ();
-	// ...
+    global::UIKit.UIApplication.EnsureUIThread ();
+    // ...
 }
 ```
 
@@ -34,7 +41,7 @@ into the following:
 ```csharp
 public virtual void AddChildViewController (UIViewController childController)
 {
-	// ...
+    // ...
 }
 ```
 
@@ -43,47 +50,9 @@ methods with the `[BindingImpl (BindingImplOptions.Optimizable)]` attribute.
 
 By default it's enabled for release builds.
 
-The default behavior can be overridden by passing `--optimize=[+|-]remove-uithread-checks` to mtouch/mmp.
+Set the `CheckForIllegalCrossThreadCalls` MSBuild property to override the default behavior.
 
-[1]: https://developer.xamarin.com/api/member/UIKit.UIApplication.EnsureUIThread/
-
-## Inline IntPtr.Size
-
-Inlines the constant value of `IntPtr.Size` according to the target platform.
-
-This optimization will change the following type of code:
-
-```csharp
-if (IntPtr.Size == 8) {
-	Console.WriteLine ("64-bit platform");
-} else {
-	Console.WriteLine ("32-bit platform");
-}
-```
-
-into the following (when building for a 64-bit platform):
-
-```csharp
-if (8 == 8) {
-	Console.WriteLine ("64-bit platform");
-} else {
-	Console.WriteLine ("32-bit platform");
-}
-```
-
-This optimization requires the linker to be enabled, and is only applied to
-methods with the `[BindingImpl (BindingImplOptions.Optimizable)]` attribute.
-
-By default it's enabled if targeting a single architecture, or for the
-platform assembly (**Xamarin.iOS.dll**, **Xamarin.TVOS.dll**, 
-**Xamarin.WatchOS.dll** or **Xamarin.Mac.dll**).
-
-If targeting multiple architectures, this optimization will create different
-assemblies for the 32-bit version and the 64-bit version of the app, and both
-versions will have to be included in the app, effectively increasing the final
-app size instead of decreasing it.
-
-The default behavior can be overridden by passing `--optimize=[+|-]inline-intptr-size` to mtouch/mmp.
+[1]: /dotnet/api/UIKit.UIApplication.EnsureUIThread
 
 ## Inline NSObject.IsDirectBinding
 
@@ -101,27 +70,27 @@ Given only the following code:
 
 ```csharp
 class UIView : NSObject {
-	public virtual string SomeProperty {
-		get {
-			if (IsDirectBinding) {
-				return "true";
-			} else {
-				return "false"
-			}
-		}
-	}
+    public virtual string SomeProperty {
+        get {
+            if (IsDirectBinding) {
+                return "true";
+            } else {
+                return "false"
+            }
+        }
+    }
 }
 
 class NSUrl : NSObject {
-	public virtual string SomeOtherProperty {
-		get {
-			if (IsDirectBinding) {
-				return "true";
-			} else {
-				return "false"
-			}
-		}
-	}
+    public virtual string SomeOtherProperty {
+        get {
+            if (IsDirectBinding) {
+                return "true";
+            } else {
+                return "false"
+            }
+        }
+    }
 }
 
 class MyUIView : UIView {
@@ -153,9 +122,9 @@ is the binding code for `NSUrl.AbsoluteUrl`):
 
 ```csharp
 if (IsDirectBinding) {
-	return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, Selector.GetHandle ("absoluteURL")));
+    return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, Selector.GetHandle ("absoluteURL")));
 } else {
-	return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("absoluteURL")));
+    return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("absoluteURL")));
 }
 ```
 
@@ -164,9 +133,9 @@ into the following (when it can be determined that there are no subclasses of
 
 ```csharp
 if (true) {
-	return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, Selector.GetHandle ("absoluteURL")));
+    return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSend (this.Handle, Selector.GetHandle ("absoluteURL")));
 } else {
-	return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("absoluteURL")));
+    return Runtime.GetNSObject<NSUrl> (global::ObjCRuntime.Messaging.IntPtr_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("absoluteURL")));
 }
 ```
 
@@ -181,46 +150,15 @@ never subclassed).
 The default behavior can be overridden by passing
 `--optimize=[+|-]inline-isdirectbinding` to mtouch/mmp.
 
-## Inline Runtime.Arch
-
-This optimization will change the following type of code:
-
-```csharp
-if (Runtime.Arch == Arch.DEVICE) {
-	Console.WriteLine ("Running on device");
-} else {
-	Console.WriteLine ("Running in the simulator");
-}
-```
-
-into the following (when building for device):
-
-```csharp
-if (Arch.DEVICE == Arch.DEVICE) {
-	Console.WriteLine ("Running on device");
-} else {
-	Console.WriteLine ("Running in the simulator");
-}
-```
-
-This optimization requires the linker to be enabled, and is only applied to
-methods with the `[BindingImpl (BindingImplOptions.Optimizable)]` attribute.
-
-It is always enabled by default for Xamarin.iOS (it's not available for
-Xamarin.Mac).
-
-The default behavior can be overridden by passing
-`--optimize=[+|-]inline-runtime-arch` to mtouch.
-
 ## Dead code elimination
 
 This optimization will change the following type of code:
 
 ```csharp
 if (true) {
-	Console.WriteLine ("Doing this");
+    Console.WriteLine ("Doing this");
 } else {
-	Console.WriteLine ("Not doing this");
+    Console.WriteLine ("Not doing this");
 }
 ```
 
@@ -234,9 +172,9 @@ It will also evaluate constant comparisons, like this:
 
 ```csharp
 if (8 == 8) {
-	Console.WriteLine ("Doing this");
+    Console.WriteLine ("Doing this");
 } else {
-	Console.WriteLine ("Not doing this");
+    Console.WriteLine ("Not doing this");
 }
 ```
 
@@ -253,29 +191,17 @@ the binding code for `NFCIso15693ReadMultipleBlocksConfiguration.Range`):
 ```csharp
 NSRange ret;
 if (IsDirectBinding) {
-	if (Runtime.Arch == Arch.DEVICE) {
-		if (IntPtr.Size == 8) {
-			ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSend (this.Handle, Selector.GetHandle ("range"));
-		} else {
-			global::ObjCRuntime.Messaging.NSRange_objc_msgSend_stret (out ret, this.Handle, Selector.GetHandle ("range"));
-		}
-	} else if (IntPtr.Size == 8) {
-		ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSend (this.Handle, Selector.GetHandle ("range"));
-	} else {
-		ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSend (this.Handle, Selector.GetHandle ("range"));
-	}
+    if (Runtime.Arch == Arch.DEVICE) {
+        ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSend (this.Handle, Selector.GetHandle ("range"));
+    } else {
+        ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSend (this.Handle, Selector.GetHandle ("range"));
+    }
 } else {
-	if (Runtime.Arch == Arch.DEVICE) {
-		if (IntPtr.Size == 8) {
-			ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("range"));
-		} else {
-			global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper_stret (out ret, this.SuperHandle, Selector.GetHandle ("range"));
-		}
-	} else if (IntPtr.Size == 8) {
-		ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("range"));
-	} else {
-		ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("range"));
-	}
+    if (Runtime.Arch == Arch.DEVICE) {
+        ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("range"));
+    } else {
+        ret = global::ObjCRuntime.Messaging.NSRange_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("range"));
+    }
 }
 return ret;
 ```
@@ -318,14 +244,14 @@ runtime.
 
 Benchmarks show that this speeds up calling a block by a factor of 10 to 15.
 
-It will transform the following [code](https://github.com/xamarin/xamarin-macios/blob/018f7153441d9d7e0f58e2046f39eeb46f1ff480/src/UIKit/UIAccessibility.cs#L198-L211):
+It will transform the following [code](https://github.com/dotnet/macios/blob/018f7153441d9d7e0f58e2046f39eeb46f1ff480/src/UIKit/UIAccessibility.cs#L198-L211):
 
 ```csharp
 public static void RequestGuidedAccessSession (bool enable, Action<bool> completionHandler)
 {
-	// ...
-	block_handler.SetupBlock (callback, completionHandler);
-	// ...
+    // ...
+    block_handler.SetupBlock (callback, completionHandler);
+    // ...
 }
 ```
 
@@ -334,9 +260,9 @@ into:
 ```csharp
 public static void RequestGuidedAccessSession (bool enable, Action<bool> completionHandler)
 {
-	// ...
-	block_handler.SetupBlockImpl (callback, completionHandler, true, "v@?B");
-	// ...
+    // ...
+    block_handler.SetupBlockImpl (callback, completionHandler, true, "v@?B");
+    // ...
 }
 ```
 
@@ -386,7 +312,7 @@ The default behavior can be overridden by passing
 ## Remove the dynamic registrar
 
 Both the Xamarin.iOS and the Xamarin.Mac runtime include support for
-[registering managed types](https://developer.xamarin.com/guides/ios/advanced_topics/registrar/)
+[registering managed types](~/ios/internals/registrar.md)
 with the Objective-C runtime. It can either be done at build time or at
 runtime (or partially at build time and the rest at runtime), but if it's
 completely done at build time, it means the supporting code for doing it at
@@ -424,9 +350,9 @@ This optimization will change the following type of code:
 
 ```csharp
 if (Runtime.DynamicRegistrationSupported) {
-	Console.WriteLine ("do something");
+    Console.WriteLine ("do something");
 } else {
-	throw new Exception ("dynamic registration is not supported");
+    throw new Exception ("dynamic registration is not supported");
 }
 ```
 
@@ -468,6 +394,7 @@ Given the following Objective-C code:
 -(void) classCallback: (void (^)())completionHandler;
 -(void) callClassCallback;
 @end
+
 @implementation ObjCBlockTester
 -(void) classCallback: (void (^)())completionHandler
 {
@@ -475,10 +402,10 @@ Given the following Objective-C code:
 
 -(void) callClassCallback
 {
-	[self classCallback: ^()
-	{
-		NSLog (@"called!");
-	}];
+    [self classCallback: ^()
+    {
+        NSLog (@"called!");
+    }];
 }
 @end
 ```
@@ -489,8 +416,8 @@ and the following binding code:
 [BaseType (typeof (NSObject))]
 interface ObjCBlockTester
 {
-	[Export ("classCallback:")]
-	void ClassCallback (Action completionHandler);
+    [Export ("classCallback:")]
+    void ClassCallback (Action completionHandler);
 }
 ```
 
@@ -499,86 +426,86 @@ the generator will produce:
 ```csharp
 [Register("ObjCBlockTester", true)]
 public unsafe partial class ObjCBlockTester : NSObject {
-	// unrelated code...
+    // unrelated code...
 
-	[Export ("callClassCallback")]
-	[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-	public virtual void CallClassCallback ()
-	{
-		if (IsDirectBinding) {
-			ApiDefinition.Messaging.void_objc_msgSend (this.Handle, Selector.GetHandle ("callClassCallback"));
-		} else {
-			ApiDefinition.Messaging.void_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("callClassCallback"));
-		}
-	}
-	
-	[Export ("classCallback:")]
-	[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-	public unsafe virtual void ClassCallback ([BlockProxy (typeof (Trampolines.NIDActionArity1V0))] System.Action completionHandler)
-	{
-		// ...
-		
-	}
+    [Export ("callClassCallback")]
+    [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+    public virtual void CallClassCallback ()
+    {
+        if (IsDirectBinding) {
+            ApiDefinition.Messaging.void_objc_msgSend (this.Handle, Selector.GetHandle ("callClassCallback"));
+        } else {
+            ApiDefinition.Messaging.void_objc_msgSendSuper (this.SuperHandle, Selector.GetHandle ("callClassCallback"));
+        }
+    }
+
+    [Export ("classCallback:")]
+    [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+    public unsafe virtual void ClassCallback ([BlockProxy (typeof (Trampolines.NIDActionArity1V0))] System.Action completionHandler)
+    {
+        // ...
+
+    }
 }
 
 static class Trampolines
 {
-	[UnmanagedFunctionPointerAttribute (CallingConvention.Cdecl)]
-	[UserDelegateType (typeof (System.Action))]
-	internal delegate void DActionArity1V0 (IntPtr block);
+    [UnmanagedFunctionPointerAttribute (CallingConvention.Cdecl)]
+    [UserDelegateType (typeof (System.Action))]
+    internal delegate void DActionArity1V0 (IntPtr block);
 
-	static internal class SDActionArity1V0 {
-		static internal readonly DActionArity1V0 Handler = Invoke;
-		
-		[MonoPInvokeCallback (typeof (DActionArity1V0))]
-		static unsafe void Invoke (IntPtr block) {
-			var descriptor = (BlockLiteral *) block;
-			var del = (System.Action) (descriptor->Target);
-			if (del != null)
-				del (obj);
-		}
-	}
-	
-	internal class NIDActionArity1V0 {
-		IntPtr blockPtr;
-		DActionArity1V0 invoker;
-		
-		[Preserve (Conditional=true)]
-		[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-		public unsafe NIDActionArity1V0 (BlockLiteral *block)
-		{
-			blockPtr = _Block_copy ((IntPtr) block);
-			invoker = block->GetDelegateForBlock<DActionArity1V0> ();
-		}
-		
-		[Preserve (Conditional=true)]
-		[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-		~NIDActionArity1V0 ()
-		{
-			_Block_release (blockPtr);
-		}
-		
-		[Preserve (Conditional=true)]
-		[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-		public unsafe static System.Action Create (IntPtr block)
-		{
-			if (block == IntPtr.Zero)
-				return null;
-			if (BlockLiteral.IsManagedBlock (block)) {
-				var existing_delegate = ((BlockLiteral *) block)->Target as System.Action;
-				if (existing_delegate != null)
-					return existing_delegate;
-			}
-			return new NIDActionArity1V0 ((BlockLiteral *) block).Invoke;
-		}
-		
-		[Preserve (Conditional=true)]
-		[BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
-		unsafe void Invoke ()
-		{
-			invoker (blockPtr);
-		}
-	}
+    static internal class SDActionArity1V0 {
+        static internal readonly DActionArity1V0 Handler = Invoke;
+
+        [MonoPInvokeCallback (typeof (DActionArity1V0))]
+        static unsafe void Invoke (IntPtr block) {
+            var descriptor = (BlockLiteral *) block;
+            var del = (System.Action) (descriptor->Target);
+            if (del != null)
+                del (obj);
+        }
+    }
+
+    internal class NIDActionArity1V0 {
+        IntPtr blockPtr;
+        DActionArity1V0 invoker;
+
+        [Preserve (Conditional=true)]
+        [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+        public unsafe NIDActionArity1V0 (BlockLiteral *block)
+        {
+            blockPtr = _Block_copy ((IntPtr) block);
+            invoker = block->GetDelegateForBlock<DActionArity1V0> ();
+        }
+
+        [Preserve (Conditional=true)]
+        [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+        ~NIDActionArity1V0 ()
+        {
+            _Block_release (blockPtr);
+        }
+
+        [Preserve (Conditional=true)]
+        [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+        public unsafe static System.Action Create (IntPtr block)
+        {
+            if (block == IntPtr.Zero)
+                return null;
+            if (BlockLiteral.IsManagedBlock (block)) {
+                var existing_delegate = ((BlockLiteral *) block)->Target as System.Action;
+                if (existing_delegate != null)
+                    return existing_delegate;
+            }
+            return new NIDActionArity1V0 ((BlockLiteral *) block).Invoke;
+        }
+
+        [Preserve (Conditional=true)]
+        [BindingImpl (BindingImplOptions.GeneratedCode | BindingImplOptions.Optimizable)]
+        unsafe void Invoke ()
+        {
+            invoker (blockPtr);
+        }
+    }
 }
 ```
 
@@ -656,7 +583,13 @@ build time.
 
 It's usually possible to determine at build time if we'll be running on an
 ARM64 cpu at runtime, and in that case we can inline the value of this
-property to a constant `true` or `false` value.
+field to a constant `true` or `false` value.
+
+This optimization has been replaced by the
+`ObjCRuntime.Runtime.IsARM64CallingConvention` trimmer feature switch: the
+build sets the feature switch according to the target architecture, and ILLink
+folds `Runtime.IsARM64CallingConvention` into a constant `true` or `false`
+value.
 
 This optimization will change the following type of code:
 
@@ -689,13 +622,11 @@ if (false) {
 
 ```
 
-This optimization requires the linker to be enabled, and is only applied to
-methods with the `[BindingImpl (BindingImplOptions.Optimizable)]` attribute.
+This optimization requires the linker (trimmer) to be enabled.
 
-It is always enabled by default (when the linker is enabled).
-
-The default behavior can be overridden by passing
-`--optimize=[+|-]inline-is-arm64-calling-convention` to mtouch/mmp.
+The `--optimize=[+|-]inline-is-arm64-calling-convention` option to mtouch/mmp
+no longer has any effect (it's kept only so that passing it won't cause an
+error).
 
 ## Seal and Devirtualize
 
@@ -755,3 +686,24 @@ disabling the managed linker.
 
 The default behavior can be overridden by passing
 `--optimize=[+|-]custom-attributes-removal` to `mtouch` or `mmp`.
+
+## Force Rejected Types Removal
+
+This optimization can be enabled when it's not possible to use the 
+managed linker (e.g. **Don't link**) or when the managed linker cannot
+remove references to deprecated types that would cause an application
+to be rejected by Apple.
+
+References to the existing types will be renamed, e.g. `UIWebView` to 
+`DeprecatedWebView`, in every assemblies.
+
+The type definition is also renamed (for validity) and all custom 
+attributes on the types and their members will be removed. 
+Code inside the members will be replaced with a
+`throw new NotSupportedException ();`.
+
+The default behavior can be overridden by passing
+`--optimize=[+|-]force-rejected-types-removal` to `mtouch`.
+
+The exact list of types might change over time and is best read directly from
+the [source code](https://github.com/dotnet/macios/blob/main/tools/linker/RemoveRejectedTypesStep.cs).

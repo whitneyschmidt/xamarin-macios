@@ -25,38 +25,48 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+#nullable enable
 
-using Foundation;
 using CoreFoundation;
-using ObjCRuntime;
 using CoreImage;
 
-namespace AudioUnit
-{
-	public class ClassInfoDictionary : DictionaryContainer
-	{
-		const string VersionKey  		= "version";
-		const string TypeKey 			= "type";
-		const string SubtypeKey 		= "subtype";
-		const string ManufacturerKey	= "manufacturer";
-		const string DataKey			= "data";
-		const string NameKey			= "name";
-		const string RenderQualityKey	= "render-quality";
-		const string CPULoadKey			= "cpu-load";
-		const string ElementNameKey		= "element-name";
-		const string ExternalFileRefs	= "file-references";
+namespace AudioUnit {
+	/// <summary>Holds key-value pairs on class information. Used with <see cref="AudioUnit.SetClassInfo(ClassInfoDictionary,AudioUnitScopeType,System.UInt32)" /> and <see cref="AudioUnit.GetClassInfo(AudioUnitScopeType,System.UInt32)" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class ClassInfoDictionary : DictionaryContainer {
+		const string VersionKey = "version";
+		const string TypeKey = "type";
+		const string SubtypeKey = "subtype";
+		const string ManufacturerKey = "manufacturer";
+		const string DataKey = "data";
+		const string NameKey = "name";
+		const string RenderQualityKey = "render-quality";
+		const string CPULoadKey = "cpu-load";
+		const string ElementNameKey = "element-name";
+		const string ExternalFileRefs = "file-references";
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public ClassInfoDictionary ()
 			: base (new NSMutableDictionary ())
 		{
 		}
 
-		public ClassInfoDictionary (NSDictionary dictionary)
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public ClassInfoDictionary (NSDictionary? dictionary)
 			: base (dictionary)
 		{
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AudioComponentManufacturerType? Manufacturer {
 			get {
 				using (var key = new NSString (ManufacturerKey))
@@ -64,12 +74,18 @@ namespace AudioUnit
 			}
 		}
 
-		public string Name {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public string? Name {
 			get {
-				return GetStringValue (NameKey);					
+				return GetStringValue (NameKey);
 			}
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public AudioComponentType? Type {
 			get {
 				using (var key = new NSString (TypeKey))

@@ -1,0 +1,71 @@
+name: Add changelog for Maestro bump
+
+on: pull_request
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+permissions: {}
+
+jobs:
+  add-changelog:
+    name: Add changelog
+    runs-on: ubuntu-latest
+    # GITHUB_TOKEN change from read-write to read-only on 2024-02-01 requires permissions block
+    # https://docs.opensource.microsoft.com/github/apps/permission-changes/
+    # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    permissions:
+      pull-requests: write # will add/edit comments
+      contents: read
+    if: github.event.pull_request.user.login == 'dotnet-maestro[bot]'
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+      with:
+        global-json-file: ./global.json
+
+    - name: 'Compute changelog'
+      run: |
+        set -exo pipefail
+        dotnet run --project scripts/changelog/changelog.csproj --verbosity quiet -- https://github.com/$GITHUB_REPOSITORY/pull/${GITHUB_REF_NAME/\/*/} /tmp/changelog.txt
+
+    - name: 'Add changelog'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const fs = require('fs');
+          const changelog_message = fs.readFileSync('/tmp/changelog.txt', 'utf8');
+          // check if we've already added a changelog to this PR, and if so, update that comment, otherwise add a new comment
+          var commentId = ""
+          await github.paginate (github.rest.issues.listComments,
+          {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          }).then ((comments) =>
+          {
+            const changelogComment = comments.find(comment =>
+              (comment.body.includes (".NET Changelog for") || comment.body.includes (".net ChangeLog for")) &&
+              comment.user.login == 'github-actions[bot]')
+            if (changelogComment)
+              commentId = changelogComment.id
+          })
+          if (commentId == "") {
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: changelog_message
+            })
+          } else {
+            github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: changelog_message
+            })
+          }

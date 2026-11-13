@@ -1,0 +1,106 @@
+//
+// Link All [Regression] Tests
+//
+// Authors:
+//	Sebastien Pouliot  <sebastien@xamarin.com>
+//
+// Copyright 2012 Xamarin Inc. All rights reserved.
+//
+
+namespace LinkAll.Layout {
+
+	struct DefaultStruct {
+#pragma warning disable CS0649 // Field 'DefaultStruct.never_used' is never assigned to, and will always have its default value 0
+		public int never_used;
+#pragma warning restore CS0649
+		public int used;
+	}
+
+	[StructLayout (LayoutKind.Auto)]
+	struct AutoStruct {
+		public int never_used;
+		public int used;
+	}
+
+	[StructLayout (LayoutKind.Sequential)]
+	struct SequentialStruct {
+		public int never_used;
+		public int used;
+	}
+
+	[StructLayout (LayoutKind.Explicit)]
+	struct ExplicitStruct {
+		[FieldOffset (0)]
+		public int never_used;
+		[FieldOffset (4)]
+		public int used;
+		[FieldOffset (8)]
+		public int never_ever_used;
+	}
+
+	[TestFixture]
+	// we want the tests to be available because we use the linker
+	[Preserve (AllMembers = true)]
+	public class StructLayoutTest {
+
+		[Test]
+		public void DefaultLayoutStruct () // sequential
+		{
+			DefaultStruct c = new DefaultStruct ();
+			c.used = 1;
+			Assert.That (Marshal.SizeOf (c), Is.EqualTo (8), "2 fields");
+			var t = typeof (DefaultStruct);
+			var fields = t.GetFields ();
+			Assert.That (fields.Length, Is.EqualTo (2), "Length");
+
+			Assert.That (t.IsAutoLayout, Is.False, "IsAutoLayout");
+			Assert.That (t.IsExplicitLayout, Is.False, "IsExplicitLayout");
+			Assert.That (t.IsLayoutSequential, Is.True, "IsLayoutSequential");
+		}
+
+		[Test]
+		public void AutoLayoutStruct ()
+		{
+			AutoStruct c = new AutoStruct ();
+			c.used = 1;
+			// can't ask SizeOf on Auto
+			var t = typeof (AutoStruct);
+			var fields = t.GetFields ();
+			Assert.That (fields.Length, Is.EqualTo (2), "Length");
+
+			Assert.That (t.IsAutoLayout, Is.True, "IsAutoLayout");
+			Assert.That (t.IsExplicitLayout, Is.False, "IsExplicitLayout");
+			Assert.That (t.IsLayoutSequential, Is.False, "IsLayoutSequential");
+		}
+
+		[Test]
+		public void LayoutSequential ()
+		{
+			SequentialStruct c = new SequentialStruct ();
+			c.used = 1;
+			Assert.That (Marshal.SizeOf (c), Is.EqualTo (8), "2 fields");
+			var t = typeof (SequentialStruct);
+			var fields = t.GetFields ();
+			Assert.That (fields.Length, Is.EqualTo (2), "Length");
+
+			Assert.That (t.IsAutoLayout, Is.False, "IsAutoLayout");
+			Assert.That (t.IsExplicitLayout, Is.False, "IsExplicitLayout");
+			Assert.That (t.IsLayoutSequential, Is.True, "IsLayoutSequential");
+		}
+
+		[Test]
+		public void ExplicitLayout ()
+		{
+			ExplicitStruct c = new ExplicitStruct ();
+			c.used = 1;
+			Assert.That (Marshal.SizeOf (c), Is.GreaterThanOrEqualTo (12), "3 fields");
+			var t = typeof (ExplicitStruct);
+			var fields = t.GetFields ();
+			Assert.That (fields.Length, Is.EqualTo (3), "Length");
+
+			Assert.That (t.IsAutoLayout, Is.False, "IsAutoLayout");
+			Assert.That (t.IsExplicitLayout, Is.True, "IsExplicitLayout");
+			Assert.That (t.IsLayoutSequential, Is.False, "IsLayoutSequential");
+		}
+	}
+}

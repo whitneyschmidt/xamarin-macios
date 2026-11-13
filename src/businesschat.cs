@@ -6,11 +6,8 @@
 //
 // Copyright 2017 Microsoft Inc. All rights reserved.
 //
-using System;
 using System.ComponentModel;
 
-using Foundation;
-using ObjCRuntime;
 #if MONOMAC
 using AppKit;
 using UIControl = AppKit.NSControl;
@@ -20,21 +17,34 @@ using UIKit;
 
 namespace BusinessChat {
 
-	[Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof(UIControl))]
+	[Deprecated (PlatformName.MacOSX, 13, 1)]
+	[Deprecated (PlatformName.iOS, 16, 2)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 16, 2)]
+	[BaseType (typeof (UIControl))]
 	[DisableDefaultCtor]
 	interface BCChatButton {
+		/// <param name="style">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithStyle:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (BCChatButtonStyle style);
+		NativeHandle Constructor (BCChatButtonStyle style);
 	}
 
 
-	[Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof(NSObject))]
+	[Deprecated (PlatformName.MacOSX, 13, 1)]
+	[Deprecated (PlatformName.iOS, 16, 2)]
+	[MacCatalyst (13, 1)]
+	[Deprecated (PlatformName.MacCatalyst, 16, 2)]
+	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface BCChatAction {
 
+		/// <param name="businessIdentifier">To be added.</param>
+		///         <param name="intentParameters">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[EditorBrowsable (EditorBrowsableState.Advanced)]
 		[Export ("openTranscript:intentParameters:")]

@@ -1,16 +1,28 @@
-using System;
 
-using Foundation;
-using ObjCRuntime;
 using CoreGraphics;
+
+#nullable enable
 
 namespace CoreAnimation {
 	public partial class CAKeyFrameAnimation {
-		public T[] GetValuesAs <T> () where T : class, INativeObject
+		/// <summary>Returns the elements of the key frame animation as an array of strongly typed values of <see cref="NSObject" /> or CoreGraphics objects.</summary>
+		/// <typeparam name="T">Generic type to get the values as.</typeparam>
+		public T []? GetValuesAs<T> () where T : class, INativeObject
 		{
 			return NSArray.FromArrayNative<T> (_Values);
 		}
 
+		/// <param name="value">Values to set, they can be CoreGraphics
+		/// 	objects, or subclasses of an NSObject.</param>
+		///         <summary>Sets the values fo the key frame animation to the
+		/// 	values specified in the array.</summary>
+		///         <remarks>
+		///           <para>
+		/// 	    To pass number, create instances of <see cref="Foundation.NSNumber" /> with the value,
+		/// 	    to pass other values, use <see cref="Foundation.NSValue" />, or pass the
+		/// 	    CoreGraphics data types directly to it.
+		/// 	  </para>
+		///         </remarks>
 		public void SetValues (INativeObject [] value)
 		{
 			_Values = NSArray.FromNSObjects (value);
@@ -20,6 +32,8 @@ namespace CoreAnimation {
 		// or some other trickery. Our NSString -> C# string -> NSString conversions
 		// were breaking this on the Mac. We look up the equivilant NSString and pass that
 		// along to "fix" this
+		/// <summary>Gets or sets the calculation mode used to interpolate key frame values.</summary>
+		/// <value>The calculation mode string.</value>
 		public virtual string CalculationMode {
 			get {
 				return _CalculationMode;
@@ -28,8 +42,8 @@ namespace CoreAnimation {
 				NSString result;
 				if (value == CAAnimation.AnimationLinear)
 					result = CAAnimation.AnimationLinear;
-				else if (value == CAAnimation.AnimationDescrete)
-					result = CAAnimation.AnimationDescrete;
+				else if (value == CAAnimation.AnimationDiscrete)
+					result = CAAnimation.AnimationDiscrete;
 				else if (value == CAAnimation.AnimationPaced)
 					result = CAAnimation.AnimationPaced;
 				else if (value == CAAnimation.AnimationCubic)
@@ -37,12 +51,10 @@ namespace CoreAnimation {
 				else if (value == CAAnimation.AnimationCubicPaced)
 					result = CAAnimation.AnimationCubicPaced;
 				else
-					result = (NSString)value;
+					result = (NSString) value;
 
 				_CalculationMode = result;
 			}
 		}
 	}
 }
-
-

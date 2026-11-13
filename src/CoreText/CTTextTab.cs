@@ -24,128 +24,128 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
 
-using ObjCRuntime;
-using Foundation;
+#nullable enable
+
 using CoreFoundation;
-using CoreGraphics;
 
 namespace CoreText {
-
-#region Text Tab Constants
-	public static class CTTextTabOptionKey {
-
-		public static readonly NSString ColumnTerminators;
-
-		static CTTextTabOptionKey ()
-		{
-			ColumnTerminators = Dlfcn.GetStringConstant (Libraries.CoreText.Handle, "kCTTabColumnTerminatorsAttributeName");
-		}
-	}
-
+	/// <summary>Options relating to a <see cref="CoreText.CTTextTab" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
 	public class CTTextTabOptions {
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTTextTabOptions ()
 			: this (new NSMutableDictionary ())
 		{
 		}
 
+		/// <param name="dictionary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTTextTabOptions (NSDictionary dictionary)
 		{
-			if (dictionary == null)
-				throw new ArgumentNullException ("dictionary");
+			if (dictionary is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (dictionary));
 			Dictionary = dictionary;
 		}
 
-		public NSDictionary Dictionary {get; private set;}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSDictionary Dictionary { get; private set; }
 
-		public NSCharacterSet ColumnTerminators {
-			get {return (NSCharacterSet) Dictionary [CTTextTabOptionKey.ColumnTerminators];}
-			set {Adapter.SetValue (Dictionary, CTTextTabOptionKey.ColumnTerminators, value);}
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		public NSCharacterSet? ColumnTerminators {
+			get { return (NSCharacterSet?) Dictionary [CTTextTabOptionKey.ColumnTerminators]!; }
+			set { Adapter.SetValue (Dictionary, CTTextTabOptionKey.ColumnTerminators, value); }
 		}
 	}
-#endregion
 
-	public class CTTextTab : INativeObject, IDisposable {
-		internal IntPtr handle;
-
-		internal CTTextTab (IntPtr handle, bool owns)
+	static class CTTextTabOptionsExtensions {
+		public static IntPtr GetHandle (this CTTextTabOptions? self)
 		{
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.ArgumentNull (this, "handle");
-
-			this.handle = handle;
-			if (!owns)
-				CFObject.CFRetain (handle);
+			if (self is null)
+				return IntPtr.Zero;
+			return self.Dictionary.GetHandle ();
 		}
-		
-		public IntPtr Handle {
-			get {return handle;}
-		}
+	}
 
-		~CTTextTab ()
+	/// <summary>Represents a tab in a <see cref="CoreText.CTParagraphStyle" />.</summary>
+	///     <remarks>To be added.</remarks>
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("tvos")]
+	public class CTTextTab : NativeObject {
+		[Preserve (Conditional = true)]
+		internal CTTextTab (NativeHandle handle, bool owns)
+			: base (handle, owns, verify: true)
 		{
-			Dispose (false);
-		}
-		
-		public void Dispose ()
-		{
-			Dispose (true);
-			GC.SuppressFinalize (this);
 		}
 
-		protected virtual void Dispose (bool disposing)
-		{
-			if (handle != IntPtr.Zero){
-				CFObject.CFRelease (handle);
-				handle = IntPtr.Zero;
-			}
-		}
-
-#region Text Tab Creation
+		#region Text Tab Creation
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTTextTabCreate (CTTextAlignment alignment, double location, IntPtr options);
+		/// <param name="alignment">To be added.</param>
+		///         <param name="location">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		public CTTextTab (CTTextAlignment alignment, double location)
 			: this (alignment, location, null)
 		{
 		}
 
-		public CTTextTab (CTTextAlignment alignment, double location, CTTextTabOptions options)
+		/// <param name="alignment">To be added.</param>
+		///         <param name="location">To be added.</param>
+		///         <param name="options">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		public CTTextTab (CTTextAlignment alignment, double location, CTTextTabOptions? options)
+			: base (CTTextTabCreate (alignment, location, options.GetHandle ()), true, true)
 		{
-			handle = CTTextTabCreate (alignment, location, 
-					options == null ? IntPtr.Zero : options.Dictionary.Handle);
-
-			if (handle == IntPtr.Zero)
-				throw ConstructorError.Unknown (this);
+			GC.KeepAlive (options);
 		}
-#endregion
+		#endregion
 
-#region Text Tab Access
+		#region Text Tab Access
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern CTTextAlignment CTTextTabGetAlignment (IntPtr tab);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public CTTextAlignment TextAlignment {
-			get {return CTTextTabGetAlignment (handle);}
+			get { return CTTextTabGetAlignment (Handle); }
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern double CTTextTabGetLocation (IntPtr tab);
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public double Location {
-			get {return CTTextTabGetLocation (handle);}
+			get { return CTTextTabGetLocation (Handle); }
 		}
 
 		[DllImport (Constants.CoreTextLibrary)]
 		static extern IntPtr CTTextTabGetOptions (IntPtr tab);
-		public CTTextTabOptions GetOptions ()
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		public CTTextTabOptions? GetOptions ()
 		{
-			var options = CTTextTabGetOptions (handle);
+			var options = CTTextTabGetOptions (Handle);
 			if (options == IntPtr.Zero)
 				return null;
-			return new CTTextTabOptions (
-					(NSDictionary) Runtime.GetNSObject (options));
+			return new CTTextTabOptions (Runtime.GetNSObject<NSDictionary> (options)!);
 		}
-#endregion
+		#endregion
 	}
 }
-

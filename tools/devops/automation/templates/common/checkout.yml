@@ -1,0 +1,60 @@
+# Template that performs the checkout and fixes a number of small issues we have found between the vsts <-> github integration
+
+parameters:
+
+- name: isPR
+  type: boolean
+
+- name: repositoryAlias
+  type: string
+  default: self
+
+- name: commit
+  type: string
+  default: HEAD
+
+# Compiler fixtures are opt-in because publishing jobs can exceed
+# .NET Framework's 65,535-byte subprocess environment limit.
+- name: runPowerShellBootstrapTests
+  type: boolean
+  default: false
+
+steps:
+
+- template: sdk-unified/steps/checkout/v1.yml@yaml-templates
+  parameters:
+    resource: ${{ parameters.repositoryAlias }}
+    commit: ${{ parameters.commit }}
+    clean: true
+    submodules: recursive
+    path: s/$(BUILD_REPOSITORY_TITLE)
+    fetchTags: false
+    retryCount: 3
+
+# some bots don't seem to have pwsh installed, so make sure it is
+- powershell: ./install-powershell-core.ps1
+  displayName: 'Install PowerShell Core'
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts
+  timeoutInMinutes: 10
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
+  env:
+    POWERSHELL_VERSION: 7.4.0
+    POWERSHELL_ZIP_SHA256: 62151db1d98a8b56aeb249cc8a3ce17948f1c83b4062dac8d0c4302de71cbd75
+
+- powershell: ./test-powershell-core-native.ps1
+  displayName: 'Test native PowerShell bootstrap failures'
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts
+  timeoutInMinutes: 5
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), ${{ parameters.runPowerShellBootstrapTests }})
+
+- pwsh: ./undo_github_merge.ps1 -SourceBranch "$(Build.SourceBranch)" -IsPr "$Env:IS_PR"
+  name: fix_commit
+  displayName: "Undo Github merge"
+  workingDirectory: $(System.DefaultWorkingDirectory)/$(BUILD_REPOSITORY_TITLE)/tools/devops/automation/scripts
+  timeoutInMinutes: 15
+  env:
+    IS_PR: ${{ parameters.isPR }}
+
+- checkout: yaml-templates
+  clean: true
+  fetchTags: false

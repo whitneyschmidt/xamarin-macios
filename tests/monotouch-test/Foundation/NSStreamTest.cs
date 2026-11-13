@@ -1,23 +1,13 @@
-﻿using System;
-using NUnit.Framework;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-#if XAMCORE_2_0
-using CoreFoundation;
-using Foundation;
-#else
-using MonoTouch.CoreFoundation;
-using MonoTouch.Foundation;
-#endif
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
-	public class AA_NSStreamTest 
-	{
+	[Preserve (AllMembers = true)]
+	public class NSStreamTest {
 		[Test]
 		public void BoundPairTest ()
 		{
@@ -29,18 +19,17 @@ namespace MonoTouchFixtures.Foundation {
 			write.Open ();
 
 			var send = Encoding.ASCII.GetBytes ("hello, world");
-			var n = send.Length;
+			nint n = send.Length;
 
-			Assert.AreEqual (n, write.Write (send));
-			var result = new byte [n+10];
+			Assert.That (write.Write (send), Is.EqualTo (n));
+			var result = new byte [n + 10];
 
-			Assert.AreEqual (n, read.Read (result, (uint)n));
+			Assert.That (read.Read (result, (uint) n), Is.EqualTo (n));
 			for (int i = 0; i < n; i++)
-				Assert.AreEqual (send [i], result [i], "Item " + i);
+				Assert.That (result [i], Is.EqualTo (send [i]), "Item " + i);
 
 		}
 
-#if !__WATCHOS__
 		TcpListener FindPort (out int port)
 		{
 			// This does not work well on watchOS:
@@ -56,7 +45,7 @@ namespace MonoTouchFixtures.Foundation {
 					listener.Start ();
 					return listener;
 				} catch {
-				} 
+				}
 			}
 			return null;
 		}
@@ -69,23 +58,25 @@ namespace MonoTouchFixtures.Foundation {
 
 			int port;
 			var listener = FindPort (out port);
-			if (listener == null) {
+			if (listener is null) {
 				Assert.Inconclusive ("Not possible to bind a port");
 				return;
 			}
 
-			var listenThread = new Thread (new ParameterizedThreadStart (DebugListener));
+			var listenThread = new Thread (new ParameterizedThreadStart (DebugListener)) {
+				IsBackground = true,
+			};
 			listenThread.Start (listener);
 			NSStream.CreatePairWithSocketToHost (new IPEndPoint (IPAddress.Loopback, port), out read, out write);
 			read.Open ();
 			write.Open ();
-			var send = new byte[] { 1, 2, 3, 4, 5 };
-			Assert.AreEqual (5, write.Write (send));
+			var send = new byte [] { 1, 2, 3, 4, 5 };
+			Assert.That (write.Write (send), Is.EqualTo ((nint) 5));
 			var result = new byte [5];
-			Assert.AreEqual (5, read.Read (result,5));
+			Assert.That (read.Read (result, 5), Is.EqualTo ((nint) 5));
 			for (int i = 0; i < 5; i++)
-				Assert.AreEqual (send [i] * 10, result [i]);
-			listenThread.Join ();
+				Assert.That (result [i], Is.EqualTo (send [i] * 10));
+			Assert.That (listenThread.Join (TimeSpan.FromSeconds (10)), Is.True, "listenThread.Join timed out");
 			listener.Stop ();
 			read.Close ();
 			write.Close ();
@@ -94,47 +85,73 @@ namespace MonoTouchFixtures.Foundation {
 		[Test]
 		public void ConnectToPeer ()
 		{
-			NSInputStream read;
-			NSOutputStream write;
-
 			int port;
 			var listener = FindPort (out port);
-			if (listener == null) {
+			if (listener is null) {
 				Assert.Inconclusive ("Not possible to bind a port");
 				return;
 			}
 
-			var listenThread = new Thread (new ParameterizedThreadStart (DebugListener));
-			listenThread.Start (listener);
-			NSStream.CreatePairWithPeerSocketSignature (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp, new IPEndPoint (IPAddress.Loopback, port), out read, out write);
-			read.Open ();
-			write.Open ();
-			var send = new byte[] { 1, 2, 3, 4, 5 };
-			Assert.AreEqual (5, write.Write (send));
-			var result = new byte [5];
-			Assert.AreEqual (5, read.Read (result,5));
-			for (int i = 0; i < 5; i++)
-				Assert.AreEqual (send [i] * 10, result [i]);
-			listenThread.Join ();
-			listener.Stop ();
-			read.Close ();
-			write.Close ();
+			Exception ex = null;
+			var thread = new Thread (() => {
+				try {
+					NSInputStream read = null;
+					NSOutputStream write = null;
+
+					var listenThread = new Thread (new ParameterizedThreadStart (DebugListener)) {
+						IsBackground = true,
+					};
+					var listenThreadCompleted = false;
+					try {
+						listenThread.Start (listener);
+						NSStream.CreatePairWithPeerSocketSignature (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp, new IPEndPoint (IPAddress.Loopback, port), out read, out write);
+						read.Open ();
+						write.Open ();
+						var send = new byte [] { 1, 2, 3, 4, 5 };
+						Assert.That (write.Write (send), Is.EqualTo ((nint) 5), "Write");
+						var result = new byte [5];
+						Assert.That (read.Read (result, 5), Is.EqualTo ((nint) 5), "Read");
+						for (int i = 0; i < 5; i++)
+							Assert.That (result [i], Is.EqualTo (send [i] * 10), "Item " + i);
+						listenThreadCompleted = listenThread.Join (TimeSpan.FromSeconds (5));
+						Assert.That (listenThreadCompleted, Is.True, "Listener thread");
+					} finally {
+						listener.Stop ();
+						read?.Close ();
+						write?.Close ();
+					}
+				} catch (Exception e) {
+					ex = e;
+				}
+			}) {
+				IsBackground = true,
+			};
+			thread.Start ();
+			Assert.That (thread.Join (TimeSpan.FromSeconds (10)), Is.True, "Background thread completion");
+			Assert.That (ex, Is.Null, "No exception");
 		}
 
 		void DebugListener (object data)
 		{
 			var listener = data as TcpListener;
-			var client = listener.AcceptTcpClient();
-			var stream = client.GetStream();
+			TcpClient client;
+			try {
+				client = listener.AcceptTcpClient ();
+			} catch (ObjectDisposedException) {
+				return;
+			} catch (SocketException) {
+				return;
+			} catch (InvalidOperationException) {
+				return;
+			}
+			var stream = client.GetStream ();
 
 			byte [] buffer = new byte [512];
-			if (stream.Read (buffer, 0, 5) == 5){
-				stream.Write (new byte[] {10,20,30,40,50}, 0, 5);
+			if (stream.Read (buffer, 0, 5) == 5) {
+				stream.Write (new byte [] { 10, 20, 30, 40, 50 }, 0, 5);
 				stream.Flush ();
 			}
 			client.Close ();
 		}
-#endif // !__WATCHOS__
 	}
 }
-

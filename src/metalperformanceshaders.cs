@@ -1,128 +1,228 @@
-#if XAMCORE_2_0 || !MONOMAC
-using System;
+using System.ComponentModel;
+using System.Numerics;
+
 using CoreGraphics;
-using Foundation;
 using Metal;
-using ObjCRuntime;
-using Vector4 = global::OpenTK.Vector4;
 
 namespace MetalPerformanceShaders {
 	// MPSImageConvolution.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that represents a convolution.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageConvolution_ClassReference/index.html">Apple documentation for <c>MPSImageConvolution</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageConvolution {
+		/// <summary>Gets the height of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>Gets the width of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>Gets or sets a value that is added to a pixel after it is transformed.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bias")]
 		float Bias { get; set; }
 
 		[Export ("initWithDevice:kernelWidth:kernelHeight:weights:")]
 		[DesignatedInitializer]
 		[Internal]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, IntPtr kernelWeights);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, IntPtr kernelWeights);
 
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageConvolution</c> for the specified device.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[TV (11,0), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>An optimized Laplacian filter.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImageLaplacian">Apple documentation for <c>MPSImageLaplacian</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageLaplacian {
 
+		/// <summary>Gets or sets a bias to add to convolved pixels before they are converted to their storage format.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bias")]
 		float Bias { get; set; }
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSImageLaplacian" /> object for the specified <paramref name="device" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that blurs by transforming each pixel of the source image to the average of itself and its neighbors.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageBox_ClassReference/index.html">Apple documentation for <c>MPSImageBox</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageBox {
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <summary>Gets the height of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>Gets the width of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="kernelWidth">The width of the window around the pixel to consider. This must be an odd number.</param>
+		/// <param name="kernelHeight">The height of the window around the pixel to consider. This must be an odd number.</param>
+		/// <summary>Constructs a new <c>MPSImageBox</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:kernelWidth:kernelHeight: instead.
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that blurs an image with a tent function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageTent_ClassReference/index.html">Apple documentation for <c>MPSImageTent</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageBox))]
 	[DisableDefaultCtor]
 	interface MPSImageTent {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="kernelWidth">The width of the window around the pixel to consider. This must be an odd number.</param>
+		/// <param name="kernelHeight">The height of the window around the pixel to consider. This must be an odd number.</param>
+		/// <summary>Constructs a new <c>MPSImageTent</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that applies a fast Gaussian blur to an image.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageGaussianBlur_ClassReference/index.html">Apple documentation for <c>MPSImageGaussianBlur</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageGaussianBlur {
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="sigma">A value that controls the blurriness of the resulting image.</param>
+		/// <summary>Constructs a new <c>MPSImageGaussianBlur</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:sigma:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, float sigma);
+		NativeHandle Constructor (IMTLDevice device, float sigma);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:sigma: instead.
 
+		/// <summary>Gets the standard deviation of the blur effect, with larger values indicating a stronger blur.</summary>
+		///         <value>The standard deviation of the blur effect.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sigma")]
 		float Sigma { get; }
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that detects edges by using a Sobel filter.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageSobel_ClassReference/index.html">Apple documentation for <c>MPSImageSobel</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageSobel {
 		// inlining .ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageSobel</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithDevice:linearGrayColorTransform:")]
 		[Internal]
@@ -133,33 +233,60 @@ namespace MetalPerformanceShaders {
 		IntPtr /* float* */ _ColorTransform { get; }
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Base class for image pyramids.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImagePyramid">Apple documentation for <c>MPSImagePyramid</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImagePyramid {
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="device">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSImagePyramid" /> object for the specified <paramref name="device" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="centerWeight">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSImagePyramid" /> object for the specified <paramref name="device" />, with the specified <paramref name="centerWeight" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:centerWeight:")]
-		IntPtr Constructor (IMTLDevice device, float centerWeight);
+		NativeHandle Constructor (IMTLDevice device, float centerWeight);
 
 		[Export ("initWithDevice:kernelWidth:kernelHeight:weights:")]
 		[Internal]
 		IntPtr InitWithDevice (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, /* float* */ IntPtr kernelWeights);
 
+		/// <summary>Gets the (odd) number of pixels in the filter window height.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>Gets the (odd) number of pixels in the filter window width.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Represents a Gaussian image pyramid.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImageGaussianPyramid">Apple documentation for <c>MPSImageGaussianPyramid</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImagePyramid))]
 	[DisableDefaultCtor]
 	interface MPSImageGaussianPyramid {
@@ -171,301 +298,620 @@ namespace MetalPerformanceShaders {
 		IntPtr InitWithDevice (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, /* float* */ IntPtr kernelWeights);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageHistogram.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Calculates a histogram of image data.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageHistogram_ClassReference/index.html">Apple documentation for <c>MPSImageHistogram</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageHistogram {
-		[TV (11,0), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <summary>The region of the texture to sample.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <summary>Controls whether the histogram will be zeroed before it is written to. Default is <see langword="true" /></summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("zeroHistogram")]
 		bool ZeroHistogram { get; set; }
 
+		/// <summary>Gets the configuration of the histogram.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("histogramInfo")]
 		MPSImageHistogramInfo HistogramInfo {
-			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")] get;
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			get;
 		}
 
 		// Could not initialize an instance of the type 'MetalPerformanceShaders.MPSImageHistogram': the native 'initWithDevice:' method returned nil.
-//		[Export ("initWithDevice:")]
-//		IntPtr Constructor (IMTLDevice device);
+		//		[Export ("initWithDevice:")]
+		//		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="device">The device on which the histogram filter will be run.</param>
+		/// <param name="histogramInfo">Configuration data for the histogram.</param>
+		/// <summary>Creates a new <c>MPSImageHistogram</c> for the specified <paramref name="device" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:histogramInfo:")]
 		[DesignatedInitializer]
 		[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
-		IntPtr Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
+		NativeHandle Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="source">To be added.</param>
+		/// <param name="histogram">To be added.</param>
+		/// <param name="histogramOffset">To be added.</param>
+		/// <summary>Encodes the kernel to <paramref name="commandBuffer" />, which will operate on <paramref name="source" /> and write the results <paramref name="histogramOffset" /> bytes into <paramref name="histogram" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceTexture:histogram:histogramOffset:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture source, IMTLBuffer histogram, nuint histogramOffset);
 
+		/// <param name="sourceFormat">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("histogramSizeForSourceFormat:")]
 		nuint GetHistogramSize (MTLPixelFormat sourceFormat);
 
-		[TV (11,0), iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("minPixelThresholdValue", ArgumentSemantic.Assign)]
 		Vector4 MinPixelThresholdValue {
-			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")] get; 
-			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")] set; 
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			get;
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			set;
 		}
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> that equalizes the histogram of an image.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageHistogramEqualization_ClassReference/index.html">Apple documentation for <c>MPSImageHistogramEqualization</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageHistogramEqualization {
+		/// <param name="device">The device on which the histogram equalization will be run.</param>
+		/// <param name="histogramInfo">The histogram format.</param>
+		/// <summary>Creates a new <c>MPSImageHistogramEqualization</c> for the specified <paramref name="device" /> and <paramref name="histogramInfo" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:histogramInfo:")]
 		[DesignatedInitializer]
 		[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
-		IntPtr Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
+		NativeHandle Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
 
+		/// <summary>Gets the configuration of the current histogram.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("histogramInfo")]
 		MPSImageHistogramInfo HistogramInfo {
-			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")] get;
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			get;
 		}
 
+		/// <param name="commandBuffer">The command buffer in which to encode the transformation.</param>
+		/// <param name="source">The source image.</param>
+		/// <param name="histogram">A buffer that contains the current histogram data.</param>
+		/// <param name="histogramOffset">The offset, into <paramref name="histogram" />, to the start of the current histogram data.</param>
+		/// <summary>Encodes the transform function, which calculates the equalization lookup table, to the specified <paramref name="commandBuffer" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeTransformToCommandBuffer:sourceTexture:histogram:histogramOffset:")]
 		void EncodeTransformToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture source, IMTLBuffer histogram, nuint histogramOffset);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Transforms an image so that its histogram matches a desired histogram.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageHistogramSpecification_ClassReference/index.html">Apple documentation for <c>MPSImageHistogramSpecification</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageHistogramSpecification {
+		/// <param name="device">The device on which the histogram specification will be run.</param>
+		/// <param name="histogramInfo">The histogram format.</param>
+		/// <summary>Creates a new <c>MPSImageHistogramSpecification</c> for the specified <paramref name="device" /> and <paramref name="histogramInfo" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:histogramInfo:")]
 		[DesignatedInitializer]
 		[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
-		IntPtr Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
+		NativeHandle Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
 
+		/// <summary>Gets the configuration of the current and desired histograms.</summary>
+		///         <value>The configuration of the current and desired histograms.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("histogramInfo")]
 		MPSImageHistogramInfo HistogramInfo {
-			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")] get;
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			get;
 		}
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="source">To be added.</param>
+		/// <param name="sourceHistogram">To be added.</param>
+		/// <param name="sourceHistogramOffset">To be added.</param>
+		/// <param name="desiredHistogram">To be added.</param>
+		/// <param name="desiredHistogramOffset">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeTransformToCommandBuffer:sourceTexture:sourceHistogram:sourceHistogramOffset:desiredHistogram:desiredHistogramOffset:")]
 		void EncodeTransformToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture source, IMTLBuffer sourceHistogram, nuint sourceHistogramOffset, IMTLBuffer desiredHistogram, nuint desiredHistogramOffset);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageIntegral.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that sums the values of pixels in a region.</summary>
+	///     <remarks>
+	///       <para>The region of consideration is given by the filter offset and the position in the result image. That is, each pixel of the destination image is the sum of the pixels in a rectangular region bounded by the coordinates of the target pixel and the filter offset.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageIntegral_ClassReference/index.html">Apple documentation for <c>MPSImageIntegral</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageIntegral {
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageIntegral</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that sums the squared values of pixels in a region.</summary>
+	///     <remarks>
+	///       <para>The region of consideration is given by the filter offset and the position in the result image. That is, each pixel of the destination image is the sum of the pixels in a rectangular region bounded by the coordinates of the target pixel and the filter offset.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageIntegralOfSquares_ClassReference/index.html">Apple documentation for <c>MPSImageIntegralOfSquares</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageIntegralOfSquares {
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageIntegralOfSquares</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageKernel.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Represents a shader transformation produces one texture from another.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSUnaryImageKernel_ClassReference/index.html">Apple documentation for <c>MPSUnaryImageKernel</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSUnaryImageKernel {
+		/// <summary>Gets or sets the location of the destination clipping rectangle in the source texture.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("offset", ArgumentSemantic.Assign)]
 		MPSOffset Offset { get; set; }
 
+		/// <summary>Gets or sets the clipping rectangle in which to write data. The default value writes to the entire image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		///         <!--MPSRectNoClip info should go below when available. -->
 		[Export ("clipRect", ArgumentSemantic.Assign)]
 		MTLRegion ClipRect { get; set; }
 
+		/// <summary>Gets or sets the behavior to use when the shader encounters the edge of the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("edgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode EdgeMode { get; set; }
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="texture">To be added.</param>
+		///         <param name="copyAllocator">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Attempts to apply the kernel to <paramref name="texture" />, using <paramref name="copyAllocator" /> to allocate and write to a new texture if in-place application fails.</summary>
+		///         <returns>
+		///           <see langword="true" /> if in-place application succeeds. Otherwise, returns <see langword="false" />.</returns>
+		///         <remarks>If <see langword="true" /> is returned and a non-null copy allocator was supplied, <paramref name="texture" /> will point to the newly allocated texture, whether in-place or out-of-place. If no copy allocator is supplied, the reference <paramref name="texture" /> remains unchanged on failure.</remarks>
 		[Export ("encodeToCommandBuffer:inPlaceTexture:fallbackCopyAllocator:")]
 		bool EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, out NSObject /* IMTLTexture */ texture, [NullAllowed] MPSCopyAllocator copyAllocator);
 		// FIXME: can't use IMTLTexture now
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceTexture">To be added.</param>
+		///         <param name="destinationTexture">To be added.</param>
+		///         <summary>Encodes the kernel to <paramref name="commandBuffer" />, which will overwrite <paramref name="destinationTexture" /> with the result of applying the kernel to <paramref name="sourceTexture" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceTexture:destinationTexture:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture destinationTexture);
 
-		[iOS (11,0), TV (11,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSImage destinationImage);
 
+		/// <param name="destinationSize">To be added.</param>
+		///         <summary>Calculates and returns the area of the source texture that will be read for the specified <paramref name="destinationSize" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceRegionForDestinationSize:")]
 		MPSRegion SourceRegionForDestinationSize (MTLSize destinationSize);
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> for the specified <paramref name="device" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A image kernel that combines two textures into one texture result.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSBinaryImageKernel_ClassReference/index.html">Apple documentation for <c>MPSBinaryImageKernel</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSBinaryImageKernel {
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
-		
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		/// <summary>Gets or sets the location of the destination clipping rectangle in the primary texture.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryOffset", ArgumentSemantic.Assign)]
 		MPSOffset PrimaryOffset { get; set; }
 
+		/// <summary>Gets or sets the location of the destination clipping rectangle in the secondary texture.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryOffset", ArgumentSemantic.Assign)]
 		MPSOffset SecondaryOffset { get; set; }
 
+		/// <summary>Gets or sets the behavior to use when the shader encounters the edge of the primary image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryEdgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode PrimaryEdgeMode { get; set; }
 
+		/// <summary>Gets or sets the behavior to use when the shader encounters the edge of the secondary image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryEdgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode SecondaryEdgeMode { get; set; }
 
+		/// <summary>The region of the destination in which to write data.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRect", ArgumentSemantic.Assign)]
 		MTLRegion ClipRect { get; set; }
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryTexture">To be added.</param>
+		///         <param name="inPlaceSecondaryTexture">To be added.</param>
+		///         <param name="copyAllocator">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Attempts to apply the kernel to <paramref name="inPlaceSecondaryTexture" />, using <paramref name="copyAllocator" /> to allocate and write to a new texture if in-place application fails.</summary>
+		///         <returns>
+		///           <see langword="true" /> if in-place application succeeds. Otherwise, returns <see langword="false" />.</returns>
+		///         <remarks>If <see langword="false" /> is returned and a non-null copy allocator was supplied, <paramref name="inPlaceSecondaryTexture" /> will point to the newly allocated texture.</remarks>
 		[Export ("encodeToCommandBuffer:primaryTexture:inPlaceSecondaryTexture:fallbackCopyAllocator:")]
 		bool EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture primaryTexture, out NSObject /* IMTLTexture */ inPlaceSecondaryTexture, [NullAllowed] MPSCopyAllocator copyAllocator);
 		// FIXME: can't use IMTLTexture now
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inPlacePrimaryTexture">To be added.</param>
+		///         <param name="secondaryTexture">To be added.</param>
+		///         <param name="copyAllocator">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Attempts to apply the kernel to <paramref name="inPlacePrimaryTexture" />, using <paramref name="copyAllocator" /> to allocate and write to a new texture if in-place application fails.</summary>
+		///         <returns>
+		///           <see langword="true" /> if in-place application succeeds. Otherwise, returns <see langword="false" />.</returns>
+		///         <remarks>If <see langword="false" /> is returned and a non-null copy allocator was supplied, <paramref name="inPlacePrimaryTexture" /> will point to the newly allocated texture.</remarks>
 		[Export ("encodeToCommandBuffer:inPlacePrimaryTexture:secondaryTexture:fallbackCopyAllocator:")]
 		bool EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, out NSObject /* MTLTexture */ inPlacePrimaryTexture, IMTLTexture secondaryTexture, [NullAllowed] MPSCopyAllocator copyAllocator);
 		// FIXME: can't use IMTLTexture now
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryTexture">To be added.</param>
+		///         <param name="secondaryTexture">To be added.</param>
+		///         <param name="destinationTexture">To be added.</param>
+		///         <summary>Encodes the kernel to <paramref name="commandBuffer" />, which will overwrite <paramref name="destinationTexture" /> with the result of applying the kernel to <paramref name="primaryTexture" /> and <paramref name="secondaryTexture" />.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:primaryTexture:secondaryTexture:destinationTexture:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture primaryTexture, IMTLTexture secondaryTexture, IMTLTexture destinationTexture);
 
-		[iOS (11,0), TV (11,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, MPSImage destinationImage);
 
+		/// <param name="destinationSize">To be added.</param>
+		///         <summary>Calculates and returns the area of the primary source texture that will be read for the specified <paramref name="destinationSize" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("primarySourceRegionForDestinationSize:")]
 		MPSRegion PrimarySourceRegionForDestinationSize (MTLSize destinationSize);
 
+		/// <param name="destinationSize">To be added.</param>
+		///         <summary>Calculates and returns the area of the secondary source texture that will be read for the specified <paramref name="destinationSize" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondarySourceRegionForDestinationSize:")]
 		MPSRegion SecondarySourceRegionForDestinationSize (MTLSize destinationSize);
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>Creates a new MPSBinaryImageKernel for the specified metal device.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
 	// MPSImageMedian.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that finds the median value of each channel for pixels in the region around each source image pixel.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageMedian_ClassReference/index.html">Apple documentation for <c>MPSImageMedian</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageMedian {
+		/// <summary>Gets the length of the sides of the region to consider. This property is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelDiameter")]
 		nuint KernelDiameter { get; }
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="kernelDiameter">The length of the sides of the region to consider. Must be an odd number</param>
+		/// <summary>Constructs a new <c>MPSImageMedian</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelDiameter:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelDiameter);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelDiameter);
 
 		// [Export ("initWithDevice:")] is NS_UNAVAILABLE - You must use initWithDevice:kernelDiameter: instead.
 
+		/// <summary>Gets the maximum supported kernel diameter.</summary>
+		///         <value>The maximum supported kernel diameter.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("maxKernelDiameter")]
 		nuint MaxKernelDiameter { get; }
 
+		/// <summary>Gets the minimum supported kernel diameter.</summary>
+		///         <value>The minimum supported kernel diameter.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("minKernelDiameter")]
 		nuint MinKernelDiameter { get; }
 
-		[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageMorphology.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that finds the maximum pixel value in a window around each pixel in the source image.(Individual channels are processed separately.)</summary>
+	///     <remarks>
+	///       <para>Pixels inside the window that is considered but that are outside the bounds of the source image are clamped to the value at the edge of the image.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageAreaMax_ClassReference/index.html">Apple documentation for <c>MPSImageAreaMax</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageAreaMax {
+		/// <summary>Gets the height of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>Gets the width of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="kernelWidth">The width of the window around the pixel to consider. This must be an odd number.</param>
+		/// <param name="kernelHeight">The height of the window around the pixel to consider. This must be an odd number.</param>
+		/// <summary>Constructs a new <c>MPSImageAreaMax</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
-		[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		// [Export ("initWithDevice:")] is NS_UNAVAILABLE - You must use initWithDevice:kernelWidth:kernelHeight: instead.
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that finds the minimum pixel value in a window around each pixel in the source image.(Individual channels are processed separately.)</summary>
+	///     <remarks>
+	///       <para>Pixels inside the window that is considered but that are outside the bounds of the source image are clamped to the value at the edge of the image.</para>
+	///       <para>Developers should note that this filter kernel inherits from <see cref="MetalPerformanceShaders.MPSImageAreaMax" />.</para>
+	///     </remarks>
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageAreaMin_ClassReference/index.html">Apple documentation for <c>MPSImageAreaMin</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageAreaMax))]
 	[DisableDefaultCtor]
 	interface MPSImageAreaMin {
 		// inlining ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <param name="kernelWidth">The width of the window around the pixel to consider. This must be an odd number.</param>
+		/// <param name="kernelHeight">The height of the window around the pixel to consider. This must be an odd number.</param>
+		/// <summary>Constructs a new <c>MPSImageAreaMin</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Finds the maximum value in a region, offset by a corresponding value in a mask.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageDilate_ClassReference/index.html">Apple documentation for <c>MPSImageDilate</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageDilate {
+		/// <summary>Gets the height of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>Gets the height of the window around the pixel to consider. This is always an odd number.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
@@ -476,13 +922,24 @@ namespace MetalPerformanceShaders {
 		// [Export ("initWithDevice:")] is NS_UNAVAILABLE - You must use initWithDevice:kernelWidth:kernelHeight:values: instead. instead.
 
 		// inlining ctor from base class
-		[TV (11,0), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Finds the minimum value in a region, offset by a corresponding value in a mask.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageErode_ClassReference/index.html">Apple documentation for <c>MPSImageErode</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageDilate))]
 	[DisableDefaultCtor]
 	interface MPSImageErode {
@@ -490,34 +947,59 @@ namespace MetalPerformanceShaders {
 		// inlining ctor from base class -> done in manual bindings (wrt float* argument)
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageResampling.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that performs a scaling operation with Lanczos resampling.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageLanczosScale_ClassReference/index.html">Apple documentation for <c>MPSImageLanczosScale</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageScale))]
 	[DisableDefaultCtor]
 	interface MPSImageLanczosScale {
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageLanczosScale</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSImageThreshold.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that changes all pixels above a threshold luminance to a specified maximum single-channel value, and completely darkens the rest.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageThresholdBinary_ClassReference/index.html">Apple documentation for <c>MPSImageThresholdBinary</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageThresholdBinary {
@@ -527,9 +1009,15 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:thresholdValue:maximumValue:linearGrayColorTransform: instead
 
+		/// <summary>Gets the value above which pixels will be brightened to the maximum value.</summary>
+		///         <value>The value above which pixels will be brightened to the maximum value.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("thresholdValue")]
 		float ThresholdValue { get; }
 
+		/// <summary>Gets the value to which to brighten pixels brighter than the threshold.</summary>
+		///         <value>The value to which to brighten pixels brighter than the threshold.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumValue")]
 		float MaximumValue { get; }
 
@@ -538,13 +1026,24 @@ namespace MetalPerformanceShaders {
 		IntPtr _Transform { get; }
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that changes all pixels above a threshold luminance to 0, and brightens the rest to a specified maximum single-channel value.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageThresholdBinaryInverse_ClassReference/index.html">Apple documentation for <c>MPSImageThresholdBinaryInverse</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageThresholdBinaryInverse {
@@ -554,9 +1053,15 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:thresholdValue:maximumValue:linearGrayColorTransform: instead
 
+		/// <summary>Gets the value above which pixels will be darkened to 0 brightness.</summary>
+		///         <value>The value above which pixels will be darkened to 0 brightness.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("thresholdValue")]
 		float ThresholdValue { get; }
 
+		/// <summary>Gets the value to which to brighten pixels that are dimmer than the threshold in the source image.</summary>
+		///         <value>The value to which to brighten pixels that are dimmer than the threshold in the source image.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumValue")]
 		float MaximumValue { get; }
 
@@ -565,13 +1070,24 @@ namespace MetalPerformanceShaders {
 		IntPtr _Transform { get; }
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that clamps brightness values to a threshold value.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageThresholdTruncate_ClassReference/index.html">Apple documentation for <c>MPSImageThresholdTruncate</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageThresholdTruncate {
@@ -581,6 +1097,9 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:thresholdValue:linearGrayColorTransform: instead
 
+		/// <summary>Gets the value to which pixel brightensses will be clamped.</summary>
+		///         <value>The value to which pixel brightensses will be clamped.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("thresholdValue")]
 		float ThresholdValue { get; }
 
@@ -589,13 +1108,24 @@ namespace MetalPerformanceShaders {
 		IntPtr _Transform { get; }
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that darkens all pixels dimmer than or equal in brightness to a threshold luminance to 0, and leaves the rest unchanged.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageThresholdToZero_ClassReference/index.html">Apple documentation for <c>MPSImageThresholdToZero</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageThresholdToZero {
@@ -605,6 +1135,9 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:thresholdValue:linearGrayColorTransform: instead
 
+		/// <summary>Gets the value above which pixels will be left unchanged.</summary>
+		///         <value>The value above which pixels will be left unchanged.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("thresholdValue")]
 		float ThresholdValue { get; }
 
@@ -613,13 +1146,24 @@ namespace MetalPerformanceShaders {
 		IntPtr _Transform { get; }
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that leaves all pixels dimmer than or equal in brightness to a threshold luminance unchangedt, and darkens the rest to 0.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageThresholdToZeroInverse_ClassReference/index.html">Apple documentation for <c>MPSImageThresholdToZeroInverse</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageThresholdToZeroInverse {
@@ -629,6 +1173,9 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - You must use initWithDevice:thresholdValue:linearGrayColorTransform: instead
 
+		/// <summary>Gets the value above which pixels will be darkened to 0.</summary>
+		///         <value>The value above which pixels will be darkened to 0.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("thresholdValue")]
 		float ThresholdValue { get; }
 
@@ -637,36 +1184,92 @@ namespace MetalPerformanceShaders {
 		IntPtr _Transform { get; }
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSKernel.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <include file="../docs/api/MetalPerformanceShaders/MPSKernel.xml" path="/Documentation/Docs[@DocId='T:MetalPerformanceShaders.MPSKernel']/*" />
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSKernel : NSCopying, NSSecureCoding {
-		[TV (11,0), iOS (11,0)]
+		/// <summary>Gets a region that represents the default clipping rectangle.</summary>
+		[Field ("MPSRectNoClip")]
+		MTLRegion RectNoClip { get; }
+
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <summary>Gets or sets the list of kernel options for running the shader.</summary>
+		///         <value>The list of kernel options for running the shader.</value>
+		///         <remarks>
+		///           <para>Application developers can use this field to allow reduced-precision types in calculations, skip validation, both, or neither.</para>
+		///         </remarks>
 		[Export ("options", ArgumentSemantic.Assign)]
 		MPSKernelOptions Options { get; set; }
 
+		/// <summary>Gets the device for which the kernel will be encoded.</summary>
+		///         <value>The device for which the kernel will be encoded.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("device", ArgumentSemantic.Retain)]
 		IMTLDevice Device { get; }
 
+		/// <summary>Gets or sets a programmer-friendly name for the shader</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("label")]
 		string Label { get; set; }
 
+		/// <param name="device">The device for which to create a new kernel.</param>
+		/// <summary>Creates a new kernel that can run on the specified device, if supported.</summary>
+		/// <remarks>
+		///           <para>Application developers should call the <see cref="MetalPerformanceShaders.MPSKernel.Supports(Metal.IMTLDevice)" /> method to determine if the <paramref name="device" /> is supported.</para>
+		///         </remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>
+		///           Zone to use to allocate this object, or null to use the default zone.
+		///         </para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>The device for which to make a copy.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>Copies a shader for the specified device and zone.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>
+		///           <para>App developers can call this method to create copies of shaders for use on multiple threads.</para>
+		///           <para>Application developers should call the <see cref="MetalPerformanceShaders.MPSKernel.Supports(Metal.IMTLDevice)" /> method to determine if the<paramref name="device" /> is supported.</para>
+		///         </remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSKernel CopyWithZone ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
@@ -674,455 +1277,855 @@ namespace MetalPerformanceShaders {
 
 	// MPSImageTranspose.h
 
-	[iOS (9,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Filter that transposes an image.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/library/ios/documentation/MetalPerformanceShaders/Reference/MPSImageTranspose_ClassReference/index.html">Apple documentation for <c>MPSImageTranspose</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageTranspose {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">The device on which the filter will run.</param>
+		/// <summary>Constructs a new <c>MPSImageTranspose</c> with the specified values.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSCNN.h
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The base class for layers in a convolutional neural network.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNKernel">Apple documentation for <c>MPSCNNKernel</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel), Name = "MPSCNNKernel")]
 	[Abstract]
 	[DisableDefaultCtor]
 	interface MPSCnnKernel {
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("offset", ArgumentSemantic.Assign)]
 		MPSOffset Offset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRect", ArgumentSemantic.Assign)]
 		MTLRegion ClipRect { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationFeatureChannelOffset")]
 		nuint DestinationFeatureChannelOffset { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("sourceFeatureChannelMaxCount")]
 		nuint SourceFeatureChannelMaxCount { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("sourceFeatureChannelOffset")]
 		nuint SourceFeatureChannelOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("edgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode EdgeMode { get; set; }
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceImage:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)] // keeping same name to match existing member
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="destinationState">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:destinationState:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSState destinationState, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationImages:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, NSArray<MPSImage> destinationImages);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="destinationStates">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationStates:destinationImages:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, [NullAllowed] NSArray<MPSState> destinationStates, NSArray<MPSImage> destinationImages);
 
+		/// <param name="destinationSize">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceRegionForDestinationSize:")]
 		MPSRegion GetSourceRegion (MTLSize destinationSize);
 
 		//inlining ctor from base class
-		[TV (11,0), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isBackwards")]
 		bool IsBackwards { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isStateModified")]
 		bool IsStateModified { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("padding", ArgumentSemantic.Retain)]
 		IMPSNNPadding Padding { get; set; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("destinationImageAllocator", ArgumentSemantic.Retain)]
 		IMPSImageAllocator DestinationImageAllocator { get; set; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:")]
 		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="outState">To be added.</param>
+		///         <param name="isTemporary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:destinationState:destinationStateIsTemporary:")]
 		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] out MPSState outState, bool isTemporary);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="outStates">To be added.</param>
+		///         <param name="isTemporary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationStates:destinationStateIsTemporary:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, [NullAllowed] out NSArray<MPSState> outStates, bool isTemporary);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSState GetResultState (MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateBatchForSourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		NSArray<MPSState> GetResultStateBatch (NSArray<MPSImage> sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateBatchForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		NSArray<MPSState> GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isResultStateReusedAcrossBatch")]
 		bool IsResultStateReusedAcrossBatch { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("appendBatchBarrier")]
 		bool AppendBatchBarrier { get; }
 
-		[TV (11,0), Mac (10,13), iOS (11,0)]
+		/// <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("destinationImageDescriptorForSourceImages:sourceStates:")]
 		MPSImageDescriptor GetDestinationImageDescriptor (NSArray<MPSImage> sourceImages, [NullAllowed] NSArray<MPSState> sourceStates);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; }
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodingStorageSizeForSourceImage:sourceStates:destinationImage:")]
+		nuint GetEncodingStorageSize (MPSImage sourceImage, [NullAllowed] MPSState [] sourceStates, [NullAllowed] MPSImage destinationImage);
+
+		[MacCatalyst (13, 0)]
+		[Export ("batchEncodingStorageSizeForSourceImage:sourceStates:destinationImage:")]
+		nuint GetBatchEncodingStorageSize (MPSImage [] sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, [NullAllowed] MPSImage [] destinationImage);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The base class for activation functions.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuron">Apple documentation for <c>MPSCNNNeuron</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNNeuron")]
 	[Abstract] // You must use one of the sub-classes of MPSCNNNeuron
 	[DisableDefaultCtor]
 	interface MPSCnnNeuron {
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[DesignatedInitializer]
 		[Export ("initWithCoder:device:")]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11,0), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("a")]
 		float A { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("b")]
 		float B { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("c")]
 		float C { get; }
 
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("data", ArgumentSemantic.Retain)]
 		NSData Data { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The linear activation function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuronLinear">Apple documentation for <c>MPSCNNNeuronLinear</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronLinear")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronLinear {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b);
+		NativeHandle Constructor (IMTLDevice device, float a, float b);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The rectified linear unit activation function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuronReLU">Apple documentation for <c>MPSCNNNeuronReLU</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronReLU")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronReLU {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:")]
-		IntPtr Constructor (IMTLDevice device, float a);
+		NativeHandle Constructor (IMTLDevice device, float a);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The sigmoid activation function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuronSigmoid">Apple documentation for <c>MPSCNNNeuronSigmoid</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronSigmoid")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronSigmoid {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The hyperbolic tangent activation function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuronTanH">Apple documentation for <c>MPSCNNNeuronTanH</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronTanH")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronTanH {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b);
+		NativeHandle Constructor (IMTLDevice device, float a, float b);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:a:b: instead
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The absolute-value activation function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNNeuronAbsolute">Apple documentation for <c>MPSCNNNeuronAbsolute</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronAbsolute")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronAbsolute {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Describes a convolution kernel.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNConvolutionDescriptor">Apple documentation for <c>MPSCNNConvolutionDescriptor</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject), Name = "MPSCNNConvolutionDescriptor")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionDescriptor : NSCopying, NSSecureCoding {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("groups")]
 		nuint Groups { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("neuron", ArgumentSemantic.Retain)]
 		[Deprecated (PlatformName.TvOS, 11, 0)]
 		[Deprecated (PlatformName.iOS, 11, 0)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		MPSCnnNeuron Neuron { get; set; }
 
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="inputFeatureChannels">To be added.</param>
+		/// <param name="outputFeatureChannels">To be added.</param>
+		/// <param name="neuronFilter">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Deprecated (PlatformName.TvOS, 11, 0)]
 		[Deprecated (PlatformName.iOS, 11, 0)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("cnnConvolutionDescriptorWithKernelWidth:kernelHeight:inputFeatureChannels:outputFeatureChannels:neuronFilter:")]
 		MPSCnnConvolutionDescriptor GetConvolutionDescriptor (nuint kernelWidth, nuint kernelHeight, nuint inputFeatureChannels, nuint outputFeatureChannels, [NullAllowed] MPSCnnNeuron neuronFilter);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("supportsSecureCoding")]
 		bool SupportsSecureCoding { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="inputFeatureChannels">To be added.</param>
+		/// <param name="outputFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("cnnConvolutionDescriptorWithKernelWidth:kernelHeight:inputFeatureChannels:outputFeatureChannels:")]
 		MPSCnnConvolutionDescriptor CreateCnnConvolutionDescriptor (nuint kernelWidth, nuint kernelHeight, nuint inputFeatureChannels, nuint outputFeatureChannels);
 
-		[TV (11, 0), iOS (11, 0)]
+		[MacCatalyst (13, 1)]
 		[Internal, Export ("setBatchNormalizationParametersForInferenceWithMean:variance:gamma:beta:epsilon:")]
 		void SetBatchNormalizationParameters (IntPtr /* float* */ mean, IntPtr /* float* */ variance, [NullAllowed] IntPtr /* float* */ gamma, [NullAllowed] IntPtr /* float* */ beta, float epsilon);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use 'FusedNeuronDescriptor' property instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Export ("setNeuronType:parameterA:parameterB:")]
 		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use 'FusedNeuronDescriptor' property instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use 'FusedNeuronDescriptor' property instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use 'FusedNeuronDescriptor' property instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="A">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use 'FusedNeuronDescriptor' property instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property instead.")]
 		[Export ("setNeuronToPReLUWithParametersA:")]
 		void SetNeuronToPReLU (NSData A);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; set; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("fusedNeuronDescriptor", ArgumentSemantic.Retain)]
 		MPSNNNeuronDescriptor FusedNeuronDescriptor { get; set; }
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
-	[Native][Flags]
+	/// <summary>Developers should not use this deprecated class.</summary>
+	[MacCatalyst (13, 1)]
+	[Native]
+	[Flags]
 	public enum MPSCnnConvolutionFlags : ulong {
-		None = 0
+		/// <summary>To be added.</summary>
+		None = 0,
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that convolves its inputs, producing a feature map for each of its constituent filters.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNConvolution">Apple documentation for <c>MPSCNNConvolution</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNConvolution")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolution {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("groups")]
 		nuint Groups { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dataSource", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource DataSource { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 0, message: "A 'MPSCnnNeuron' is much too heavy for this purpose. Please set 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.iOS, 11, 0, message: "A 'MPSCnnNeuron' is much too heavy for this purpose. Please set 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "A 'MPSCnnNeuron' is much too heavy for this purpose. Please set 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[NullAllowed, Export ("neuron")]
 		MPSCnnNeuron Neuron { get; }
 
@@ -1132,117 +2135,203 @@ namespace MetalPerformanceShaders {
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:convolutionDescriptor:kernelWeights:biasTerms instead
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:weights:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11, 0), iOS (11, 0)]
-		[Export ("encodeToCommandBuffer:sourceImage:destinationImage:state:")]
-		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSImage destinationImage, out MPSCnnConvolutionState state);
-
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("channelMultiplier")]
 		nuint ChannelMultiplier { get; }
 
-		[TV (11,3), Mac (10,13, 4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("accumulatorPrecisionOption", ArgumentSemantic.Assign)]
 		MPSNNConvolutionAccumulatorPrecisionOption AccumulatorPrecisionOption { get; set; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
-		[TV (11,2), iOS (11,2), Mac (10,13,2, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use 'FusedNeuronDescriptor' property of convolution descriptor instead.")]
 		[Export ("neuronParameterC")]
 		float NeuronParameterC { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("subPixelScaleFactor")]
 		nuint SubPixelScaleFactor { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("fusedNeuronDescriptor")]
 		MPSNNNeuronDescriptor FusedNeuronDescriptor { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnConvolutionGradientState GetResultState (MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateBatchForSourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnConvolutionGradientState [] GetResultStateBatch (NSArray<MPSImage> sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnConvolutionGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateBatchForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnConvolutionGradientState [] GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadWeightsAndBiasesFromDataSource")]
 		void ReloadWeightsAndBiasesFromDataSource ();
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="dataSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use 'ReloadWeightsAndBiasesFromDataSource' instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use 'ReloadWeightsAndBiasesFromDataSource' instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use 'ReloadWeightsAndBiasesFromDataSource' instead.")]
+		[MacCatalyst (13, 1)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use 'ReloadWeightsAndBiasesFromDataSource' instead.")]
 		[Export ("reloadWeightsAndBiasesWithDataSource:")]
 		void ReloadWeightsAndBiases (IMPSCnnConvolutionDataSource dataSource);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadWeightsAndBiasesWithCommandBuffer:state:")]
 		void ReloadWeightsAndBiases (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionWeightsAndBiasesState state);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="resultStateCanBeTemporary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("exportWeightsAndBiasesWithCommandBuffer:resultStateCanBeTemporary:")]
 		MPSCnnConvolutionWeightsAndBiasesState ExportWeightsAndBiases (IMTLCommandBuffer commandBuffer, bool resultStateCanBeTemporary);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A fully connected layer.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNFullyConnected">Apple documentation for <c>MPSCNNFullyConnected</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnConvolution), Name = "MPSCNNFullyConnected")]
 	[DisableDefaultCtor]
 	interface MPSCnnFullyConnected {
-		
+
 		[Export ("initWithDevice:convolutionDescriptor:kernelWeights:biasTerms:flags:")]
 		[Internal]
 		IntPtr InitWithDevice (IMTLDevice device, MPSCnnConvolutionDescriptor fullyConnectedDescriptor, /* float* */ IntPtr kernelWeights, [NullAllowed] /* float* */ IntPtr biasTerms, MPSCnnConvolutionFlags flags);
@@ -1250,541 +2339,1079 @@ namespace MetalPerformanceShaders {
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:convolutionDescriptor:kernelWeights:biasTerms instead
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:weights:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A subclass of <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that sub-samples its input.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNPooling">Apple documentation for <c>MPSCNNPooling</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNPooling")]
 	[DisableDefaultCtor]
 	interface MPSCnnPooling {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY: instead
 
-		[TV (11, 0), Mac (10, 13, onlyOn64: true), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnPooling" /> subclass that performs max-pooling.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNPoolingMax">Apple documentation for <c>MPSCNNPoolingMax</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPooling), Name = "MPSCNNPoolingMax")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingMax {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>An average pooling filter.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNPoolingAverage">Apple documentation for <c>MPSCNNPoolingAverage</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPooling), Name = "MPSCNNPoolingAverage")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingAverage {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("zeroPadSizeX")]
 		nuint ZeroPadSizeX { get; set; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("zeroPadSizeY")]
 		nuint ZeroPadSizeY { get; set; }
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that performs spatial normalization.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNSpatialNormalization">Apple documentation for <c>MPSCNNSpatialNormalization</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNSpatialNormalization")]
 	[DisableDefaultCtor]
 	interface MPSCnnSpatialNormalization {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:kernelWidth:kernelHeight instead
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNSpatialNormalizationGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnSpatialNormalizationGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A local contrast <see cref="MetalPerformanceShaders.MPSCnnKernel" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNLocalContrastNormalization">Apple documentation for <c>MPSCNNLocalContrastNormalization</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNLocalContrastNormalization")]
 	[DisableDefaultCtor]
 	interface MPSCnnLocalContrastNormalization {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("p0")]
 		float P0 { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pm")]
 		float Pm { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("ps")]
 		float Ps { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Override]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:kernelWidth:kernelHeight instead
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNLocalContrastNormalizationGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnLocalContrastNormalizationGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("p0")]
 		float P0 { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pm")]
 		float Pm { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("ps")]
 		float Ps { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that normalizes across feature channels.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNCrossChannelNormalization">Apple documentation for <c>MPSCNNCrossChannelNormalization</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNCrossChannelNormalization")]
 	[DisableDefaultCtor]
 	interface MPSCnnCrossChannelNormalization {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelSize")]
 		nuint KernelSize { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelSize);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelSize);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use initWithDevice:kernelSize: instead
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNCrossChannelNormalizationGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnCrossChannelNormalizationGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelSize")]
 		nuint KernelSize { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelSize);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelSize);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> commonly used in categorization tasks.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNSoftMax">Apple documentation for <c>MPSCNNSoftMax</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNSoftMax")]
 	[DisableDefaultCtor]
 	interface MPSCnnSoftMax {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNSoftMaxGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnSoftMaxGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>The logarithmic softmax loss function.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSCNNLogSoftMax">Apple documentation for <c>MPSCNNLogSoftMax</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNLogSoftMax")]
 	[DisableDefaultCtor]
 	interface MPSCnnLogSoftMax {
 
 		// inlining .ctor from base class
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNLogSoftMaxGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnLogSoftMaxGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
 	// MPSImage.h
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Contains the attributes for a new or existing <see cref="MetalPerformanceShaders.MPSImage" />.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImageDescriptor">Apple documentation for <c>MPSImageDescriptor</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSImageDescriptor : NSCopying {
 
+		/// <summary>Gets the image width.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("width")]
 		nuint Width { get; set; }
 
+		/// <summary>Gets the image height.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("height")]
 		nuint Height { get; set; }
 
+		/// <summary>Gets the number of feature channels for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("featureChannels")]
 		nuint FeatureChannels { get; set; }
 
+		/// <summary>Gets the number of images in a batch of images for processing.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfImages")]
 		nuint NumberOfImages { get; set; }
 
+		/// <summary>Gets pixel format of the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pixelFormat")]
 		MTLPixelFormat PixelFormat { get; }
 
+		/// <summary>Gets or sets the channel storage format.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("channelFormat", ArgumentSemantic.Assign)]
 		MPSImageFeatureChannelFormat ChannelFormat { get; set; }
 
+		/// <summary>Gets or sets the CPU cache mode for the underlying texture for an image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("cpuCacheMode", ArgumentSemantic.Assign)]
 		MTLCpuCacheMode CpuCacheMode { get; set; }
 
+		/// <summary>Gets or sets the storage mode for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("storageMode", ArgumentSemantic.Assign)]
 		MTLStorageMode StorageMode { get; set; }
 
+		/// <summary>Gets the intended use of the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("usage", ArgumentSemantic.Assign)]
 		MTLTextureUsage Usage { get; set; }
 
+		/// <param name="channelFormat">To be added.</param>
+		/// <param name="width">To be added.</param>
+		/// <param name="height">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <summary>Returns a <see cref="MetalPerformanceShaders.MPSImageDescriptor" /> object for the specified values.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("imageDescriptorWithChannelFormat:width:height:featureChannels:")]
 		MPSImageDescriptor GetImageDescriptor (MPSImageFeatureChannelFormat channelFormat, nuint width, nuint height, nuint featureChannels);
 
+		/// <param name="channelFormat">To be added.</param>
+		/// <param name="width">To be added.</param>
+		/// <param name="height">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <param name="numberOfImages">To be added.</param>
+		/// <param name="usage">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("imageDescriptorWithChannelFormat:width:height:featureChannels:numberOfImages:usage:")]
 		MPSImageDescriptor GetImageDescriptor (MPSImageFeatureChannelFormat channelFormat, nuint width, nuint height, nuint featureChannels, nuint numberOfImages, MTLTextureUsage usage);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
-	[Native][Flags]
+	/// <summary>Enumerates an image's underlying texture's purgeable state.</summary>
+	[MacCatalyst (13, 1)]
+	[Native]
+	[Flags]
 	public enum MPSPurgeableState : ulong {
+		/// <summary>Indicates that the underlying texture has not been allocated.</summary>
 		AllocationDeferred = 0,
+		/// <summary>Indicates that the underlying texture can be queried without changing its purgeable state.</summary>
 		KeepCurrent = MTLPurgeableState.KeepCurrent,
+		/// <summary>Indicates that the texture may not be discarded.</summary>
 		NonVolatile = MTLPurgeableState.NonVolatile,
+		/// <summary>Indicates that the texture may be, but does not have to be, discarded.</summary>
 		Volatile = MTLPurgeableState.Volatile,
-		Empty = MTLPurgeableState.Empty
+		/// <summary>Indicates that the underlying texture should be discarded.</summary>
+		Empty = MTLPurgeableState.Empty,
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>An image that may contain more than 4 channels. (For example, an image in a layer of a convolutional neural network.)</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImage">Apple documentation for <c>MPSImage</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSImage {
 
-		[TV (11,0), iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("defaultAllocator")]
 		IMPSImageAllocator DefaultAllocator { get; }
 
+		/// <summary>Gets the Metal device for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("device", ArgumentSemantic.Retain)]
 		IMTLDevice Device { get; }
 
+		/// <summary>Gets the height of the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("width")]
 		nuint Width { get; }
 
+		/// <summary>Gets the height of the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("height")]
 		nuint Height { get; }
 
+		/// <summary>Gets the number of feature channels for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("featureChannels")]
 		nuint FeatureChannels { get; }
 
+		/// <summary>Gets the number of images in a batch of images for processing.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfImages")]
 		nuint NumberOfImages { get; }
 
+		/// <summary>Gets the type of the underlying texture for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("textureType")]
 		MTLTextureType TextureType { get; }
 
+		/// <summary>Gets pixel format of the image texture.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pixelFormat")]
 		MTLPixelFormat PixelFormat { get; }
 
+		/// <summary>Gets the number of bits of precision for each feature channel.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("precision")]
 		nuint Precision { get; }
 
+		/// <summary>Gets the intended use of the image's underlying texture.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("usage")]
 		MTLTextureUsage Usage { get; }
 
+		[MacCatalyst (13, 1)]
+		[Export ("featureChannelFormat")]
+		MPSImageFeatureChannelFormat FeatureChannelFormat { get; }
+
+		/// <summary>Gets the number of bytes that are between the start of each pixel and the start of the next sequential pixel. (The stride for one pixel, in bytes.)</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pixelSize")]
 		nuint PixelSize { get; }
 
+		/// <summary>Gets the underlying texture for the image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("texture")]
 		IMTLTexture Texture { get; }
 
+		/// <summary>Gets or sets the image object's label.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("label")]
 		string Label { get; set; }
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("parent", ArgumentSemantic.Retain)]
 		MPSImage Parent { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="imageDescriptor">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSImage" /> for the specified <paramref name="device" /> with the specified <paramref name="imageDescriptor" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:imageDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MPSImageDescriptor imageDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSImageDescriptor imageDescriptor);
 
+		/// <param name="parent">To be added.</param>
+		/// <param name="sliceRange">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithParentImage:sliceRange:featureChannels:")]
-		IntPtr Constructor (MPSImage parent, NSRange sliceRange, nuint featureChannels);
+		NativeHandle Constructor (MPSImage parent, NSRange sliceRange, nuint featureChannels);
 
+		/// <param name="texture">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSImage" /> from the specified <paramref name="texture" /> with the specified <paramref name="featureChannels" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithTexture:featureChannels:")]
-		IntPtr Constructor (IMTLTexture texture, nuint featureChannels);
+		NativeHandle Constructor (IMTLTexture texture, nuint featureChannels);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("batchRepresentation")]
 		NSArray<MPSImage> BatchRepresentation { get; }
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="subRange">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("batchRepresentationWithSubRange:")]
 		NSArray<MPSImage> GetBatchRepresentation (NSRange subRange);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="featureChannelRange">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("subImageWithFeatureChannelRange:")]
 		MPSImage GetSubImage (NSRange featureChannelRange);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceSize")]
 		nuint ResourceSize { get; }
 
+		/// <param name="state">To be added.</param>
+		///         <summary>Sets the purgeable state of the underlying texture for the image.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("setPurgeableState:")]
 		MPSPurgeableState SetPurgeableState (MPSPurgeableState state);
 
-		[TV (11,0), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("readBytes:dataLayout:bytesPerRow:region:featureChannelInfo:imageIndex:")]
 		void ReadBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint bytesPerRow, MTLRegion region, MPSImageReadWriteParams featureChannelInfo, nuint imageIndex);
 
-		[TV (11,0), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("writeBytes:dataLayout:bytesPerRow:region:featureChannelInfo:imageIndex:")]
 		void WriteBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint bytesPerRow, MTLRegion region, MPSImageReadWriteParams featureChannelInfo, nuint imageIndex);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		[MacCatalyst (13, 1)]
+		[Export ("writeBytes:dataLayout:bytesPerColumn:bytesPerRow:bytesPerImage:region:featureChannelInfo:imageIndex:")]
+		void WriteBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint bytesPerColumn, nuint bytesPerRow, nuint bytesPerImage, MTLRegion region, MPSImageReadWriteParams featureChannelInfo, nuint imageIndex);
+
+		[MacCatalyst (13, 1)]
 		[Export ("readBytes:dataLayout:bytesPerRow:bytesPerImage:region:featureChannelInfo:imageIndex:")]
 		void ReadBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint bytesPerRow, nuint bytesPerImage, MTLRegion region, MPSImageReadWriteParams featureChannelInfo, nuint imageIndex);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		[MacCatalyst (13, 1)]
 		[Export ("writeBytes:dataLayout:bytesPerRow:bytesPerImage:region:featureChannelInfo:imageIndex:")]
 		void WriteBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint bytesPerRow, nuint bytesPerImage, MTLRegion region, MPSImageReadWriteParams featureChannelInfo, nuint imageIndex);
 
-		[TV (11,0), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("readBytes:dataLayout:imageIndex:")]
 		void ReadBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint imageIndex);
 
-		[TV (11,0), iOS (11,0)]
+		[MacCatalyst (13, 1)]
 		[Export ("writeBytes:dataLayout:imageIndex:")]
 		void WriteBytes (IntPtr /* void* */ dataBytes, MPSDataLayout dataLayout, nuint imageIndex);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeOnCommandBuffer:")]
 		void Synchronize (IMTLCommandBuffer commandBuffer);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Discardable image data.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSTemporaryImage">Apple documentation for <c>MPSTemporaryImage</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImage))]
 	[DisableDefaultCtor]
 	interface MPSTemporaryImage {
 
-		[TV (11,0), iOS (11,0)]
-		[Static][New]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Static]
+		[New]
 		[Export ("defaultAllocator")]
 		IMPSImageAllocator DefaultAllocator { get; }
 
+		/// <param name="parent">To be added.</param>
+		/// <param name="sliceRange">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[DesignatedInitializer]
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithParentImage:sliceRange:featureChannels:")]
-		IntPtr Constructor (MPSImage parent, NSRange sliceRange, nuint featureChannels);
+		NativeHandle Constructor (MPSImage parent, NSRange sliceRange, nuint featureChannels);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="imageDescriptor">To be added.</param>
+		///         <summary>Gets a temporary image from the specified <paramref name="commandBuffer" />, with data that conforms to <paramref name="imageDescriptor" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryImageWithCommandBuffer:imageDescriptor:")]
 		MPSTemporaryImage GetTemporaryImage (IMTLCommandBuffer commandBuffer, MPSImageDescriptor imageDescriptor);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="textureDescriptor">To be added.</param>
+		///         <summary>Gets a temporary image from the specified <paramref name="commandBuffer" />, with data that conforms to <paramref name="textureDescriptor" />.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryImageWithCommandBuffer:textureDescriptor:")]
 		MPSTemporaryImage GetTemporaryImage (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor textureDescriptor);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="textureDescriptor">To be added.</param>
+		/// <param name="featureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("temporaryImageWithCommandBuffer:textureDescriptor:featureChannels:")]
 		MPSTemporaryImage GetTemporaryImage (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor textureDescriptor, nuint featureChannels);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptorList">To be added.</param>
+		///         <summary>Indicates to the framework that the app might create temporary images described by <paramref name="descriptorList" /> and to optimize memory allocations accordingly.</summary>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("prefetchStorageWithCommandBuffer:imageDescriptorList:")]
-		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSImageDescriptor[] descriptorList);
+		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSImageDescriptor [] descriptorList);
 
+		/// <summary>Gets or sets the maximum number of reads that a CNN kernel may make on the image before its contents expire.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("readCount")]
 		nuint ReadCount { get; set; }
 	}
 
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	interface MPSPredicate {
+		[Export ("predicateBuffer", ArgumentSemantic.Retain)]
+		IMTLBuffer PredicateBuffer { get; }
+
+		[Export ("predicateOffset")]
+		nuint PredicateOffset { get; }
+
+		[Static]
+		[Export ("predicateWithBuffer:offset:")]
+		MPSPredicate Create (IMTLBuffer buffer, nuint offset);
+
+		[Export ("initWithBuffer:offset:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLBuffer buffer, nuint offset);
+
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	interface IMPSHeapProvider { }
+
+	[Protocol]
+	interface MPSHeapProvider {
+		[Abstract]
+		[Export ("newHeapWithDescriptor:")]
+		[return: NullAllowed]
+		[return: Release]
+		IMTLHeap GetNewHeap (MTLHeapDescriptor descriptor);
+
+		[Export ("retireHeap:cacheDelay:")]
+		void RetireHeap (IMTLHeap heap, double seconds);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSCommandBuffer : MTLCommandBuffer {
+		[Export ("commandBuffer", ArgumentSemantic.Retain)]
+		IMTLCommandBuffer CommandBuffer { get; }
+
+		[Export ("rootCommandBuffer", ArgumentSemantic.Retain)]
+		IMTLCommandBuffer RootCommandBuffer { get; }
+
+		[NullAllowed, Export ("predicate", ArgumentSemantic.Retain)]
+		MPSPredicate Predicate { get; set; }
+
+		[NullAllowed, Export ("heapProvider", ArgumentSemantic.Retain)]
+		IMPSHeapProvider HeapProvider { get; set; }
+
+		[Static]
+		[Export ("commandBufferWithCommandBuffer:")]
+		MPSCommandBuffer Create (IMTLCommandBuffer commandBuffer);
+
+		[Static]
+		[Export ("commandBufferFromCommandQueue:")]
+		MPSCommandBuffer Create (IMTLCommandQueue commandQueue);
+
+		[Export ("initWithCommandBuffer:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLCommandBuffer commandBuffer);
+
+		[Export ("commitAndContinue")]
+		void CommitAndContinue ();
+
+		[Export ("prefetchHeapForWorkloadSize:")]
+		void PrefetchHeap (nuint size);
+	}
+
+
 	// MPSImageConversion.h
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>An image that can convert its color space, alpha, or pixel format.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSImageConversion">Apple documentation for <c>MPSImageConversion</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageConversion {
 
+		/// <summary>Gets the premultiplication settings for the source image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceAlpha")]
 		MPSAlphaType SourceAlpha { get; }
 
+		/// <summary>Gets the premultiplication settings for the destination image.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationAlpha")]
 		MPSAlphaType DestinationAlpha { get; }
 
@@ -1793,689 +3420,1517 @@ namespace MetalPerformanceShaders {
 		IntPtr InitWithDevice (IMTLDevice device, MPSAlphaType srcAlpha, MPSAlphaType destAlpha, [NullAllowed] /* nfloat* */ IntPtr backgroundColor, [NullAllowed] CGColorConversionInfo conversionInfo);
 
 		// inlining ctor from base class
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
 	// MPSMatrix.h
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Describes the size, data type, and stride of a row-major matrix.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSMatrixDescriptor">Apple documentation for <c>MPSMatrixDescriptor</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSMatrixDescriptor {
 
+		/// <summary>Gets the number of columns in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rows")]
 		nuint Rows { get; set; }
 
+		/// <summary>Gets the number of columns that are in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("columns")]
 		nuint Columns { get; set; }
 
+		/// <summary>Gets the type of data that are stored in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataType", ArgumentSemantic.Assign)]
 		MPSDataType DataType { get; set; }
 
+		/// <summary>Gets the row stride for the matrix, in bytes.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rowBytes")]
 		nuint RowBytes { get; set; }
 
 		[Static]
 		[Deprecated (PlatformName.TvOS, 11, 0)]
 		[Deprecated (PlatformName.iOS, 11, 0)]
+		[Unavailable (PlatformName.MacCatalyst)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("matrixDescriptorWithDimensions:columns:rowBytes:dataType:")]
 		MPSMatrixDescriptor Create (nuint rows, nuint columns, nuint rowBytes, MPSDataType dataType);
 
 		[Static]
-		[Deprecated (PlatformName.TvOS, 11, 0)]
 		[Deprecated (PlatformName.iOS, 11, 0)]
+		[Deprecated (PlatformName.TvOS, 11, 0)]
+		[Unavailable (PlatformName.MacCatalyst)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("rowBytesFromColumns:dataType:")]
 		nuint GetRowBytesFromColumns (nuint columns, MPSDataType dataType);
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("matrices")]
 		nuint Matrices { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("matrixBytes")]
 		nuint MatrixBytes { get; }
 
-		[TV (11,0), iOS (11,0)]
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <param name="rowBytes">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("matrixDescriptorWithRows:columns:rowBytes:dataType:")]
 		MPSMatrixDescriptor GetMatrixDescriptor (nuint rows, nuint columns, nuint rowBytes, MPSDataType dataType);
 
-		[TV (11,0), iOS (11,0)]
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <param name="matrices">To be added.</param>
+		/// <param name="rowBytes">To be added.</param>
+		/// <param name="matrixBytes">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("matrixDescriptorWithRows:columns:matrices:rowBytes:matrixBytes:dataType:")]
 		MPSMatrixDescriptor GetMatrixDescriptor (nuint rows, nuint columns, nuint matrices, nuint rowBytes, nuint matrixBytes, MPSDataType dataType);
 
-		[TV (11,0), iOS (11,0)]
+		/// <param name="columns">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("rowBytesForColumns:dataType:")]
 		nuint GetRowBytesForColumns (nuint columns, MPSDataType dataType);
 	}
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>A matrix that represents the kernel of a linear transformation.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSMatrix">Apple documentation for <c>MPSMatrix</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor] // init NS_UNAVAILABLE;
 	interface MPSMatrix {
 
+		/// <summary>Gets the Metal device on which the matrix will be used.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("device", ArgumentSemantic.Retain)]
 		IMTLDevice Device { get; }
 
+		/// <summary>Gets the number of columns in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rows")]
 		nuint Rows { get; }
 
+		/// <summary>Gets the number of columns that are in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("columns")]
 		nuint Columns { get; }
 
+		/// <summary>Gets the type of data that are stored in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataType")]
 		MPSDataType DataType { get; }
 
+		/// <summary>Gets the row stride, in bytes.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rowBytes")]
 		nuint RowBytes { get; }
 
+		/// <summary>Gets a buffer that contains the data in the matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("data")]
 		IMTLBuffer Data { get; }
 
+		/// <param name="buffer">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>Creates a new <see cref="MetalPerformanceShaders.MPSMatrix" /> object with the specified <paramref name="buffer" /> and <paramref name="descriptor" />.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithBuffer:descriptor:")]
-		IntPtr Constructor (IMTLBuffer buffer, MPSMatrixDescriptor descriptor);
+		NativeHandle Constructor (IMTLBuffer buffer, MPSMatrixDescriptor descriptor);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
+		[Export ("initWithBuffer:offset:descriptor:")]
+		NativeHandle Constructor (IMTLBuffer buffer, nuint offset, MPSMatrixDescriptor descriptor);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:descriptor:")]
-		IntPtr Constructor (IMTLDevice device, MPSMatrixDescriptor descriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSMatrixDescriptor descriptor);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeOnCommandBuffer:")]
 		void Synchronize (IMTLCommandBuffer commandBuffer);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceSize")]
 		nuint ResourceSize { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("matrices")]
 		nuint Matrices { get; }
 
-		[TV (11, 0), iOS (11, 0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("matrixBytes")]
 		nuint MatrixBytes { get; }
+
+		[iOS (13, 1)]
+		[MacCatalyst (13, 1)]
+		[Export ("offset")]
+		nuint Offset { get; }
 	}
 
 	// MPSMatrixMultiplication.h
 
-	[iOS (10,0)][TV (10,0)][Mac (10, 13, onlyOn64: true)]
+	/// <summary>Represents a weighted matrix multiplication operation, followed by a weighted addition operation.</summary>
+	///     
+	///     <related type="externalDocumentation" href="https://developer.apple.com/reference/MetalPerformanceShaders/MPSMatrixMultiplication">Apple documentation for <c>MPSMatrixMultiplication</c></related>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixMultiplication {
-		[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="resultRows">To be added.</param>
+		/// <param name="resultColumns">To be added.</param>
+		/// <param name="interiorColumns">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:resultRows:resultColumns:interiorColumns:")]
-		IntPtr Constructor (IMTLDevice device, nuint resultRows, nuint resultColumns, nuint interiorColumns);
+		NativeHandle Constructor (IMTLDevice device, nuint resultRows, nuint resultColumns, nuint interiorColumns);
 
+		/// <summary>Gets or sets the origin of the results matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("resultMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin ResultMatrixOrigin { get; set; }
 
+		/// <summary>Gets or sets the origin of the left matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("leftMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin LeftMatrixOrigin { get; set; }
 
+		/// <summary>Gets or sets the origin of the right matrix.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rightMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin RightMatrixOrigin { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="transposeLeft">To be added.</param>
+		/// <param name="transposeRight">To be added.</param>
+		/// <param name="resultRows">To be added.</param>
+		/// <param name="resultColumns">To be added.</param>
+		/// <param name="interiorColumns">To be added.</param>
+		/// <param name="alpha">To be added.</param>
+		/// <param name="beta">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:transposeLeft:transposeRight:resultRows:resultColumns:interiorColumns:alpha:beta:")]
-		IntPtr Constructor (IMTLDevice device, bool transposeLeft, bool transposeRight, nuint resultRows, nuint resultColumns, nuint interiorColumns, double alpha, double beta);
+		NativeHandle Constructor (IMTLDevice device, bool transposeLeft, bool transposeRight, nuint resultRows, nuint resultColumns, nuint interiorColumns, double alpha, double beta);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="leftMatrix">To be added.</param>
+		///         <param name="rightMatrix">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>Encodes the matrix manipulation that is described by the left and right matrices, to the specified <paramref name="commandBuffer" />, and indicates that <paramref name="resultMatrix" /> will contain the results.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:leftMatrix:rightMatrix:resultMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix leftMatrix, MPSMatrix rightMatrix, MPSMatrix resultMatrix);
 
 		// [Export ("initWithDevice:")] marked as NS_UNAVAILABLE - Use the above initialization method instead.
 
 		// inlining ctor from base class
-		[TV (11,0), iOS (11,0)]
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[TV (11,0), iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("batchStart")]
 		nuint BatchStart { get; set; }
 
-		[TV (11,0), iOS (11,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("batchSize")]
 		nuint BatchSize { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayMatrixMultiplication {
+		[Export ("alpha")]
+		double Alpha { get; set; }
+
+		[Export ("beta")]
+		double Beta { get; set; }
+	}
+
+	/// <summary>Temporary storage used by convolutional neural nets.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSState {
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
 		MPSState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
 		MPSState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("temporaryStateWithCommandBuffer:")]
 		MPSState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="device">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:bufferSize:")]
-		IntPtr Constructor (IMTLDevice device, nuint bufferSize);
+		NativeHandle Constructor (IMTLDevice device, nuint bufferSize);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:textureDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
+		NativeHandle Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="resource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithResource:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource resource);
+		NativeHandle Constructor ([NullAllowed] IMTLResource resource);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="device">To be added.</param>
+		/// <param name="resourceList">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:resourceList:")]
-		IntPtr Constructor (IMTLDevice device, MPSStateResourceList resourceList);
+		NativeHandle Constructor (IMTLDevice device, MPSStateResourceList resourceList);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="resourceList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
 		MPSState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="resources">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithResources:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource [] resources);
+		NativeHandle Constructor ([NullAllowed] IMTLResource [] resources);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceCount")]
 		nuint ResourceCount { get; }
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="index">To be added.</param>
+		/// <param name="allocateMemory">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceAtIndex:allocateMemory:")]
 		[return: NullAllowed]
 		IMTLResource GetResource (nuint index, bool allocateMemory);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("readCount")]
 		nuint ReadCount { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isTemporary")]
 		bool IsTemporary { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("label")]
 		string Label { get; set; }
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("bufferSizeAtIndex:")]
 		nuint GetBufferSize (nuint index);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("textureInfoAtIndex:")]
 		MPSStateTextureInfo GetTextureInfo (nuint index);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceTypeAtIndex:")]
 		MPSStateResourceType GetResourceType (nuint index);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeOnCommandBuffer:")]
 		void Synchronize (IMTLCommandBuffer commandBuffer);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceSize")]
 		nuint ResourceSize { get; }
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="kernel">To be added.</param>
+		///         <param name="inDescriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("destinationImageDescriptorForSourceImages:sourceStates:forKernel:suggestedDescriptor:")]
 		MPSImageDescriptor GetDestinationImageDescriptor (NSArray<MPSImage> sourceImages, [NullAllowed] NSArray<MPSState> sourceStates, MPSKernel kernel, MPSImageDescriptor inDescriptor);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use 'GetResource (nuint, bool)' instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use 'GetResource (nuint, bool)' instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Please use 'GetResource (nuint, bool)' instead.")]
+		[Unavailable (PlatformName.MacCatalyst)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use 'GetResource (nuint, bool)' instead.")]
 		[NullAllowed, Export ("resource", ArgumentSemantic.Retain)]
 		IMTLResource Resource { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrix))]
+	/// <summary>A matrix allocated in GPU private memory.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrix))]
 	[DisableDefaultCtor]
 	interface MPSTemporaryMatrix {
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="matrixDescriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryMatrixWithCommandBuffer:matrixDescriptor:")]
 		MPSTemporaryMatrix Create (IMTLCommandBuffer commandBuffer, MPSMatrixDescriptor matrixDescriptor);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptorList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("prefetchStorageWithCommandBuffer:matrixDescriptorList:")]
-		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSMatrixDescriptor[] descriptorList);
+		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSMatrixDescriptor [] descriptorList);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("readCount")]
 		nuint ReadCount { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A one-dimensional array.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSVector {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("device", ArgumentSemantic.Retain)]
 		IMTLDevice Device { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("length")]
 		nuint Length { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vectors")]
 		nuint Vectors { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataType")]
 		MPSDataType DataType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vectorBytes")]
 		nuint VectorBytes { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("data")]
 		IMTLBuffer Data { get; }
 
+		/// <param name="buffer">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithBuffer:descriptor:")]
-		IntPtr Constructor (IMTLBuffer buffer, MPSVectorDescriptor descriptor);
+		NativeHandle Constructor (IMTLBuffer buffer, MPSVectorDescriptor descriptor);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
+		[Export ("initWithBuffer:offset:descriptor:")]
+		NativeHandle Constructor (IMTLBuffer buffer, nuint offset, MPSVectorDescriptor descriptor);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:descriptor:")]
-		IntPtr Constructor (IMTLDevice device, MPSVectorDescriptor descriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSVectorDescriptor descriptor);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeOnCommandBuffer:")]
 		void Synchronize (IMTLCommandBuffer commandBuffer);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resourceSize")]
 		nuint ResourceSize { get; }
+
+		[iOS (13, 1)]
+		[MacCatalyst (13, 1)]
+		[Export ("offset")]
+		nuint Offset { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Describes the length and data type of a <see cref="MetalPerformanceShaders.MPSVector" />.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSVectorDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("length")]
 		nuint Length { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vectors")]
 		nuint Vectors { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataType", ArgumentSemantic.Assign)]
 		MPSDataType DataType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vectorBytes")]
 		nuint VectorBytes { get; }
 
+		/// <param name="length">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("vectorDescriptorWithLength:dataType:")]
 		MPSVectorDescriptor Create (nuint length, MPSDataType dataType);
 
+		/// <param name="length">To be added.</param>
+		/// <param name="vectors">To be added.</param>
+		/// <param name="vectorBytes">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("vectorDescriptorWithLength:vectors:vectorBytes:dataType:")]
 		MPSVectorDescriptor Create (nuint length, nuint vectors, nuint vectorBytes, MPSDataType dataType);
 
+		/// <param name="length">To be added.</param>
+		/// <param name="dataType">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("vectorBytesForLength:dataType:")]
 		nuint GetVectorBytes (nuint length, MPSDataType dataType);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel))]
+	/// <summary>A kernel that performs a mapping from one matrix to another.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixUnaryKernel {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin SourceMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("resultMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin ResultMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("batchStart")]
 		nuint BatchStart { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("batchSize")]
 		nuint BatchSize { get; set; }
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel))]
+	/// <summary>A kernel that operates on two matrices to create a new matrix.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixBinaryKernel {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primarySourceMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin PrimarySourceMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondarySourceMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin SecondarySourceMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("resultMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin ResultMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("batchStart")]
 		nuint BatchStart { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("batchSize")]
 		nuint BatchSize { get; set; }
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
-	
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixBinaryKernel))]
+
+	/// <summary>Performs matrix multiplication.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixVectorMultiplication {
+		/// <param name="device">To be added.</param>
+		/// <param name="transpose">To be added.</param>
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <param name="alpha">To be added.</param>
+		/// <param name="beta">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:transpose:rows:columns:alpha:beta:")]
-		IntPtr Constructor (IMTLDevice device, bool transpose, nuint rows, nuint columns, double alpha, double beta);
+		NativeHandle Constructor (IMTLDevice device, bool transpose, nuint rows, nuint columns, double alpha, double beta);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rows:columns:")]
-		IntPtr Constructor (IMTLDevice device, nuint rows, nuint columns);
+		NativeHandle Constructor (IMTLDevice device, nuint rows, nuint columns);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="inputVector">To be added.</param>
+		///         <param name="resultVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:inputMatrix:inputVector:resultVector:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSVector inputVector, MPSVector resultVector);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixBinaryKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSMatrixBinaryKernel" /> that solves a linear system of equations via a triangular coefficient matrix.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixSolveTriangular {
+		/// <param name="device">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <param name="upper">To be added.</param>
+		/// <param name="transpose">To be added.</param>
+		/// <param name="unit">To be added.</param>
+		/// <param name="order">To be added.</param>
+		/// <param name="numberOfRightHandSides">To be added.</param>
+		/// <param name="alpha">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:right:upper:transpose:unit:order:numberOfRightHandSides:alpha:")]
-		IntPtr Constructor (IMTLDevice device, bool right, bool upper, bool transpose, bool unit, nuint order, nuint numberOfRightHandSides, double alpha);
+		NativeHandle Constructor (IMTLDevice device, bool right, bool upper, bool transpose, bool unit, nuint order, nuint numberOfRightHandSides, double alpha);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="rightHandSideMatrix">To be added.</param>
+		///         <param name="solutionMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:rightHandSideMatrix:solutionMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSMatrix rightHandSideMatrix, MPSMatrix solutionMatrix);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixBinaryKernel))]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixSolveLU {
+		/// <param name="device">To be added.</param>
+		/// <param name="transpose">To be added.</param>
+		/// <param name="order">To be added.</param>
+		/// <param name="numberOfRightHandSides">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:transpose:order:numberOfRightHandSides:")]
-		IntPtr Constructor (IMTLDevice device, bool transpose, nuint order, nuint numberOfRightHandSides);
+		NativeHandle Constructor (IMTLDevice device, bool transpose, nuint order, nuint numberOfRightHandSides);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="rightHandSideMatrix">To be added.</param>
+		///         <param name="pivotIndices">To be added.</param>
+		///         <param name="solutionMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:rightHandSideMatrix:pivotIndices:solutionMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSMatrix rightHandSideMatrix, MPSMatrix pivotIndices, MPSMatrix solutionMatrix);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixBinaryKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSMatrixBinaryKernel" /> that solves a linear system of equations via Cholesky factorization.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixSolveCholesky {
+		/// <param name="device">To be added.</param>
+		/// <param name="upper">To be added.</param>
+		/// <param name="order">To be added.</param>
+		/// <param name="numberOfRightHandSides">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:upper:order:numberOfRightHandSides:")]
-		IntPtr Constructor (IMTLDevice device, bool upper, nuint order, nuint numberOfRightHandSides);
+		NativeHandle Constructor (IMTLDevice device, bool upper, nuint order, nuint numberOfRightHandSides);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="rightHandSideMatrix">To be added.</param>
+		///         <param name="solutionMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:rightHandSideMatrix:solutionMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSMatrix rightHandSideMatrix, MPSMatrix solutionMatrix);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixUnaryKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSMatrixUnaryKernel" /> that computes LU factorization using partial pivoting.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixUnaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixDecompositionLU {
+		/// <param name="device">To be added.</param>
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rows:columns:")]
-		IntPtr Constructor (IMTLDevice device, nuint rows, nuint columns);
+		NativeHandle Constructor (IMTLDevice device, nuint rows, nuint columns);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <param name="pivotIndices">To be added.</param>
+		///         <param name="status">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:resultMatrix:pivotIndices:status:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSMatrix resultMatrix, MPSMatrix pivotIndices, [NullAllowed] IMTLBuffer status);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSMatrixUnaryKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSMatrixUnaryKernel" /> that computes the Cholesky factorization.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixUnaryKernel))]
 	[DisableDefaultCtor] // According to docs needs a Metal Device so initWithDevice: makes more sense.
 	interface MPSMatrixDecompositionCholesky {
+		/// <param name="device">To be added.</param>
+		/// <param name="lower">To be added.</param>
+		/// <param name="order">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:lower:order:")]
-		IntPtr Constructor (IMTLDevice device, bool lower, nuint order);
+		NativeHandle Constructor (IMTLDevice device, bool lower, nuint order);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <param name="status">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:resultMatrix:status:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSMatrix resultMatrix, [NullAllowed] IMTLBuffer status);
 
 		// inlining ctor from base class
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Describes multiple matrix copy operations.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSMatrixCopyDescriptor {
+		/// <param name="sourceMatrix">To be added.</param>
+		///         <param name="destinationMatrix">To be added.</param>
+		///         <param name="offsets">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("descriptorWithSourceMatrix:destinationMatrix:offsets:")]
 		MPSMatrixCopyDescriptor Create (MPSMatrix sourceMatrix, MPSMatrix destinationMatrix, MPSMatrixCopyOffsets offsets);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="count">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:count:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint count);
+		NativeHandle Constructor (IMTLDevice device, nuint count);
 
+		/// <param name="index">To be added.</param>
+		/// <param name="sourceMatrix">To be added.</param>
+		/// <param name="destinationMatrix">To be added.</param>
+		/// <param name="offsets">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("setCopyOperationAtIndex:sourceMatrix:destinationMatrix:offsets:")]
 		void SetCopyOperation (nuint index, MPSMatrix sourceMatrix, MPSMatrix destinationMatrix, MPSMatrixCopyOffsets offsets);
 
+		/// <param name="sourceMatrices">To be added.</param>
+		/// <param name="destinationMatrices">To be added.</param>
+		/// <param name="offsets">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="byteOffset">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceMatrices:destinationMatrices:offsetVector:offset:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSMatrix[] sourceMatrices, MPSMatrix[] destinationMatrices, [NullAllowed] MPSVector offsets, nuint byteOffset);
+		NativeHandle Constructor (MPSMatrix [] sourceMatrices, MPSMatrix [] destinationMatrices, [NullAllowed] MPSVector offsets, nuint byteOffset);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel))]
+	/// <summary>Performs multiple matrix copy operations.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSMatrixCopy {
+		/// <param name="device">To be added.</param>
+		/// <param name="copyRows">To be added.</param>
+		/// <param name="copyColumns">To be added.</param>
+		/// <param name="areSourcesTransposed">To be added.</param>
+		/// <param name="areDestinationsTransposed">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:copyRows:copyColumns:sourcesAreTransposed:destinationsAreTransposed:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint copyRows, nuint copyColumns, bool areSourcesTransposed, bool areDestinationsTransposed);
+		NativeHandle Constructor (IMTLDevice device, nuint copyRows, nuint copyColumns, bool areSourcesTransposed, bool areDestinationsTransposed);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyRows")]
 		nuint CopyRows { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyColumns")]
 		nuint CopyColumns { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourcesAreTransposed")]
 		bool AreSourcesTransposed { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationsAreTransposed")]
 		bool AreDestinationsTransposed { get; }
 
+		/// <param name="cmdBuf">To be added.</param>
+		///         <param name="copyDescriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:copyDescriptor:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer cmdBuf, MPSMatrixCopyDescriptor copyDescriptor);
 
-		[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="copyDescriptor">To be added.</param>
+		/// <param name="rowPermuteIndices">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="rowPermuteOffset">To be added.</param>
+		/// <param name="columnPermuteIndices">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="columnPermuteOffset">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:copyDescriptor:rowPermuteIndices:rowPermuteOffset:columnPermuteIndices:columnPermuteOffset:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrixCopyDescriptor copyDescriptor, [NullAllowed] MPSVector rowPermuteIndices, nuint rowPermuteOffset, [NullAllowed] MPSVector columnPermuteIndices, nuint columnPermuteOffset);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	interface MPSMatrixRandomDistributionDescriptor : NSCopying {
+		[Export ("distributionType", ArgumentSemantic.Assign)]
+		MPSMatrixRandomDistribution DistributionType { get; set; }
+
+		[Export ("minimum")]
+		float Minimum { get; set; }
+
+		[Export ("maximum")]
+		float Maximum { get; set; }
+
+		[Export ("mean")]
+		float Mean { get; set; }
+
+		[Export ("standardDeviation")]
+		float StandardDeviation { get; set; }
+
+		[Static]
+		[Export ("uniformDistributionDescriptorWithMinimum:maximum:")]
+		MPSMatrixRandomDistributionDescriptor CreateUniform (float minimum, float maximum);
+
+		[Static]
+		[Export ("defaultDistributionDescriptor")]
+		MPSMatrixRandomDistributionDescriptor CreateDefault ();
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Static]
+		[Export ("normalDistributionDescriptorWithMean:standardDeviation:")]
+		MPSMatrixRandomDistributionDescriptor CreateNormal (float mean, float standardDeviation);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Static]
+		[Export ("normalDistributionDescriptorWithMean:standardDeviation:minimum:maximum:")]
+		MPSMatrixRandomDistributionDescriptor CreateNormal (float mean, float standardDeviation, float minimum, float maximum);
+	}
+
 	[DisableDefaultCtor]
-	[BaseType (typeof(MPSKernel))]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
+	interface MPSMatrixRandom {
+		[Export ("destinationDataType")]
+		MPSDataType DestinationDataType { get; }
+
+		[Export ("distributionType")]
+		MPSMatrixRandomDistribution DistributionType { get; }
+
+		[Export ("batchStart")]
+		nuint BatchStart { get; set; }
+
+		[Export ("batchSize")]
+		nuint BatchSize { get; set; }
+
+		[Export ("encodeToCommandBuffer:destinationVector:")]
+		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSVector destinationVector);
+
+		[Export ("encodeToCommandBuffer:destinationMatrix:")]
+		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix destinationMatrix);
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixRandom), Name = "MPSMatrixRandomMTGP32")]
+	interface MPSMatrixRandomMtgp32 {
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithDevice:destinationDataType:seed:distributionDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSDataType destinationDataType, nuint seed, MPSMatrixRandomDistributionDescriptor distributionDescriptor);
+
+		[Export ("synchronizeStateOnCommandBuffer:")]
+		void Synchronize (IMTLCommandBuffer commandBuffer);
+
+		[Export ("initWithDevice:destinationDataType:seed:")]
+		NativeHandle Constructor (IMTLDevice device, MPSDataType destinationDataType, nuint seed);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixRandom))]
+	interface MPSMatrixRandomPhilox {
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithDevice:destinationDataType:seed:distributionDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSDataType destinationDataType, nuint seed, MPSMatrixRandomDistributionDescriptor distributionDescriptor);
+
+		[Export ("initWithDevice:destinationDataType:seed:")]
+		NativeHandle Constructor (IMTLDevice device, MPSDataType destinationDataType, nuint seed);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSKernel" /> that copies image data into a <see cref="MetalPerformanceShaders.MPSMatrix" /> object.</summary>
+	[MacCatalyst (13, 1)]
+	[DisableDefaultCtor]
+	[BaseType (typeof (MPSKernel))]
 	interface MPSImageCopyToMatrix {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin DestinationMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationMatrixBatchIndex")]
 		nuint DestinationMatrixBatchIndex { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataLayout")]
 		MPSDataLayout DataLayout { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="dataLayout">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:dataLayout:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSDataLayout dataLayout);
+		NativeHandle Constructor (IMTLDevice device, MPSDataLayout dataLayout);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="destinationMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceImage:destinationMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSMatrix destinationMatrix);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="destinationMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, MPSMatrix destinationMatrix);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel))]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSImageFindKeypoints {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keypointRangeInfo")]
 		MPSImageKeypointRangeInfo KeypointRangeInfo { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="info">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:info:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSImageKeypointRangeInfo info);
+		NativeHandle Constructor (IMTLDevice device, MPSImageKeypointRangeInfo info);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="source">To be added.</param>
+		/// <param name="regions">To be added.</param>
+		/// <param name="numberOfRegions">To be added.</param>
+		/// <param name="keypointCountBuffer">To be added.</param>
+		/// <param name="keypointCountBufferOffset">To be added.</param>
+		/// <param name="keypointDataBuffer">To be added.</param>
+		/// <param name="keypointDataBufferOffset">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceTexture:regions:numberOfRegions:keypointCountBuffer:keypointCountBufferOffset:keypointDataBuffer:keypointDataBufferOffset:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, IMTLTexture source, MTLRegion regions, nuint numberOfRegions, IMTLBuffer keypointCountBuffer, nuint keypointCountBufferOffset, IMTLBuffer keypointDataBuffer, nuint keypointDataBufferOffset);
 	}
-	
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSBinaryImageKernel))]
+
+	/// <summary>Base class for <see cref="MetalPerformanceShaders.MPSBinaryImageKernel" /> classes that perform arithmetic on images.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSBinaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageArithmetic {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryScale")]
 		float PrimaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryScale")]
 		float SecondaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bias")]
 		float Bias { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryStrideInPixels", ArgumentSemantic.Assign)]
 		MTLSize PrimaryStrideInPixels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInPixels", ArgumentSemantic.Assign)]
 		MTLSize SecondaryStrideInPixels { get; set; }
 
 		// float
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("minimumValue")]
 		float MinimumValue { get; set; }
 
 		// float
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("maximumValue")]
 		float MaximumValue { get; set; }
 
 		//inlining ctor from base class
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSImageArithmetic))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSImageArithmetic" /> kernel that performs element-wise addition of two images.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSImageArithmetic))]
 	[DisableDefaultCtor]
 	interface MPSImageAdd {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSImageArithmetic))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSImageArithmetic" /> kernel that performs element-wise subtraction of two images.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSImageArithmetic))]
 	[DisableDefaultCtor]
 	interface MPSImageSubtract {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSImageArithmetic))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSImageArithmetic" /> kernel that performs element-wise multiplication of two images.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSImageArithmetic))]
 	[DisableDefaultCtor]
 	interface MPSImageMultiply {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSImageArithmetic))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSImageArithmetic" /> kernel that performs element-wise division of two images.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSImageArithmetic))]
 	[DisableDefaultCtor]
 	interface MPSImageDivide {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSUnaryImageKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> that can resize and change aspect ratio of an image.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageScale {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// scaleTransform property should be like:
 		// unsafe MPSScaleTransform* ScaleTransform { get; set; }
@@ -2488,2711 +4943,5456 @@ namespace MetalPerformanceShaders {
 		[Internal]
 		void _SetScaleTransform (IntPtr value);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSImageScale))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSImageScale" /> subclass that uses bilinear sampling to scale the image.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSImageScale))]
 	[DisableDefaultCtor]
 	interface MPSImageBilinearScale {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSUnaryImageKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> that calculates the minimum and maximum pixel values for a region.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageStatisticsMinAndMax {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSUnaryImageKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> that calculates the mean and variance of pixel values for a region.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageStatisticsMeanAndVariance {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSUnaryImageKernel))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSUnaryImageKernel" /> that calculates the mean of pixel values for a region.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageStatisticsMean {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Predefined common padding policies.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSNNDefaultPadding : MPSNNPadding {
+		/// <param name="method">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("paddingWithMethod:")]
 		MPSNNDefaultPadding Create (MPSNNPaddingMethod method);
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
 		[Export ("paddingForTensorflowAveragePooling")]
 		MPSNNDefaultPadding CreatePaddingForTensorflowAveragePooling ();
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("paddingForTensorflowAveragePoolingValidOnly")]
 		MPSNNDefaultPadding CreatePaddingForTensorflowAveragePoolingValidOnly ();
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel), Name = "MPSCNNBinaryKernel")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSKernel" /> that has binary weights.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel), Name = "MPSCNNBinaryKernel")]
 	[DisableDefaultCtor]
 	interface MPSCnnBinaryKernel {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryOffset", ArgumentSemantic.Assign)]
 		MPSOffset PrimaryOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryOffset", ArgumentSemantic.Assign)]
 		MPSOffset SecondaryOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRect", ArgumentSemantic.Assign)]
 		MTLRegion ClipRect { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationFeatureChannelOffset")]
 		nuint DestinationFeatureChannelOffset { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primarySourceFeatureChannelOffset")]
 		nuint PrimarySourceFeatureChannelOffset { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondarySourceFeatureChannelOffset")]
 		nuint SecondarySourceFeatureChannelOffset { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primarySourceFeatureChannelMaxCount")]
 		nuint PrimarySourceFeatureChannelMaxCount { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondarySourceFeatureChannelMaxCount")]
 		nuint SecondarySourceFeatureChannelMaxCount { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryEdgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode PrimaryEdgeMode { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryEdgeMode", ArgumentSemantic.Assign)]
 		MPSImageEdgeMode SecondaryEdgeMode { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryKernelWidth")]
 		nuint PrimaryKernelWidth { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryKernelHeight")]
 		nuint PrimaryKernelHeight { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryKernelWidth")]
 		nuint SecondaryKernelWidth { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryKernelHeight")]
 		nuint SecondaryKernelHeight { get; }
 
-#if !XAMCORE_4_0
-		// Apple answered to radar://38054031 and said that these were exposed by mistake in an older release
-		// and got removed because they are useless and no developers could have used it before.
-		// Keeping stubs for binary compat.
-		[Obsolete ("This was exposed by mistake, it will be removed in a future release.")]
-		[Wrap ("0", IsVirtual = true)]
-		nuint KernelWidth { get; }
-
-		[Obsolete ("This was exposed by mistake, it will be removed in a future release.")]
-		[Wrap ("0", IsVirtual = true)]
-		nuint KernelHeight { get; }
-#endif
-
 		// Apple added availability info here
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryStrideInPixelsX")]
 		nuint PrimaryStrideInPixelsX { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryStrideInPixelsY")]
 		nuint PrimaryStrideInPixelsY { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryStrideInPixelsX")]
 		nuint SecondaryStrideInPixelsX { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryStrideInPixelsY")]
 		nuint SecondaryStrideInPixelsY { get; set; }
 
-		[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryDilationRateX")]
 		nuint PrimaryDilationRateX { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("primaryDilationRateY")]
 		nuint PrimaryDilationRateY { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryDilationRateX")]
 		nuint SecondaryDilationRateX { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("secondaryDilationRateY")]
 		nuint SecondaryDilationRateY { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isBackwards")]
 		bool IsBackwards { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isStateModified")]
 		bool IsStateModified { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("padding", ArgumentSemantic.Retain)]
 		IMPSNNPadding Padding { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationImageAllocator", ArgumentSemantic.Retain)]
 		IMPSImageAllocator DestinationImageAllocator { get; set; }
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImages">To be added.</param>
+		///         <param name="secondaryImages">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:primaryImages:secondaryImages:destinationImages:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImages, NSArray<MPSImage> secondaryImages, NSArray<MPSImage> destinationImages);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:")]
 		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:primaryImages:secondaryImages:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImage, NSArray<MPSImage> secondaryImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="outState">To be added.</param>
+		///         <param name="isTemporary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:destinationState:destinationStateIsTemporary:")]
 		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, [NullAllowed] out MPSState outState, bool isTemporary);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImages">To be added.</param>
+		///         <param name="secondaryImages">To be added.</param>
+		///         <param name="outState">To be added.</param>
+		///         <param name="isTemporary">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:primaryImages:secondaryImages:destinationStates:destinationStateIsTemporary:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImages, NSArray<MPSImage> secondaryImages, [NullAllowed] out MPSState [] outState, bool isTemporary);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateForPrimaryImage:secondaryImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSState GetResultState (MPSImage primaryImage, MPSImage secondaryImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultStateBatchForPrimaryImage:secondaryImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		NSArray<MPSState> GetResultStateBatch (NSArray<MPSImage> primaryImage, NSArray<MPSImage> secondaryImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateForCommandBuffer:primaryImage:secondaryImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("temporaryResultStateBatchForCommandBuffer:primaryImage:secondaryImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		NSArray<MPSState> GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImage, NSArray<MPSImage> secondaryImage, [NullAllowed] NSArray<MPSState> [] sourceStates, NSArray<MPSImage> destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("isResultStateReusedAcrossBatch")]
 		bool IsResultStateReusedAcrossBatch { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("appendBatchBarrier")]
 		bool AppendBatchBarrier { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("destinationImageDescriptorForSourceImages:sourceStates:")]
 		MPSImageDescriptor GetDestinationImageDescriptor (NSArray<MPSImage> sourceImages, [NullAllowed] NSArray<MPSState> sourceStates);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodingStorageSizeForPrimaryImage:secondaryImage:sourceStates:destinationImage:")]
+		nuint GetEncodingStorageSize (MPSImage primaryImage, MPSImage secondaryImage, [NullAllowed] MPSState [] sourceStates, [NullAllowed] MPSImage destinationImage);
+
+		[MacCatalyst (13, 0)]
+		[Export ("batchEncodingStorageSizeForPrimaryImage:secondaryImage:sourceStates:destinationImage:")]
+		nuint GetBatchEncodingStorageSize (MPSImage [] primaryImage, MPSImage [] secondaryImage, [NullAllowed] NSArray<MPSState> [] sourceStates, [NullAllowed] MPSImage [] destinationImage);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronPReLU")]
+	/// <summary>The parametric rectified linear unit activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronPReLU")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronPReLU {
 		[Export ("initWithDevice:a:count:")]
 		[Internal, Sealed]
 		IntPtr InitWithDevice (IMTLDevice device, IntPtr /* float* */ a, nuint count);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 
 		// inlining ctor from base class
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronHardSigmoid")]
+	/// <summary>The hard sigmoid activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronHardSigmoid")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronHardSigmoid {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, float a, float b);
+		NativeHandle Constructor (IMTLDevice device, float a, float b);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronSoftPlus")]
+	/// <summary>The softplus activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronSoftPlus")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronSoftPlus {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b);
+		NativeHandle Constructor (IMTLDevice device, float a, float b);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronSoftSign")]
+	/// <summary>The softsign activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronSoftSign")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronSoftSign {
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronELU")]
+	/// <summary>The exponential linear unit activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronELU")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronElu {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:")]
-		IntPtr Constructor (IMTLDevice device, float a);
+		NativeHandle Constructor (IMTLDevice device, float a);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnNeuron), Name = "MPSCNNNeuronReLUN")]
+	/// <summary>The ReLUN activation function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronReLUN")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronReLun {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b);
+		NativeHandle Constructor (IMTLDevice device, float a, float b);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronPower")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronPower {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:c:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b, float c);
+		NativeHandle Constructor (IMTLDevice device, float a, float b, float c);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronExponential")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronExponential {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:c:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b, float c);
+		NativeHandle Constructor (IMTLDevice device, float a, float b, float c);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuron), Name = "MPSCNNNeuronLogarithm")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronLogarithm {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use '.ctor (IMTLDevice, MPSNNNeuronDescriptor)' overload instead.")]
 		[Export ("initWithDevice:a:b:c:")]
-		IntPtr Constructor (IMTLDevice device, float a, float b, float c);
+		NativeHandle Constructor (IMTLDevice device, float a, float b, float c);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:neuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnConvolutionDescriptor), Name = "MPSCNNSubPixelConvolutionDescriptor")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnConvolutionDescriptor" /> that describes subpixel upsampling and reshaping.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnConvolutionDescriptor), Name = "MPSCNNSubPixelConvolutionDescriptor")]
 	[DisableDefaultCtor]
 	interface MPSCnnSubPixelConvolutionDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("subPixelScaleFactor")]
 		nuint SubPixelScaleFactor { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnConvolutionDescriptor), Name = "MPSCNNDepthWiseConvolutionDescriptor")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnConvolutionDescriptor" /> that describes depthwise convolution.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnConvolutionDescriptor), Name = "MPSCNNDepthWiseConvolutionDescriptor")]
 	[DisableDefaultCtor]
 	interface MPSCnnDepthWiseConvolutionDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("channelMultiplier")]
 		nuint ChannelMultiplier { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSState), Name = "MPSCNNConvolutionState")]
-	[DisableDefaultCtor]
-	interface MPSCnnConvolutionState : MPSImageSizeEncodingState {
-		[Export ("kernelWidth")]
-		nuint KernelWidth { get; }
-
-		[Export ("kernelHeight")]
-		nuint KernelHeight { get; }
-
-		[Export ("sourceOffset")]
-		MPSOffset SourceOffset { get; }
-	}
-
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnKernel), Name = "MPSCNNConvolutionTranspose")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that transposes its input.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNConvolutionTranspose")]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSCnnConvolutionTranspose {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelOffsetX")]
 		nint KernelOffsetX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelOffsetY")]
 		nint KernelOffsetY { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("groups")]
 		nuint Groups { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("accumulatorPrecisionOption", ArgumentSemantic.Assign)]
 		MPSNNConvolutionAccumulatorPrecisionOption AccumulatorPrecisionOption { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:weights:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[Export ("encodeToCommandBuffer:sourceImage:convolutionState:")]
-		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed]MPSCnnConvolutionState convolutionState);
-
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:convolutionGradientState:")]
 		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSCnnConvolutionGradientState convolutionGradientState);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:convolutionGradientStates:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, [NullAllowed] MPSCnnConvolutionGradientState [] convolutionGradientState);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeToCommandBuffer:sourceImage:convolutionGradientState:destinationImage:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSCnnConvolutionGradientState convolutionGradientState, MPSImage destinationImage);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:convolutionGradientStates:destinationImages:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, [NullAllowed] MPSCnnConvolutionGradientState [] convolutionGradientState, NSArray<MPSImage> destinationImage);
+
+		[Wrap ("WeakDataSource")]
+		IMPSCnnConvolutionDataSource DataSource { get; }
+
+		[MacCatalyst (13, 0)]
+		[Export ("dataSource", ArgumentSemantic.Retain)]
+		NSObject WeakDataSource { get; }
+
+		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnConvolutionTransposeGradientState GetResultState (MPSImage sourceImage, [NullAllowed] MPSCnnConvolutionGradientState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("resultStateBatchForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnConvolutionTransposeGradientState [] GetResultStateBatch (MPSImage [] sourceImage, [NullAllowed] NSArray<MPSCnnConvolutionGradientState> [] sourceStates, MPSImage [] destinationImage);
+
+		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnConvolutionTransposeGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSCnnConvolutionGradientState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("temporaryResultStateBatchForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnConvolutionTransposeGradientState [] GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImage, [NullAllowed] NSArray<MPSCnnConvolutionGradientState> [] sourceStates, MPSImage [] destinationImage);
+
+		[MacCatalyst (13, 0)]
+		[Export ("reloadWeightsAndBiasesFromDataSource")]
+		void ReloadWeightsAndBiasesFromDataSource ();
+
+		[MacCatalyst (13, 0)]
+		[Export ("reloadWeightsAndBiasesWithCommandBuffer:state:")]
+		void ReloadWeightsAndBiases (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionWeightsAndBiasesState state);
+
+		[MacCatalyst (13, 0)]
+		[Export ("exportWeightsAndBiasesWithCommandBuffer:resultStateCanBeTemporary:")]
+		MPSCnnConvolutionWeightsAndBiasesState ExportWeightsAndBiases (IMTLCommandBuffer commandBuffer, bool resultStateCanBeTemporary);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:sourceImage:convolutionGradientState:destinationState:destinationStateIsTemporary:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSCnnConvolutionGradientState convolutionGradientState, [NullAllowed] out MPSCnnConvolutionTransposeGradientState outState, bool isTemporary);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeBatchToCommandBuffer:sourceImages:convolutionGradientStates:destinationStates:destinationStateIsTemporary:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, [NullAllowed] MPSCnnConvolutionGradientState [] convolutionGradientStates, [NullAllowed] out MPSCnnConvolutionTransposeGradientState [] outStates, bool isTemporary);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnKernel), Name = "MPSCNNBinaryConvolution")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that has binary weights and convolves its input.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNBinaryConvolution")]
 	[DisableDefaultCtor]
 	interface MPSCnnBinaryConvolution {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="convolutionData">To be added.</param>
+		/// <param name="scaleValue">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="flags">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:convolutionData:scaleValue:type:flags:")]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
-		[Internal, Sealed, Export ("initWithDevice:convolutionData:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
-		IntPtr InitWithDevice (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, [NullAllowed] IntPtr /* float* */ outputBiasTerms, [NullAllowed] IntPtr /* float* */ outputScaleTerms, [NullAllowed] IntPtr /* float* */ inputBiasTerms, [NullAllowed] IntPtr /* float* */ inputScaleTerms,MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		[Internal, Export ("initWithDevice:convolutionData:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
+		IntPtr _InitWithDevice (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, [NullAllowed] IntPtr /* float* */ outputBiasTerms, [NullAllowed] IntPtr /* float* */ outputScaleTerms, [NullAllowed] IntPtr /* float* */ inputBiasTerms, [NullAllowed] IntPtr /* float* */ inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnBinaryConvolution" /> that is a fully-connected convolution layer that uses binary weights.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnBinaryConvolution), Name = "MPSCNNBinaryFullyConnected")]
 	[DisableDefaultCtor]
 	interface MPSCnnBinaryFullyConnected {
+		/// <param name="device">To be added.</param>
+		/// <param name="convolutionData">To be added.</param>
+		/// <param name="scaleValue">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="flags">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:convolutionData:scaleValue:type:flags:")]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
-		[Internal, Sealed, Export ("initWithDevice:convolutionData:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
-		IntPtr InitWithDevice (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, [NullAllowed] IntPtr /* float* */ outputBiasTerms, [NullAllowed] IntPtr /* float* */ outputScaleTerms, [NullAllowed] IntPtr /* float* */ inputBiasTerms, [NullAllowed] IntPtr /* float* */ inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		[Internal, Export ("initWithDevice:convolutionData:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
+		IntPtr _InitWithDevice (IMTLDevice device, IMPSCnnConvolutionDataSource convolutionData, [NullAllowed] IntPtr /* float* */ outputBiasTerms, [NullAllowed] IntPtr /* float* */ outputScaleTerms, [NullAllowed] IntPtr /* float* */ inputBiasTerms, [NullAllowed] IntPtr /* float* */ inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnPooling), Name = "MPSCNNPoolingL2Norm")]
+	/// <summary>An L2-norm pooling filter.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnPooling), Name = "MPSCNNPoolingL2Norm")]
 	[DisableDefaultCtor] // failed assertion.
 	interface MPSCnnPoolingL2Norm {
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnPooling), Name = "MPSCNNDilatedPoolingMax")]
+	/// <summary>A dilated max <see cref="MetalPerformanceShaders.MPSCnnPooling" /> filter.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnPooling), Name = "MPSCNNDilatedPoolingMax")]
 	[DisableDefaultCtor] // failed assertion.
 	interface MPSCnnDilatedPoolingMax {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="dilationRateX">To be added.</param>
+		/// <param name="dilationRateY">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:dilationRateX:dilationRateY:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint dilationRateX, nuint dilationRateY, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint dilationRateX, nuint dilationRateY, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNPoolingGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceSize", ArgumentSemantic.Assign)]
 		MTLSize SourceSize { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:")]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradient), Name = "MPSCNNPoolingAverageGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingAverageGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("zeroPadSizeX")]
 		nuint ZeroPadSizeX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("zeroPadSizeY")]
 		nuint ZeroPadSizeY { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradient), Name = "MPSCNNPoolingMaxGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingMaxGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradient), Name = "MPSCNNPoolingL2NormGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingL2NormGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradient), Name = "MPSCNNDilatedPoolingMaxGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnDilatedPoolingMaxGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="dilationRateX">To be added.</param>
+		/// <param name="dilationRateY">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelWidth:kernelHeight:dilationRateX:dilationRateY:strideInPixelsX:strideInPixelsY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint dilationRateX, nuint dilationRateY, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, nuint dilationRateX, nuint dilationRateY, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnKernel), Name = "MPSCNNUpsampling")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnKernel" /> that upsamples an image.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNUpsampling")]
 	[DisableDefaultCtor] // failed assertion
 	interface MPSCnnUpsampling {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("alignCorners")]
 		bool AlignCorners { get; }
 
 		// inlining ctor from base class
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnUpsampling" /> filter that performs nearest spatial upsampling.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnUpsampling), Name = "MPSCNNUpsamplingNearest")]
 	[DisableDefaultCtor] // failed assertion.
 	interface MPSCnnUpsamplingNearest {
+		/// <param name="device">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:integerScaleFactorX:integerScaleFactorY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnUpsampling" /> filter that performs bilinear spatial upsampling.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnUpsampling), Name = "MPSCNNUpsamplingBilinear")]
 	[DisableDefaultCtor] // failed assertion.
 	interface MPSCnnUpsamplingBilinear {
+		/// <param name="device">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:integerScaleFactorX:integerScaleFactorY:")]
-		IntPtr Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <param name="alignCorners">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:integerScaleFactorX:integerScaleFactorY:alignCorners:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY, bool alignCorners);
+		NativeHandle Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY, bool alignCorners);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNUpsamplingGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnUpsamplingGradient), Name = "MPSCNNUpsamplingNearestGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingNearestGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:integerScaleFactorX:integerScaleFactorY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnUpsamplingGradient), Name = "MPSCNNUpsamplingBilinearGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingBilinearGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:integerScaleFactorX:integerScaleFactorY:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (IMTLDevice device, nuint integerScaleFactorX, nuint integerScaleFactorY);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A structural description of a recurrent neural net layer.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject), Name = "MPSRNNDescriptor")]
 	interface MPSRnnDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("useLayerInputUnitTransformMode")]
 		bool UseLayerInputUnitTransformMode { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("useFloat32Weights")]
 		bool UseFloat32Weights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("layerSequenceDirection", ArgumentSemantic.Assign)]
 		MPSRnnSequenceDirection LayerSequenceDirection { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSRnnDescriptor), Name = "MPSRNNSingleGateDescriptor")]
+	/// <summary>Describes the internal gate in a recurrent neural net.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSRnnDescriptor), Name = "MPSRNNSingleGateDescriptor")]
 	interface MPSRnnSingleGateDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("recurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource RecurrentWeights { get; set; }
 
+		/// <param name="inputFeatureChannels">To be added.</param>
+		/// <param name="outputFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("createRNNSingleGateDescriptorWithInputFeatureChannels:outputFeatureChannels:")]
 		MPSRnnSingleGateDescriptor Create (nuint inputFeatureChannels, nuint outputFeatureChannels);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSRnnDescriptor))]
+	/// <summary>Describes a gated recurrent unit layer in a neural net.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSRnnDescriptor))]
 	interface MPSGRUDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("recurrentGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource RecurrentGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("recurrentGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource RecurrentGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateInputGateWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateInputGateWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("gatePnormValue")]
 		float GatePnormValue { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("flipOutputGates")]
 		bool FlipOutputGates { get; set; }
 
+		/// <param name="inputFeatureChannels">To be added.</param>
+		/// <param name="outputFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("createGRUDescriptorWithInputFeatureChannels:outputFeatureChannels:")]
 		MPSGRUDescriptor Create (nuint inputFeatureChannels, nuint outputFeatureChannels);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSRnnDescriptor))]
+	/// <summary>Describes a Long-Short Term Memory layer in neural net.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSRnnDescriptor))]
 	interface MPSLSTMDescriptor {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("memoryWeightsAreDiagonal")]
 		bool AreMemoryWeightsDiagonal { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("inputGateMemoryWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource InputGateMemoryWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("forgetGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource ForgetGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("forgetGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource ForgetGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("forgetGateMemoryWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource ForgetGateMemoryWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("outputGateMemoryWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource OutputGateMemoryWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("cellGateInputWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource CellGateInputWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("cellGateRecurrentWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource CellGateRecurrentWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("cellGateMemoryWeights", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource CellGateMemoryWeights { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("cellToOutputNeuronType", ArgumentSemantic.Assign)]
 		MPSCnnNeuronType CellToOutputNeuronType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("cellToOutputNeuronParamA")]
 		float CellToOutputNeuronParamA { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("cellToOutputNeuronParamB")]
 		float CellToOutputNeuronParamB { get; set; }
 
-		[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("cellToOutputNeuronParamC")]
 		float CellToOutputNeuronParamC { get; set; }
 
+		/// <param name="inputFeatureChannels">To be added.</param>
+		/// <param name="outputFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("createLSTMDescriptorWithInputFeatureChannels:outputFeatureChannels:")]
 		MPSLSTMDescriptor Create (nuint inputFeatureChannels, nuint outputFeatureChannels);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSState), Name = "MPSRNNRecurrentImageState")]
+	/// <summary>The image containing the state in an image-baed recurrent neural net as it iterates through its sequence.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState), Name = "MPSRNNRecurrentImageState")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSRnnRecurrentImageState {
+		/// <param name="layerIndex">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("getRecurrentOutputImageForLayerIndex:")]
 		[return: NullAllowed]
 		MPSImage GetRecurrentOutputImage (nuint layerIndex);
 
+		/// <param name="layerIndex">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("getMemoryCellImageForLayerIndex:")]
 		[return: NullAllowed]
 		MPSImage GetMemoryCellImage (nuint layerIndex);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnKernel), Name = "MPSRNNImageInferenceLayer")]
+	/// <summary>A recurrent neural net layer specifically for image data.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSRNNImageInferenceLayer")]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSRnnImageInferenceLayer {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfLayers")]
 		nuint NumberOfLayers { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("recurrentOutputIsTemporary")]
 		bool IsRecurrentOutputTemporary { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("storeAllIntermediateStates")]
 		bool StoreAllIntermediateStates { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bidirectionalCombineMode", ArgumentSemantic.Assign)]
 		MPSRnnBidirectionalCombineMode BidirectionalCombineMode { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="rnnDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rnnDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="rnnDescriptors">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rnnDescriptors:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSRnnDescriptor[] rnnDescriptors);
+		NativeHandle Constructor (IMTLDevice device, MPSRnnDescriptor [] rnnDescriptors);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <param name="recurrentInputState">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="recurrentOutputStates">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeSequenceToCommandBuffer:sourceImages:destinationImages:recurrentInputState:recurrentOutputStates:")]
-		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSImage[] sourceImages, MPSImage[] destinationImages, [NullAllowed] MPSRnnRecurrentImageState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentImageState> recurrentOutputStates);
+		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, MPSImage [] destinationImages, [NullAllowed] MPSRnnRecurrentImageState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentImageState> recurrentOutputStates);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceSequence">To be added.</param>
+		///         <param name="destinationForwardImages">To be added.</param>
+		///         <param name="destinationBackwardImages">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBidirectionalSequenceToCommandBuffer:sourceSequence:destinationForwardImages:destinationBackwardImages:")]
-		void EncodeBidirectionalSequence (IMTLCommandBuffer commandBuffer, MPSImage[] sourceSequence, MPSImage[] destinationForwardImages, [NullAllowed] MPSImage[] destinationBackwardImages);
+		void EncodeBidirectionalSequence (IMTLCommandBuffer commandBuffer, MPSImage [] sourceSequence, MPSImage [] destinationForwardImages, [NullAllowed] MPSImage [] destinationBackwardImages);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSRnnImageInferenceLayer Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSState), Name = "MPSRNNRecurrentMatrixState")]
+	/// <summary>The matrix containing the state as a recurrent neural net iterates through its sequence.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState), Name = "MPSRNNRecurrentMatrixState")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSRnnRecurrentMatrixState {
+		/// <param name="layerIndex">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("getRecurrentOutputMatrixForLayerIndex:")]
 		[return: NullAllowed]
 		MPSMatrix GetRecurrentOutputMatrix (nuint layerIndex);
 
+		/// <param name="layerIndex">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("getMemoryCellMatrixForLayerIndex:")]
 		[return: NullAllowed]
 		MPSMatrix GetMemoryCellMatrix (nuint layerIndex);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel), Name = "MPSRNNMatrixInferenceLayer")]
+	/// <summary>A recurrent neural net layer.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel), Name = "MPSRNNMatrixInferenceLayer")]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSRnnMatrixInferenceLayer {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputFeatureChannels")]
 		nuint InputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputFeatureChannels")]
 		nuint OutputFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfLayers")]
 		nuint NumberOfLayers { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("recurrentOutputIsTemporary")]
 		bool IsRecurrentOutputTemporary { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("storeAllIntermediateStates")]
 		bool StoreAllIntermediateStates { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bidirectionalCombineMode", ArgumentSemantic.Assign)]
 		MPSRnnBidirectionalCombineMode BidirectionalCombineMode { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="rnnDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rnnDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="rnnDescriptors">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:rnnDescriptors:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSRnnDescriptor[] rnnDescriptors);
+		NativeHandle Constructor (IMTLDevice device, MPSRnnDescriptor [] rnnDescriptors);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrices">To be added.</param>
+		///         <param name="destinationMatrices">To be added.</param>
+		///         <param name="recurrentInputState">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="recurrentOutputStates">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeSequenceToCommandBuffer:sourceMatrices:destinationMatrices:recurrentInputState:recurrentOutputStates:")]
-		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] sourceMatrices, MPSMatrix[] destinationMatrices, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates);
+		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] sourceMatrices, MPSMatrix [] destinationMatrices, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrices">To be added.</param>
+		///         <param name="sourceOffsets">To be added.</param>
+		///         <param name="destinationMatrices">To be added.</param>
+		///         <param name="destinationOffsets">To be added.</param>
+		///         <param name="recurrentInputState">To be added.</param>
+		///         <param name="recurrentOutputStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeSequenceToCommandBuffer:sourceMatrices:sourceOffsets:destinationMatrices:destinationOffsets:recurrentInputState:recurrentOutputStates:")]
-		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] sourceMatrices, [NullAllowed] IntPtr sourceOffsets, MPSMatrix[] destinationMatrices, [NullAllowed] IntPtr destinationOffsets, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates);
+		void EncodeSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] sourceMatrices, [NullAllowed] IntPtr sourceOffsets, MPSMatrix [] destinationMatrices, [NullAllowed] IntPtr destinationOffsets, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceSequence">To be added.</param>
+		///         <param name="destinationForwardMatrices">To be added.</param>
+		///         <param name="destinationBackwardMatrices">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBidirectionalSequenceToCommandBuffer:sourceSequence:destinationForwardMatrices:destinationBackwardMatrices:")]
-		void EncodeBidirectionalSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] sourceSequence, MPSMatrix[] destinationForwardMatrices, [NullAllowed] MPSMatrix[] destinationBackwardMatrices);
+		void EncodeBidirectionalSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] sourceSequence, MPSMatrix [] destinationForwardMatrices, [NullAllowed] MPSMatrix [] destinationBackwardMatrices);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSRnnMatrixInferenceLayer Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A placeholder node for an image in a neural network graph.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSNNImageNode {
+		/// <param name="handle">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithHandle:")]
 		[DesignatedInitializer]
-		IntPtr Constructor ([NullAllowed] IMPSHandle handle);
+		NativeHandle Constructor ([NullAllowed] IMPSHandle handle);
 
+		/// <param name="handle">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithHandle:")]
 		MPSNNImageNode Create ([NullAllowed] IMPSHandle handle);
 
+		/// <param name="handle">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("exportedNodeWithHandle:")]
 		MPSNNImageNode GetExportedNode ([NullAllowed] IMPSHandle handle);
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("handle", ArgumentSemantic.Retain)]
 		IMPSHandle MPSHandle { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("format", ArgumentSemantic.Assign)]
 		MPSImageFeatureChannelFormat Format { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("imageAllocator", ArgumentSemantic.Retain)]
 		IMPSImageAllocator ImageAllocator { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("exportFromGraph")]
 		bool ExportFromGraph { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeResource")]
 		bool SynchronizeResource { get; set; }
 
-		[TV (12,2), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("stopGradient")]
 		bool StopGradient { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A state object in a neural network graph.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSNNStateNode {
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("handle", ArgumentSemantic.Retain)]
 		IMPSHandle MPSHandle { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("exportFromGraph")]
 		bool ExportFromGraph { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("synchronizeResource")]
 		bool SynchronizeResource { get; set; }
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	delegate void MPSGradientNodeHandler (MPSNNFilterNode gradientNode, MPSNNFilterNode inferenceNode, MPSNNImageNode inferenceSource, MPSNNImageNode gradientSource);
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A placeholder node in a neural network graph for an image filtering stage.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
 	interface MPSNNFilterNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("resultImage")]
 		MPSNNImageNode ResultImage { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("resultState")]
 		MPSNNStateNode ResultState { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("resultStates")]
-		MPSNNStateNode[] ResultStates { get; }
+		MPSNNStateNode [] ResultStates { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("paddingPolicy", ArgumentSemantic.Retain)]
 		IMPSNNPadding PaddingPolicy { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("label")]
 		string Label { get; set; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="gradientImageSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientFilterWithSource:")]
 		MPSNNGradientFilterNode GetFilter (MPSNNImageNode gradientImageSource);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="gradientImagesSources">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientFilterWithSources:")]
-		MPSNNGradientFilterNode GetFilter (MPSNNImageNode[] gradientImagesSources);
+		MPSNNGradientFilterNode GetFilter (MPSNNImageNode [] gradientImagesSources);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="gradientImagesSources">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientFiltersWithSources:")]
-		MPSNNGradientFilterNode [] GetFilters (MPSNNImageNode[] gradientImagesSources);
+		MPSNNGradientFilterNode [] GetFilters (MPSNNImageNode [] gradientImagesSources);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="gradientImageSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientFiltersWithSource:")]
 		MPSNNGradientFilterNode [] GetFilters (MPSNNImageNode gradientImageSource);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="gradientImageSource">To be added.</param>
+		///         <param name="nodeHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("trainingGraphWithSourceGradient:nodeHandler:")]
 		[return: NullAllowed]
 		MPSNNFilterNode [] GetTrainingGraph ([NullAllowed] MPSNNImageNode gradientImageSource, [NullAllowed] MPSGradientNodeHandler nodeHandler);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNGradientFilterNode {
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNConvolutionNode")]
+	/// <summary>Subclass of <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that is the base class for convolution representation nodes.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNConvolutionNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
-	interface MPSCnnConvolutionNode {
+	interface MPSCnnConvolutionNode : MPSNNTrainableNode {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("accumulatorPrecision", ArgumentSemantic.Assign)]
 		MPSNNConvolutionAccumulatorPrecisionOption AccumulatorPrecision { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:weights:")]
 		MPSCnnConvolutionNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:weights:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
 
-		[NullAllowed, Export ("convolutionState")]
-		MPSCnnConvolutionStateNode ConvolutionState { get; }
-
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[NullAllowed, Export ("convolutionGradientState")]
 		MPSCnnConvolutionGradientStateNode ConvolutionGradientState { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnConvolutionNode" /> that represents a fully connected layer.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnConvolutionNode), Name = "MPSCNNFullyConnectedNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnFullyConnectedNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:weights:")]
 		MPSCnnFullyConnectedNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:weights:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnConvolutionNode" /> that represents a binary convolution kernel.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnConvolutionNode), Name = "MPSCNNBinaryConvolutionNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnBinaryConvolutionNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <param name="scaleValue">To be added.</param>
+		///         <param name="type">To be added.</param>
+		///         <param name="flags">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:weights:scaleValue:type:flags:")]
-		MPSCnnBinaryConvolutionNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue,MPSCnnBinaryConvolutionType type,MPSCnnBinaryConvolutionFlags flags);
+		MPSCnnBinaryConvolutionNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <param name="scaleValue">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="flags">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:weights:scaleValue:type:flags:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue,MPSCnnBinaryConvolutionType type,MPSCnnBinaryConvolutionFlags flags);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
 		[Internal]
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:weights:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
 		MPSCnnBinaryConvolutionNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
 		[Internal]
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithSource:weights:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
-		IntPtr InitWithSource (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		IntPtr _InitWithSource (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnBinaryConvolutionNode" /> that represents a fully-connected convolution layer that uses binary weights.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnBinaryConvolutionNode), Name = "MPSCNNBinaryFullyConnectedNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnBinaryFullyConnectedNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <param name="scaleValue">To be added.</param>
+		///         <param name="type">To be added.</param>
+		///         <param name="flags">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:weights:scaleValue:type:flags:")]
-		MPSCnnBinaryFullyConnectedNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue,MPSCnnBinaryConvolutionType type,MPSCnnBinaryConvolutionFlags flags);
+		MPSCnnBinaryFullyConnectedNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <param name="scaleValue">To be added.</param>
+		/// <param name="type">To be added.</param>
+		/// <param name="flags">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:weights:scaleValue:type:flags:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue,MPSCnnBinaryConvolutionType type,MPSCnnBinaryConvolutionFlags flags);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, float scaleValue, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
 		[Internal]
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:weights:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
 		MPSCnnBinaryFullyConnectedNode Create (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 
 		[Internal]
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		[MacCatalyst (13, 1)]
 		[Export ("initWithSource:weights:outputBiasTerms:outputScaleTerms:inputBiasTerms:inputScaleTerms:type:flags:")]
-		IntPtr InitWithSource (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
+		IntPtr _InitWithSource (MPSNNImageNode sourceNode, IMPSCnnConvolutionDataSource weights, [NullAllowed] IntPtr outputBiasTerms, [NullAllowed] IntPtr outputScaleTerms, [NullAllowed] IntPtr inputBiasTerms, [NullAllowed] IntPtr inputScaleTerms, MPSCnnBinaryConvolutionType type, MPSCnnBinaryConvolutionFlags flags);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnConvolutionNode" /> that represents a transpose kernel.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnConvolutionNode), Name = "MPSCNNConvolutionTransposeNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnConvolutionTransposeNode {
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:convolutionGradientState:weights:")]
 		MPSCnnConvolutionTransposeNode Create (MPSNNImageNode sourceNode, [NullAllowed] MPSCnnConvolutionGradientStateNode convolutionGradientState, IMPSCnnConvolutionDataSource weights);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="convolutionGradientState">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithSource:convolutionGradientState:weights:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, [NullAllowed] MPSCnnConvolutionGradientStateNode convolutionGradientState, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, [NullAllowed] MPSCnnConvolutionGradientStateNode convolutionGradientState, IMPSCnnConvolutionDataSource weights);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNConvolutionGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionGradientNode : MPSNNTrainableNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:convolutionGradientState:weights:")]
 		MPSCnnConvolutionGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:convolutionGradientState:weights:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNNeuronNode")]
+	/// <summary>The base class for representations of activation functions.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNNeuronNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronNode {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:descriptor:")]
 		MPSCnnNeuronNode Create (MPSNNImageNode sourceNode, MPSNNNeuronDescriptor descriptor);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("a")]
 		float A { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("b")]
 		float B { get; }
 
-		[TV (11,2), iOS (11,2), Mac (10,13,2, onlyOn64: true)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("c")]
 		float C { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronPowerNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronPowerNode {
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <param name="c">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:c:")]
 		MPSCnnNeuronPowerNode Create (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:c:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronPowerNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronExponentialNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronExponentialNode {
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <param name="c">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:c:")]
 		MPSCnnNeuronExponentialNode Create (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:c:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronExponentialNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronLogarithmNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronLogarithmNode {
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <param name="c">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:c:")]
 		MPSCnnNeuronLogarithmNode Create (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <param name="c">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:c:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b, float c);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronLogarithmNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNNeuronGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnNeuronGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:descriptor:")]
 		MPSCnnNeuronGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, MPSNNNeuronDescriptor descriptor);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:descriptor:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, MPSNNNeuronDescriptor descriptor);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, MPSNNNeuronDescriptor descriptor);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("descriptor")]
 		MPSNNNeuronDescriptor Descriptor { get; }
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNUnaryReductionNode {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSNNUnaryReductionNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionRowMinNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionRowMinNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionColumnMinNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionColumnMinNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsMinNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsMinNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsArgumentMinNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsArgumentMinNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionRowMaxNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionRowMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionColumnMaxNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionColumnMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsMaxNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsArgumentMaxNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsArgumentMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionRowMeanNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionRowMeanNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionColumnMeanNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionColumnMeanNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsMeanNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsMeanNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionSpatialMeanNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionSpatialMeanNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionRowSumNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionRowSumNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionColumnSumNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionColumnSumNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNUnaryReductionNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionFeatureChannelsSumNode {
 
-		[Static][New]
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSource:")]
 		MPSNNReductionFeatureChannelsSumNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("weight")]
 		float Weight { get; set; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the absolute-value activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronAbsoluteNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronAbsoluteNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronAbsoluteNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the exponential linear unit activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronELUNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronEluNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:")]
 		MPSCnnNeuronEluNode Create (MPSNNImageNode sourceNode, float a);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronEluNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the ReLUN activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronReLUNNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronReLunNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:")]
 		MPSCnnNeuronReLunNode Create (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronReLunNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the linear activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronLinearNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronLinearNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:")]
 		MPSCnnNeuronLinearNode Create (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 12, 0)]
 		[Deprecated (PlatformName.iOS, 12, 0)]
 		[Deprecated (PlatformName.MacOSX, 10, 14)]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1)]
 		[Export ("initWithSource:a:b:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronLinearNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the rectified linear unit activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronReLUNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronReLUNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:")]
 		MPSCnnNeuronReLUNode Create (MPSNNImageNode sourceNode, float a);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronReLUNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the sigmoid activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronSigmoidNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronSigmoidNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronSigmoidNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the hard sigmoid activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronHardSigmoidNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronHardSigmoidNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:")]
 		MPSCnnNeuronHardSigmoidNode Create (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronHardSigmoidNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the softplus activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronSoftPlusNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronSoftPlusNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:")]
 		MPSCnnNeuronSoftPlusNode Create (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronSoftPlusNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the softsign activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronSoftSignNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronSoftSignNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronSoftSignNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents a tanh activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronTanHNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronTanHNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:a:b:")]
 		MPSCnnNeuronTanHNode Create (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="a">To be added.</param>
+		/// <param name="b">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:a:b:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, float a, float b);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float a, float b);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNeuronTanHNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNeuronNode" /> that represents the parametric rectified linear unit activation function.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronPReLUNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNeuronPReLUNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="aData">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:aData:")]
 		MPSCnnNeuronPReLUNode Create (MPSNNImageNode sourceNode, NSData aData);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="aData">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:aData:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, NSData aData);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, NSData aData);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNPoolingNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that represents a pooling kernel in a convolutional neural net.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNPoolingNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnPoolingNode {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; }
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:filterSize:")]
 		MPSCnnPoolingNode Create (MPSNNImageNode sourceNode, nuint size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:filterSize:stride:")]
 		MPSCnnPoolingNode Create (MPSNNImageNode sourceNode, nuint size, nuint stride);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:stride:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNPoolingGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
 		MPSCnnPoolingGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("strideInPixelsX")]
 		nuint StrideInPixelsX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("strideInPixelsY")]
 		nuint StrideInPixelsY { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradientNode), Name = "MPSCNNPoolingMaxGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingMaxGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
 		MPSCnnPoolingMaxGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradientNode), Name = "MPSCNNPoolingAverageGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingAverageGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
 		MPSCnnPoolingAverageGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradientNode), Name = "MPSCNNPoolingL2NormGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnPoolingL2NormGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
 		MPSCnnPoolingL2NormGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="paddingPolicy">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:paddingPolicy:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, [NullAllowed] IMPSNNPadding paddingPolicy);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnPoolingGradientNode), Name = "MPSCNNDilatedPoolingMaxGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnDilatedPoolingMaxGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="dilationRateX">To be added.</param>
+		/// <param name="dilationRateY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:dilationRateX:dilationRateY:")]
 		MPSCnnDilatedPoolingMaxGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, nuint dilationRateX, nuint dilationRateY);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="dilationRateX">To be added.</param>
+		/// <param name="dilationRateY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:dilationRateX:dilationRateY:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, nuint dilationRateX, nuint dilationRateY);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, nuint dilationRateX, nuint dilationRateY);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNSpatialNormalizationGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnSpatialNormalizationGradientNode {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; set; }
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelSize:")]
 		MPSCnnSpatialNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNLocalContrastNormalizationGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnLocalContrastNormalizationGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:")]
 		MPSCnnLocalContrastNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelWidth:kernelHeight:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelWidth, nuint kernelHeight);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("p0")]
 		float P0 { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pm")]
 		float Pm { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("ps")]
 		float Ps { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNCrossChannelNormalizationGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnCrossChannelNormalizationGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:kernelSize:")]
 		MPSCnnCrossChannelNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:kernelSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, nuint kernelSize);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelSize")]
 		nuint KernelSize { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNInstanceNormalizationNode")]
 	[DisableDefaultCtor]
-	interface MPSCnnInstanceNormalizationNode {
+	interface MPSCnnInstanceNormalizationNode : MPSNNTrainableNode {
 
+		/// <param name="source">To be added.</param>
+		///         <param name="dataSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:dataSource:")]
 		MPSCnnInstanceNormalizationNode Create (MPSNNImageNode source, IMPSCnnInstanceNormalizationDataSource dataSource);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="dataSource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:dataSource:")]
-		IntPtr Constructor (MPSNNImageNode source, IMPSCnnInstanceNormalizationDataSource dataSource);
+		NativeHandle Constructor (MPSNNImageNode source, IMPSCnnInstanceNormalizationDataSource dataSource);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNInstanceNormalizationGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnInstanceNormalizationGradientNode : MPSNNTrainableNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSCnnInstanceNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNBatchNormalizationNode")]
 	[DisableDefaultCtor]
-	interface MPSCnnBatchNormalizationNode {
+	interface MPSCnnBatchNormalizationNode : MPSNNTrainableNode {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("flags", ArgumentSemantic.Assign)]
 		MPSCnnBatchNormalizationFlags Flags { get; set; }
 
+		/// <param name="source">To be added.</param>
+		///         <param name="dataSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:dataSource:")]
 		MPSCnnBatchNormalizationNode Create (MPSNNImageNode source, IMPSCnnBatchNormalizationDataSource dataSource);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="dataSource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:dataSource:")]
-		IntPtr Constructor (MPSNNImageNode source, IMPSCnnBatchNormalizationDataSource dataSource);
+		NativeHandle Constructor (MPSNNImageNode source, IMPSCnnBatchNormalizationDataSource dataSource);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[DisableDefaultCtor]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNBatchNormalizationGradientNode")]
 	interface MPSCnnBatchNormalizationGradientNode : MPSNNTrainableNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSCnnBatchNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNDilatedPoolingMaxNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that represents a dilated max pooling filter.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNDilatedPoolingMaxNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnDilatedPoolingMaxNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateX")]
 		nuint DilationRateX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dilationRateY")]
 		nuint DilationRateY { get; }
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:filterSize:")]
 		MPSCnnDilatedPoolingMaxNode Create (MPSNNImageNode sourceNode, nuint size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <param name="dilationRate">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:filterSize:stride:dilationRate:")]
 		MPSCnnDilatedPoolingMaxNode Create (MPSNNImageNode sourceNode, nuint size, nuint stride, nuint dilationRate);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <param name="dilationRateX">To be added.</param>
+		/// <param name="dilationRateY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:dilationRateX:dilationRateY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, nuint dilationRateX, nuint dilationRateY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY, nuint dilationRateX, nuint dilationRateY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <param name="dilationRate">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:stride:dilationRate:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride, nuint dilationRate);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride, nuint dilationRate);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNNormalizationNode")]
+	/// <summary>Abstract base class for normalization <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> subclasses.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNNormalizationNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnNormalizationNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		float Alpha { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("beta")]
 		float Beta { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("delta")]
 		float Delta { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnNormalizationNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNormalizationNode" /> that represents a spatial normalization kernel.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNormalizationNode), Name = "MPSCNNSpatialNormalizationNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnSpatialNormalizationNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:kernelSize:")]
 		MPSCnnSpatialNormalizationNode Create (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNormalizationNode" /> representing a local contrast normalization kernel.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNormalizationNode), Name = "MPSCNNLocalContrastNormalizationNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnLocalContrastNormalizationNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("pm")]
 		float Pm { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("ps")]
 		float Ps { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("p0")]
 		float P0 { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelWidth")]
 		nuint KernelWidth { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelHeight")]
 		nuint KernelHeight { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:kernelSize:")]
 		MPSCnnLocalContrastNormalizationNode Create (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnNormalizationNode" /> that represents a cross-channel normalization kernel.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnNormalizationNode), Name = "MPSCNNCrossChannelNormalizationNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnCrossChannelNormalizationNode {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelSizeInFeatureChannels")]
 		nuint KernelSizeInFeatureChannels { get; set; }
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:kernelSize:")]
 		MPSCnnCrossChannelNormalizationNode Create (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelSize:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelSize);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode))]
+	/// <summary>Abstract neural network graph node for image resampling.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNScaleNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="size">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:outputSize:")]
 		MPSNNScaleNode Create (MPSNNImageNode sourceNode, MTLSize size);
 
+		/// <param name="sourceNode">To be added.</param>
+		///         <param name="transformProvider">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="size">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:transformProvider:outputSize:")]
 		MPSNNScaleNode Create (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, MTLSize size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="transformProvider">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:transformProvider:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode))]
+	/// <summary>Abstract base class of arithmetic nodes.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNBinaryArithmeticNode {
+		/// <param name="sourceNodes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSources:")]
-		MPSNNBinaryArithmeticNode Create (MPSNNImageNode[] sourceNodes);
+		MPSNNBinaryArithmeticNode Create (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		///         <param name="right">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithLeftSource:rightSource:")]
 		MPSNNBinaryArithmeticNode Create (MPSNNImageNode left, MPSNNImageNode right);
 
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLeftSource:rightSource:")]
-		IntPtr Constructor (MPSNNImageNode left, MPSNNImageNode right);
+		NativeHandle Constructor (MPSNNImageNode left, MPSNNImageNode right);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientClass")]
 		Class GradientClass { get; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="gradientImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("gradientFiltersWithSources:")]
 		MPSNNGradientFilterNode [] GetGradientFilters (MPSNNImageNode [] gradientImages);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryScale")]
 		float PrimaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryScale")]
 		float SecondaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bias")]
 		float Bias { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryStrideInPixelsX")]
 		nuint PrimaryStrideInPixelsX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryStrideInPixelsY")]
 		nuint PrimaryStrideInPixelsY { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryStrideInFeatureChannels")]
 		nuint PrimaryStrideInFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInPixelsX")]
 		nuint SecondaryStrideInPixelsX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInPixelsY")]
 		nuint SecondaryStrideInPixelsY { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInFeatureChannels")]
 		nuint SecondaryStrideInFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("minimumValue")]
 		float MinimumValue { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumValue")]
 		float MaximumValue { get; set; }
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNBinaryArithmeticNode))]
 	[DisableDefaultCtor]
 	interface MPSNNComparisonNode {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("comparisonType", ArgumentSemantic.Assign)]
 		MPSNNComparisonType ComparisonType { get; set; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNArithmeticGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="isSecondarySourceFilter">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
 		MPSNNArithmeticGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="gradientImages">To be added.</param>
+		/// <param name="filter">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGradientImages:forwardFilter:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode[] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode [] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("primaryScale")]
 		float PrimaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryScale")]
 		float SecondaryScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("bias")]
 		float Bias { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInPixelsX")]
 		nuint SecondaryStrideInPixelsX { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInPixelsY")]
 		nuint SecondaryStrideInPixelsY { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("secondaryStrideInFeatureChannels")]
 		nuint SecondaryStrideInFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("minimumValue")]
 		float MinimumValue { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maximumValue")]
 		float MaximumValue { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("isSecondarySourceFilter")]
 		bool IsSecondarySourceFilter { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNArithmeticGradientNode))]
 	[DisableDefaultCtor]
 	interface MPSNNAdditionGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="isSecondarySourceFilter">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
 		MPSNNAdditionGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="gradientImages">To be added.</param>
+		/// <param name="filter">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGradientImages:forwardFilter:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode[] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode [] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNArithmeticGradientNode))]
 	[DisableDefaultCtor]
 	interface MPSNNSubtractionGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="isSecondarySourceFilter">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
 		MPSNNSubtractionGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="gradientImages">To be added.</param>
+		/// <param name="filter">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGradientImages:forwardFilter:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode[] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode [] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNArithmeticGradientNode))]
 	[DisableDefaultCtor]
 	interface MPSNNMultiplicationGradientNode {
 
-		[Static][New]
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="isSecondarySourceFilter">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
 		MPSNNMultiplicationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNBinaryGradientStateNode gradientState, bool isSecondarySourceFilter);
 
+		/// <param name="gradientImages">To be added.</param>
+		/// <param name="filter">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGradientImages:forwardFilter:isSecondarySourceFilter:")]
-		IntPtr Constructor (MPSNNImageNode[] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
+		NativeHandle Constructor (MPSNNImageNode [] gradientImages, MPSNNFilterNode filter, bool isSecondarySourceFilter);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNDropoutNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnDropoutNode {
 
+		/// <param name="source">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnDropoutNode Create (MPSNNImageNode source);
 
+		/// <param name="source">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode source);
+		NativeHandle Constructor (MPSNNImageNode source);
 
+		/// <param name="source">To be added.</param>
+		///         <param name="keepProbability">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:keepProbability:")]
 		MPSCnnDropoutNode Create (MPSNNImageNode source, float keepProbability);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:keepProbability:")]
-		IntPtr Constructor (MPSNNImageNode source, float keepProbability);
+		NativeHandle Constructor (MPSNNImageNode source, float keepProbability);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:keepProbability:seed:maskStrideInPixels:")]
 		MPSCnnDropoutNode Create (MPSNNImageNode source, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:keepProbability:seed:maskStrideInPixels:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSNNImageNode source, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
+		NativeHandle Constructor (MPSNNImageNode source, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keepProbability")]
 		float KeepProbability { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seed")]
 		nuint Seed { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskStrideInPixels")]
 		MTLSize MaskStrideInPixels { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNDropoutGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnDropoutGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:keepProbability:seed:maskStrideInPixels:")]
 		MPSCnnDropoutGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:keepProbability:seed:maskStrideInPixels:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keepProbability")]
 		float KeepProbability { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seed")]
 		nuint Seed { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskStrideInPixels")]
 		MTLSize MaskStrideInPixels { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNStateNode))]
 	[DisableDefaultCtor]
 	interface MPSNNLabelsNode {
 
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNLossNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnLossNode {
 
+		/// <param name="source">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:lossDescriptor:")]
 		MPSCnnLossNode Create (MPSNNImageNode source, MPSCnnLossDescriptor descriptor);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:lossDescriptor:")]
-		IntPtr Constructor (MPSNNImageNode source, MPSCnnLossDescriptor descriptor);
+		NativeHandle Constructor (MPSNNImageNode source, MPSCnnLossDescriptor descriptor);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputLabels", ArgumentSemantic.Retain)]
 		MPSNNLabelsNode InputLabels { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNYOLOLossNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnYoloLossNode {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="source">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:lossDescriptor:")]
 		MPSCnnYoloLossNode Create (MPSNNImageNode source, MPSCnnYoloLossDescriptor descriptor);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:lossDescriptor:")]
-		IntPtr Constructor (MPSNNImageNode source, MPSCnnYoloLossDescriptor descriptor);
+		NativeHandle Constructor (MPSNNImageNode source, MPSCnnYoloLossDescriptor descriptor);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("inputLabels", ArgumentSemantic.Retain)]
 		MPSNNLabelsNode InputLabels { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Concatenates the results of two kernels.</summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNConcatenationNode {
+		/// <param name="sourceNodes">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSources:")]
-		MPSNNConcatenationNode Create (MPSNNImageNode[] sourceNodes);
+		MPSNNConcatenationNode Create (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNConcatenationGradientNode {
 
+		/// <param name="gradientSourceNode">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSNNConcatenationGradientNode Create (MPSNNImageNode gradientSourceNode, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="gradientSourceNode">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode gradientSourceNode, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode gradientSourceNode, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReshapeNode {
 
+		/// <param name="source">To be added.</param>
+		/// <param name="resultWidth">To be added.</param>
+		/// <param name="resultHeight">To be added.</param>
+		/// <param name="resultFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:resultWidth:resultHeight:resultFeatureChannels:")]
 		MPSNNReshapeNode Create (MPSNNImageNode source, nuint resultWidth, nuint resultHeight, nuint resultFeatureChannels);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="resultWidth">To be added.</param>
+		/// <param name="resultHeight">To be added.</param>
+		/// <param name="resultFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:resultWidth:resultHeight:resultFeatureChannels:")]
-		IntPtr Constructor (MPSNNImageNode source, nuint resultWidth, nuint resultHeight, nuint resultFeatureChannels);
+		NativeHandle Constructor (MPSNNImageNode source, nuint resultWidth, nuint resultHeight, nuint resultFeatureChannels);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReshapeGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSNNReshapeGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNReductionSpatialMeanGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSNNReductionSpatialMeanGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNPadNode {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("fillValue")]
 		float FillValue { get; set; }
 
+		/// <param name="source">To be added.</param>
+		///         <param name="paddingSizeBefore">To be added.</param>
+		///         <param name="paddingSizeAfter">To be added.</param>
+		///         <param name="edgeMode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:paddingSizeBefore:paddingSizeAfter:edgeMode:")]
 		MPSNNPadNode Create (MPSNNImageNode source, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter, MPSImageEdgeMode edgeMode);
 
+		/// <param name="source">To be added.</param>
+		/// <param name="paddingSizeBefore">To be added.</param>
+		/// <param name="paddingSizeAfter">To be added.</param>
+		/// <param name="edgeMode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:paddingSizeBefore:paddingSizeAfter:edgeMode:")]
-		IntPtr Constructor (MPSNNImageNode source, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter, MPSImageEdgeMode edgeMode);
+		NativeHandle Constructor (MPSNNImageNode source, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter, MPSImageEdgeMode edgeMode);
 	}
 
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode))]
 	[DisableDefaultCtor]
 	interface MPSNNPadGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSNNPadGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNSoftMaxGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnSoftMaxGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSCnnSoftMaxGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNLogSoftMaxGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnLogSoftMaxGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
 		MPSCnnLogSoftMaxGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNSoftMaxNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that represents a softmax filter.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNSoftMaxNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnSoftMaxNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnSoftMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNLogSoftMaxNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that represents the logarithmic softmax loss function.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNLogSoftMaxNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnLogSoftMaxNode {
+		/// <param name="sourceNode">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:")]
 		MPSCnnLogSoftMaxNode Create (MPSNNImageNode sourceNode);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode);
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNUpsamplingNearestNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that performs nearest spatial upsampling.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNUpsamplingNearestNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingNearestNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:integerScaleFactorX:integerScaleFactorY:")]
 		MPSCnnUpsamplingNearestNode Create (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:integerScaleFactorX:integerScaleFactorY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNFilterNode), Name = "MPSCNNUpsamplingBilinearNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that performs bilinear spatial upsampling.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNUpsamplingBilinearNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingBilinearNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSource:integerScaleFactorX:integerScaleFactorY:")]
 		MPSCnnUpsamplingBilinearNode Create (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <param name="alignCorners">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("nodeWithSource:integerScaleFactorX:integerScaleFactorY:alignCorners:")]
 		MPSCnnUpsamplingBilinearNode Create (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY, bool alignCorners);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:integerScaleFactorX:integerScaleFactorY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="integerScaleFactorX">To be added.</param>
+		/// <param name="integerScaleFactorY">To be added.</param>
+		/// <param name="alignCorners">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithSource:integerScaleFactorX:integerScaleFactorY:alignCorners:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY, bool alignCorners);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint integerScaleFactorX, nuint integerScaleFactorY, bool alignCorners);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("alignCorners")]
 		bool AlignCorners { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNUpsamplingNearestGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingNearestGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="scaleFactorX">To be added.</param>
+		///         <param name="scaleFactorY">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:scaleFactorX:scaleFactorY:")]
 		MPSCnnUpsamplingNearestGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="scaleFactorX">To be added.</param>
+		/// <param name="scaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:scaleFactorX:scaleFactorY:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNUpsamplingBilinearGradientNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnUpsamplingBilinearGradientNode {
 
+		/// <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="scaleFactorX">To be added.</param>
+		///         <param name="scaleFactorY">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("nodeWithSourceGradient:sourceImage:gradientState:scaleFactorX:scaleFactorY:")]
 		MPSCnnUpsamplingBilinearGradientNode NodeWithSourceGradient (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
 
+		/// <param name="sourceGradient">To be added.</param>
+		/// <param name="sourceImage">To be added.</param>
+		/// <param name="gradientState">To be added.</param>
+		/// <param name="scaleFactorX">To be added.</param>
+		/// <param name="scaleFactorY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSourceGradient:sourceImage:gradientState:scaleFactorX:scaleFactorY:")]
-		IntPtr Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, double scaleFactorX, double scaleFactorY);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorX")]
 		double ScaleFactorX { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("scaleFactorY")]
 		double ScaleFactorY { get; }
 	}
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSKernel))]
+	interface IMPSNNLossCallback { }
+
+	[Protocol]
+	interface MPSNNLossCallback : NSSecureCoding, NSCopying {
+		[Abstract]
+		[Export ("scalarWeightForSourceImage:destinationImage:")]
+		float GetScalarWeight (MPSImage sourceImage, MPSImage destinationImage);
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode))]
+	interface MPSNNForwardLossNode {
+		[Export ("lossType")]
+		MPSCnnLossType LossType { get; }
+
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		[Export ("numberOfClasses")]
+		nuint NumberOfClasses { get; }
+
+		[Export ("weight")]
+		float Weight { get; }
+
+		[Export ("labelSmoothing")]
+		float LabelSmoothing { get; }
+
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		[Export ("delta")]
+		float Delta { get; }
+
+		[NullAllowed, Export ("propertyCallBack", ArgumentSemantic.Retain)]
+		IMPSNNLossCallback PropertyCallBack { get; set; }
+
+		[Static]
+		[Export ("nodeWithSource:labels:weights:lossDescriptor:")]
+		MPSNNForwardLossNode Create (MPSNNImageNode source, MPSNNImageNode labels, MPSNNImageNode weights, MPSCnnLossDescriptor descriptor);
+
+		[Static]
+		[Export ("nodeWithSource:labels:lossDescriptor:")]
+		MPSNNForwardLossNode Create (MPSNNImageNode source, MPSNNImageNode labels, MPSCnnLossDescriptor descriptor);
+
+		[Static]
+		[Export ("nodeWithSources:lossDescriptor:")]
+		MPSNNForwardLossNode Create (MPSNNImageNode [] sourceNodes, MPSCnnLossDescriptor descriptor);
+
+		[Export ("initWithSource:labels:weights:lossDescriptor:")]
+		NativeHandle Constructor (MPSNNImageNode source, MPSNNImageNode labels, [NullAllowed] MPSNNImageNode weights, MPSCnnLossDescriptor descriptor);
+
+		[Export ("initWithSource:labels:lossDescriptor:")]
+		NativeHandle Constructor (MPSNNImageNode source, MPSNNImageNode labels, MPSCnnLossDescriptor descriptor);
+
+		[Export ("initWithSources:lossDescriptor:")]
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes, MPSCnnLossDescriptor descriptor);
+
+		[Export ("gradientFilterWithSources:")]
+		MPSNNLossGradientNode GetFilter (MPSNNImageNode [] sourceGradient);
+
+		[Export ("gradientFiltersWithSources:")]
+		MPSNNLossGradientNode [] GetFilters (MPSNNImageNode [] sourceGradient);
+
+		[Export ("gradientFilterWithSource:")]
+		MPSNNLossGradientNode GetFilter (MPSNNImageNode sourceGradient);
+
+		[Export ("gradientFiltersWithSource:")]
+		MPSNNLossGradientNode [] GetFilters (MPSNNImageNode sourceGradient);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNGradientFilterNode))]
+	interface MPSNNLossGradientNode {
+		[Export ("lossType")]
+		MPSCnnLossType LossType { get; }
+
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		[Export ("numberOfClasses")]
+		nuint NumberOfClasses { get; }
+
+		[Export ("weight")]
+		float Weight { get; }
+
+		[Export ("labelSmoothing")]
+		float LabelSmoothing { get; }
+
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		[Export ("delta")]
+		float Delta { get; }
+
+		[Export ("isLabelsGradientFilter")]
+		bool IsLabelsGradientFilter { get; }
+
+		[NullAllowed, Export ("propertyCallBack", ArgumentSemantic.Retain)]
+		IMPSNNLossCallback PropertyCallBack { get; set; }
+
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:labels:weights:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		MPSNNLossGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNImageNode labels, MPSNNImageNode weights, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:labels:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		MPSNNLossGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNImageNode labels, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[Static]
+		[Export ("nodeWithSources:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		MPSNNLossGradientNode Create (MPSNNImageNode [] sourceNodes, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[Export ("initWithSourceGradient:sourceImage:labels:weights:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNImageNode labels, [NullAllowed] MPSNNImageNode weights, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[Export ("initWithSourceGradient:sourceImage:labels:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNImageNode labels, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[Export ("initWithSources:gradientState:lossDescriptor:isLabelsGradientFilter:")]
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes, [NullAllowed] MPSNNGradientStateNode gradientState, MPSCnnLossDescriptor descriptor, bool isLabelsGradientFilter);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNFilterNode))]
+	interface MPSNNInitialGradientNode {
+		[Static]
+		[Export ("nodeWithSource:")]
+		MPSNNInitialGradientNode Create (MPSNNImageNode source);
+
+		[Export ("initWithSource:")]
+		NativeHandle Constructor (MPSNNImageNode source);
+	}
+
+	/// <summary>An optimized neural network graph.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor] // There is a DesignatedInitializer, file a bug if needed.
 	interface MPSNNGraph : NSCopying, NSSecureCoding {
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="device">To be added.</param>
+		/// <param name="resultImage">To be added.</param>
+		/// <param name="resultIsNeeded">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:resultImage:resultImageIsNeeded:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNImageNode resultImage, bool resultIsNeeded);
+		NativeHandle Constructor (IMTLDevice device, MPSNNImageNode resultImage, bool resultIsNeeded);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="device">To be added.</param>
+		///         <param name="resultImage">To be added.</param>
+		///         <param name="resultIsNeeded">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("graphWithDevice:resultImage:resultImageIsNeeded:")]
 		[return: NullAllowed]
 		MPSNNGraph Create (IMTLDevice device, MPSNNImageNode resultImage, bool resultIsNeeded);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="resultImage">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Deprecated (PlatformName.TvOS, 11, 3, message: "Use '.ctor (IMTLDevice, MPSNNImageNode, bool)' instead.")]
 		[Deprecated (PlatformName.iOS, 11, 3, message: "Use '.ctor (IMTLDevice, MPSNNImageNode, bool)' instead.")]
 		[Deprecated (PlatformName.MacOSX, 10, 13, 4, message: "Use '.ctor (IMTLDevice, MPSNNImageNode, bool)' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Use '.ctor (IMTLDevice, MPSNNImageNode, bool)' instead.")]
 		[Export ("initWithDevice:resultImage:")]
-		IntPtr Constructor (IMTLDevice device, MPSNNImageNode resultImage);
+		NativeHandle Constructor (IMTLDevice device, MPSNNImageNode resultImage);
 
-		// TODO: Review in Xcode 12 / iOS 13
-		// Looks like the following two were exposed ahead of their time
-		// [TV (13,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
-		// [Export ("initWithDevice:resultImages:resultsAreNeeded:")]
+		[MacCatalyst (13, 0)]
+		[Export ("initWithDevice:resultImages:resultsAreNeeded:")]
 		// [DesignatedInitializer]
-		// IntPtr Constructor (MTLDevice device, MPSNNImageNode[] resultImages, [NullAllowed] bool* areResultsNeeded);
+		[Internal]
+		NativeHandle _InitWithDevice (IMTLDevice device, MPSNNImageNode [] resultImages, IntPtr areResultsNeeded);
 
-		// [TV (13,0), Mac (10,15, onlyOn64: true), iOS (13,0)]
-		// [Static]
-		// [Export ("graphWithDevice:resultImages:resultsAreNeeded:")]
-		// [return: NullAllowed]
-		// MPSNNGraph GraphWithDevice (MTLDevice device, MPSNNImageNode[] resultImages, [NullAllowed] bool* areResultsNeeded);
+		[MacCatalyst (13, 1)]
+		[Static]
+		[Export ("graphWithDevice:resultImages:resultsAreNeeded:")]
+		[return: NullAllowed]
+		MPSNNGraph Create (IMTLDevice device, MPSNNImageNode [] resultImages, IntPtr resultsAreNeeded);
 
-		// Not added because it short lived a couple of minor releases and there are alternatives.
-		//[Deprecated (PlatformName.TvOS, 11, 3)]
-		//[Deprecated (PlatformName.iOS, 11, 3)]
-		//[Deprecated (PlatformName.MacOSX, 10, 13, 4)]
-		//[Static]
-		//[Export ("graphWithDevice:resultImage:")]
-		//[return: NullAllowed]
-		//MPSNNGraph Create (IMTLDevice device, MPSNNImageNode resultImage);
-
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceImageHandles", ArgumentSemantic.Copy)]
-		IMPSHandle[] SourceImageHandles { get; }
+		IMPSHandle [] SourceImageHandles { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("sourceStateHandles", ArgumentSemantic.Copy)]
-		IMPSHandle[] SourceStateHandles { get; }
+		IMPSHandle [] SourceStateHandles { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("intermediateImageHandles", ArgumentSemantic.Copy)]
-		IMPSHandle[] IntermediateImageHandles { get; }
+		IMPSHandle [] IntermediateImageHandles { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("resultStateHandles", ArgumentSemantic.Copy)]
-		IMPSHandle[] ResultStateHandles { get; }
+		IMPSHandle [] ResultStateHandles { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("resultHandle")]
 		IMPSHandle ResultHandle { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("outputStateIsTemporary")]
 		bool IsOutputStateTemporary { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("destinationImageAllocator", ArgumentSemantic.Retain)]
 		IMPSImageAllocator DestinationImageAllocator { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("format", ArgumentSemantic.Assign)]
 		MPSImageFeatureChannelFormat Format { get; set; }
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("resultImageIsNeeded")]
 		bool ResultImageIsNeeded { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadFromDataSources")]
 		void ReloadFromDataSources ();
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="intermediateImages">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="destinationStates">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceImages:sourceStates:intermediateImages:destinationStates:")]
-		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage[] sourceImages, [NullAllowed] MPSState[] sourceStates, [NullAllowed] NSMutableArray<MPSImage> intermediateImages, [NullAllowed] NSMutableArray<MPSState> destinationStates);
+		[return: NullAllowed]
+		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, [NullAllowed] MPSState [] sourceStates, [NullAllowed] NSMutableArray<MPSImage> intermediateImages, [NullAllowed] NSMutableArray<MPSState> destinationStates);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="intermediateImages">To be added.</param>
+		///         <param name="destinationStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("encodeBatchToCommandBuffer:sourceImages:sourceStates:intermediateImages:destinationStates:")]
 		[return: NullAllowed]
-		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImages, [NullAllowed] NSArray<MPSState>[] sourceStates, [NullAllowed] NSMutableArray<NSArray<MPSImage>> intermediateImages, [NullAllowed] NSMutableArray<NSArray<MPSState>> destinationStates);
+		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImages, [NullAllowed] NSArray<MPSState> [] sourceStates, [NullAllowed] NSMutableArray<NSArray<MPSImage>> intermediateImages, [NullAllowed] NSMutableArray<NSArray<MPSState>> destinationStates);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceImages:")]
-		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage[] sourceImages);
+		[return: NullAllowed]
+		MPSImage EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceImages:sourceStates:")]
 		[return: NullAllowed]
-		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage>[] sourceImages, [NullAllowed] NSArray<MPSState>[] sourceStates);
+		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImages, [NullAllowed] NSArray<MPSState> [] sourceStates);
 
-		[Async, Export ("executeAsyncWithSourceImages:completionHandler:")]
-		MPSImage Execute (MPSImage[] sourceImages, Action<MPSImage, NSError> handler);
+		/// <param name="sourceImages">To be added.</param>
+		///         <param name="handler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Async (XmlDocs = """
+			<param name="sourceImages">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>
+			          <para class="improve-task-t-return-type-description">A task that represents the asynchronous Execute operation.  The value of the TResult parameter is of type System.Action&lt;MetalPerformanceShaders.MPSImage,Foundation.NSError&gt;.</para>
+			        </returns>
+			<remarks>
+			          <para copied="true">The ExecuteAsync method is suitable to be used with C# async by returning control to the caller with a Task representing the operation.</para>
+			          <para copied="true">To be added.</para>
+			        </remarks>
+			""",
+			XmlDocsWithOutParameter = """
+			<param name="sourceImages">To be added.</param>
+			<param name="result">To be added.</param>
+			<summary>To be added.</summary>
+			<returns>To be added.</returns>
+			<remarks>To be added.</remarks>
+			"""), Export ("executeAsyncWithSourceImages:completionHandler:")]
+		MPSImage Execute (MPSImage [] sourceImages, Action<MPSImage, NSError> handler);
 
-		[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("readCountForSourceImageAtIndex:")]
 		nuint GetReadCountForSourceImage (nuint index);
 
-		[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
+		/// <param name="index">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("readCountForSourceStateAtIndex:")]
 		nuint GetReadCountForSourceState (nuint index);
 	}
 
 	interface IMPSHandle { }
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Interface describing a Metal Performance Shaders-specific identifier.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSHandle : NSCoding {
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[NullAllowed, Export ("label")]
 		string Label { get; }
@@ -5200,79 +10400,153 @@ namespace MetalPerformanceShaders {
 
 	interface IMPSCnnConvolutionDataSource { }
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Base class for classes that provide weights and bias terms to convolution filters.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol, Model]
 	[BaseType (typeof (NSObject), Name = "MPSCNNConvolutionDataSource")]
 	interface MPSCnnConvolutionDataSource : NSCopying {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("dataType")]
 		MPSDataType DataType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("descriptor")]
 		MPSCnnConvolutionDescriptor Descriptor { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("weights")]
 		IntPtr Weights { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[NullAllowed, Export ("biasTerms")]
 		IntPtr /* float* */ BiasTerms { get; }
 
 		[Abstract]
 		[Export ("load")]
-		bool Load { get; }
+		bool Load ();
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("purge")]
 		void Purge ();
 
+		/// <summary>To be added.</summary>
+		///         <value>
+		///           <para>(More documentation for this node is coming)</para>
+		///           <para tool="nullallowed">This value can be <see langword="null" />.</para>
+		///         </value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[NullAllowed, Export ("label")]
 		string Label { get; }
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("rangesForUInt8Kernel")]
 		IntPtr GetRangesForUInt8Kernel ();
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("lookupTableForUInt8Kernel")]
 		IntPtr /* float* */ GetLookupTableForUInt8Kernel ();
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("weightsQuantizationType")]
 		MPSCnnWeightsQuantizationType GetWeightsQuantizationType ();
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="sourceState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("updateWithCommandBuffer:gradientState:sourceState:")]
 		[return: NullAllowed]
 		MPSCnnConvolutionWeightsAndBiasesState Update (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState gradientState, MPSCnnConvolutionWeightsAndBiasesState sourceState);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="gradientState">To be added.</param>
+		///         <param name="sourceState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("updateWithGradientState:sourceState:")]
 		bool Update (MPSCnnConvolutionGradientState gradientState, MPSCnnConvolutionWeightsAndBiasesState sourceState);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		IMPSCnnConvolutionDataSource Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		[MacCatalyst (13, 0)]
+		[Export ("weightsLayout")]
+		MPSCnnConvolutionWeightsLayout WeightsLayout { get; }
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("kernelWeightsDataType")]
+		MPSDataType KernelWeightsDataType { get; }
 	}
 
 	interface IMPSNNPadding { }
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Interface describing how kernels should pad their inputs.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSNNPadding : NSSecureCoding {
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("paddingMethod")]
 		MPSNNPaddingMethod PaddingMethod { get; }
 
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("label")]
 		string GetLabel ();
 
+		/// <param name="sourceImages">To be added.</param>
+		/// <param name="sourceStates">To be added.</param>
+		/// <param name="kernel">To be added.</param>
+		/// <param name="inDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("destinationImageDescriptorForSourceImages:sourceStates:forKernel:suggestedDescriptor:")]
-		MPSImageDescriptor GetDestinationImageDescriptor (MPSImage[] sourceImages, [NullAllowed] MPSState[] sourceStates, MPSKernel kernel, MPSImageDescriptor inDescriptor);
+		MPSImageDescriptor GetDestinationImageDescriptor (MPSImage [] sourceImages, [NullAllowed] MPSState [] sourceStates, MPSKernel kernel, MPSImageDescriptor inDescriptor);
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("inverse")]
 		[return: NullAllowed]
 		IMPSNNPadding GetInverse ();
@@ -5280,13 +10554,20 @@ namespace MetalPerformanceShaders {
 
 	interface IMPSImageSizeEncodingState { }
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Interface defining methods relating to when image size is stored elsewhere in the graph.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSImageSizeEncodingState {
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("sourceWidth")]
 		nuint SourceWidth { get; }
 
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("sourceHeight")]
 		nuint SourceHeight { get; }
@@ -5294,43 +10575,60 @@ namespace MetalPerformanceShaders {
 
 	interface IMPSImageAllocator { }
 
-	[TV (11,0), Mac (10, 13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Interface defining a factory that generates a <see cref="MPSImage" /> from a <see cref="IMTLCommandBuffer" />, a <see cref="MPSImageDescriptor" />, and a <see cref="MPSKernel" />.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSImageAllocator : NSSecureCoding {
+		/// <param name="cmdBuf">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <param name="kernel">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("imageForCommandBuffer:imageDescriptor:kernel:")]
 		MPSImage GetImage (IMTLCommandBuffer cmdBuf, MPSImageDescriptor descriptor, MPSKernel kernel);
 
-		[iOS (11,3), TV (11,3), Mac (10,13,4, onlyOn64: true)]
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <param name="kernel">To be added.</param>
+		/// <param name="count">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("imageBatchForCommandBuffer:imageDescriptor:kernel:count:")]
 		NSArray<MPSImage> GetImageBatch (IMTLCommandBuffer commandBuffer, MPSImageDescriptor descriptor, MPSKernel kernel, nuint count);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNStateNode), Name = "MPSCNNConvolutionStateNode")]
+#if !XAMCORE_5_0
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNStateNode), Name = "MPSCNNConvolutionStateNode")]
 	[DisableDefaultCtor]
+	[EditorBrowsable (EditorBrowsableState.Never)]
 	interface MPSCnnConvolutionStateNode {
 	}
+#endif // !XAMCORE_5_0
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNStateNode))]
 	[DisableDefaultCtor]
 	interface MPSNNGradientStateNode {
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientStateNode), Name = "MPSCNNConvolutionGradientStateNode")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionGradientStateNode {
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNStateNode))]
 	[DisableDefaultCtor]
 	interface MPSNNBinaryGradientStateNode {
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNBinaryGradientStateNode))]
 	[DisableDefaultCtor]
 	interface MPSNNArithmeticGradientStateNode {
@@ -5338,454 +10636,950 @@ namespace MetalPerformanceShaders {
 
 	interface IMPSImageTransformProvider { }
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
+	/// <summary>Interface defining image resampling methods.</summary>
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSImageTransformProvider : NSCoding {
+		/// <param name="image">To be added.</param>
+		/// <param name="handle">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("transformForSourceImage:handle:")]
 		MPSScaleTransform GetTransform (MPSImage image, [NullAllowed] IMPSHandle handle);
 	}
 
-	[TV (11, 0), Mac (10,13, onlyOn64: true), iOS (11, 0)]
+	[MacCatalyst (13, 1)]
 	[Protocol]
 	interface MPSDeviceProvider {
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("mpsMTLDevice")]
 		IMTLDevice GetMTLDevice ();
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnPoolingNode), Name="MPSCNNPoolingAverageNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that returns the average value of its input region.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnPoolingNode), Name = "MPSCNNPoolingAverageNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnPoolingAverageNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:stride:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnPoolingNode), Name="MPSCNNPoolingL2NormNode")]
+	/// <summary>Representation of an L2-norm pooling filter.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnPoolingNode), Name = "MPSCNNPoolingL2NormNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnPoolingL2NormNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:stride:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSCnnPoolingNode), Name="MPSCNNPoolingMaxNode")]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSCnnPoolingNode" /> that represents a max-pooling kernel in a convolutional neural net.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnPoolingNode), Name = "MPSCNNPoolingMaxNode")]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSCnnPoolingMaxNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="kernelWidth">To be added.</param>
+		/// <param name="kernelHeight">To be added.</param>
+		/// <param name="strideInPixelsX">To be added.</param>
+		/// <param name="strideInPixelsY">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:kernelWidth:kernelHeight:strideInPixelsX:strideInPixelsY:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint kernelWidth, nuint kernelHeight, nuint strideInPixelsX, nuint strideInPixelsY);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <param name="stride">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:stride:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size, nuint stride);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:filterSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, nuint size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, nuint size);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNBinaryArithmeticNode))]
+	/// <summary>Adds the results of two kernels.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNBinaryArithmeticNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNAdditionNode {
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLeftSource:rightSource:")]
-		IntPtr Constructor (MPSNNImageNode left, MPSNNImageNode right);
+		NativeHandle Constructor (MPSNNImageNode left, MPSNNImageNode right);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNScaleNode))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that performs bilinear sampling.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNScaleNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNBilinearScaleNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, MTLSize size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="transformProvider">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:transformProvider:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNBinaryArithmeticNode))]
+	/// <summary>Divides the results of two kernels.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNBinaryArithmeticNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNDivisionNode {
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLeftSource:rightSource:")]
-		IntPtr Constructor (MPSNNImageNode left, MPSNNImageNode right);
+		NativeHandle Constructor (MPSNNImageNode left, MPSNNImageNode right);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNScaleNode))]
+	/// <summary>A <see cref="MetalPerformanceShaders.MPSNNFilterNode" /> that performs Lanczos resampling.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNScaleNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNLanczosScaleNode {
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, MTLSize size);
 
+		/// <param name="sourceNode">To be added.</param>
+		/// <param name="transformProvider">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="size">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSource:transformProvider:outputSize:")]
-		IntPtr Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
+		NativeHandle Constructor (MPSNNImageNode sourceNode, [NullAllowed] IMPSImageTransformProvider transformProvider, MTLSize size);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNBinaryArithmeticNode))]
+	/// <summary>Multiplies the results of two kernels.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNBinaryArithmeticNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNMultiplicationNode {
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLeftSource:rightSource:")]
-		IntPtr Constructor (MPSNNImageNode left, MPSNNImageNode right);
+		NativeHandle Constructor (MPSNNImageNode left, MPSNNImageNode right);
 	}
 
-	[TV (11,0), Mac (10,13, onlyOn64: true), iOS (11,0)]
-	[BaseType (typeof(MPSNNBinaryArithmeticNode))]
+	/// <summary>Subtracts the results of two kernels.</summary>
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNBinaryArithmeticNode))]
 	[DisableDefaultCtor] // 'init' is unavailable
 	interface MPSNNSubtractionNode {
+		/// <param name="sourceNodes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithSources:")]
-		IntPtr Constructor (MPSNNImageNode[] sourceNodes);
+		NativeHandle Constructor (MPSNNImageNode [] sourceNodes);
 
+		/// <param name="left">To be added.</param>
+		/// <param name="right">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithLeftSource:rightSource:")]
-		IntPtr Constructor (MPSNNImageNode left, MPSNNImageNode right);
+		NativeHandle Constructor (MPSNNImageNode left, MPSNNImageNode right);
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+	/// <summary>A one-dimensional array allocated in GPU private memory.
+	/// </summary>
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSVector))]
 	[DisableDefaultCtor]
 	interface MPSTemporaryVector {
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryVectorWithCommandBuffer:descriptor:")]
 		MPSTemporaryVector Create (IMTLCommandBuffer commandBuffer, MPSVectorDescriptor descriptor);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptorList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("prefetchStorageWithCommandBuffer:descriptorList:")]
-		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSVectorDescriptor[] descriptorList);
+		void PrefetchStorage (IMTLCommandBuffer commandBuffer, MPSVectorDescriptor [] descriptorList);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("readCount")]
 		nuint ReadCount { get; set; }
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
-	[BaseType (typeof(MPSKernel))]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixSum {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="count">To be added.</param>
+		/// <param name="rows">To be added.</param>
+		/// <param name="columns">To be added.</param>
+		/// <param name="transpose">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:count:rows:columns:transpose:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint count, nuint rows, nuint columns, bool transpose);
+		NativeHandle Constructor (IMTLDevice device, nuint count, nuint rows, nuint columns, bool transpose);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rows")]
 		nuint Rows { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("columns")]
 		nuint Columns { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("count")]
 		nuint Count { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("transpose")]
 		bool Transpose { get; }
 
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
 		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterC")]
 		float NeuronParameterC { get; }
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="buffer">To be added.</param>
+		/// <param name="sourceMatrices">To be added.</param>
+		/// <param name="resultMatrix">To be added.</param>
+		/// <param name="scaleVector">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="offsetVector">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="biasVector">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		/// <param name="startIndex">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrices:resultMatrix:scaleVector:offsetVector:biasVector:startIndex:")]
-		void EncodeToCommandBuffer (IMTLCommandBuffer buffer, MPSMatrix[] sourceMatrices, MPSMatrix resultMatrix, [NullAllowed] MPSVector scaleVector, [NullAllowed] MPSVector offsetVector, [NullAllowed] MPSVector biasVector, nuint startIndex);
+		void EncodeToCommandBuffer (IMTLCommandBuffer buffer, MPSMatrix [] sourceMatrices, MPSMatrix resultMatrix, [NullAllowed] MPSVector scaleVector, [NullAllowed] MPSVector offsetVector, [NullAllowed] MPSVector biasVector, nuint startIndex);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("resultMatrixOrigin", ArgumentSemantic.Assign)]
+		MTLOrigin ResultMatrixOrigin { get; set; }
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
-	[BaseType (typeof(MPSMatrixUnaryKernel))]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixUnaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixSoftMax {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceRows")]
 		nuint SourceRows { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceColumns")]
 		nuint SourceColumns { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:inputMatrix:resultMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSMatrix resultMatrix);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSMatrixSoftMax Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixUnaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixNeuron {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceNumberOfFeatureVectors")]
 		nuint SourceNumberOfFeatureVectors { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceInputFeatureChannels")]
 		nuint SourceInputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		double Alpha { get; set; }
 
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
 		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterC")]
 		float NeuronParameterC { get; }
 
+		/// <param name="parametersA">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronToPReLUWithParametersA:")]
 		void SetNeuronToPReLU (NSData parametersA);
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="biasVector">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:inputMatrix:biasVector:resultMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, [NullAllowed] MPSVector biasVector, MPSMatrix resultMatrix);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSMatrixNeuron Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixNeuronGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceNumberOfFeatureVectors")]
 		nuint SourceNumberOfFeatureVectors { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceInputFeatureChannels")]
 		nuint SourceInputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		double Alpha { get; set; }
 
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
 		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterC")]
 		float NeuronParameterC { get; }
 
+		/// <param name="a">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronToPReLUWithParametersA:")]
 		void SetNeuronToPReLU (NSData a);
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientMatrix">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="biasVector">To be added.</param>
+		///         <param name="resultGradientForDataMatrix">To be added.</param>
+		///         <param name="resultGradientForBiasVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:gradientMatrix:inputMatrix:biasVector:resultGradientForDataMatrix:resultGradientForBiasVector:")]
 		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix inputMatrix, [NullAllowed] MPSVector biasVector, MPSMatrix resultGradientForDataMatrix, [NullAllowed] MPSVector resultGradientForBiasVector);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		MPSMatrixNeuronGradient Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixFullyConnectedGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceNumberOfFeatureVectors")]
 		nuint SourceNumberOfFeatureVectors { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceOutputFeatureChannels")]
 		nuint SourceOutputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceInputFeatureChannels")]
 		nuint SourceInputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		double Alpha { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientMatrix">To be added.</param>
+		///         <param name="weightMatrix">To be added.</param>
+		///         <param name="resultGradientForDataMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeGradientForDataToCommandBuffer:gradientMatrix:weightMatrix:resultGradientForDataMatrix:")]
 		void EncodeGradientForData (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix weightMatrix, MPSMatrix resultGradientForDataMatrix);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientMatrix">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="resultGradientForWeightMatrix">To be added.</param>
+		///         <param name="resultGradientForBiasVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeGradientForWeightsAndBiasToCommandBuffer:gradientMatrix:inputMatrix:resultGradientForWeightMatrix:resultGradientForBiasVector:")]
 		void EncodeGradientForWeightsAndBias (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix inputMatrix, MPSMatrix resultGradientForWeightMatrix, [NullAllowed] MPSVector resultGradientForBiasVector);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		MPSMatrixFullyConnectedGradient Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixSoftMax))]
 	[DisableDefaultCtor]
 	interface MPSMatrixLogSoftMax {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (11,2), Mac (10,13,2, onlyOn64: true), iOS (11,2)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixFullyConnected {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceNumberOfFeatureVectors")]
 		nuint SourceNumberOfFeatureVectors { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceInputFeatureChannels")]
 		nuint SourceInputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceOutputFeatureChannels")]
 		nuint SourceOutputFeatureChannels { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("alpha")]
 		double Alpha { get; set; }
 
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
 		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronType")]
 		MPSCnnNeuronType NeuronType { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterA")]
 		float NeuronParameterA { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterB")]
 		float NeuronParameterB { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("neuronParameterC")]
 		float NeuronParameterC { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="weightMatrix">To be added.</param>
+		///         <param name="biasVector">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:inputMatrix:weightMatrix:biasVector:resultMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSMatrix weightMatrix, [NullAllowed] MPSVector biasVector, MPSMatrix resultMatrix);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSMatrixFullyConnected Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)] // Apple corrected availability here
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixUnaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixFindTopK {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceRows")]
 		nuint SourceRows { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceColumns")]
 		nuint SourceColumns { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("indexOffset")]
 		nuint IndexOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfTopKValues")]
 		nuint NumberOfTopKValues { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="numberOfTopKValues">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:numberOfTopKValues:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint numberOfTopKValues);
+		NativeHandle Constructor (IMTLDevice device, nuint numberOfTopKValues);
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="resultIndexMatrix">To be added.</param>
+		///         <param name="resultValueMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:inputMatrix:resultIndexMatrix:resultValueMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSMatrix resultIndexMatrix, MPSMatrix resultValueMatrix);
 
+		/// <param name="aDecoder">The unarchiver object.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>A constructor that initializes the object from the data stored in the unarchiver object.</summary>
+		/// <remarks>
+		///           <para>This constructor is provided to allow the class to be initialized from an unarchiver (for example, during NIB deserialization).   This is part of the <see cref="Foundation.NSCoding" />  protocol.</para>
+		///           <para>If developers want to create a subclass of this object and continue to support deserialization from an archive, they should implement a constructor with an identical signature: taking a single parameter of type <see cref="Foundation.NSCoder" /> and decorate it with the [Export("initWithCoder:"] attribute declaration.</para>
+		///           <para>The state of this object can also be serialized by using the companion method, EncodeTo.</para>
+		///         </remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <param name="device">
+		///           <para>To be added.</para>
+		///           <para tool="nullallowed">This parameter can be <see langword="null" />.</para>
+		///         </param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release ()]
 		MPSMatrixFindTopK Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
-	interface MPSStateResourceList 	{
+	interface MPSStateResourceList {
 
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("resourceList")]
 		MPSStateResourceList Create ();
@@ -5799,6 +11593,9 @@ namespace MetalPerformanceShaders {
 		//[Export ("resourceListWithBufferSizes:", IsVariadic = true)]
 		//MPSStateResourceList ResourceListWithBufferSizes (nuint firstSize, IntPtr varArgs);
 
+		/// <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("appendTexture:")]
 		void Append (MTLTextureDescriptor descriptor);
 
@@ -5806,78 +11603,228 @@ namespace MetalPerformanceShaders {
 		void Append (nuint bufferSize);
 	}
 
-	[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSKeyedUnarchiver))]
 	[DisableDefaultCtor]
 	interface MPSKeyedUnarchiver : MPSDeviceProvider {
 
-		[TV (12,0), iOS (12,0), Mac (10,14, onlyOn64: true)]
+		/// <param name="classes">To be added.</param>
+		///         <param name="data">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("unarchivedObjectOfClasses:fromData:device:error:")]
 		[return: NullAllowed]
 		NSObject GetUnarchivedObject (NSSet<Class> classes, NSData data, IMTLDevice device, [NullAllowed] out NSError error);
 
-		[TV (12,0), iOS (12,0), Mac (10,14, onlyOn64: true)]
+		/// <param name="class">To be added.</param>
+		///         <param name="data">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <param name="error">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Static]
 		[Export ("unarchivedObjectOfClass:fromData:device:error:")]
 		[return: NullAllowed]
 		NSObject GetUnarchivedObject (Class @class, NSData data, IMTLDevice device, [NullAllowed] out NSError error);
 
-		[TV (12,0), iOS (12,0), Mac (10,14, onlyOn64: true)]
+		/// <param name="data">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <param name="error">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initForReadingFromData:device:error:")]
-		IntPtr Constructor (NSData data, IMTLDevice device, [NullAllowed] out NSError error);
-
-		// Comes from MPSDeviceProvider
-		//[Export ("mpsMTLDevice")]
-		//IMTLDevice GetMTLDevice ();
-
-		// According to header docs the following are deprecated and not binary compatibile,
-		// so there is not much point in binding/using these, they only short lived
-		// for iOS 11.3 and Mac 10.13.4 and were considered experimental.
-
-		//[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
-		//[Deprecated (PlatformName.TvOS, 12, 0)]
-		//[Deprecated (PlatformName.iOS, 12, 0)]
-		//[Deprecated (PlatformName.MacOSX, 10, 14)]
-		//[Static]
-		//[Export ("unarchiveObjectWithData:device:")]
-		//[return: NullAllowed]
-		//NSObject UnarchiveObjectWithData (NSData data, IMTLDevice device);
-
-		//[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
-		//[Deprecated (PlatformName.TvOS, 12, 0)]
-		//[Deprecated (PlatformName.iOS, 12, 0)]
-		//[Deprecated (PlatformName.MacOSX, 10, 14)]
-		//[Static]
-		//[Export ("unarchiveTopLevelObjectWithData:device:error:")]
-		//[return: NullAllowed]
-		//NSObject UnarchiveTopLevelObjectWithData (NSData data, IMTLDevice device, [NullAllowed] out NSError error);
-
-		//[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
-		//[Deprecated (PlatformName.TvOS, 12, 0)]
-		//[Deprecated (PlatformName.iOS, 12, 0)]
-		//[Deprecated (PlatformName.MacOSX, 10, 14)]
-		//[Static]
-		//[Export ("unarchiveObjectWithFile:device:")]
-		//[return: NullAllowed]
-		//NSObject UnarchiveObjectWithFile (string path, IMTLDevice device);
-
-		//[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
-		//[Deprecated (PlatformName.TvOS, 12, 0)]
-		//[Deprecated (PlatformName.iOS, 12, 0)]
-		//[Deprecated (PlatformName.MacOSX, 10, 14)]
-		//[Export ("initWithDevice:")]
-		//IntPtr Constructor (IMTLDevice device);
-
-		//[TV (11,3), iOS (11,3), Mac (10,13,4, onlyOn64: true)]
-		//[Deprecated (PlatformName.TvOS, 12, 0)]
-		//[Deprecated (PlatformName.iOS, 12, 0)]
-		//[Deprecated (PlatformName.MacOSX, 10, 14)]
-		//[Export ("initForReadingWithData:device:")]
-		//IntPtr Constructor (NSData data, IMTLDevice device);
+		NativeHandle Constructor (NSData data, IMTLDevice device, [NullAllowed] out NSError error);
 	}
 
-	[TV (11,0), iOS (11,0), Mac (10,13, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayDescriptor {
+		[Export ("dataType", ArgumentSemantic.Assign)]
+		MPSDataType DataType { get; set; }
+
+		[Export ("numberOfDimensions")]
+		nuint NumberOfDimensions { get; set; }
+
+		[Export ("lengthOfDimension:")]
+		nuint GetLength (nuint dimensionIndex);
+
+		[Export ("sliceRangeForDimension:")]
+		MPSDimensionSlice GetSliceRange (nuint dimensionIndex);
+
+		[Export ("sliceDimension:withSubrange:")]
+		void Slice (nuint dimensionIndex, MPSDimensionSlice subRange);
+
+		[Export ("transposeDimension:withDimension:")]
+		void Transpose (nuint dimensionIndex, nuint dimensionIndex2);
+
+		[Export ("dimensionOrder")]
+		NVector16b DimensionOrder {
+			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+			get;
+		}
+
+		[Static]
+		[Export ("descriptorWithDataType:dimensionCount:dimensionSizes:")]
+		MPSNDArrayDescriptor Create (MPSDataType dataType, nuint numberOfDimensions, IntPtr dimensionSizes);
+
+		[Static]
+		[Export ("descriptorWithDataType:shape:")]
+		MPSNDArrayDescriptor Create (MPSDataType dataType, [BindAs (typeof (nuint []))] NSNumber [] shape);
+
+		// This is implemented using params and descriptorWithDataType:dimensionCount:dimensionSizes: in MPSNDArray.cs
+		// [Static, Internal]
+		// [Export ("descriptorWithDataType:dimensionSizes:", IsVariadic = true)]
+		// MPSNDArrayDescriptor Create (MPSDataType dataType, nuint dimension0, IntPtr varArgs);
+
+		[Export ("reshapeWithDimensionCount:dimensionSizes:")]
+		void Reshape (nuint numberOfDimensions, IntPtr dimensionSizes);
+
+		[Export ("reshapeWithShape:")]
+		void Reshape ([BindAs (typeof (nuint []))] NSNumber [] shape);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("preferPackedRows")]
+		bool PreferPackedRows { get; set; }
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("permuteWithDimensionOrder:")]
+		[Internal]
+		void _PermuteWithDimensionOrder (/* NSUInteger* */ IntPtr dimensionOrder);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("getShape")]
+		[return: BindAs (typeof (nuint []))]
+		NSNumber [] GetShape ();
+	}
+
+	interface IMPSNDArrayAllocator { }
+
+	[Protocol]
+	interface MPSNDArrayAllocator : NSCoding, NSCopying, NSSecureCoding {
+		[Abstract]
+		[Export ("arrayForCommandBuffer:arrayDescriptor:kernel:")]
+		MPSNDArray AllocateArray (IMTLCommandBuffer cmdBuf, MPSNDArrayDescriptor descriptor, MPSKernel kernel);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSNDArray {
+		[Static]
+		[Export ("defaultAllocator")]
+		IMPSNDArrayAllocator DefaultAllocator { get; }
+
+		[NullAllowed, Export ("label")]
+		string Label { get; set; }
+
+		[Export ("dataType")]
+		MPSDataType DataType { get; }
+
+		[Export ("dataTypeSize")]
+		nuint DataTypeSize { get; }
+
+		[Export ("numberOfDimensions")]
+		nuint NumberOfDimensions { get; }
+
+		[Export ("lengthOfDimension:")]
+		nuint GetLength (nuint dimensionIndex);
+
+		[Export ("device", ArgumentSemantic.Retain)]
+		IMTLDevice Device { get; }
+
+		[Export ("descriptor")]
+		MPSNDArrayDescriptor Descriptor { get; }
+
+		[Export ("initWithDevice:descriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSNDArrayDescriptor descriptor);
+
+		[Export ("initWithDevice:scalar:")]
+		NativeHandle Constructor (IMTLDevice device, double value);
+
+		[Export ("resourceSize")]
+		nuint ResourceSize { get; }
+
+		[Export ("arrayViewWithCommandBuffer:descriptor:aliasing:")]
+		[return: NullAllowed]
+		MPSNDArray Create (IMTLCommandBuffer cmdBuf, MPSNDArrayDescriptor descriptor, MPSAliasingStrategy aliasing);
+
+		[NullAllowed, Export ("parent", ArgumentSemantic.Retain)]
+		MPSNDArray Parent { get; }
+
+		[Export ("exportDataWithCommandBuffer:toBuffer:destinationDataType:offset:rowStrides:")]
+		void ExportData (IMTLCommandBuffer cmdBuf, IMTLBuffer buffer, MPSDataType destinationDataType, nuint offset, IntPtr rowStrides);
+
+		[Export ("importDataWithCommandBuffer:fromBuffer:sourceDataType:offset:rowStrides:")]
+		void ImportData (IMTLCommandBuffer cmdBuf, IMTLBuffer buffer, MPSDataType sourceDataType, nuint offset, IntPtr rowStrides);
+
+		[Export ("exportDataWithCommandBuffer:toImages:offset:")]
+		void ExportData (IMTLCommandBuffer cmdBuf, MPSImage [] images, MPSImageCoordinate offset);
+
+		[Export ("importDataWithCommandBuffer:fromImages:offset:")]
+		void ImportData (IMTLCommandBuffer cmdBuf, MPSImage [] images, MPSImageCoordinate offset);
+
+		[Export ("readBytes:strideBytes:")]
+		void ReadBytes (IntPtr buffer, IntPtr strideBytesPerDimension);
+
+		[Export ("writeBytes:strideBytes:")]
+		void WriteBytes (IntPtr buffer, IntPtr strideBytesPerDimension);
+
+		[Export ("synchronizeOnCommandBuffer:")]
+		void Synchronize (IMTLCommandBuffer commandBuffer);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("initWithBuffer:offset:descriptor:")]
+		NativeHandle Constructor (IMTLBuffer buffer, nuint offset, MPSNDArrayDescriptor descriptor);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[NullAllowed]
+		[Export ("userBuffer")]
+		IMTLBuffer UserBuffer { get; }
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("arrayViewWithDescriptor:")]
+		[return: NullAllowed]
+		MPSNDArray Create (MPSNDArrayDescriptor descriptor);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("arrayViewWithShape:strides:")]
+		[return: NullAllowed]
+		MPSNDArray Create ([NullAllowed][BindAs (typeof (nint []))] NSNumber [] shape, [BindAs (typeof (nint []))] NSNumber [] strides);
+
+		[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+		[Export ("arrayViewWithDimensionCount:dimensionSizes:strides:")]
+		[return: NullAllowed]
+		[Internal]
+		MPSNDArray _Create (nuint numberOfDimensions, IntPtr dimensionSizes, IntPtr dimStrides);
+	}
+
+	[DisableDefaultCtor]
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNDArray))]
+	interface MPSTemporaryNDArray {
+		[Static]
+		[Export ("defaultAllocator")]
+		IMPSNDArrayAllocator DefaultAllocator { get; }
+
+		[Static]
+		[Export ("temporaryNDArrayWithCommandBuffer:descriptor:")]
+		MPSTemporaryNDArray Create (IMTLCommandBuffer commandBuffer, MPSNDArrayDescriptor descriptor);
+
+		[Export ("readCount")]
+		nuint ReadCount { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImagePyramid))]
 	[DisableDefaultCtor]
 	interface MPSImageLaplacianPyramid {
@@ -5885,39 +11832,45 @@ namespace MetalPerformanceShaders {
 		// .ctors inlined from parent class
 
 		[Export ("initWithCoder:device:")]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithDevice:centerWeight:")]
-		IntPtr Constructor (IMTLDevice device, float centerWeight);
+		NativeHandle Constructor (IMTLDevice device, float centerWeight);
 
 		[Export ("initWithDevice:kernelWidth:kernelHeight:weights:")]
 		[Internal]
 		IntPtr InitWithDevice (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, /* float* */ IntPtr kernelWeights);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("laplacianBias")]
 		float LaplacianBias { [Bind ("getLaplacianBias")] get; [Bind ("setLaplacianBias:")] set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("laplacianScale")]
 		float LaplacianScale { [Bind ("getLaplacianScale")] get; [Bind ("setLaplacianScale:")] set; }
 	}
 
-	[TV (11,0), iOS (11,0), Mac (10,13, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageLaplacianPyramid))]
 	[DisableDefaultCtor]
 	interface MPSImageLaplacianPyramidSubtract {
 		// .ctors inlined from parent class
 
 		[Export ("initWithCoder:device:")]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithDevice:centerWeight:")]
-		IntPtr Constructor (IMTLDevice device, float centerWeight);
+		NativeHandle Constructor (IMTLDevice device, float centerWeight);
 
 		[Export ("initWithDevice:kernelWidth:kernelHeight:weights:")]
 		[Internal]
@@ -5925,536 +11878,958 @@ namespace MetalPerformanceShaders {
 	}
 
 
-	[TV (11,0), iOS (11,0), Mac (10,13, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageLaplacianPyramid))]
 	[DisableDefaultCtor]
 	interface MPSImageLaplacianPyramidAdd {
 		// .ctors inlined from parent class
 
 		[Export ("initWithCoder:device:")]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithDevice:centerWeight:")]
-		IntPtr Constructor (IMTLDevice device, float centerWeight);
+		NativeHandle Constructor (IMTLDevice device, float centerWeight);
 
 		[Export ("initWithDevice:kernelWidth:kernelHeight:weights:")]
 		[Internal]
 		IntPtr InitWithDevice (IMTLDevice device, nuint kernelWidth, nuint kernelHeight, /* float* */ IntPtr kernelWeights);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixCopyToImage {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceMatrixOrigin", ArgumentSemantic.Assign)]
 		MTLOrigin SourceMatrixOrigin { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceMatrixBatchIndex")]
 		nuint SourceMatrixBatchIndex { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataLayout")]
 		MPSDataLayout DataLayout { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="dataLayout">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:dataLayout:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSDataLayout dataLayout);
+		NativeHandle Constructor (IMTLDevice device, MPSDataLayout dataLayout);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceMatrix:destinationImage:")]
 		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, MPSImage destinationImage);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrix">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceMatrix:destinationImages:")]
 		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix sourceMatrix, NSArray<MPSImage> destinationImages);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageEuclideanDistanceTransform {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("searchLimitRadius")]
+		float SearchLimitRadius { get; set; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageGuidedFilter {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("kernelDiameter")]
 		nuint KernelDiameter { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("epsilon")]
 		float Epsilon { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("reconstructScale")]
 		float ReconstructScale { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("reconstructOffset")]
 		float ReconstructOffset { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="kernelDiameter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:kernelDiameter:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint kernelDiameter);
+		NativeHandle Constructor (IMTLDevice device, nuint kernelDiameter);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceTexture">To be added.</param>
+		///         <param name="guidanceTexture">To be added.</param>
+		///         <param name="weightsTexture">To be added.</param>
+		///         <param name="destinationCoefficientsTexture">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeRegressionToCommandBuffer:sourceTexture:guidanceTexture:weightsTexture:destinationCoefficientsTexture:")]
 		void EncodeRegression (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture guidanceTexture, [NullAllowed] IMTLTexture weightsTexture, IMTLTexture destinationCoefficientsTexture);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="guidanceTexture">To be added.</param>
+		///         <param name="coefficientsTexture">To be added.</param>
+		///         <param name="destinationTexture">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeReconstructionToCommandBuffer:guidanceTexture:coefficientsTexture:destinationTexture:")]
 		void EncodeReconstruction (IMTLCommandBuffer commandBuffer, IMTLTexture guidanceTexture, IMTLTexture coefficientsTexture, IMTLTexture destinationTexture);
+
+		[TV (13, 2), MacCatalyst (13, 2), iOS (13, 2)]
+		[Export ("encodeRegressionToCommandBuffer:sourceTexture:guidanceTexture:weightsTexture:destinationCoefficientsTextureA:destinationCoefficientsTextureB:")]
+		void EncodeRegression (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture guidanceTexture, [NullAllowed] IMTLTexture weightsTexture, IMTLTexture destinationCoefficientsTextureA, IMTLTexture destinationCoefficientsTextureB);
+
+		[TV (13, 2), MacCatalyst (13, 2), iOS (13, 2)]
+		[Export ("encodeReconstructionToCommandBuffer:guidanceTexture:coefficientsTextureA:coefficientsTextureB:destinationTexture:")]
+		void EncodeReconstruction (IMTLCommandBuffer commandBuffer, IMTLTexture guidanceTexture, IMTLTexture coefficientsTextureA, IMTLTexture coefficientsTextureB, IMTLTexture destinationTexture);
 	}
 
-	[TV (12,0), iOS (12,0), Mac (10,14, onlyOn64: true)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
 	interface MPSImageNormalizedHistogram {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("zeroHistogram")]
 		bool ZeroHistogram { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("histogramInfo")]
 		MPSImageHistogramInfo HistogramInfo {
 			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
 			get;
 		}
 
+		/// <param name="device">To be added.</param>
+		/// <param name="histogramInfo">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:histogramInfo:")]
 		[DesignatedInitializer]
 		[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
-		IntPtr Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
+		NativeHandle Constructor (IMTLDevice device, ref MPSImageHistogramInfo histogramInfo);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="source">To be added.</param>
+		/// <param name="minmaxTexture">To be added.</param>
+		/// <param name="histogram">To be added.</param>
+		/// <param name="histogramOffset">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceTexture:minmaxTexture:histogram:histogramOffset:")]
 		void Encode (IMTLCommandBuffer commandBuffer, IMTLTexture source, IMTLTexture minmaxTexture, IMTLBuffer histogram, nuint histogramOffset);
 
+		/// <summary>Calculates and returns the amount of memory, in bytes, that is consumed the histogram for an image with the specified pixel format.</summary>
 		[Export ("histogramSizeForSourceFormat:")]
 		nuint GetHistogramSize (MTLPixelFormat sourceFormat);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor] // Only subclasses are meant to be used
 	interface MPSImageReduceUnary {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("clipRectSource", ArgumentSemantic.Assign)]
 		MTLRegion ClipRectSource { get; set; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceRowMin {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceColumnMin {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceRowMax {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceColumnMax {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceRowMean {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceColumnMean {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceRowSum {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSImageReduceUnary))]
 	[DisableDefaultCtor]
 	interface MPSImageReduceColumnSum {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixBinaryKernel))]
 	[DisableDefaultCtor]
 	interface MPSMatrixSoftMaxGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceRows")]
 		nuint SourceRows { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceColumns")]
 		nuint SourceColumns { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		// Keeping the same name as in the parent class so it ends up in an overload
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientMatrix">To be added.</param>
+		///         <param name="forwardOutputMatrix">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:gradientMatrix:forwardOutputMatrix:resultMatrix:")]
 		void EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix forwardOutputMatrix, MPSMatrix resultMatrix);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		MPSMatrixSoftMaxGradient Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSMatrixSoftMaxGradient))]
 	[DisableDefaultCtor]
 	interface MPSMatrixLogSoftMaxGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
+	[Deprecated (PlatformName.MacOSX, 14, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.iOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.TvOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 17, 0, "Use Metal ray tracing instead.")]
 	interface MPSRayIntersector : NSSecureCoding, NSCopying {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("cullMode", ArgumentSemantic.Assign)]
 		MTLCullMode CullMode { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("frontFacingWinding", ArgumentSemantic.Assign)]
 		MTLWinding FrontFacingWinding { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("triangleIntersectionTestType", ArgumentSemantic.Assign)]
 		MPSTriangleIntersectionTestType TriangleIntersectionTestType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("boundingBoxIntersectionTestType", ArgumentSemantic.Assign)]
 		MPSBoundingBoxIntersectionTestType BoundingBoxIntersectionTestType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rayMaskOptions", ArgumentSemantic.Assign)]
 		MPSRayMaskOptions RayMaskOptions { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rayStride")]
 		nuint RayStride { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("intersectionStride")]
 		nuint IntersectionStride { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("rayDataType", ArgumentSemantic.Assign)]
 		MPSRayDataType RayDataType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("intersectionDataType", ArgumentSemantic.Assign)]
 		MPSIntersectionDataType IntersectionDataType { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		MPSRayIntersector Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 
+		/// <param name="rayCount">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Export ("recommendedMinimumRayBatchSizeForRayCount:")]
 		nuint GetRecommendedMinimumRayBatchSize (nuint rayCount);
 
+		/// <param name="coder">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeWithCoder:")]
 		void Encode (NSCoder coder);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="intersectionType">To be added.</param>
+		/// <param name="rayBuffer">To be added.</param>
+		/// <param name="rayBufferOffset">To be added.</param>
+		/// <param name="intersectionBuffer">To be added.</param>
+		/// <param name="intersectionBufferOffset">To be added.</param>
+		/// <param name="rayCount">To be added.</param>
+		/// <param name="accelerationStructure">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeIntersectionToCommandBuffer:intersectionType:rayBuffer:rayBufferOffset:intersectionBuffer:intersectionBufferOffset:rayCount:accelerationStructure:")]
 		void EncodeIntersection (IMTLCommandBuffer commandBuffer, MPSIntersectionType intersectionType, IMTLBuffer rayBuffer, nuint rayBufferOffset, IMTLBuffer intersectionBuffer, nuint intersectionBufferOffset, nuint rayCount, MPSAccelerationStructure accelerationStructure);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="intersectionType">To be added.</param>
+		/// <param name="rayBuffer">To be added.</param>
+		/// <param name="rayBufferOffset">To be added.</param>
+		/// <param name="intersectionBuffer">To be added.</param>
+		/// <param name="intersectionBufferOffset">To be added.</param>
+		/// <param name="rayCountBuffer">To be added.</param>
+		/// <param name="rayCountBufferOffset">To be added.</param>
+		/// <param name="accelerationStructure">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("encodeIntersectionToCommandBuffer:intersectionType:rayBuffer:rayBufferOffset:intersectionBuffer:intersectionBufferOffset:rayCountBuffer:rayCountBufferOffset:accelerationStructure:")]
 		void EncodeIntersection (IMTLCommandBuffer commandBuffer, MPSIntersectionType intersectionType, IMTLBuffer rayBuffer, nuint rayBufferOffset, IMTLBuffer intersectionBuffer, nuint intersectionBufferOffset, IMTLBuffer rayCountBuffer, nuint rayCountBufferOffset, MPSAccelerationStructure accelerationStructure);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (NSObject))]
 	[DisableDefaultCtor]
+	[Deprecated (PlatformName.MacOSX, 14, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.iOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.TvOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 17, 0, "Use Metal ray tracing instead.")]
 	interface MPSAccelerationStructureGroup {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("device")]
 		IMTLDevice Device { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSAccelerationStructure))]
 	[DisableDefaultCtor]
+	[Deprecated (PlatformName.MacOSX, 14, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.iOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.TvOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 17, 0, "Use Metal ray tracing instead.")]
 	interface MPSInstanceAccelerationStructure {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("accelerationStructures", ArgumentSemantic.Retain)]
 		MPSTriangleAccelerationStructure [] AccelerationStructures { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("instanceBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer InstanceBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("instanceBufferOffset")]
 		nuint InstanceBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("transformBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer TransformBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("transformBufferOffset")]
 		nuint TransformBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("transformType", ArgumentSemantic.Assign)]
 		MPSTransformType TransformType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("maskBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer MaskBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskBufferOffset")]
 		nuint MaskBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("instanceCount")]
 		nuint InstanceCount { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGroup:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (MPSAccelerationStructureGroup group);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:group:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
 	}
 
 	delegate void MPSAccelerationStructureCompletionHandler ([NullAllowed] MPSAccelerationStructure structure);
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
+	[Deprecated (PlatformName.MacOSX, 14, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.iOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.TvOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 17, 0, "Use Metal ray tracing instead.")]
 	interface MPSAccelerationStructure : NSSecureCoding, NSCopying {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("group")]
 		MPSAccelerationStructureGroup Group { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("boundingBox")]
 		MPSAxisAlignedBoundingBox BoundingBox {
 			[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
 			get;
 		}
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("status")]
 		MPSAccelerationStructureStatus Status { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("usage", ArgumentSemantic.Assign)]
 		MPSAccelerationStructureUsage Usage { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGroup:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (MPSAccelerationStructureGroup group);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:group:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("rebuild")]
 		void Rebuild ();
 
+		/// <param name="completionHandler">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Async]
 		[Export ("rebuildWithCompletionHandler:")]
 		void Rebuild (MPSAccelerationStructureCompletionHandler completionHandler);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeRefitToCommandBuffer:")]
 		void EncodeRefit (IMTLCommandBuffer commandBuffer);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		MPSAccelerationStructure Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 
+		/// <param name="zone">To be added.</param>
+		///         <param name="group">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("copyWithZone:group:")]
 		[return: Release]
 		MPSAccelerationStructure Copy ([NullAllowed] NSZone zone, MPSAccelerationStructureGroup group);
 
+		/// <param name="coder">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeWithCoder:")]
 		void Encode (NSCoder coder);
 	}
 
-	[TV (12, 0), Mac (10, 14, onlyOn64: true), iOS (12, 0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSAccelerationStructure))]
 	[DisableDefaultCtor]
+	[Deprecated (PlatformName.MacOSX, 14, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.iOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.TvOS, 17, 0, "Use Metal ray tracing instead.")]
+	[Deprecated (PlatformName.MacCatalyst, 17, 0, "Use Metal ray tracing instead.")]
 	interface MPSTriangleAccelerationStructure {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("vertexBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer VertexBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vertexBufferOffset")]
 		nuint VertexBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("vertexStride")]
 		nuint VertexStride { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("indexBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer IndexBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("indexType", ArgumentSemantic.Assign)]
 		MPSDataType IndexType { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("indexBufferOffset")]
 		nuint IndexBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("maskBuffer", ArgumentSemantic.Retain)]
 		IMTLBuffer MaskBuffer { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskBufferOffset")]
 		nuint MaskBufferOffset { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("triangleCount")]
 		nuint TriangleCount { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithGroup:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (MPSAccelerationStructureGroup group);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="group">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:group:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
+		NativeHandle Constructor (NSCoder aDecoder, MPSAccelerationStructureGroup group);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientState), Name = "MPSCNNBatchNormalizationState")]
 	[DisableDefaultCtor]
 	interface MPSCnnBatchNormalizationState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("batchNormalization", ArgumentSemantic.Retain)]
 		MPSCnnBatchNormalization BatchNormalization { get; }
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("reset")]
 		void Reset ();
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("gamma")]
 		IMTLBuffer Gamma { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("beta")]
 		IMTLBuffer Beta { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("mean")]
 		IMTLBuffer Mean { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("variance")]
 		IMTLBuffer Variance { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("gradientForGamma")]
 		IMTLBuffer GradientForGamma { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("gradientForBeta")]
 		IMTLBuffer GradientForBeta { get; }
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSState), Name = "MPSCNNNormalizationMeanAndVarianceState")]
 	[DisableDefaultCtor]
 	interface MPSCnnNormalizationMeanAndVarianceState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("mean")]
 		IMTLBuffer Mean { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("variance")]
 		IMTLBuffer Variance { get; }
 
+		/// <param name="mean">To be added.</param>
+		/// <param name="variance">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithMean:variance:")]
-		IntPtr Constructor (IMTLBuffer mean, IMTLBuffer variance);
+		NativeHandle Constructor (IMTLBuffer mean, IMTLBuffer variance);
 
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="numberOfFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryStateWithCommandBuffer:numberOfFeatureChannels:")]
 		MPSCnnNormalizationMeanAndVarianceState GetTemporaryState (IMTLCommandBuffer commandBuffer, nuint numberOfFeatureChannels);
@@ -6462,114 +12837,219 @@ namespace MetalPerformanceShaders {
 
 	interface IMPSCnnBatchNormalizationDataSource { }
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[Protocol, Model (AutoGeneratedName = true)]
+	[MacCatalyst (13, 1)]
+	[Protocol, Model]
 	[BaseType (typeof (NSObject), Name = "MPSCNNBatchNormalizationDataSource")]
 	interface MPSCnnBatchNormalizationDataSource : NSCopying {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("numberOfFeatureChannels")]
 		nuint NumberOfFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("gamma")]
 		IntPtr /* float* */ Gamma { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("beta")]
 		IntPtr /* float* */ Beta { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("mean")]
 		IntPtr /* float* */ Mean { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("variance")]
 		IntPtr /* float* */ Variance { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("load")]
 		bool Load { get; }
 
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[Export ("purge")]
 		void Purge ();
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Abstract]
 		[NullAllowed, Export ("label")]
 		string Label { get; }
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("updateGammaAndBetaWithCommandBuffer:batchNormalizationState:")]
 		[return: NullAllowed]
 		MPSCnnNormalizationGammaAndBetaState UpdateGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("updateMeanAndVarianceWithCommandBuffer:batchNormalizationState:")]
 		[return: NullAllowed]
 		MPSCnnNormalizationMeanAndVarianceState UpdateMeanAndVariance (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState);
 
+		/// <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("updateGammaAndBetaWithBatchNormalizationState:")]
 		bool UpdateGammaAndBeta (MPSCnnBatchNormalizationState batchNormalizationState);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("updateMeanAndVarianceWithBatchNormalizationState:")]
 		bool UpdateMeanAndVariance (MPSCnnBatchNormalizationState batchNormalizationState);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("epsilon")]
 		float Epsilon { get; }
 
+		/// <param name="coder">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeWithCoder:")]
 		void Encode (NSCoder coder);
 
+		/// <param name="decoder">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:")]
-		IntPtr Constructor (NSCoder decoder);
+		NativeHandle Constructor (NSCoder decoder);
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("supportsSecureCoding")]
 		bool SupportsSecureCoding { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("copyWithZone:device:")]
 		[return: Release]
 		IMPSCnnBatchNormalizationDataSource Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNBatchNormalization")]
 	[DisableDefaultCtor]
 	interface MPSCnnBatchNormalization {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("numberOfFeatureChannels")]
 		nuint NumberOfFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("epsilon")]
 		float Epsilon { get; set; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataSource", ArgumentSemantic.Retain)]
 		IMPSCnnBatchNormalizationDataSource DataSource { get; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="dataSource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:dataSource:")]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnBatchNormalizationDataSource dataSource);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnBatchNormalizationDataSource dataSource);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="dataSource">To be added.</param>
+		/// <param name="fusedNeuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:dataSource:fusedNeuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnBatchNormalizationDataSource dataSource, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnBatchNormalizationDataSource dataSource, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceImage:batchNormalizationState:destinationImage:")]
 		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnBatchNormalizationState batchNormalizationState, MPSImage destinationImage);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceImages:batchNormalizationState:destinationImages:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, MPSCnnBatchNormalizationState batchNormalizationState, NSArray<MPSImage> destinationImages);
 
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnBatchNormalizationState GetResultState (MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
 		[return: NullAllowed]
 		MPSCnnBatchNormalizationState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
@@ -6580,142 +13060,276 @@ namespace MetalPerformanceShaders {
 		//[Export ("reloadDataSource:")]
 		//void ReloadDataSource (IMPSCnnBatchNormalizationDataSource dataSource);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadGammaAndBetaFromDataSource")]
 		void ReloadGammaAndBetaFromDataSource ();
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadMeanAndVarianceFromDataSource")]
 		void ReloadMeanAndVarianceFromDataSource ();
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gammaAndBetaState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("reloadGammaAndBetaWithCommandBuffer:gammaAndBetaState:")]
 		void ReloadGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnNormalizationGammaAndBetaState gammaAndBetaState);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="meanAndVarianceState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadMeanAndVarianceWithCommandBuffer:meanAndVarianceState:")]
 		void ReloadMeanAndVariance (IMTLCommandBuffer commandBuffer, MPSCnnNormalizationMeanAndVarianceState meanAndVarianceState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNBatchNormalizationStatistics")]
 	[DisableDefaultCtor]
 	interface MPSCnnBatchNormalizationStatistics {
 
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceImages:batchNormalizationState:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImages, MPSCnnBatchNormalizationState batchNormalizationState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNBatchNormalizationGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnBatchNormalizationGradient {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="fusedNeuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:fusedNeuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="destinationGradient">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:batchNormalizationState:destinationGradient:")]
 		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSCnnBatchNormalizationState batchNormalizationState, MPSImage destinationGradient);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="destinationGradients">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:batchNormalizationState:destinationGradients:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, MPSCnnBatchNormalizationState batchNormalizationState, NSArray<MPSImage> destinationGradients);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:batchNormalizationState:")]
 		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSCnnBatchNormalizationState batchNormalizationState);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:batchNormalizationState:")]
 		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, MPSCnnBatchNormalizationState batchNormalizationState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNBatchNormalizationStatisticsGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnBatchNormalizationStatisticsGradient {
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <param name="device">To be added.</param>
+		/// <param name="fusedNeuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("initWithDevice:fusedNeuronDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
+		NativeHandle Constructor (IMTLDevice device, [NullAllowed] MPSNNNeuronDescriptor fusedNeuronDescriptor);
 
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:batchNormalizationState:")]
 		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, MPSCnnBatchNormalizationState batchNormalizationState);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientState), Name = "MPSCNNConvolutionGradientState")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionGradientState : MPSImageSizeEncodingState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("gradientForWeights")]
 		IMTLBuffer GradientForWeights { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("gradientForBiases")]
 		IMTLBuffer GradientForBiases { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("convolution", ArgumentSemantic.Retain)]
 		MPSCnnConvolution Convolution { get; }
+
+		[MacCatalyst (13, 0)]
+		[Export ("gradientForWeightsLayout")]
+		MPSCnnConvolutionWeightsLayout GradientForWeightsLayout { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSState), Name = "MPSCNNConvolutionWeightsAndBiasesState")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionWeightsAndBiasesState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("weights")]
 		IMTLBuffer Weights { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[NullAllowed, Export ("biases")]
 		IMTLBuffer Biases { get; }
 
+		/// <param name="weights">To be added.</param>
+		/// <param name="biases">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithWeights:biases:")]
-		IntPtr Constructor (IMTLBuffer weights, [NullAllowed] IMTLBuffer biases);
+		NativeHandle Constructor (IMTLBuffer weights, [NullAllowed] IMTLBuffer biases);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:cnnConvolutionDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MPSCnnConvolutionDescriptor descriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSCnnConvolutionDescriptor descriptor);
 
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
 		[Static]
 		[Export ("temporaryCNNConvolutionWeightsAndBiasesStateWithCommandBuffer:cnnConvolutionDescriptor:")]
 		MPSCnnConvolutionWeightsAndBiasesState GetTemporaryCnnConvolutionWeightsAndBiasesState (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionDescriptor descriptor);
+
+		[Export ("weightsOffset")]
+		nuint WeightsOffset { get; }
+
+		[Export ("biasesOffset")]
+		nuint BiasesOffset { get; }
+
+		[MacCatalyst (13, 0)]
+		[Export ("initWithWeights:weightsOffset:biases:biasesOffset:cnnConvolutionDescriptor:")]
+		NativeHandle Constructor (IMTLBuffer weights, nuint weightsOffset, [NullAllowed] IMTLBuffer biases, nuint biasesOffset, MPSCnnConvolutionDescriptor descriptor);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNConvolutionGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnConvolutionGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceGradientFeatureChannels")]
 		nuint SourceGradientFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("sourceImageFeatureChannels")]
 		nuint SourceImageFeatureChannels { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("groups")]
 		nuint Groups { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("channelMultiplier")]
 		nuint ChannelMultiplier { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("dataSource", ArgumentSemantic.Retain)]
 		IMPSCnnConvolutionDataSource DataSource { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("gradientOption", ArgumentSemantic.Assign)]
 		MPSCnnConvolutionGradientOption GradientOption { get; set; }
 
@@ -6725,99 +13339,3544 @@ namespace MetalPerformanceShaders {
 		//[Export ("serializeWeightsAndBiases")]
 		//bool SerializeWeightsAndBiases { get; set; }
 
+		/// <param name="device">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:weights:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
 		[Export ("reloadWeightsAndBiasesFromDataSource")]
 		void ReloadWeightsAndBiasesFromDataSource ();
 
-		[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="state">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
 		[Export ("reloadWeightsAndBiasesWithCommandBuffer:state:")]
 		void ReloadWeightsAndBiases (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionWeightsAndBiasesState state);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnConvolutionGradient), Name = "MPSCNNFullyConnectedGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnFullyConnectedGradient {
 
+		/// <param name="device">To be added.</param>
+		/// <param name="weights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:weights:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientState), Name = "MPSCNNDropoutGradientState")]
 	[DisableDefaultCtor]
 	interface MPSCnnDropoutGradientState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskData")]
 		NSData MaskData { get; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNDropout")]
 	[DisableDefaultCtor]
 	interface MPSCnnDropout {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keepProbability")]
 		float KeepProbability { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seed")]
 		nuint Seed { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskStrideInPixels")]
 		MTLSize MaskStrideInPixels { get; }
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:keepProbability:seed:maskStrideInPixels:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
+		NativeHandle Constructor (IMTLDevice device, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
+
+		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnDropoutGradientState GetResultState (MPSImage sourceImage, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("resultStateBatchForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnDropoutGradientState GetResultStateBatch (MPSImage [] sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, MPSImage [] destinationImage);
+
+		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnDropoutGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("temporaryResultStateBatchForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnDropoutGradientState [] GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, MPSImage [] destinationImage);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNDropoutGradient")]
 	[DisableDefaultCtor]
 	interface MPSCnnDropoutGradient {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("keepProbability")]
 		float KeepProbability { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("seed")]
 		nuint Seed { get; }
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("maskStrideInPixels")]
 		MTLSize MaskStrideInPixels { get; }
 
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
 
+		/// <param name="device">To be added.</param>
+		/// <param name="keepProbability">To be added.</param>
+		/// <param name="seed">To be added.</param>
+		/// <param name="maskStrideInPixels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
 		[Export ("initWithDevice:keepProbability:seed:maskStrideInPixels:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
+		NativeHandle Constructor (IMTLDevice device, float keepProbability, nuint seed, MTLSize maskStrideInPixels);
 	}
 
-	[TV (11, 3), Mac (10, 13, 4, onlyOn64: true), iOS (11, 3)]
+	[MacCatalyst (13, 1)]
 	[BaseType (typeof (MPSNNGradientState), Name = "MPSCNNInstanceNormalizationGradientState")]
 	[DisableDefaultCtor]
 	interface MPSCnnInstanceNormalizationGradientState {
 
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		[Export ("instanceNormalization", ArgumentSemantic.Retain)]
 		MPSCnnInstanceNormalization InstanceNormalization { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed, Export ("gamma")]
+		IMTLBuffer Gamma { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed, Export ("beta")]
+		IMTLBuffer Beta { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientForGamma")]
+		IMTLBuffer GradientForGamma { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientForBeta")]
+		IMTLBuffer GradientForBeta { get; }
+	}
+
+	interface IMPSCnnInstanceNormalizationDataSource { }
+
+	[MacCatalyst (13, 1)]
+	[Protocol, Model]
+	[BaseType (typeof (NSObject), Name = "MPSCNNInstanceNormalizationDataSource")]
+	interface MPSCnnInstanceNormalizationDataSource : NSCopying {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Abstract]
+		[Export ("gamma")]
+		IntPtr /* float* */ Gamma { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Abstract]
+		[Export ("beta")]
+		IntPtr /* float* */ Beta { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Abstract]
+		[Export ("numberOfFeatureChannels")]
+		nuint NumberOfFeatureChannels { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Abstract]
+		[Export ("label")]
+		string Label { get; }
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="instanceNormalizationStateBatch">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("updateGammaAndBetaWithCommandBuffer:instanceNormalizationStateBatch:")]
+		[return: NullAllowed]
+		MPSCnnNormalizationGammaAndBetaState UpdateGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnInstanceNormalizationGradientState [] instanceNormalizationStateBatch);
+
+		/// <param name="instanceNormalizationStateBatch">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("updateGammaAndBetaWithInstanceNormalizationStateBatch:")]
+		bool UpdateGammaAndBeta (MPSCnnInstanceNormalizationGradientState [] instanceNormalizationStateBatch);
+
+		/// <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float GetEpsilon ();
+
+		/// <param name="coder">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeWithCoder:")]
+		void Encode (NSCoder coder);
+
+		/// <param name="decoder">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:")]
+		NativeHandle Constructor (NSCoder decoder);
+
+		// This needs to be inlined in classes that implement 'IMPSCnnInstanceNormalizationDataSource'.
+		//[Static]
+		//[Export ("supportsSecureCoding")]
+		//bool SupportsSecureCoding { get; }
+
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		IMPSCnnInstanceNormalizationDataSource Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		[MacCatalyst (13, 0)]
+		[Export ("load")]
+		bool Load ();
+
+		[MacCatalyst (13, 0)]
+		[Export ("purge")]
+		void Purge ();
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNInstanceNormalization")]
+	[DisableDefaultCtor]
+	interface MPSCnnInstanceNormalization {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("dataSource", ArgumentSemantic.Retain)]
+		IMPSCnnInstanceNormalizationDataSource DataSource { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="dataSource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:dataSource:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnInstanceNormalizationDataSource dataSource);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="dataSource">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
+		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
+		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 13, 1, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
+		[Export ("reloadDataSource:")]
+		void ReloadDataSource (IMPSCnnInstanceNormalizationDataSource dataSource);
+
+		/// <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Export ("reloadGammaAndBetaFromDataSource")]
+		void ReloadGammaAndBetaFromDataSource ();
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gammaAndBetaState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("reloadGammaAndBetaWithCommandBuffer:gammaAndBetaState:")]
+		void ReloadGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnNormalizationGammaAndBetaState gammaAndBetaState);
+
+		/// <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnInstanceNormalizationGradientState GetResultState (MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="sourceStates">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnInstanceNormalizationGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNInstanceNormalizationGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnInstanceNormalizationGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSCNNGradientKernel")]
+	[DisableDefaultCtor]
+	interface MPSCnnGradientKernel {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("kernelOffsetX")]
+		nint KernelOffsetX { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("kernelOffsetY")]
+		nint KernelOffsetY { get; set; }
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:gradientState:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSState gradientState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradient">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="gradientState">To be added.</param>
+		///         <param name="destinationGradient">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:gradientState:destinationGradient:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSState gradientState, MPSImage destinationGradient);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="gradientStates">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:gradientStates:")]
+		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, NSArray<MPSState> gradientStates);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceImages">To be added.</param>
+		///         <param name="gradientStates">To be added.</param>
+		///         <param name="destinationGradients">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:gradientStates:destinationGradients:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, NSArray<MPSState> gradientStates, NSArray<MPSImage> destinationGradients);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject), Name = "MPSCNNLossDataDescriptor")]
+	[DisableDefaultCtor]
+	interface MPSCnnLossDataDescriptor : NSCopying {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("layout")]
+		MPSDataLayout Layout { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("size")]
+		MTLSize Size { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("bytesPerRow")]
+		nuint BytesPerRow { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("bytesPerImage")]
+		nuint BytesPerImage { get; set; }
+
+		/// <param name="data">To be added.</param>
+		///         <param name="layout">To be added.</param>
+		///         <param name="size">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnLossDataDescriptorWithData:layout:size:")]
+		[return: NullAllowed]
+		MPSCnnLossDataDescriptor Create (NSData data, MPSDataLayout layout, MTLSize size);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState), Name = "MPSCNNLossLabels")]
+	[DisableDefaultCtor]
+	interface MPSCnnLossLabels {
+
+		/// <param name="device">To be added.</param>
+		/// <param name="labelsDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:labelsDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, MPSCnnLossDataDescriptor labelsDescriptor);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="lossImageSize">To be added.</param>
+		/// <param name="labelsDescriptor">To be added.</param>
+		/// <param name="weightsDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:lossImageSize:labelsDescriptor:weightsDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MTLSize lossImageSize, MPSCnnLossDataDescriptor labelsDescriptor, [NullAllowed] MPSCnnLossDataDescriptor weightsDescriptor);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossImage")]
+		MPSImage LossImage { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Export ("labelsImage")]
+		MPSImage LabelsImage { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[MacCatalyst (13, 1)]
+		[Export ("weightsImage")]
+		MPSImage WeightsImage { get; }
+
+		[MacCatalyst (13, 0)]
+		[Export ("initWithDevice:lossImageSize:labelsImage:weightsImage:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MTLSize lossImageSize, MPSImage labelsImage, [NullAllowed] MPSImage weightsImage);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject), Name = "MPSCNNLossDescriptor")]
+	[DisableDefaultCtor]
+	interface MPSCnnLossDescriptor : NSCopying {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossType", ArgumentSemantic.Assign)]
+		MPSCnnLossType LossType { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("reductionType", ArgumentSemantic.Assign)]
+		MPSCnnReductionType ReductionType { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("weight")]
+		float Weight { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("labelSmoothing")]
+		float LabelSmoothing { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("numberOfClasses")]
+		nuint NumberOfClasses { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("delta")]
+		float Delta { get; set; }
+
+		/// <param name="lossType">To be added.</param>
+		///         <param name="reductionType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnLossDescriptorWithType:reductionType:")]
+		MPSCnnLossDescriptor Create (MPSCnnLossType lossType, MPSCnnReductionType reductionType);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNLoss")]
+	[DisableDefaultCtor]
+	interface MPSCnnLoss {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossType")]
+		MPSCnnLossType LossType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("weight")]
+		float Weight { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("labelSmoothing")]
+		float LabelSmoothing { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("numberOfClasses")]
+		nuint NumberOfClasses { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("delta")]
+		float Delta { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="lossDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:lossDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSCnnLossDescriptor lossDescriptor);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceImage:labels:destinationImage:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels, MPSImage destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceImage:labels:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:destinationImages:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels, NSArray<MPSImage> destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:")]
+		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject), Name = "MPSCNNYOLOLossDescriptor")]
+	[DisableDefaultCtor]
+	interface MPSCnnYoloLossDescriptor : NSCopying {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("XYLossDescriptor", ArgumentSemantic.Retain)]
+		MPSCnnLossDescriptor XYLossDescriptor { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("WHLossDescriptor", ArgumentSemantic.Retain)]
+		MPSCnnLossDescriptor WHLossDescriptor { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("confidenceLossDescriptor", ArgumentSemantic.Retain)]
+		MPSCnnLossDescriptor ConfidenceLossDescriptor { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("classesLossDescriptor", ArgumentSemantic.Retain)]
+		MPSCnnLossDescriptor ClassesLossDescriptor { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("reductionType", ArgumentSemantic.Assign)]
+		MPSCnnReductionType ReductionType { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("rescore")]
+		bool Rescore { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleXY")]
+		float ScaleXY { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleWH")]
+		float ScaleWH { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleNoObject")]
+		float ScaleNoObject { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleObject")]
+		float ScaleObject { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleClass")]
+		float ScaleClass { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("minIOUForObjectPresence")]
+		float MinIouForObjectPresence { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("maxIOUForObjectAbsence")]
+		float MaxIouForObjectAbsence { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("numberOfAnchorBoxes")]
+		nuint NumberOfAnchorBoxes { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("anchorBoxes", ArgumentSemantic.Retain)]
+		NSData AnchorBoxes { get; set; }
+
+		/// <param name="xyLossType">To be added.</param>
+		/// <param name="whLossType">To be added.</param>
+		/// <param name="confidenceLossType">To be added.</param>
+		/// <param name="classesLossType">To be added.</param>
+		/// <param name="reductionType">To be added.</param>
+		/// <param name="anchorBoxes">To be added.</param>
+		/// <param name="numberOfAnchorBoxes">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnLossDescriptorWithXYLossType:WHLossType:confidenceLossType:classesLossType:reductionType:anchorBoxes:numberOfAnchorBoxes:")]
+		MPSCnnYoloLossDescriptor Create (MPSCnnLossType xyLossType, MPSCnnLossType whLossType, MPSCnnLossType confidenceLossType, MPSCnnLossType classesLossType, MPSCnnReductionType reductionType, NSData anchorBoxes, nuint numberOfAnchorBoxes);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNYOLOLoss")]
+	[DisableDefaultCtor]
+	interface MPSCnnYoloLoss {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossXY", ArgumentSemantic.Retain)]
+		MPSCnnLoss LossXY { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossWH", ArgumentSemantic.Retain)]
+		MPSCnnLoss LossWH { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossConfidence", ArgumentSemantic.Retain)]
+		MPSCnnLoss LossConfidence { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("lossClasses", ArgumentSemantic.Retain)]
+		MPSCnnLoss LossClasses { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleXY")]
+		float ScaleXY { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleWH")]
+		float ScaleWH { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleNoObject")]
+		float ScaleNoObject { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleObject")]
+		float ScaleObject { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("scaleClass")]
+		float ScaleClass { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("minIOUForObjectPresence")]
+		float MinIouForObjectPresence { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("maxIOUForObjectAbsence")]
+		float MaxIouForObjectAbsence { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("numberOfAnchorBoxes")]
+		nuint NumberOfAnchorBoxes { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("anchorBoxes", ArgumentSemantic.Retain)]
+		NSData AnchorBoxes { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="lossDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:lossDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSCnnYoloLossDescriptor lossDescriptor);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceImage:labels:destinationImage:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels, MPSImage destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:sourceImage:labels:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:destinationImages:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels, NSArray<MPSImage> destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceImage">To be added.</param>
+		///         <param name="labels">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:")]
+		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNBinaryGradientState), Name = "MPSCNNArithmeticGradientState")]
+	[DisableDefaultCtor]
+	interface MPSCnnArithmeticGradientState {
+
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSCNNArithmetic")]
+	[DisableDefaultCtor]
+	interface MPSCnnArithmetic {
+
+		// Inlined but you are not supposed to use this class, only its subclasses
+		//[Export ("initWithDevice:")]
+		//[DesignatedInitializer]
+		//NativeHandle Constructor (IMTLDevice device);
+
+		//[Export ("initWithCoder:device:")]
+		//[DesignatedInitializer]
+		//NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("primaryScale")]
+		float PrimaryScale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("secondaryScale")]
+		float SecondaryScale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("bias")]
+		float Bias { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("primaryStrideInFeatureChannels")]
+		nuint PrimaryStrideInFeatureChannels { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("secondaryStrideInFeatureChannels")]
+		nuint SecondaryStrideInFeatureChannels { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("minimumValue")]
+		float MinimumValue { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("maximumValue")]
+		float MaximumValue { get; set; }
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImage">To be added.</param>
+		///         <param name="secondaryImage">To be added.</param>
+		///         <param name="destinationState">To be added.</param>
+		///         <param name="destinationImage">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:destinationState:destinationImage:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, MPSCnnArithmeticGradientState destinationState, MPSImage destinationImage);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="primaryImages">To be added.</param>
+		///         <param name="secondaryImages">To be added.</param>
+		///         <param name="destinationStates">To be added.</param>
+		///         <param name="destinationImages">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeBatchToCommandBuffer:primaryImages:secondaryImages:destinationStates:destinationImages:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImages, NSArray<MPSImage> secondaryImages, MPSCnnArithmeticGradientState [] destinationStates, NSArray<MPSImage> destinationImages);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNAdd")]
+	[DisableDefaultCtor]
+	interface MPSCnnAdd {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNSubtract")]
+	[DisableDefaultCtor]
+	interface MPSCnnSubtract {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNMultiply")]
+	[DisableDefaultCtor]
+	interface MPSCnnMultiply {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNDivide")]
+	[DisableDefaultCtor]
+	interface MPSCnnDivide {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmetic))]
+	[DisableDefaultCtor]
+	interface MPSNNCompare {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("comparisonType", ArgumentSemantic.Assign)]
+		MPSNNComparisonType ComparisonType { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("threshold")]
+		float Threshold { get; set; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNArithmeticGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnArithmeticGradient {
+
+		// Inlined but you are not supposed to use this class, only its subclasses
+		//[Export ("initWithDevice:")]
+		//[DesignatedInitializer]
+		//NativeHandle Constructor (IMTLDevice device);
+
+		//[Export ("initWithCoder:device:")]
+		//[DesignatedInitializer]
+		//NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("primaryScale")]
+		float PrimaryScale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("secondaryScale")]
+		float SecondaryScale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("bias")]
+		float Bias { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("secondaryStrideInFeatureChannels")]
+		nuint SecondaryStrideInFeatureChannels { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("minimumValue")]
+		float MinimumValue { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("maximumValue")]
+		float MaximumValue { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("isSecondarySourceFilter")]
+		bool IsSecondarySourceFilter { get; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNAddGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnAddGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:isSecondarySourceFilter:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, bool isSecondarySourceFilter);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNSubtractGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnSubtractGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:isSecondarySourceFilter:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, bool isSecondarySourceFilter);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNMultiplyGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnMultiplyGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <param name="isSecondarySourceFilter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:isSecondarySourceFilter:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, bool isSecondarySourceFilter);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSNNNeuronDescriptor : NSCopying, NSSecureCoding {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronType", ArgumentSemantic.Assign)]
+		MPSCnnNeuronType NeuronType { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("a")]
+		float A { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("b")]
+		float B { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("c")]
+		float C { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed, Export ("data", ArgumentSemantic.Retain)]
+		NSData Data { get; set; }
+
+		/// <param name="neuronType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnNeuronDescriptorWithType:")]
+		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType);
+
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnNeuronDescriptorWithType:a:")]
+		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a);
+
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnNeuronDescriptorWithType:a:b:")]
+		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a, float b);
+
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="a">To be added.</param>
+		///         <param name="b">To be added.</param>
+		///         <param name="c">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnNeuronDescriptorWithType:a:b:c:")]
+		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a, float b, float c);
+
+		/// <param name="data">To be added.</param>
+		///         <param name="noCopy">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("cnnNeuronPReLUDescriptorWithData:noCopy:")]
+		MPSNNNeuronDescriptor Create (NSData data, bool noCopy);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNNeuronGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnNeuronGradient {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronType")]
+		MPSCnnNeuronType NeuronType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("a")]
+		float A { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("b")]
+		float B { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("c")]
+		float C { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[NullAllowed, Export ("data", ArgumentSemantic.Retain)]
+		NSData Data { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="neuronDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:neuronDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState), Name = "MPSCNNNormalizationGammaAndBetaState")]
+	[DisableDefaultCtor]
+	interface MPSCnnNormalizationGammaAndBetaState {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gamma")]
+		IMTLBuffer Gamma { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("beta")]
+		IMTLBuffer Beta { get; }
+
+		/// <param name="gamma">To be added.</param>
+		/// <param name="beta">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithGamma:beta:")]
+		NativeHandle Constructor (IMTLBuffer gamma, IMTLBuffer beta);
+
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="numberOfFeatureChannels">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:numberOfFeatureChannels:")]
+		MPSCnnNormalizationGammaAndBetaState GetTemporaryState (IMTLCommandBuffer commandBuffer, nuint numberOfFeatureChannels);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixUnaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSMatrixBatchNormalization {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("sourceNumberOfFeatureVectors")]
+		nuint SourceNumberOfFeatureVectors { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("sourceInputFeatureChannels")]
+		nuint SourceInputFeatureChannels { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("computeStatistics")]
+		bool ComputeStatistics { get; set; }
+
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
+		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronType")]
+		MPSCnnNeuronType NeuronType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterA")]
+		float NeuronParameterA { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterB")]
+		float NeuronParameterB { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterC")]
+		float NeuronParameterC { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="meanVector">To be added.</param>
+		///         <param name="varianceVector">To be added.</param>
+		///         <param name="gammaVector">To be added.</param>
+		///         <param name="betaVector">To be added.</param>
+		///         <param name="resultMatrix">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:inputMatrix:meanVector:varianceVector:gammaVector:betaVector:resultMatrix:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSVector meanVector, MPSVector varianceVector, [NullAllowed] MPSVector gammaVector, [NullAllowed] MPSVector betaVector, MPSMatrix resultMatrix);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		MPSMatrixBatchNormalization Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSMatrixBinaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSMatrixBatchNormalizationGradient {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("sourceNumberOfFeatureVectors")]
+		nuint SourceNumberOfFeatureVectors { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("sourceInputFeatureChannels")]
+		nuint SourceInputFeatureChannels { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		/// <param name="neuronType">To be added.</param>
+		///         <param name="parameterA">To be added.</param>
+		///         <param name="parameterB">To be added.</param>
+		///         <param name="parameterC">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
+		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronType")]
+		MPSCnnNeuronType NeuronType { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterA")]
+		float NeuronParameterA { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterB")]
+		float NeuronParameterB { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("neuronParameterC")]
+		float NeuronParameterC { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="gradientMatrix">To be added.</param>
+		///         <param name="inputMatrix">To be added.</param>
+		///         <param name="meanVector">To be added.</param>
+		///         <param name="varianceVector">To be added.</param>
+		///         <param name="gammaVector">To be added.</param>
+		///         <param name="betaVector">To be added.</param>
+		///         <param name="resultGradientForDataMatrix">To be added.</param>
+		///         <param name="resultGradientForGammaVector">To be added.</param>
+		///         <param name="resultGradientForBetaVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:gradientMatrix:inputMatrix:meanVector:varianceVector:gammaVector:betaVector:resultGradientForDataMatrix:resultGradientForGammaVector:resultGradientForBetaVector:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix inputMatrix, MPSVector meanVector, MPSVector varianceVector, [NullAllowed] MPSVector gammaVector, [NullAllowed] MPSVector betaVector, MPSMatrix resultGradientForDataMatrix, [NullAllowed] MPSVector resultGradientForGammaVector, [NullAllowed] MPSVector resultGradientForBetaVector);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		MPSMatrixBatchNormalizationGradient Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState))]
+	[DisableDefaultCtor]
+	interface MPSNNGradientState {
+
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
+		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
+		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:")]
+		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:bufferSize:")]
+		NativeHandle Constructor (IMTLDevice device, nuint bufferSize);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:textureDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
+
+		/// <param name="resource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResource:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource resource);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="resourceList">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:resourceList:")]
+		NativeHandle Constructor (IMTLDevice device, MPSStateResourceList resourceList);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="resourceList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
+		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
+
+		/// <param name="resources">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResources:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource [] resources);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState))]
+	[DisableDefaultCtor]
+	interface MPSNNBinaryGradientState {
+
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
+		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
+		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:")]
+		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:bufferSize:")]
+		NativeHandle Constructor (IMTLDevice device, nuint bufferSize);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:textureDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
+
+		/// <param name="resource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResource:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource resource);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="resourceList">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:resourceList:")]
+		NativeHandle Constructor (IMTLDevice device, MPSStateResourceList resourceList);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="resourceList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[New]
+		[Static]
+		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
+		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
+
+		/// <param name="resources">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResources:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource [] resources);
+	}
+
+	interface IMPSNNTrainableNode { }
+
+	[MacCatalyst (13, 1)]
+	[Protocol]
+	interface MPSNNTrainableNode {
+		/// <summary>To be added.</summary>
+		/// <value>To be added.</value>
+		/// <remarks>To be added.</remarks>
+		[Abstract]
+		[Export ("trainingStyle", ArgumentSemantic.Assign)]
+		MPSNNTrainingStyle TrainingStyle { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSNNOptimizerDescriptor {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("learningRate")]
+		float LearningRate { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientRescale")]
+		float GradientRescale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("applyGradientClipping")]
+		bool ApplyGradientClipping { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientClipMax")]
+		float GradientClipMax { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientClipMin")]
+		float GradientClipMin { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("regularizationScale")]
+		float RegularizationScale { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("regularizationType", ArgumentSemantic.Assign)]
+		MPSNNRegularizationType RegularizationType { get; set; }
+
+		/// <param name="learningRate">To be added.</param>
+		/// <param name="gradientRescale">To be added.</param>
+		/// <param name="regularizationType">To be added.</param>
+		/// <param name="regularizationScale">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithLearningRate:gradientRescale:regularizationType:regularizationScale:")]
+		NativeHandle Constructor (float learningRate, float gradientRescale, MPSNNRegularizationType regularizationType, float regularizationScale);
+
+		/// <param name="learningRate">To be added.</param>
+		/// <param name="gradientRescale">To be added.</param>
+		/// <param name="applyGradientClipping">To be added.</param>
+		/// <param name="gradientClipMax">To be added.</param>
+		/// <param name="gradientClipMin">To be added.</param>
+		/// <param name="regularizationType">To be added.</param>
+		/// <param name="regularizationScale">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithLearningRate:gradientRescale:applyGradientClipping:gradientClipMax:gradientClipMin:regularizationType:regularizationScale:")]
+		NativeHandle Constructor (float learningRate, float gradientRescale, bool applyGradientClipping, float gradientClipMax, float gradientClipMin, MPSNNRegularizationType regularizationType, float regularizationScale);
+
+		/// <param name="learningRate">To be added.</param>
+		///         <param name="gradientRescale">To be added.</param>
+		///         <param name="regularizationType">To be added.</param>
+		///         <param name="regularizationScale">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("optimizerDescriptorWithLearningRate:gradientRescale:regularizationType:regularizationScale:")]
+		MPSNNOptimizerDescriptor Create (float learningRate, float gradientRescale, MPSNNRegularizationType regularizationType, float regularizationScale);
+
+		/// <param name="learningRate">To be added.</param>
+		///         <param name="gradientRescale">To be added.</param>
+		///         <param name="applyGradientClipping">To be added.</param>
+		///         <param name="gradientClipMax">To be added.</param>
+		///         <param name="gradientClipMin">To be added.</param>
+		///         <param name="regularizationType">To be added.</param>
+		///         <param name="regularizationScale">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[Export ("optimizerDescriptorWithLearningRate:gradientRescale:applyGradientClipping:gradientClipMax:gradientClipMin:regularizationType:regularizationScale:")]
+		MPSNNOptimizerDescriptor Create (float learningRate, float gradientRescale, bool applyGradientClipping, float gradientClipMax, float gradientClipMin, MPSNNRegularizationType regularizationType, float regularizationScale);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel))]
+	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNOptimizer.
+	interface MPSNNOptimizer {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("learningRate")]
+		float LearningRate { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientRescale")]
+		float GradientRescale { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("applyGradientClipping")]
+		bool ApplyGradientClipping { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientClipMax")]
+		float GradientClipMax { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("gradientClipMin")]
+		float GradientClipMin { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("regularizationScale")]
+		float RegularizationScale { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("regularizationType")]
+		MPSNNRegularizationType RegularizationType { get; }
+
+		/// <param name="newLearningRate">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("setLearningRate:")]
+		void SetLearningRate (float newLearningRate);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNOptimizer))]
+	[DisableDefaultCtor]
+	interface MPSNNOptimizerStochasticGradientDescent {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("momentumScale")]
+		float MomentumScale { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("useNestrovMomentum")]
+		bool UseNestrovMomentum { get; }
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("useNesterovMomentum")]
+		bool UseNesterovMomentum { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="learningRate">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:learningRate:")]
+		NativeHandle Constructor (IMTLDevice device, float learningRate);
+
+		[Internal]
+		[Export ("initWithDevice:momentumScale:useNestrovMomentum:optimizerDescriptor:")]
+		NativeHandle _InitWithNestrovMomentum (IMTLDevice device, float momentumScale, bool useNestrovMomentum, MPSNNOptimizerDescriptor optimizerDescriptor);
+
+		[Internal]
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("initWithDevice:momentumScale:useNesterovMomentum:optimizerDescriptor:")]
+		NativeHandle _InitWithNesterovMomentum (IMTLDevice device, float momentumScale, bool useNesterovMomentum, MPSNNOptimizerDescriptor optimizerDescriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputGradientVector">To be added.</param>
+		///         <param name="inputValuesVector">To be added.</param>
+		///         <param name="inputMomentumVector">To be added.</param>
+		///         <param name="resultValuesVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputMomentumVector:resultValuesVector:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, [NullAllowed] MPSVector inputMomentumVector, MPSVector resultValuesVector);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="convolutionSourceState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputMomentumVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationState:inputMomentumVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationGradientState">To be added.</param>
+		///         <param name="batchNormalizationSourceState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputMomentumVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:inputGradientMatrix:inputValuesMatrix:inputMomentumMatrix:resultValuesMatrix:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputGradientMatrix, MPSMatrix inputValuesMatrix, [NullAllowed] MPSMatrix inputMomentumMatrix, MPSMatrix resultValuesMatrix);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNOptimizer), Name = "MPSNNOptimizerRMSProp")]
+	[DisableDefaultCtor]
+	interface MPSNNOptimizerRmsProp {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("decay")]
+		double Decay { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="learningRate">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:learningRate:")]
+		NativeHandle Constructor (IMTLDevice device, float learningRate);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="decay">To be added.</param>
+		/// <param name="epsilon">To be added.</param>
+		/// <param name="optimizerDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:decay:epsilon:optimizerDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, double decay, float epsilon, MPSNNOptimizerDescriptor optimizerDescriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputGradientVector">To be added.</param>
+		///         <param name="inputValuesVector">To be added.</param>
+		///         <param name="inputSumOfSquaresVector">To be added.</param>
+		///         <param name="resultValuesVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputSumOfSquaresVector:resultValuesVector:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, MPSVector inputSumOfSquaresVector, MPSVector resultValuesVector);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="convolutionSourceState">To be added.</param>
+		///         <param name="inputSumOfSquaresVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputSumOfSquaresVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="inputSumOfSquaresVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationState:inputSumOfSquaresVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationGradientState">To be added.</param>
+		///         <param name="batchNormalizationSourceState">To be added.</param>
+		///         <param name="inputSumOfSquaresVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputSumOfSquaresVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:inputGradientMatrix:inputValuesMatrix:inputSumOfSquaresMatrix:resultValuesMatrix:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputGradientMatrix, MPSMatrix inputValuesMatrix, MPSMatrix inputSumOfSquaresMatrix, MPSMatrix resultValuesMatrix);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNOptimizer))]
+	[DisableDefaultCtor]
+	interface MPSNNOptimizerAdam {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("beta1")]
+		double Beta1 { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("beta2")]
+		double Beta2 { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("timeStep")]
+		nuint TimeStep { get; set; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="learningRate">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:learningRate:")]
+		NativeHandle Constructor (IMTLDevice device, float learningRate);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="beta1">To be added.</param>
+		/// <param name="beta2">To be added.</param>
+		/// <param name="epsilon">To be added.</param>
+		/// <param name="timeStep">To be added.</param>
+		/// <param name="optimizerDescriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:beta1:beta2:epsilon:timeStep:optimizerDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, double beta1, double beta2, float epsilon, nuint timeStep, MPSNNOptimizerDescriptor optimizerDescriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="inputGradientVector">To be added.</param>
+		///         <param name="inputValuesVector">To be added.</param>
+		///         <param name="inputMomentumVector">To be added.</param>
+		///         <param name="inputVelocityVector">To be added.</param>
+		///         <param name="resultValuesVector">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputMomentumVector:inputVelocityVector:resultValuesVector:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, MPSVector inputMomentumVector, MPSVector inputVelocityVector, MPSVector resultValuesVector);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="convolutionGradientState">To be added.</param>
+		///         <param name="convolutionSourceState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="inputVelocityVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputMomentumVectors:inputVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="inputVelocityVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationState:inputMomentumVectors:inputVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="batchNormalizationGradientState">To be added.</param>
+		///         <param name="batchNormalizationSourceState">To be added.</param>
+		///         <param name="inputMomentumVectors">To be added.</param>
+		///         <param name="inputVelocityVectors">To be added.</param>
+		///         <param name="resultState">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputMomentumVectors:inputVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:inputGradientMatrix:inputValuesMatrix:inputMomentumMatrix:inputVelocityMatrix:resultValuesMatrix:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputGradientMatrix, MPSMatrix inputValuesMatrix, MPSMatrix inputMomentumMatrix, MPSMatrix inputVelocityMatrix, MPSMatrix resultValuesMatrix);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputMomentumVector:inputVelocityVector:maximumVelocityVector:resultValuesVector:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, MPSVector inputMomentumVector, MPSVector inputVelocityVector, [NullAllowed] MPSVector maximumVelocityVector, MPSVector resultValuesVector);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:inputGradientMatrix:inputValuesMatrix:inputMomentumMatrix:inputVelocityMatrix:maximumVelocityMatrix:resultValuesMatrix:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputGradientMatrix, MPSMatrix inputValuesMatrix, MPSMatrix inputMomentumMatrix, MPSMatrix inputVelocityMatrix, [NullAllowed] MPSMatrix maximumVelocityMatrix, MPSMatrix resultValuesMatrix);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputMomentumVectors:inputVelocityVectors:maximumVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, MPSVector [] inputMomentumVectors, MPSVector [] inputVelocityVectors, [NullAllowed] MPSVector [] maximumVelocityVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:batchNormalizationState:inputMomentumVectors:inputVelocityVectors:maximumVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, MPSVector [] inputMomentumVectors, MPSVector [] inputVelocityVectors, [NullAllowed] MPSVector [] maximumVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+
+		[MacCatalyst (13, 0)]
+		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputMomentumVectors:inputVelocityVectors:maximumVelocityVectors:resultState:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, MPSVector [] inputMomentumVectors, MPSVector [] inputVelocityVectors, [NullAllowed] MPSVector [] maximumVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNReduceUnary.
+	interface MPSNNReduceUnary {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("clipRectSource", ArgumentSemantic.Assign)]
+		MTLRegion ClipRectSource { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceRowMin {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceColumnMin {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsMin {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsArgumentMin {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceRowMax {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceColumnMax {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsMax {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsArgumentMax {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceRowMean {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceColumnMean {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsMean {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceRowSum {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceColumnSum {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceUnary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsSum {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("weight")]
+		float Weight { get; set; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnBinaryKernel))]
+	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNReduceBinary.
+	interface MPSNNReduceBinary {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("primarySourceClipRect", ArgumentSemantic.Assign)]
+		MTLRegion PrimarySourceClipRect { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("secondarySourceClipRect", ArgumentSemantic.Assign)]
+		MTLRegion SecondarySourceClipRect { get; set; }
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceBinary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsAndWeightsMean {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSNNReduceBinary))]
+	[DisableDefaultCtor]
+	interface MPSNNReduceFeatureChannelsAndWeightsSum {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("doWeightedSumByNonZeroWeights")]
+		bool DoWeightedSumByNonZeroWeights { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="doWeightedSumByNonZeroWeights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:doWeightedSumByNonZeroWeights:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, bool doWeightedSumByNonZeroWeights);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNReshape {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("encodeToCommandBuffer:sourceImage:reshapedWidth:reshapedHeight:reshapedFeatureChannels:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, nuint reshapedWidth, nuint reshapedHeight, nuint reshapedFeatureChannels);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("encodeToCommandBuffer:sourceImage:destinationState:destinationStateIsTemporary:reshapedWidth:reshapedHeight:reshapedFeatureChannels:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] out MPSState outState, bool isTemporary, nuint reshapedWidth, nuint reshapedHeight, nuint reshapedFeatureChannels);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("encodeBatchToCommandBuffer:sourceImages:reshapedWidth:reshapedHeight:reshapedFeatureChannels:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, nuint reshapedWidth, nuint reshapedHeight, nuint reshapedFeatureChannels);
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationStates:destinationStateIsTemporary:reshapedWidth:reshapedHeight:reshapedFeatureChannels:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, [NullAllowed] out MPSState [] outStates, bool isTemporary, nuint reshapedWidth, nuint reshapedHeight, nuint reshapedFeatureChannels);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNReshapeGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNPad {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("paddingSizeBefore", ArgumentSemantic.Assign)]
+		MPSImageCoordinate PaddingSizeBefore { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("paddingSizeAfter", ArgumentSemantic.Assign)]
+		MPSImageCoordinate PaddingSizeAfter { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("fillValue")]
+		float FillValue { get; set; }
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="paddingSizeBefore">To be added.</param>
+		/// <param name="paddingSizeAfter">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:paddingSizeBefore:paddingSizeAfter:")]
+		NativeHandle Constructor (IMTLDevice device, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="paddingSizeBefore">To be added.</param>
+		/// <param name="paddingSizeAfter">To be added.</param>
+		/// <param name="fillValueArray">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:paddingSizeBefore:paddingSizeAfter:fillValueArray:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter, [NullAllowed] NSData fillValueArray);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNPadGradient {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNResizeBilinear {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("resizeWidth")]
+		nuint ResizeWidth { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("resizeHeight")]
+		nuint ResizeHeight { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("alignCorners")]
+		bool AlignCorners { get; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="resizeWidth">To be added.</param>
+		/// <param name="resizeHeight">To be added.</param>
+		/// <param name="alignCorners">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:resizeWidth:resizeHeight:alignCorners:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint resizeWidth, nuint resizeHeight, bool alignCorners);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNCropAndResizeBilinear {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("resizeWidth")]
+		nuint ResizeWidth { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("resizeHeight")]
+		nuint ResizeHeight { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("numberOfRegions")]
+		nuint NumberOfRegions { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("regions")]
+		IntPtr Regions { get; }
+
+		[Export ("initWithDevice:resizeWidth:resizeHeight:numberOfRegions:regions:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint resizeWidth, nuint resizeHeight, nuint numberOfRegions, IntPtr regions);
+
+		/// <param name="aDecoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSCnnKernel))]
+	[DisableDefaultCtor]
+	interface MPSNNSlice {
+
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSState), Name = "MPSRNNMatrixTrainingState")]
+	[DisableDefaultCtor]
+	interface MPSRnnMatrixTrainingState {
+
+		/// <param name="commandBuffer">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <returns>To be added.</returns>
+		/// <remarks>To be added.</remarks>
+		[Static]
+		[New]
+		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
+		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="descriptor">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
+		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
+		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
+		[Export ("temporaryStateWithCommandBuffer:")]
+		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="bufferSize">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:bufferSize:")]
+		NativeHandle Constructor (IMTLDevice device, nuint bufferSize);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="descriptor">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:textureDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
+
+		/// <param name="resource">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResource:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource resource);
+
+		/// <param name="device">To be added.</param>
+		/// <param name="resourceList">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:resourceList:")]
+		NativeHandle Constructor (IMTLDevice device, MPSStateResourceList resourceList);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="resourceList">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Static]
+		[New]
+		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
+		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
+
+		/// <param name="resources">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithResources:")]
+		NativeHandle Constructor ([NullAllowed] IMTLResource [] resources);
+	}
+
+	[MacCatalyst (13, 1)]
+	[BaseType (typeof (MPSKernel), Name = "MPSRNNMatrixTrainingLayer")]
+	[DisableDefaultCtor]
+	interface MPSRnnMatrixTrainingLayer {
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("inputFeatureChannels")]
+		nuint InputFeatureChannels { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("outputFeatureChannels")]
+		nuint OutputFeatureChannels { get; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("storeAllIntermediateStates")]
+		bool StoreAllIntermediateStates { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("recurrentOutputIsTemporary")]
+		bool RecurrentOutputIsTemporary { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("trainingStateIsTemporary")]
+		bool TrainingStateIsTemporary { get; set; }
+
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
+		[Export ("accumulateWeightGradients")]
+		bool AccumulateWeightGradients { get; set; }
+
+		/// <param name="device">To be added.</param>
+		/// <param name="rnnDescriptor">To be added.</param>
+		/// <param name="trainableWeights">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithDevice:rnnDescriptor:trainableWeights:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor, NSMutableArray<MPSMatrix> trainableWeights);
+
+		/// <param name="matrices">To be added.</param>
+		///         <param name="dataType">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("createWeightGradientMatrices:dataType:")]
+		void CreateWeightGradientMatrices (NSMutableArray<MPSMatrix> matrices, MPSDataType dataType);
+
+		/// <param name="matrices">To be added.</param>
+		///         <param name="dataType">To be added.</param>
+		///         <param name="commandBuffer">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("createTemporaryWeightGradientMatrices:dataType:commandBuffer:")]
+		void CreateTemporaryWeightGradientMatrices (NSMutableArray<MPSMatrix> matrices, MPSDataType dataType, IMTLCommandBuffer commandBuffer);
+
+		/// <param name="matrices">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("createWeightMatrices:")]
+		void CreateWeightMatrices (NSMutableArray<MPSMatrix> matrices);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <param name="matrixId">To be added.</param>
+		///         <param name="matrix">To be added.</param>
+		///         <param name="copyFromWeightsToMatrix">To be added.</param>
+		///         <param name="matrixOffset">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeCopyWeightsToCommandBuffer:weights:matrixId:matrix:copyFromWeightsToMatrix:matrixOffset:")]
+		void EncodeCopyWeights (IMTLCommandBuffer commandBuffer, MPSMatrix [] weights, MPSRnnMatrixId matrixId, MPSMatrix matrix, bool copyFromWeightsToMatrix, MTLOrigin matrixOffset);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrices">To be added.</param>
+		///         <param name="sourceOffsets">To be added.</param>
+		///         <param name="destinationMatrices">To be added.</param>
+		///         <param name="destinationOffsets">To be added.</param>
+		///         <param name="trainingStates">To be added.</param>
+		///         <param name="recurrentInputState">To be added.</param>
+		///         <param name="recurrentOutputStates">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeForwardSequenceToCommandBuffer:sourceMatrices:sourceOffsets:destinationMatrices:destinationOffsets:trainingStates:recurrentInputState:recurrentOutputStates:weights:")]
+		void EncodeForwardSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] sourceMatrices, [NullAllowed] IntPtr sourceOffsets, MPSMatrix [] destinationMatrices, [NullAllowed] IntPtr destinationOffsets, NSMutableArray<MPSRnnMatrixTrainingState> trainingStates, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates, MPSMatrix [] weights);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="sourceMatrices">To be added.</param>
+		///         <param name="destinationMatrices">To be added.</param>
+		///         <param name="trainingStates">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeForwardSequenceToCommandBuffer:sourceMatrices:destinationMatrices:trainingStates:weights:")]
+		void EncodeForwardSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] sourceMatrices, MPSMatrix [] destinationMatrices, NSMutableArray<MPSRnnMatrixTrainingState> trainingStates, MPSMatrix [] weights);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="forwardSources">To be added.</param>
+		///         <param name="forwardSourceOffsets">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="sourceGradientOffsets">To be added.</param>
+		///         <param name="destinationGradients">To be added.</param>
+		///         <param name="destinationOffsets">To be added.</param>
+		///         <param name="weightGradients">To be added.</param>
+		///         <param name="trainingStates">To be added.</param>
+		///         <param name="recurrentInputState">To be added.</param>
+		///         <param name="recurrentOutputStates">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeGradientSequenceToCommandBuffer:forwardSources:forwardSourceOffsets:sourceGradients:sourceGradientOffsets:destinationGradients:destinationOffsets:weightGradients:trainingStates:recurrentInputState:recurrentOutputStates:weights:")]
+		void EncodeGradientSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] forwardSources, [NullAllowed] IntPtr forwardSourceOffsets, MPSMatrix [] sourceGradients, [NullAllowed] IntPtr sourceGradientOffsets, [NullAllowed] MPSMatrix [] destinationGradients, [NullAllowed] IntPtr destinationOffsets, [NullAllowed] MPSMatrix [] weightGradients, MPSRnnMatrixTrainingState [] trainingStates, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates, MPSMatrix [] weights);
+
+		/// <param name="commandBuffer">To be added.</param>
+		///         <param name="forwardSources">To be added.</param>
+		///         <param name="sourceGradients">To be added.</param>
+		///         <param name="destinationGradients">To be added.</param>
+		///         <param name="weightGradients">To be added.</param>
+		///         <param name="trainingStates">To be added.</param>
+		///         <param name="weights">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <remarks>To be added.</remarks>
+		[Export ("encodeGradientSequenceToCommandBuffer:forwardSources:sourceGradients:destinationGradients:weightGradients:trainingStates:weights:")]
+		void EncodeGradientSequence (IMTLCommandBuffer commandBuffer, MPSMatrix [] forwardSources, MPSMatrix [] sourceGradients, [NullAllowed] MPSMatrix [] destinationGradients, [NullAllowed] MPSMatrix [] weightGradients, MPSRnnMatrixTrainingState [] trainingStates, MPSMatrix [] weights);
+
+		/// <param name="decoder">To be added.</param>
+		/// <param name="device">To be added.</param>
+		/// <summary>To be added.</summary>
+		/// <remarks>To be added.</remarks>
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder decoder, IMTLDevice device);
+
+		/// <param name="zone">To be added.</param>
+		///         <param name="device">To be added.</param>
+		///         <summary>To be added.</summary>
+		///         <returns>To be added.</returns>
+		///         <remarks>To be added.</remarks>
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		MPSRnnMatrixTrainingLayer Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayMultiaryBase {
+		[Export ("offsetsAtSourceIndex:")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArrayOffsets GetOffsets (nuint sourceIndex);
+
+		[Export ("edgeModeAtSourceIndex:")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSImageEdgeMode GetEdgeMode (nuint sourceIndex);
+
+		[Export ("kernelSizesForSourceIndex:")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArraySizes GetKernelSizes (nuint sourceIndex);
+
+		[Export ("stridesForSourceIndex:")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArrayOffsets GetStrides (nuint sourceIndex);
+
+		[Export ("dilationRatesForSourceIndex:")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArraySizes GetDilationRates (nuint sourceIndex);
+
+		[Export ("destinationArrayAllocator", ArgumentSemantic.Retain)]
+		IMPSNDArrayAllocator DestinationArrayAllocator { get; set; }
+
+		[Export ("initWithDevice:sourceCount:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint count);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("encodeWithCoder:")]
+		void EncodeTo (NSCoder coder);
+
+		[Export ("copyWithZone:device:")]
+		[return: Release ()]
+		MPSMatrixNeuron Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		[Export ("resultStateForSourceArrays:sourceStates:destinationArray:")]
+		[return: NullAllowed]
+		MPSState GetResultState (MPSNDArray [] sourceArrays, [NullAllowed] MPSState [] sourceStates, MPSNDArray destinationArray);
+
+		[Export ("destinationArrayDescriptorForSourceArrays:sourceState:")]
+		MPSNDArrayDescriptor GetDestinationArray (MPSNDArray [] sources, [NullAllowed] MPSState state);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryBase))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayMultiaryKernel {
+		[Export ("initWithDevice:sourceCount:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint count);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray [] sourceArrays);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:destinationArray:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray [] sourceArrays, MPSNDArray destinationArray);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:resultState:outputStateIsTemporary:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray [] sourceArrays, [NullAllowed] out MPSState gradientState, bool outputStateIsTemporary);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:resultState:destinationArray:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray [] sourceArrays, [NullAllowed] MPSState gradientState, MPSNDArray destinationArray);
+
+		[iOS (18, 0), TV (18, 0), MacCatalyst (18, 0), Mac (15, 0)]
+		[Export ("encodeToCommandEncoder:commandBuffer:sourceArrays:destinationArray:")]
+		MPSNDArray EncodeToCommandEncoder ([NullAllowed] IMTLComputeCommandEncoder encoder, IMTLCommandBuffer commandBuffer, MPSNDArray [] sourceArrays, MPSNDArray destinationArray);
+
+		/// <summary>Encodes the kernel with a Metal 4 compute command encoder.</summary>
+		/// <param name="encoder">The Metal 4 compute command encoder.</param>
+		/// <param name="sourceArrays">The source arrays, ordered as required by the kernel.</param>
+		/// <param name="destinationArray">The array that receives the result.</param>
+		/// <remarks>The encoder associates the command with <see cref="MTLStages.Dispatch" />. Synchronize dependent workloads against that stage to prevent race conditions.</remarks>
+		[UnsupportedSimulator ("ios")]
+		[UnsupportedSimulator ("tvos")]
+		[TV (27, 0), Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("encodeWithMTL4CommandEncoder:sourceArrays:destinationArray:")]
+		void EncodeWithMtl4CommandEncoder (IMTL4ComputeCommandEncoder encoder, MPSNDArray [] sourceArrays, MPSNDArray destinationArray);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayUnaryKernel {
+		[Export ("offsets")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArrayOffsets Offsets { get; }
+
+		[Export ("edgeMode")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSImageEdgeMode EdgeMode { get; }
+
+		[Export ("kernelSizes")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArraySizes KernelSizes { get; }
+
+		[Export ("strides")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArrayOffsets Strides { get; }
+
+		[Export ("dilationRates")]
+		[Deprecated (PlatformName.iOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, message: "Use derived filter properties instead.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, message: "Use derived filter properties instead.")]
+		MPSNDArraySizes DilationRates { get; }
+
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:sourceArray:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray);
+
+		[Export ("encodeToCommandBuffer:sourceArray:destinationArray:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, MPSNDArray destinationArray);
+
+		[Export ("encodeToCommandBuffer:sourceArray:resultState:outputStateIsTemporary:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, [NullAllowed] out MPSState gradientState, bool outputStateIsTemporary);
+
+		[Export ("encodeToCommandBuffer:sourceArray:resultState:destinationArray:")]
+		MPSNDArray EncodeToCommandBuffer (IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, [NullAllowed] MPSState gradientState, MPSNDArray destinationArray);
+
+		/// <summary>Encodes the kernel with a Metal 4 compute command encoder.</summary>
+		/// <param name="encoder">The Metal 4 compute command encoder.</param>
+		/// <param name="sourceArray">The source array.</param>
+		/// <param name="destinationArray">The array that receives the result.</param>
+		/// <remarks>The encoder associates the command with <see cref="MTLStages.Dispatch" />. Synchronize dependent workloads against that stage to prevent race conditions.</remarks>
+		[UnsupportedSimulator ("ios")]
+		[UnsupportedSimulator ("tvos")]
+		[TV (27, 0), Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("encodeWithMTL4CommandEncoder:sourceArray:destinationArray:")]
+		void EncodeWithMtl4CommandEncoder (IMTL4ComputeCommandEncoder encoder, MPSNDArray sourceArray, MPSNDArray destinationArray);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayUnaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayIdentity {
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("reshapeWithCommandBuffer:sourceArray:shape:destinationArray:")]
+		[return: NullAllowed]
+		MPSNDArray Reshape ([NullAllowed] IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, [BindAs (typeof (int []))] NSNumber [] shape, [NullAllowed] MPSNDArray destinationArray);
+
+		[Export ("reshapeWithCommandBuffer:sourceArray:dimensionCount:dimensionSizes:destinationArray:")]
+		[return: NullAllowed]
+		[Internal]
+		MPSNDArray _Reshape ([NullAllowed] IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, nuint numberOfDimensions, /* NSUInteger */ IntPtr dimensionSizes, [NullAllowed] MPSNDArray destinationArray);
+
+		[Export ("reshapeWithCommandEncoder:commandBuffer:sourceArray:shape:destinationArray:")]
+		[return: NullAllowed]
+		MPSNDArray Reshape ([NullAllowed] IMTLComputeCommandEncoder encoder, [NullAllowed] IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, [BindAs (typeof (int []))] NSNumber [] shape, [NullAllowed] MPSNDArray destinationArray);
+
+		[Export ("reshapeWithCommandEncoder:commandBuffer:sourceArray:dimensionCount:dimensionSizes:destinationArray:")]
+		[return: NullAllowed]
+		[Internal]
+		MPSNDArray _Reshape ([NullAllowed] IMTLComputeCommandEncoder encoder, [NullAllowed] IMTLCommandBuffer commandBuffer, MPSNDArray sourceArray, nuint numberOfDimensions, /* NSUInteger */ IntPtr dimensionSizes, [NullAllowed] MPSNDArray destinationArray);
+
+		/// <summary>Creates a reshaped view of an array on the CPU.</summary>
+		/// <param name="sourceArray">The source array.</param>
+		/// <param name="shape">The new shape in TensorFlow dimension order.</param>
+		/// <returns>A reshaped view, or <see langword="null" /> if aliasing isn't possible.</returns>
+		[TV (27, 0), Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("reshapeWithSourceArray:shape:")]
+		[return: NullAllowed]
+		MPSNDArray Reshape (MPSNDArray sourceArray, [BindAs (typeof (int []))] NSNumber [] shape);
+
+		/// <summary>Encodes a reshape operation with a Metal 4 compute command encoder.</summary>
+		/// <param name="encoder">The Metal 4 compute command encoder.</param>
+		/// <param name="sourceArray">The source array.</param>
+		/// <param name="shape">The new shape in TensorFlow dimension order.</param>
+		/// <param name="destinationArray">The destination array, whose shape must match <paramref name="shape" />.</param>
+		/// <remarks>The encoder associates the command with <see cref="MTLStages.Dispatch" />. Synchronize dependent workloads against that stage to prevent race conditions.</remarks>
+		[UnsupportedSimulator ("ios")]
+		[UnsupportedSimulator ("tvos")]
+		[TV (27, 0), Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("reshapeWithMTL4CommandEncoder:sourceArray:shape:destinationArray:")]
+		void ReshapeWithMtl4CommandEncoder (IMTL4ComputeCommandEncoder encoder, MPSNDArray sourceArray, [BindAs (typeof (int []))] NSNumber [] shape, MPSNDArray destinationArray);
+
+		[UnsupportedSimulator ("ios")]
+		[UnsupportedSimulator ("tvos")]
+		[TV (27, 0), Mac (27, 0), iOS (27, 0), MacCatalyst (27, 0)]
+		[Export ("reshapeWithMTL4CommandEncoder:sourceArray:dimensionCount:dimensionSizes:destinationArray:")]
+		[Internal]
+		void _ReshapeWithMtl4CommandEncoder (IMTL4ComputeCommandEncoder encoder, MPSNDArray sourceArray, nuint numberOfDimensions, /* NSUInteger */ IntPtr dimensionSizes, MPSNDArray destinationArray);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[Native]
+	public enum MPSNDArrayQuantizationScheme : ulong {
+		None = 0,
+		Affine,
+		Lut,
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (NSObject))]
+	[DefaultCtorVisibility (Visibility.Protected)]
+	interface MPSNDArrayQuantizationDescriptor : NSCopying {
+		[Export ("quantizationDataType")]
+		MPSDataType QuantizationDataType { get; }
+
+		[Export ("quantizationScheme")]
+		MPSNDArrayQuantizationScheme QuantizationScheme { get; }
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayQuantizationDescriptor))]
+	interface MPSNDArrayAffineQuantizationDescriptor {
+		[Export ("hasZeroPoint")]
+		bool HasZeroPoint { get; set; }
+
+		[Export ("hasMinValue")]
+		bool HasMinValue { get; set; }
+
+		[Export ("implicitZeroPoint")]
+		bool ImplicitZeroPoint { get; set; }
+
+		[Export ("initWithDataType:hasZeroPoint:hasMinValue:")]
+		NativeHandle Constructor (MPSDataType quantizationDataType, bool hasZeroPoint, bool hasMinValue);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayQuantizationDescriptor), Name = "MPSNDArrayLUTQuantizationDescriptor")]
+	[DisableDefaultCtor]
+	interface MPSNDArrayLutQuantizationDescriptor {
+		[Export ("initWithDataType:")]
+		NativeHandle Constructor (MPSDataType quantizationDataType);
+
+		[Export ("initWithDataType:vectorAxis:")]
+		NativeHandle Constructor (MPSDataType quantizationDataType, nuint vectorAxis);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayMatrixMultiplication))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayQuantizedMatrixMultiplication {
+		[Export ("initWithDevice:leftQuantizationDescriptor:rightQuantizationDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, [NullAllowed] MPSNDArrayQuantizationDescriptor leftQuantizationDescriptor, [NullAllowed] MPSNDArrayQuantizationDescriptor rightQuantizationDescriptor);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel), Name = "MPSNDArrayLUTDequantize")]
+	[DisableDefaultCtor]
+	interface MPSNDArrayLutDequantize {
+		[DesignatedInitializer]
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel), Name = "MPSNDArrayVectorLUTDequantize")]
+	[DisableDefaultCtor]
+	interface MPSNDArrayVectorLutDequantize {
+		[Export ("vectorAxis")]
+		nuint VectorAxis { get; set; }
+
+		[DesignatedInitializer]
+		[Export ("initWithDevice:axis:")]
+		NativeHandle Constructor (IMTLDevice device, nuint axis);
+	}
+
+	[TV (18, 0), Mac (15, 0), iOS (18, 0), MacCatalyst (18, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayAffineInt4Dequantize {
+		[Export ("initWithDevice:quantizationDescriptor:")]
+		NativeHandle Constructor (IMTLDevice device, MPSNDArrayAffineQuantizationDescriptor quantizationDescriptor);
+	}
+
+	[MacCatalyst (13, 1)]
+	[NativeName ("MPSCNNConvolutionWeightsLayout")]
+	public enum MPSCnnConvolutionWeightsLayout : uint {
+		Ohwi = 0,
+	}
+
+	[MacCatalyst (13, 0)]
+	[Native]
+	public enum MPSTemporalWeighting : ulong {
+		Average = 0,
+		ExponentialMovingAverage = 1,
+	}
+
+	interface IMPSCnnGroupNormalizationDataSource { }
+
+	[MacCatalyst (13, 0)]
+	[Protocol (Name = "MPSCNNGroupNormalizationDataSource", BackwardsCompatibleCodeGeneration = false)]
+	interface MPSCnnGroupNormalizationDataSource : NSCopying {
+		[Abstract]
+		[NullAllowed, Export ("gamma")]
+		// This is a pointer to an array of floats, with 'numberOfFeatureChannels' number of values.
+		/* float* __nullable */
+		IntPtr Gamma { get; }
+
+		[Abstract]
+		[NullAllowed, Export ("beta")]
+		// This is a pointer to an array of floats, with 'numberOfFeatureChannels' number of values.
+		/* float* __nullable */
+		IntPtr Beta { get; }
+
+		[Abstract]
+		[Export ("numberOfFeatureChannels")]
+		nuint NumberOfFeatureChannels { get; }
+
+		[Abstract]
+		[Export ("numberOfGroups")]
+		nuint NumberOfGroups { get; set; }
+
+		[Abstract]
+		[NullAllowed, Export ("label")]
+		string Label { get; }
+
+		[Export ("updateGammaAndBetaWithCommandBuffer:groupNormalizationStateBatch:")]
+		[return: NullAllowed]
+		MPSCnnNormalizationGammaAndBetaState UpdateGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnGroupNormalizationGradientState [] groupNormalizationStateBatch);
+
+		[Export ("updateGammaAndBetaWithGroupNormalizationStateBatch:")]
+		bool UpdateGammaAndBeta (MPSCnnGroupNormalizationGradientState [] groupNormalizationStateBatch);
+
+		[Export ("epsilon")]
+		float Epsilon { get; }
+
+		[Export ("encodeWithCoder:")]
+		void Encode (NSCoder aCoder);
+
+		[Export ("initWithCoder:")]
+		NativeHandle Constructor (NSCoder aDecoder);
+
+		[Static]
+		[Export ("supportsSecureCoding")]
+		bool SupportsSecureCoding { get; }
+
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		IMPSCnnGroupNormalizationDataSource Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+	}
+
+	interface IMPSnnGramMatrixCallback { }
+
+	[Protocol (Name = "MPSNNGramMatrixCallback", BackwardsCompatibleCodeGeneration = false)]
+	interface MPSnnGramMatrixCallback : NSSecureCoding, NSCopying {
+		[Abstract]
+		[Export ("alphaForSourceImage:destinationImage:")]
+		float GetAlpha (MPSImage sourceImage, MPSImage destinationImage);
+	}
+
+	interface IMPSSvgfTextureAllocator { }
+
+	[MacCatalyst (13, 0)]
+	[Protocol (Name = "MPSSVGFTextureAllocator", BackwardsCompatibleCodeGeneration = false)]
+	interface MPSSvgfTextureAllocator {
+		[Abstract]
+		[Export ("textureWithPixelFormat:width:height:")]
+		[return: NullAllowed]
+		IMTLTexture GetTexture (MTLPixelFormat pixelFormat, nuint width, nuint height);
+
+		[Abstract]
+		[Export ("returnTexture:")]
+		void ReturnTexture (IMTLTexture texture);
+	}
+
+	public enum MPSFloatDataTypeBit : uint {
+		SignBit = 0x00800000,
+		ExponentBit = 0x007C0000,
+		MantissaBit = 0x0003FC00,
+	}
+
+	public enum MPSFloatDataTypeShift : uint {
+		SignShift = 23,
+		ExponentShift = 18,
+		MantissaShift = 10,
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNConvolutionTransposeGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnConvolutionTransposeGradient {
+		[Export ("sourceGradientFeatureChannels")]
+		nuint SourceGradientFeatureChannels { get; }
+
+		[Export ("sourceImageFeatureChannels")]
+		nuint SourceImageFeatureChannels { get; }
+
+		[Export ("groups")]
+		nuint Groups { get; }
+
+		[Wrap ("WeakDataSource")]
+		IMPSCnnConvolutionDataSource DataSource { get; }
+
+		[Export ("dataSource", ArgumentSemantic.Retain)]
+		NSObject WeakDataSource { get; }
+
+		[Export ("gradientOption", ArgumentSemantic.Assign)]
+		MPSCnnConvolutionGradientOption GradientOption { get; set; }
+
+		[Export ("initWithDevice:weights:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnConvolutionDataSource weights);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("reloadWeightsAndBiasesFromDataSource")]
+		void ReloadWeightsAndBiasesFromDataSource ();
+
+		[Export ("reloadWeightsAndBiasesWithCommandBuffer:state:")]
+		void ReloadWeightsAndBiasesWithCommandBuffer (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionWeightsAndBiasesState state);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnConvolutionGradientNode), Name = "MPSCNNConvolutionTransposeGradientNode")]
+	[DisableDefaultCtor]
+	interface MPSCNNConvolutionTransposeGradientNode {
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:convolutionTransposeGradientState:weights:")]
+		MPSCNNConvolutionTransposeGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionTransposeGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
+
+		[Export ("initWithSourceGradient:sourceImage:convolutionTransposeGradientState:weights:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionTransposeGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnConvolutionGradientState), Name = "MPSCNNConvolutionTransposeGradientState")]
+	[DisableDefaultCtor]
+	interface MPSCnnConvolutionTransposeGradientState {
+		[Export ("convolutionTranspose", ArgumentSemantic.Retain)]
+		MPSCnnConvolutionTranspose ConvolutionTranspose { get; }
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnConvolutionGradientStateNode), Name = "MPSCNNConvolutionTransposeGradientStateNode")]
+	[DisableDefaultCtor]
+	interface MPSCnnConvolutionTransposeGradientStateNode {
+	}
+
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnConvolutionGradientNode), Name = "MPSCNNFullyConnectedGradientNode")]
+	[DisableDefaultCtor]
+	interface MPSCnnFullyConnectedGradientNode {
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:convolutionGradientState:weights:")]
+		MPSCnnFullyConnectedGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
+
+		[Export ("initWithSourceGradient:sourceImage:convolutionGradientState:weights:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSCnnConvolutionGradientStateNode gradientState, [NullAllowed] IMPSCnnConvolutionDataSource weights);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNGroupNormalization")]
+	[DisableDefaultCtor]
+	interface MPSCnnGroupNormalization {
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		[Wrap ("WeakDataSource")]
+		IMPSCnnGroupNormalizationDataSource DataSource { get; }
+
+		[Export ("dataSource", ArgumentSemantic.Retain)]
+		NSObject WeakDataSource { get; }
+
+		[Export ("initWithDevice:dataSource:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, IMPSCnnGroupNormalizationDataSource dataSource);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("reloadGammaAndBetaFromDataSource")]
+		void ReloadGammaAndBetaFromDataSource ();
+
+		[Export ("reloadGammaAndBetaWithCommandBuffer:gammaAndBetaState:")]
+		void ReloadGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnNormalizationGammaAndBetaState gammaAndBetaState);
+
+		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnGroupNormalizationGradientState GetResultState (MPSImage sourceImage, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSCnnGroupNormalizationGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNGroupNormalizationGradient")]
+	[DisableDefaultCtor]
+	interface MPSCnnGroupNormalizationGradient {
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSCNNGroupNormalizationGradientNode")]
+	[DisableDefaultCtor]
+	interface MPSCnnGroupNormalizationGradientNode : MPSNNTrainableNode {
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
+		MPSCnnGroupNormalizationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+
+		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNGradientState), Name = "MPSCNNGroupNormalizationGradientState")]
+	[DisableDefaultCtor]
+	interface MPSCnnGroupNormalizationGradientState {
+		[Export ("groupNormalization", ArgumentSemantic.Retain)]
+		MPSCnnGroupNormalization GroupNormalization { get; }
 
 		[NullAllowed, Export ("gamma")]
 		IMTLBuffer Gamma { get; }
@@ -6832,200 +16891,468 @@ namespace MetalPerformanceShaders {
 		IMTLBuffer GradientForBeta { get; }
 	}
 
-	interface IMPSCnnInstanceNormalizationDataSource { }
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSCNNGroupNormalizationNode")]
+	[DisableDefaultCtor]
+	interface MPSCnnGroupNormalizationNode : MPSNNTrainableNode {
+		[Static]
+		[Export ("nodeWithSource:dataSource:")]
+		MPSCnnGroupNormalizationNode Create (MPSNNImageNode source, IMPSCnnGroupNormalizationDataSource dataSource);
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[Protocol, Model (AutoGeneratedName = true)]
-	[BaseType (typeof (NSObject), Name = "MPSCNNInstanceNormalizationDataSource")]
-	interface MPSCnnInstanceNormalizationDataSource : NSCopying {
-
-		[Abstract]
-		[Export ("gamma")]
-		IntPtr /* float* */ Gamma { get; }
-
-		[Abstract]
-		[Export ("beta")]
-		IntPtr /* float* */ Beta { get; }
-
-		[Abstract]
-		[Export ("numberOfFeatureChannels")]
-		nuint NumberOfFeatureChannels { get; }
-
-		[Abstract]
-		[Export ("label")]
-		string Label { get; }
-
-		[Export ("updateGammaAndBetaWithCommandBuffer:instanceNormalizationStateBatch:")]
-		[return: NullAllowed]
-		MPSCnnNormalizationGammaAndBetaState UpdateGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnInstanceNormalizationGradientState [] instanceNormalizationStateBatch);
-
-		[Export ("updateGammaAndBetaWithInstanceNormalizationStateBatch:")]
-		bool UpdateGammaAndBeta (MPSCnnInstanceNormalizationGradientState [] instanceNormalizationStateBatch);
-
-		[Export ("epsilon")]
-		float GetEpsilon ();
-
-		[Export ("encodeWithCoder:")]
-		void Encode (NSCoder coder);
-
-		[Export ("initWithCoder:")]
-		IntPtr Constructor (NSCoder decoder);
-
-		// This needs to be inlined in classes that implement 'IMPSCnnInstanceNormalizationDataSource'.
-		//[Static]
-		//[Export ("supportsSecureCoding")]
-		//bool SupportsSecureCoding { get; }
-
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-		[Export ("copyWithZone:device:")]
-		[return: Release]
-		IMPSCnnInstanceNormalizationDataSource Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+		[Export ("initWithSource:dataSource:")]
+		NativeHandle Constructor (MPSNNImageNode source, IMPSCnnGroupNormalizationDataSource dataSource);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNInstanceNormalization")]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSKernel), Name = "MPSCNNMultiaryKernel")]
 	[DisableDefaultCtor]
-	interface MPSCnnInstanceNormalization {
-
-		[Export ("epsilon")]
-		float Epsilon { get; set; }
-
-		[Export ("dataSource", ArgumentSemantic.Retain)]
-		IMPSCnnInstanceNormalizationDataSource DataSource { get; }
-
-		[Export ("initWithDevice:dataSource:")]
+	interface MPSCnnMultiaryKernel {
+		[Export ("initWithDevice:sourceCount:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, IMPSCnnInstanceNormalizationDataSource dataSource);
+		NativeHandle Constructor (IMTLDevice device, nuint sourceCount);
+
+		[Export ("sourceCount")]
+		nuint SourceCount { get; }
+
+		[Export ("clipRect", ArgumentSemantic.Assign)]
+		MTLRegion ClipRect { get; set; }
+
+		[Export ("destinationFeatureChannelOffset")]
+		nuint DestinationFeatureChannelOffset { get; set; }
+
+		[Export ("isBackwards")]
+		bool IsBackwards { get; }
+
+		[Export ("isStateModified")]
+		bool IsStateModified { get; }
+
+		[Export ("padding", ArgumentSemantic.Retain)]
+		IMPSNNPadding Padding { get; set; }
+
+		[Export ("destinationImageAllocator", ArgumentSemantic.Retain)]
+		IMPSImageAllocator DestinationImageAllocator { get; set; }
+
+		[Export ("offsetAtIndex:")]
+		MPSOffset GetOffset (nuint index);
+
+		[Export ("setOffset:atIndex:")]
+		void SetOffset (MPSOffset offset, nuint index);
+
+		[Export ("sourceFeatureChannelOffsetAtIndex:")]
+		nuint GetSourceFeatureChannelOffset (nuint index);
+
+		[Export ("setSourceFeatureChannelOffset:atIndex:")]
+		void SetSourceFeatureChannelOffset (nuint offset, nuint index);
+
+		[Export ("sourceFeatureChannelMaxCountAtIndex:")]
+		nuint GetSourceFeatureChannelMaxCount (nuint index);
+
+		[Export ("setSourceFeatureChannelMaxCount:atIndex:")]
+		void SetSourceFeatureChannelMaxCount (nuint count, nuint index);
+
+		[Export ("edgeModeAtIndex:")]
+		MPSImageEdgeMode GetEdgeMode (nuint index);
+
+		[Export ("setEdgeMode:atIndex:")]
+		void SetEdgeMode (MPSImageEdgeMode edgeMode, nuint index);
+
+		[Export ("kernelWidthAtIndex:")]
+		nuint GetKernelWidth (nuint index);
+
+		[Export ("setKernelWidth:atIndex:")]
+		void SetKernelWidth (nuint width, nuint index);
+
+		[Export ("kernelHeightAtIndex:")]
+		nuint GetKernelHeight (nuint index);
+
+		[Export ("setKernelHeight:atIndex:")]
+		void SetKernelHeight (nuint height, nuint index);
+
+		[Export ("strideInPixelsXatIndex:")]
+		nuint GetStrideInPixelsX (nuint index);
+
+		[Export ("setStrideInPixelsX:atIndex:")]
+		void SetStrideInPixelsX (nuint stride, nuint index);
+
+		[Export ("strideInPixelsYatIndex:")]
+		nuint GetStrideInPixelsY (nuint index);
+
+		[Export ("setStrideInPixelsY:atIndex:")]
+		void SetStrideInPixelsY (nuint stride, nuint index);
+
+		[Export ("dilationRateXatIndex:")]
+		nuint GetDilationRateX (nuint index);
+
+		[Export ("setDilationRateX:atIndex:")]
+		void SetDilationRateX (nuint dilationRate, nuint index);
+
+		[Export ("dilationRateYatIndex:")]
+		nuint GetDilationRateY (nuint index);
+
+		[Export ("setDilationRateY:atIndex:")]
+		void SetDilationRateY (nuint dilationRate, nuint index);
 
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[Deprecated (PlatformName.TvOS, 12, 0, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
-		[Deprecated (PlatformName.iOS, 12, 0, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
-		[Deprecated (PlatformName.MacOSX, 10, 14, message: "Please use 'ReloadGammaAndBetaFromDataSource' instead.")]
-		[Export ("reloadDataSource:")]
-		void ReloadDataSource (IMPSCnnInstanceNormalizationDataSource dataSource);
+		[Export ("encodeToCommandBuffer:sourceImages:destinationImage:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, MPSImage destinationImage);
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-		[Export ("reloadGammaAndBetaFromDataSource")]
-		void ReloadGammaAndBetaFromDataSource ();
+		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationImages:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImages, MPSImage [] destinationImages);
 
-		[Export ("reloadGammaAndBetaWithCommandBuffer:gammaAndBetaState:")]
-		void ReloadGammaAndBeta (IMTLCommandBuffer commandBuffer, MPSCnnNormalizationGammaAndBetaState gammaAndBetaState);
+		[Export ("encodeToCommandBuffer:sourceImages:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages);
 
-		[Export ("resultStateForSourceImage:sourceStates:destinationImage:")]
+		[Export ("encodeBatchToCommandBuffer:sourceImages:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImageBatches);
+
+		[Export ("encodeToCommandBuffer:sourceImages:destinationState:destinationStateIsTemporary:")]
+		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, [NullAllowed] out MPSState outState, bool isTemporary);
+
+		[Export ("encodeBatchToCommandBuffer:sourceImages:destinationStates:destinationStateIsTemporary:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImageBatches, [NullAllowed] out MPSState [] outState, bool isTemporary);
+
+		[Export ("isResultStateReusedAcrossBatch")]
+		bool IsResultStateReusedAcrossBatch { get; }
+
+		[Export ("appendBatchBarrier")]
+		bool AppendBatchBarrier { get; }
+
+		[Export ("resultStateForSourceImages:sourceStates:destinationImage:")]
 		[return: NullAllowed]
-		MPSCnnInstanceNormalizationGradientState GetResultState (MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
+		MPSState GetResultState (MPSImage [] sourceImages, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
 
-		[Export ("temporaryResultStateForCommandBuffer:sourceImage:sourceStates:destinationImage:")]
+		[Export ("resultStateBatchForSourceImages:sourceStates:destinationImage:")]
 		[return: NullAllowed]
-		MPSCnnInstanceNormalizationGradientState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, [NullAllowed] NSArray<MPSState> sourceStates, MPSImage destinationImage);
+		MPSState [] GetResultStateBatch (NSArray<MPSImage> [] sourceImages, [NullAllowed] NSArray<MPSState> [] sourceStates, MPSImage [] destinationImage);
+
+		[Export ("temporaryResultStateForCommandBuffer:sourceImages:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSState GetTemporaryResultState (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImage, [NullAllowed] MPSState [] sourceStates, MPSImage destinationImage);
+
+		[Export ("temporaryResultStateBatchForCommandBuffer:sourceImages:sourceStates:destinationImage:")]
+		[return: NullAllowed]
+		MPSState [] GetTemporaryResultStateBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> [] sourceImage, [NullAllowed] NSArray<MPSState> [] sourceStates, MPSImage [] destinationImage);
+
+		[Export ("destinationImageDescriptorForSourceImages:sourceStates:")]
+		MPSImageDescriptor GetDestinationImageDescriptor (MPSImage [] sourceImages, [NullAllowed] MPSState [] sourceStates);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNInstanceNormalizationGradient")]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnNeuronNode), Name = "MPSCNNNeuronGeLUNode")]
 	[DisableDefaultCtor]
-	interface MPSCnnInstanceNormalizationGradient {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSCNNGradientKernel")]
-	[DisableDefaultCtor]
-	interface MPSCnnGradientKernel {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-
-		[Export ("kernelOffsetX")]
-		nint KernelOffsetX { get; set; }
-
-		[Export ("kernelOffsetY")]
-		nint KernelOffsetY { get; set; }
-
-		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:gradientState:")]
-		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSState gradientState);
-
-		[Export ("encodeToCommandBuffer:sourceGradient:sourceImage:gradientState:destinationGradient:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceGradient, MPSImage sourceImage, MPSState gradientState, MPSImage destinationGradient);
-
-		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:gradientStates:")]
-		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, NSArray<MPSState> gradientStates);
-
-		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:gradientStates:destinationGradients:")]
-		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceGradients, NSArray<MPSImage> sourceImages, NSArray<MPSState> gradientStates, NSArray<MPSImage> destinationGradients);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (NSObject), Name = "MPSCNNLossDataDescriptor")]
-	[DisableDefaultCtor]
-	interface MPSCnnLossDataDescriptor : NSCopying {
-
-		[Export ("layout")]
-		MPSDataLayout Layout { get; }
-
-		[Export ("size")]
-		MTLSize Size { get; }
-
-		[Export ("bytesPerRow")]
-		nuint BytesPerRow { get; set; }
-
-		[Export ("bytesPerImage")]
-		nuint BytesPerImage { get; set; }
+	interface MPSCnnNeuronGeLUNode {
+		[Export ("initWithSource:")]
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
 
 		[Static]
-		[Export ("cnnLossDataDescriptorWithData:layout:size:")]
-		[return: NullAllowed]
-		MPSCnnLossDataDescriptor Create (NSData data, MPSDataLayout layout, MTLSize size);
+		[Export ("nodeWithSource:")]
+		MPSCnnNeuronGeLUNode Create (MPSNNImageNode sourceNode);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSState), Name = "MPSCNNLossLabels")]
+	[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+	[BaseType (typeof (MPSUnaryImageKernel))]
 	[DisableDefaultCtor]
-	interface MPSCnnLossLabels {
+	interface MPSImageCanny {
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
 
-		[Export ("initWithDevice:labelsDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MPSCnnLossDataDescriptor labelsDescriptor);
+		[Export ("initWithDevice:linearToGrayScaleTransform:sigma:")]
+		// [DesignatedInitializer]
+		[Internal]
+		NativeHandle _InitWithDevice (IMTLDevice device, /* const float * __nonnull = Array of three floats */ IntPtr transform, float sigma);
 
-		[Export ("initWithDevice:lossImageSize:labelsDescriptor:weightsDescriptor:")]
+		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MTLSize lossImageSize, MPSCnnLossDataDescriptor labelsDescriptor, [NullAllowed] MPSCnnLossDataDescriptor weightsDescriptor);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[Export ("lossImage")]
-		MPSImage LossImage { get; }
+		// strongly typed as 'float[] ColorTransform'
+		[Export ("colorTransform")]
+		/* const float* = array of three floats */
+		IntPtr WeakColorTransform { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-		[Export ("labelsImage")]
-		MPSImage LabelsImage { get; }
+		[Export ("sigma")]
+		float Sigma { get; }
 
-		[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-		[Export ("weightsImage")]
-		MPSImage WeightsImage { get; }
+		[Export ("highThreshold")]
+		float HighThreshold { get; set; }
+
+		[Export ("lowThreshold")]
+		float LowThreshold { get; set; }
+
+		[Export ("useFastMode")]
+		bool UseFastMode { get; set; }
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (NSObject), Name = "MPSCNNLossDescriptor")]
+	[TV (13, 4), MacCatalyst (13, 4), iOS (13, 4)]
+	[BaseType (typeof (MPSKernel))]
 	[DisableDefaultCtor]
-	interface MPSCnnLossDescriptor : NSCopying {
+	interface MPSImageEDLines {
+		[Export ("initWithDevice:gaussianSigma:minLineLength:maxLines:detailRatio:gradientThreshold:lineErrorThreshold:mergeLocalityThreshold:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, float gaussianSigma, ushort minLineLength, nuint maxLines, ushort detailRatio, float gradientThreshold, float lineErrorThreshold, float mergeLocalityThreshold);
 
-		[Export ("lossType", ArgumentSemantic.Assign)]
-		MPSCnnLossType LossType { get; set; }
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[Export ("reductionType", ArgumentSemantic.Assign)]
-		MPSCnnReductionType ReductionType { get; set; }
+		[Export ("encodeToCommandBuffer:sourceTexture:destinationTexture:endpointBuffer:endpointOffset:")]
+		void Encode (IMTLCommandBuffer commandBuffer, IMTLTexture source, [NullAllowed] IMTLTexture dest, IMTLBuffer endpointBuffer, nuint endpointOffset);
+
+		[Export ("clipRectSource", ArgumentSemantic.Assign)]
+		MTLRegion ClipRectSource { get; set; }
+
+		[Export ("gaussianSigma")]
+		float GaussianSigma { get; }
+
+		[Export ("minLineLength")]
+		ushort MinLineLength { get; set; }
+
+		[Export ("maxLines")]
+		nuint MaxLines { get; set; }
+
+		[Export ("detailRatio")]
+		ushort DetailRatio { get; set; }
+
+		[Export ("gradientThreshold")]
+		float GradientThreshold { get; set; }
+
+		[Export ("lineErrorThreshold")]
+		float LineErrorThreshold { get; set; }
+
+		[Export ("mergeLocalityThreshold")]
+		float MergeLocalityThreshold { get; set; }
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayBinaryKernel {
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("primaryOffsets")]
+		MPSNDArrayOffsets PrimaryOffsets { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("primaryEdgeMode")]
+		MPSImageEdgeMode PrimaryEdgeMode { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("primaryKernelSizes")]
+		MPSNDArraySizes PrimaryKernelSizes { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("primaryStrides")]
+		MPSNDArrayOffsets PrimaryStrides { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("primaryDilationRates")]
+		MPSNDArraySizes PrimaryDilationRates { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("secondaryOffsets")]
+		MPSNDArrayOffsets SecondaryOffsets { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("secondaryEdgeMode")]
+		MPSImageEdgeMode SecondaryEdgeMode { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("secondaryKernelSizes")]
+		MPSNDArraySizes SecondaryKernelSizes { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("secondaryStrides")]
+		MPSNDArrayOffsets SecondaryStrides { get; }
+
+		[Deprecated (PlatformName.MacCatalyst, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.MacOSX, 11, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.iOS, 14, 0, "Use derived filter properties.")]
+		[Deprecated (PlatformName.TvOS, 14, 0, "Use derived filter properties.")]
+		[Export ("secondaryDilationRates")]
+		MPSNDArraySizes SecondaryDilationRates { get; }
+
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, MPSNDArray destination);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:resultState:outputStateIsTemporary:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, [NullAllowed] out MPSState outGradientState, bool outputStateIsTemporary);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:resultState:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, [NullAllowed] MPSState outGradientState, MPSNDArray destination);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayBinaryPrimaryGradientKernel {
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:sourceGradient:gradientState:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, MPSNDArray gradient, MPSState state);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:sourceGradient:gradientState:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, MPSNDArray gradient, MPSState state, MPSNDArray destination);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayBinarySecondaryGradientKernel {
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:sourceGradient:gradientState:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, MPSNDArray gradient, MPSState state);
+
+		[Export ("encodeToCommandBuffer:primarySourceArray:secondarySourceArray:sourceGradient:gradientState:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray primarySourceArray, MPSNDArray secondarySourceArray, MPSNDArray gradient, MPSState state, MPSNDArray destination);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayBinaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayGather {
+		[Export ("axis")]
+		nuint Axis { get; set; }
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayBinaryPrimaryGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayGatherGradient {
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayGradientState))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayGatherGradientState {
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSState))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayGradientState {
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryBase))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayMultiaryGradientKernel {
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("initWithDevice:sourceCount:sourceGradientIndex:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint count, nuint sourceGradientIndex);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:sourceGradient:gradientState:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray [] sources, MPSNDArray gradient, MPSState state);
+
+		[Export ("encodeToCommandBuffer:sourceArrays:sourceGradient:gradientState:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray [] sources, MPSNDArray gradient, MPSState state, MPSNDArray destination);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayUnaryKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayStridedSlice {
+		[Export ("strides", ArgumentSemantic.Assign)]
+		MPSNDArrayOffsets Strides { get; set; }
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayUnaryGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayStridedSliceGradient {
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNDArrayMultiaryGradientKernel))]
+	[DisableDefaultCtor]
+	interface MPSNDArrayUnaryGradientKernel {
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder coder, IMTLDevice device);
+
+		[Export ("encodeToCommandBuffer:sourceArray:sourceGradient:gradientState:")]
+		MPSNDArray Encode (IMTLCommandBuffer cmdBuf, MPSNDArray sourceArray, MPSNDArray gradient, MPSState state);
+
+		[Export ("encodeToCommandBuffer:sourceArray:sourceGradient:gradientState:destinationArray:")]
+		void Encode (IMTLCommandBuffer cmdBuf, MPSNDArray sourceArray, MPSNDArray gradient, MPSState state, MPSNDArray destination);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSNNForwardLoss")]
+	[DisableDefaultCtor]
+	interface MPSnnForwardLoss {
+		[Export ("lossType")]
+		MPSCnnLossType LossType { get; }
+
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+
+		[Export ("numberOfClasses")]
+		nuint NumberOfClasses { get; }
 
 		[Export ("weight")]
 		float Weight { get; set; }
@@ -7033,8 +17360,186 @@ namespace MetalPerformanceShaders {
 		[Export ("labelSmoothing")]
 		float LabelSmoothing { get; set; }
 
+		[Export ("epsilon")]
+		float Epsilon { get; set; }
+
+		[Export ("delta")]
+		float Delta { get; set; }
+
+		[Export ("initWithDevice:lossDescriptor:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, MPSCnnLossDescriptor lossDescriptor);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:weights:destinationStates:destinationImages:")]
+		void Encode (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, MPSImage [] labels, [NullAllowed] MPSImage [] weights, [NullAllowed] MPSState [] destinationStates, MPSImage [] destinationImages);
+
+		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:weights:destinationStates:destinationStateIsTemporary:")]
+		MPSImage [] Encode (IMTLCommandBuffer commandBuffer, MPSImage [] sourceImages, MPSImage [] labels, [NullAllowed] MPSImage [] weights, [NullAllowed] out MPSState [] outStates, bool isTemporary);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNFilterNode), Name = "MPSNNGramMatrixCalculationNode")]
+	[DisableDefaultCtor]
+	interface MPSnnGramMatrixCalculationNode {
+		[Export ("alpha")]
+		float Alpha { get; }
+
+		[NullAllowed, Export ("propertyCallBack", ArgumentSemantic.Retain)]
+		IMPSnnGramMatrixCallback PropertyCallBack { get; set; }
+
+		[Static]
+		[Export ("nodeWithSource:")]
+		MPSnnGramMatrixCalculationNode Create (MPSNNImageNode sourceNode);
+
+		[Export ("initWithSource:")]
+		NativeHandle Constructor (MPSNNImageNode sourceNode);
+
+		[Static]
+		[Export ("nodeWithSource:alpha:")]
+		MPSnnGramMatrixCalculationNode Create (MPSNNImageNode sourceNode, float alpha);
+
+		[Export ("initWithSource:alpha:")]
+		NativeHandle Constructor (MPSNNImageNode sourceNode, float alpha);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSNNGramMatrixCalculation")]
+	[DisableDefaultCtor]
+	interface MPSnnGramMatrixCalculation {
+		[Export ("alpha")]
+		float Alpha { get; set; }
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("initWithDevice:alpha:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, float alpha);
+
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSNNGramMatrixCalculationGradient")]
+	[DisableDefaultCtor]
+	interface MPSNNGramMatrixCalculationGradient {
+		[Export ("alpha")]
+		float Alpha { get; set; }
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+
+		[Export ("initWithDevice:alpha:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, float alpha);
+
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNGradientFilterNode), Name = "MPSNNGramMatrixCalculationGradientNode")]
+	[DisableDefaultCtor]
+	interface MPSnnGramMatrixCalculationGradientNode {
+		[Export ("alpha")]
+		float Alpha { get; }
+
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:gradientState:")]
+		MPSnnGramMatrixCalculationGradientNode Create (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+
+		[Export ("initWithSourceGradient:sourceImage:gradientState:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState);
+
+		[Static]
+		[Export ("nodeWithSourceGradient:sourceImage:gradientState:alpha:")]
+		MPSnnGramMatrixCalculationGradientNode NodeWithSourceGradient (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, float alpha);
+
+		[Export ("initWithSourceGradient:sourceImage:gradientState:alpha:")]
+		NativeHandle Constructor (MPSNNImageNode sourceGradient, MPSNNImageNode sourceImage, MPSNNGradientStateNode gradientState, float alpha);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSNNGridSample")]
+	[DisableDefaultCtor]
+	interface MPSnnGridSample {
+		[Export ("useGridValueAsInputCoordinate")]
+		bool UseGridValueAsInputCoordinate { get; set; }
+
+		[Export ("initWithDevice:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnKernel), Name = "MPSNNInitialGradient")]
+	[DisableDefaultCtor]
+	interface MPSnnInitialGradient {
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNReduceBinary), Name = "MPSNNLocalCorrelation")]
+	[DisableDefaultCtor]
+	interface MPSnnLocalCorrelation {
+		[Export ("windowInX")]
+		nuint WindowInX { get; set; }
+
+		[Export ("windowInY")]
+		nuint WindowInY { get; set; }
+
+		[Export ("strideInX")]
+		nuint StrideInX { get; set; }
+
+		[Export ("strideInY")]
+		nuint StrideInY { get; set; }
+
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
+
+		[Export ("initWithDevice:windowInX:windowInY:strideInX:strideInY:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (IMTLDevice device, nuint windowInX, nuint windowInY, nuint strideInX, nuint strideInY);
+
+		[Export ("initWithCoder:device:")]
+		[DesignatedInitializer]
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
+	}
+
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSNNLossGradient")]
+	[DisableDefaultCtor]
+	interface MPSnnLossGradient {
+		[Export ("lossType")]
+		MPSCnnLossType LossType { get; }
+
+		[Export ("reductionType")]
+		MPSCnnReductionType ReductionType { get; }
+
+		[TV (14, 0), MacCatalyst (14, 0), iOS (14, 0)]
+		[Export ("reduceAcrossBatch")]
+		bool ReduceAcrossBatch { get; }
+
 		[Export ("numberOfClasses")]
-		nuint NumberOfClasses { get; set; }
+		nuint NumberOfClasses { get; }
+
+		[Export ("weight")]
+		float Weight { get; set; }
+
+		[Export ("labelSmoothing")]
+		float LabelSmoothing { get; set; }
 
 		[Export ("epsilon")]
 		float Epsilon { get; set; }
@@ -7042,1213 +17547,300 @@ namespace MetalPerformanceShaders {
 		[Export ("delta")]
 		float Delta { get; set; }
 
-		[Static]
-		[Export ("cnnLossDescriptorWithType:reductionType:")]
-		MPSCnnLossDescriptor Create (MPSCnnLossType lossType, MPSCnnReductionType reductionType);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNLoss")]
-	[DisableDefaultCtor]
-	interface MPSCnnLoss {
-
-		[Export ("lossType")]
-		MPSCnnLossType LossType { get; }
-
-		[Export ("reductionType")]
-		MPSCnnReductionType ReductionType { get; }
-
-		[Export ("weight")]
-		float Weight { get; }
-
-		[Export ("labelSmoothing")]
-		float LabelSmoothing { get; }
-
-		[Export ("numberOfClasses")]
-		nuint NumberOfClasses { get; }
-
-		[Export ("epsilon")]
-		float Epsilon { get; }
-
-		[Export ("delta")]
-		float Delta { get; }
+		[Export ("computeLabelGradients")]
+		bool ComputeLabelGradients { get; set; }
 
 		[Export ("initWithDevice:lossDescriptor:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSCnnLossDescriptor lossDescriptor);
+		NativeHandle Constructor (IMTLDevice device, MPSCnnLossDescriptor lossDescriptor);
 
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
-		[Export ("encodeToCommandBuffer:sourceImage:labels:destinationImage:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels, MPSImage destinationImage);
+		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:labels:weights:sourceStates:")]
+		MPSImage [] EncodeBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceGradients, MPSImage [] sourceImages, MPSImage [] labels, [NullAllowed] MPSImage [] weights, [NullAllowed] MPSState [] sourceStates);
 
-		[Export ("encodeToCommandBuffer:sourceImage:labels:")]
-		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels);
-
-		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:destinationImages:")]
-		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels, NSArray<MPSImage> destinationImage);
-
-		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:")]
-		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels);
+		[Export ("encodeBatchToCommandBuffer:sourceGradients:sourceImages:labels:weights:sourceStates:destinationGradients:")]
+		void EncodeBatch (IMTLCommandBuffer commandBuffer, MPSImage [] sourceGradients, MPSImage [] sourceImages, MPSImage [] labels, [NullAllowed] MPSImage [] weights, [NullAllowed] MPSState [] sourceStates, MPSImage [] destinationGradients);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (NSObject), Name = "MPSCNNYOLOLossDescriptor")]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSState), Name = "MPSNNMultiaryGradientState")]
 	[DisableDefaultCtor]
-	interface MPSCnnYoloLossDescriptor : NSCopying {
-
-		[Export ("XYLossDescriptor", ArgumentSemantic.Retain)]
-		MPSCnnLossDescriptor XYLossDescriptor { get; set; }
-
-		[Export ("WHLossDescriptor", ArgumentSemantic.Retain)]
-		MPSCnnLossDescriptor WHLossDescriptor { get; set; }
-
-		[Export ("confidenceLossDescriptor", ArgumentSemantic.Retain)]
-		MPSCnnLossDescriptor ConfidenceLossDescriptor { get; set; }
-
-		[Export ("classesLossDescriptor", ArgumentSemantic.Retain)]
-		MPSCnnLossDescriptor ClassesLossDescriptor { get; set; }
-
-		[Export ("reductionType", ArgumentSemantic.Assign)]
-		MPSCnnReductionType ReductionType { get; set; }
-
-		[Export ("rescore")]
-		bool Rescore { get; set; }
-
-		[Export ("scaleXY")]
-		float ScaleXY { get; set; }
-
-		[Export ("scaleWH")]
-		float ScaleWH { get; set; }
-
-		[Export ("scaleNoObject")]
-		float ScaleNoObject { get; set; }
-
-		[Export ("scaleObject")]
-		float ScaleObject { get; set; }
-
-		[Export ("scaleClass")]
-		float ScaleClass { get; set; }
-
-		[Export ("minIOUForObjectPresence")]
-		float MinIouForObjectPresence { get; set; }
-
-		[Export ("maxIOUForObjectAbsence")]
-		float MaxIouForObjectAbsence { get; set; }
-
-		[Export ("numberOfAnchorBoxes")]
-		nuint NumberOfAnchorBoxes { get; set; }
-
-		[Export ("anchorBoxes", ArgumentSemantic.Retain)]
-		NSData AnchorBoxes { get; set; }
-
-		[Static]
-		[Export ("cnnLossDescriptorWithXYLossType:WHLossType:confidenceLossType:classesLossType:reductionType:anchorBoxes:numberOfAnchorBoxes:")]
-		MPSCnnYoloLossDescriptor Create (MPSCnnLossType xyLossType, MPSCnnLossType whLossType, MPSCnnLossType confidenceLossType, MPSCnnLossType classesLossType, MPSCnnReductionType reductionType, NSData anchorBoxes, nuint numberOfAnchorBoxes);
+	interface MPSnnMultiaryGradientState {
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSCnnKernel), Name = "MPSCNNYOLOLoss")]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSNNStateNode), Name = "MPSNNMultiaryGradientStateNode")]
 	[DisableDefaultCtor]
-	interface MPSCnnYoloLoss {
+	interface MPSnnMultiaryGradientStateNode {
+	}
 
-		[Export ("lossXY", ArgumentSemantic.Retain)]
-		MPSCnnLoss LossXY { get; }
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (MPSKernel), Name = "MPSSVGF")]
+	[DisableDefaultCtor]
+	interface MPSSvgf : NSSecureCoding, NSCopying {
+		[Export ("depthWeight")]
+		float DepthWeight { get; set; }
 
-		[Export ("lossWH", ArgumentSemantic.Retain)]
-		MPSCnnLoss LossWH { get; }
+		[Export ("normalWeight")]
+		float NormalWeight { get; set; }
 
-		[Export ("lossConfidence", ArgumentSemantic.Retain)]
-		MPSCnnLoss LossConfidence { get; }
+		[Export ("luminanceWeight")]
+		float LuminanceWeight { get; set; }
 
-		[Export ("lossClasses", ArgumentSemantic.Retain)]
-		MPSCnnLoss LossClasses { get; }
+		[Export ("temporalWeighting", ArgumentSemantic.Assign)]
+		MPSTemporalWeighting TemporalWeighting { get; set; }
 
-		[Export ("scaleXY")]
-		float ScaleXY { get; }
+		[Export ("temporalReprojectionBlendFactor")]
+		float TemporalReprojectionBlendFactor { get; set; }
 
-		[Export ("scaleWH")]
-		float ScaleWH { get; }
+		[Export ("reprojectionThreshold")]
+		float ReprojectionThreshold { get; set; }
 
-		[Export ("scaleNoObject")]
-		float ScaleNoObject { get; }
+		[Export ("minimumFramesForVarianceEstimation")]
+		nuint MinimumFramesForVarianceEstimation { get; set; }
 
-		[Export ("scaleObject")]
-		float ScaleObject { get; }
+		[Export ("varianceEstimationRadius")]
+		nuint VarianceEstimationRadius { get; set; }
 
-		[Export ("scaleClass")]
-		float ScaleClass { get; }
+		[Export ("varianceEstimationSigma")]
+		float VarianceEstimationSigma { get; set; }
 
-		[Export ("minIOUForObjectPresence")]
-		float MinIouForObjectPresence { get; }
+		[Export ("variancePrefilterSigma")]
+		float VariancePrefilterSigma { get; set; }
 
-		[Export ("maxIOUForObjectAbsence")]
-		float MaxIouForObjectAbsence { get; }
+		[Export ("variancePrefilterRadius")]
+		nuint VariancePrefilterRadius { get; set; }
 
-		[Export ("reductionType")]
-		MPSCnnReductionType ReductionType { get; }
+		[Export ("bilateralFilterSigma")]
+		float BilateralFilterSigma { get; set; }
 
-		[Export ("numberOfAnchorBoxes")]
-		nuint NumberOfAnchorBoxes { get; }
+		[Export ("bilateralFilterRadius")]
+		nuint BilateralFilterRadius { get; set; }
 
-		[Export ("anchorBoxes", ArgumentSemantic.Retain)]
-		NSData AnchorBoxes { get; }
+		[Export ("channelCount")]
+		nuint ChannelCount { get; set; }
 
-		[Export ("initWithDevice:lossDescriptor:")]
+		[Export ("channelCount2")]
+		nuint ChannelCount2 { get; set; }
+
+		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSCnnYoloLossDescriptor lossDescriptor);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-
-		[Export ("encodeToCommandBuffer:sourceImage:labels:destinationImage:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels, MPSImage destinationImage);
-
-		[Export ("encodeToCommandBuffer:sourceImage:labels:")]
-		MPSImage Encode (IMTLCommandBuffer commandBuffer, MPSImage sourceImage, MPSCnnLossLabels labels);
-
-		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:destinationImages:")]
-		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels, NSArray<MPSImage> destinationImage);
-
-		[Export ("encodeBatchToCommandBuffer:sourceImages:labels:")]
-		NSArray<MPSImage> EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> sourceImage, NSArray<MPSCnnLossLabels> labels);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNBinaryGradientState), Name = "MPSCNNArithmeticGradientState")]
-	[DisableDefaultCtor]
-	interface MPSCnnArithmeticGradientState {
-
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnBinaryKernel), Name = "MPSCNNArithmetic")]
-	[DisableDefaultCtor]
-	interface MPSCnnArithmetic {
-
-		// Inlined but you are not supposed to use this class, only its subclasses
-		//[Export ("initWithDevice:")]
-		//[DesignatedInitializer]
-		//IntPtr Constructor (IMTLDevice device);
-
-		//[Export ("initWithCoder:device:")]
-		//[DesignatedInitializer]
-		//IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-
-		[Export ("primaryScale")]
-		float PrimaryScale { get; set; }
-
-		[Export ("secondaryScale")]
-		float SecondaryScale { get; set; }
-
-		[Export ("bias")]
-		float Bias { get; set; }
-
-		[Export ("primaryStrideInFeatureChannels")]
-		nuint PrimaryStrideInFeatureChannels { get; set; }
-
-		[Export ("secondaryStrideInFeatureChannels")]
-		nuint SecondaryStrideInFeatureChannels { get; set; }
-
-		[Export ("minimumValue")]
-		float MinimumValue { get; set; }
-
-		[Export ("maximumValue")]
-		float MaximumValue { get; set; }
-
-		[Export ("encodeToCommandBuffer:primaryImage:secondaryImage:destinationState:destinationImage:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSImage primaryImage, MPSImage secondaryImage, MPSCnnArithmeticGradientState destinationState, MPSImage destinationImage);
-
-		[Export ("encodeBatchToCommandBuffer:primaryImages:secondaryImages:destinationStates:destinationImages:")]
-		void EncodeBatch (IMTLCommandBuffer commandBuffer, NSArray<MPSImage> primaryImages, NSArray<MPSImage> secondaryImages, MPSCnnArithmeticGradientState [] destinationStates, NSArray<MPSImage> destinationImages);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNAdd")]
-	[DisableDefaultCtor]
-	interface MPSCnnAdd {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNSubtract")]
-	[DisableDefaultCtor]
-	interface MPSCnnSubtract {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNMultiply")]
-	[DisableDefaultCtor]
-	interface MPSCnnMultiply {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmetic), Name = "MPSCNNDivide")]
-	[DisableDefaultCtor]
-	interface MPSCnnDivide {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
-	[BaseType (typeof (MPSCnnArithmetic))]
-	[DisableDefaultCtor]
-	interface MPSNNCompare {
-
-		[Export ("comparisonType", ArgumentSemantic.Assign)]
-		MPSNNComparisonType ComparisonType { get; set; }
-
-		[Export ("threshold")]
-		float Threshold { get; set; }
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNArithmeticGradient")]
-	[DisableDefaultCtor]
-	interface MPSCnnArithmeticGradient {
-
-		// Inlined but you are not supposed to use this class, only its subclasses
-		//[Export ("initWithDevice:")]
-		//[DesignatedInitializer]
-		//IntPtr Constructor (IMTLDevice device);
-
-		//[Export ("initWithCoder:device:")]
-		//[DesignatedInitializer]
-		//IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-
-		[Export ("primaryScale")]
-		float PrimaryScale { get; set; }
-
-		[Export ("secondaryScale")]
-		float SecondaryScale { get; set; }
-
-		[Export ("bias")]
-		float Bias { get; set; }
-
-		[Export ("secondaryStrideInFeatureChannels")]
-		nuint SecondaryStrideInFeatureChannels { get; set; }
-
-		[Export ("minimumValue")]
-		float MinimumValue { get; set; }
-
-		[Export ("maximumValue")]
-		float MaximumValue { get; set; }
-
-		[Export ("isSecondarySourceFilter")]
-		bool IsSecondarySourceFilter { get; }
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNAddGradient")]
-	[DisableDefaultCtor]
-	interface MPSCnnAddGradient {
-
-		[Export ("initWithDevice:isSecondarySourceFilter:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, bool isSecondarySourceFilter);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNSubtractGradient")]
-	[DisableDefaultCtor]
-	interface MPSCnnSubtractGradient {
-
-		[Export ("initWithDevice:isSecondarySourceFilter:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, bool isSecondarySourceFilter);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnArithmeticGradient), Name = "MPSCNNMultiplyGradient")]
-	[DisableDefaultCtor]
-	interface MPSCnnMultiplyGradient {
-
-		[Export ("initWithDevice:isSecondarySourceFilter:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, bool isSecondarySourceFilter);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (NSObject))]
-	[DisableDefaultCtor]
-	interface MPSNNNeuronDescriptor : NSCopying {
-
-		[Export ("neuronType", ArgumentSemantic.Assign)]
-		MPSCnnNeuronType NeuronType { get; set; }
-
-		[Export ("a")]
-		float A { get; set; }
-
-		[Export ("b")]
-		float B { get; set; }
-
-		[Export ("c")]
-		float C { get; set; }
-
-		[NullAllowed, Export ("data", ArgumentSemantic.Retain)]
-		NSData Data { get; set; }
-
-		[Static]
-		[Export ("cnnNeuronDescriptorWithType:")]
-		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType);
-
-		[Static]
-		[Export ("cnnNeuronDescriptorWithType:a:")]
-		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a);
-
-		[Static]
-		[Export ("cnnNeuronDescriptorWithType:a:b:")]
-		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a, float b);
-
-		[Static]
-		[Export ("cnnNeuronDescriptorWithType:a:b:c:")]
-		MPSNNNeuronDescriptor Create (MPSCnnNeuronType neuronType, float a, float b, float c);
-
-		[Static]
-		[Export ("cnnNeuronPReLUDescriptorWithData:noCopy:")]
-		MPSNNNeuronDescriptor Create (NSData data, bool noCopy);
-	}
-
-	[TV (11,3), Mac (10,13, 4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnGradientKernel), Name = "MPSCNNNeuronGradient")]
-	[DisableDefaultCtor]
-	interface MPSCnnNeuronGradient {
-
-		[Export ("neuronType")]
-		MPSCnnNeuronType NeuronType { get; }
-
-		[Export ("a")]
-		float A { get; }
-
-		[Export ("b")]
-		float B { get; }
-
-		[Export ("c")]
-		float C { get; }
-
-		[NullAllowed, Export ("data", ArgumentSemantic.Retain)]
-		NSData Data { get; }
-
-		[TV (11, 0), Mac (10, 13), iOS (11, 0)]
-		[Export ("initWithDevice:neuronDescriptor:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSNNNeuronDescriptor neuronDescriptor);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSState), Name = "MPSCNNNormalizationGammaAndBetaState")]
-	[DisableDefaultCtor]
-	interface MPSCnnNormalizationGammaAndBetaState {
-
-		[Export ("gamma")]
-		IMTLBuffer Gamma { get; }
-
-		[Export ("beta")]
-		IMTLBuffer Beta { get; }
-
-		[Export ("initWithGamma:beta:")]
-		IntPtr Constructor (IMTLBuffer gamma, IMTLBuffer beta);
-
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:numberOfFeatureChannels:")]
-		MPSCnnNormalizationGammaAndBetaState GetTemporaryState (IMTLCommandBuffer commandBuffer, nuint numberOfFeatureChannels);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSMatrixUnaryKernel))]
-	[DisableDefaultCtor]
-	interface MPSMatrixBatchNormalization {
-
-		[Export ("sourceNumberOfFeatureVectors")]
-		nuint SourceNumberOfFeatureVectors { get; set; }
-
-		[Export ("sourceInputFeatureChannels")]
-		nuint SourceInputFeatureChannels { get; set; }
-
-		[Export ("epsilon")]
-		float Epsilon { get; set; }
-
-		[Export ("computeStatistics")]
-		bool ComputeStatistics { get; set; }
-
-		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
-		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
-
-		[Export ("neuronType")]
-		MPSCnnNeuronType NeuronType { get; }
-
-		[Export ("neuronParameterA")]
-		float NeuronParameterA { get; }
-
-		[Export ("neuronParameterB")]
-		float NeuronParameterB { get; }
-
-		[Export ("neuronParameterC")]
-		float NeuronParameterC { get; }
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("encodeToCommandBuffer:inputMatrix:meanVector:varianceVector:gammaVector:betaVector:resultMatrix:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix inputMatrix, MPSVector meanVector, MPSVector varianceVector, [NullAllowed] MPSVector gammaVector, [NullAllowed] MPSVector betaVector, MPSMatrix resultMatrix);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		[Export ("copyWithZone:device:")]
 		[return: Release]
-		MPSMatrixBatchNormalization Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+		MPSSvgf Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		[Export ("encodeWithCoder:")]
+		void Encode (NSCoder coder);
+
+		[Export ("encodeReprojectionToCommandBuffer:sourceTexture:previousTexture:destinationTexture:previousLuminanceMomentsTexture:destinationLuminanceMomentsTexture:previousFrameCountTexture:destinationFrameCountTexture:motionVectorTexture:depthNormalTexture:previousDepthNormalTexture:")]
+		void EncodeReprojection (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture previousTexture, IMTLTexture destinationTexture, IMTLTexture previousLuminanceMomentsTexture, IMTLTexture destinationLuminanceMomentsTexture, IMTLTexture previousFrameCountTexture, IMTLTexture destinationFrameCountTexture, [NullAllowed] IMTLTexture motionVectorTexture, [NullAllowed] IMTLTexture depthNormalTexture, [NullAllowed] IMTLTexture previousDepthNormalTexture);
+
+		[Export ("encodeReprojectionToCommandBuffer:sourceTexture:previousTexture:destinationTexture:previousLuminanceMomentsTexture:destinationLuminanceMomentsTexture:sourceTexture2:previousTexture2:destinationTexture2:previousLuminanceMomentsTexture2:destinationLuminanceMomentsTexture2:previousFrameCountTexture:destinationFrameCountTexture:motionVectorTexture:depthNormalTexture:previousDepthNormalTexture:")]
+		void EncodeReprojection (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture previousTexture, IMTLTexture destinationTexture, IMTLTexture previousLuminanceMomentsTexture, IMTLTexture destinationLuminanceMomentsTexture, [NullAllowed] IMTLTexture sourceTexture2, [NullAllowed] IMTLTexture previousTexture2, [NullAllowed] IMTLTexture destinationTexture2, [NullAllowed] IMTLTexture previousLuminanceMomentsTexture2, [NullAllowed] IMTLTexture destinationLuminanceMomentsTexture2, IMTLTexture previousFrameCountTexture, IMTLTexture destinationFrameCountTexture, [NullAllowed] IMTLTexture motionVectorTexture, [NullAllowed] IMTLTexture depthNormalTexture, [NullAllowed] IMTLTexture previousDepthNormalTexture);
+
+		[Export ("encodeVarianceEstimationToCommandBuffer:sourceTexture:luminanceMomentsTexture:destinationTexture:frameCountTexture:depthNormalTexture:")]
+		void EncodeVarianceEstimation (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture luminanceMomentsTexture, IMTLTexture destinationTexture, IMTLTexture frameCountTexture, [NullAllowed] IMTLTexture depthNormalTexture);
+
+		[Export ("encodeVarianceEstimationToCommandBuffer:sourceTexture:luminanceMomentsTexture:destinationTexture:sourceTexture2:luminanceMomentsTexture2:destinationTexture2:frameCountTexture:depthNormalTexture:")]
+		void EncodeVarianceEstimation (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture luminanceMomentsTexture, IMTLTexture destinationTexture, [NullAllowed] IMTLTexture sourceTexture2, [NullAllowed] IMTLTexture luminanceMomentsTexture2, [NullAllowed] IMTLTexture destinationTexture2, IMTLTexture frameCountTexture, [NullAllowed] IMTLTexture depthNormalTexture);
+
+		[Export ("encodeBilateralFilterToCommandBuffer:stepDistance:sourceTexture:destinationTexture:depthNormalTexture:")]
+		void EncodeBilateralFilter (IMTLCommandBuffer commandBuffer, nuint stepDistance, IMTLTexture sourceTexture, IMTLTexture destinationTexture, IMTLTexture depthNormalTexture);
+
+		[Export ("encodeBilateralFilterToCommandBuffer:stepDistance:sourceTexture:destinationTexture:sourceTexture2:destinationTexture2:depthNormalTexture:")]
+		void EncodeBilateralFilter (IMTLCommandBuffer commandBuffer, nuint stepDistance, IMTLTexture sourceTexture, IMTLTexture destinationTexture, [NullAllowed] IMTLTexture sourceTexture2, [NullAllowed] IMTLTexture destinationTexture2, IMTLTexture depthNormalTexture);
 	}
 
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSMatrixBinaryKernel))]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (NSObject), Name = "MPSSVGFDefaultTextureAllocator")]
 	[DisableDefaultCtor]
-	interface MPSMatrixBatchNormalizationGradient {
+	interface MPSSvgfDefaultTextureAllocator : MPSSvgfTextureAllocator {
+		[Export ("device")]
+		IMTLDevice Device { get; }
 
-		[Export ("sourceNumberOfFeatureVectors")]
-		nuint SourceNumberOfFeatureVectors { get; set; }
-
-		[Export ("sourceInputFeatureChannels")]
-		nuint SourceInputFeatureChannels { get; set; }
-
-		[Export ("epsilon")]
-		float Epsilon { get; set; }
-
-		[Export ("setNeuronType:parameterA:parameterB:parameterC:")]
-		void SetNeuronType (MPSCnnNeuronType neuronType, float parameterA, float parameterB, float parameterC);
-
-		[Export ("neuronType")]
-		MPSCnnNeuronType NeuronType { get; }
-
-		[Export ("neuronParameterA")]
-		float NeuronParameterA { get; }
-
-		[Export ("neuronParameterB")]
-		float NeuronParameterB { get; }
-
-		[Export ("neuronParameterC")]
-		float NeuronParameterC { get; }
+		[Export ("allocatedTextureCount")]
+		nuint AllocatedTextureCount { get; }
 
 		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
-		[Export ("encodeToCommandBuffer:gradientMatrix:inputMatrix:meanVector:varianceVector:gammaVector:betaVector:resultGradientForDataMatrix:resultGradientForGammaVector:resultGradientForBetaVector:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSMatrix gradientMatrix, MPSMatrix inputMatrix, MPSVector meanVector, MPSVector varianceVector, [NullAllowed] MPSVector gammaVector, [NullAllowed] MPSVector betaVector, MPSMatrix resultGradientForDataMatrix, [NullAllowed] MPSVector resultGradientForGammaVector, [NullAllowed] MPSVector resultGradientForBetaVector);
+		[Export ("textureWithPixelFormat:width:height:")]
+		[return: NullAllowed]
+		IMTLTexture CreateTexture (MTLPixelFormat pixelFormat, nuint width, nuint height);
 
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-
-		[Export ("copyWithZone:device:")]
-		[return: Release]
-		MPSMatrixBatchNormalizationGradient Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+		[Export ("reset")]
+		void Reset ();
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSState))]
+	[MacCatalyst (13, 0)]
+	[BaseType (typeof (NSObject), Name = "MPSSVGFDenoiser")]
 	[DisableDefaultCtor]
-	interface MPSNNGradientState {
+	interface MPSSvfgDenoiser {
+		[Export ("svgf")]
+		MPSSvgf Svgf { get; }
 
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
-		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
+		[Export ("textureAllocator")]
+		IMPSSvgfTextureAllocator TextureAllocator { get; }
 
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
-		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
+		[Export ("bilateralFilterIterations")]
+		nuint BilateralFilterIterations { get; set; }
 
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:")]
-		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
+		[Export ("initWithDevice:")]
+		NativeHandle Constructor (IMTLDevice device);
 
-		[Export ("initWithDevice:bufferSize:")]
-		IntPtr Constructor (IMTLDevice device, nuint bufferSize);
+		[Export ("initWithSVGF:textureAllocator:")]
+		NativeHandle Constructor (MPSSvgf svgf, IMPSSvgfTextureAllocator textureAllocator);
 
-		[Export ("initWithDevice:textureDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
+		[Export ("clearTemporalHistory")]
+		void ClearTemporalHistory ();
 
-		[Export ("initWithResource:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource resource);
+		[Export ("releaseTemporaryTextures")]
+		void ReleaseTemporaryTextures ();
 
-		[Export ("initWithDevice:resourceList:")]
-		IntPtr Constructor (IMTLDevice device, MPSStateResourceList resourceList);
+		[Export ("encodeToCommandBuffer:sourceTexture:motionVectorTexture:depthNormalTexture:previousDepthNormalTexture:")]
+		IMTLTexture Encode (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, [NullAllowed] IMTLTexture motionVectorTexture, IMTLTexture depthNormalTexture, [NullAllowed] IMTLTexture previousDepthNormalTexture);
 
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
-		MPSNNGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
-
-		[Export ("initWithResources:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource [] resources);
+		[Export ("encodeToCommandBuffer:sourceTexture:destinationTexture:sourceTexture2:destinationTexture2:motionVectorTexture:depthNormalTexture:previousDepthNormalTexture:")]
+		void Encode (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, out IMTLTexture destinationTexture, [NullAllowed] IMTLTexture sourceTexture2, out IMTLTexture destinationTexture2, [NullAllowed] IMTLTexture motionVectorTexture, IMTLTexture depthNormalTexture, [NullAllowed] IMTLTexture previousDepthNormalTexture);
 	}
 
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSState))]
-	[DisableDefaultCtor]
-	interface MPSNNBinaryGradientState {
-
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
-		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
-
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
-		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
-
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:")]
-		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
-
-		[Export ("initWithDevice:bufferSize:")]
-		IntPtr Constructor (IMTLDevice device, nuint bufferSize);
-
-		[Export ("initWithDevice:textureDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
-
-		[Export ("initWithResource:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource resource);
-
-		[Export ("initWithDevice:resourceList:")]
-		IntPtr Constructor (IMTLDevice device, MPSStateResourceList resourceList);
-
-		[New]
-		[Static]
-		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
-		MPSNNBinaryGradientState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
-
-		[Export ("initWithResources:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource [] resources);
-	}
-
-	interface IMPSNNTrainableNode { }
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[Protocol]
-	interface MPSNNTrainableNode {
-		[Abstract]
-		[Export ("trainingStyle", ArgumentSemantic.Assign)]
-		MPSNNTrainingStyle TrainingStyle { get; set; }
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (NSObject))]
-	[DisableDefaultCtor]
-	interface MPSNNOptimizerDescriptor {
-
-		[Export ("learningRate")]
-		float LearningRate { get; set; }
-
-		[Export ("gradientRescale")]
-		float GradientRescale { get; set; }
-
-		[Export ("applyGradientClipping")]
-		bool ApplyGradientClipping { get; set; }
-
-		[Export ("gradientClipMax")]
-		float GradientClipMax { get; set; }
-
-		[Export ("gradientClipMin")]
-		float GradientClipMin { get; set; }
-
-		[Export ("regularizationScale")]
-		float RegularizationScale { get; set; }
-
-		[Export ("regularizationType", ArgumentSemantic.Assign)]
-		MPSNNRegularizationType RegularizationType { get; set; }
-
-		[Export ("initWithLearningRate:gradientRescale:regularizationType:regularizationScale:")]
-		IntPtr Constructor (float learningRate, float gradientRescale, MPSNNRegularizationType regularizationType, float regularizationScale);
-
-		[Export ("initWithLearningRate:gradientRescale:applyGradientClipping:gradientClipMax:gradientClipMin:regularizationType:regularizationScale:")]
-		IntPtr Constructor (float learningRate, float gradientRescale, bool applyGradientClipping, float gradientClipMax, float gradientClipMin, MPSNNRegularizationType regularizationType, float regularizationScale);
-
-		[Static]
-		[Export ("optimizerDescriptorWithLearningRate:gradientRescale:regularizationType:regularizationScale:")]
-		MPSNNOptimizerDescriptor Create (float learningRate, float gradientRescale, MPSNNRegularizationType regularizationType, float regularizationScale);
-
-		[Static]
-		[Export ("optimizerDescriptorWithLearningRate:gradientRescale:applyGradientClipping:gradientClipMax:gradientClipMin:regularizationType:regularizationScale:")]
-		MPSNNOptimizerDescriptor Create (float learningRate, float gradientRescale, bool applyGradientClipping, float gradientClipMax, float gradientClipMin, MPSNNRegularizationType regularizationType, float regularizationScale);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
+	[MacCatalyst (13, 0)]
 	[BaseType (typeof (MPSKernel))]
-	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNOptimizer.
-	interface MPSNNOptimizer {
-
-		[Export ("learningRate")]
-		float LearningRate { get; }
-
-		[Export ("gradientRescale")]
-		float GradientRescale { get; }
-
-		[Export ("applyGradientClipping")]
-		bool ApplyGradientClipping { get; set; }
-
-		[Export ("gradientClipMax")]
-		float GradientClipMax { get; }
-
-		[Export ("gradientClipMin")]
-		float GradientClipMin { get; }
-
-		[Export ("regularizationScale")]
-		float RegularizationScale { get; }
-
-		[Export ("regularizationType")]
-		MPSNNRegularizationType RegularizationType { get; }
-
-		[Export ("setLearningRate:")]
-		void SetLearningRate (float newLearningRate);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSNNOptimizer))]
 	[DisableDefaultCtor]
-	interface MPSNNOptimizerStochasticGradientDescent {
-
-		[Export ("momentumScale")]
-		float MomentumScale { get; }
-
-		[Export ("useNestrovMomentum")]
-		bool UseNestrovMomentum { get; }
-
-		[Export ("initWithDevice:learningRate:")]
-		IntPtr Constructor (IMTLDevice device, float learningRate);
-
-		[Export ("initWithDevice:momentumScale:useNestrovMomentum:optimizerDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, float momentumScale, bool useNestrovMomentum, MPSNNOptimizerDescriptor optimizerDescriptor);
-
-		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputMomentumVector:resultValuesVector:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, [NullAllowed] MPSVector inputMomentumVector, MPSVector resultValuesVector);
-
-		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputMomentumVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationState:inputMomentumVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputMomentumVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSNNOptimizer), Name = "MPSNNOptimizerRMSProp")]
-	[DisableDefaultCtor]
-	interface MPSNNOptimizerRmsProp {
-
-		[Export ("decay")]
-		double Decay { get; }
-
-		[Export ("epsilon")]
-		float Epsilon { get; }
-
-		[Export ("initWithDevice:learningRate:")]
-		IntPtr Constructor (IMTLDevice device, float learningRate);
-
-		[Export ("initWithDevice:decay:epsilon:optimizerDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, double decay, float epsilon, MPSNNOptimizerDescriptor optimizerDescriptor);
-
-		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputSumOfSquaresVector:resultValuesVector:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, MPSVector inputSumOfSquaresVector, MPSVector resultValuesVector);
-
-		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputSumOfSquaresVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationState:inputSumOfSquaresVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputSumOfSquaresVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputSumOfSquaresVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSNNOptimizer))]
-	[DisableDefaultCtor]
-	interface MPSNNOptimizerAdam {
-
-		[Export ("beta1")]
-		double Beta1 { get; }
-
-		[Export ("beta2")]
-		double Beta2 { get; }
-
-		[Export ("epsilon")]
-		float Epsilon { get; }
-
-		[Export ("timeStep")]
-		nuint TimeStep { get; set; }
-
-		[Export ("initWithDevice:learningRate:")]
-		IntPtr Constructor (IMTLDevice device, float learningRate);
-
-		[Export ("initWithDevice:beta1:beta2:epsilon:timeStep:optimizerDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, double beta1, double beta2, float epsilon, nuint timeStep, MPSNNOptimizerDescriptor optimizerDescriptor);
-
-		[Export ("encodeToCommandBuffer:inputGradientVector:inputValuesVector:inputMomentumVector:inputVelocityVector:resultValuesVector:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSVector inputGradientVector, MPSVector inputValuesVector, MPSVector inputMomentumVector, MPSVector inputVelocityVector, MPSVector resultValuesVector);
-
-		[Export ("encodeToCommandBuffer:convolutionGradientState:convolutionSourceState:inputMomentumVectors:inputVelocityVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnConvolutionGradientState convolutionGradientState, MPSCnnConvolutionWeightsAndBiasesState convolutionSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnConvolutionWeightsAndBiasesState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationState:inputMomentumVectors:inputVelocityVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-
-		[Export ("encodeToCommandBuffer:batchNormalizationGradientState:batchNormalizationSourceState:inputMomentumVectors:inputVelocityVectors:resultState:")]
-		void Encode (IMTLCommandBuffer commandBuffer, MPSCnnBatchNormalizationState batchNormalizationGradientState, MPSCnnBatchNormalizationState batchNormalizationSourceState, [NullAllowed] NSArray<MPSVector> inputMomentumVectors, [NullAllowed] NSArray<MPSVector> inputVelocityVectors, MPSCnnNormalizationGammaAndBetaState resultState);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNReduceUnary.
-	interface MPSNNReduceUnary {
-
-		[Export ("clipRectSource", ArgumentSemantic.Assign)]
-		MTLRegion ClipRectSource { get; set; }
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceRowMin {
+	interface MPSTemporalAA : NSSecureCoding, NSCopying {
+		[Export ("blendFactor")]
+		float BlendFactor { get; set; }
 
 		[Export ("initWithDevice:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceColumnMin {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsMin {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsArgumentMin {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceRowMax {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceColumnMax {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsMax {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsArgumentMax {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceRowMean {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceColumnMean {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsMean {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceRowSum {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceColumnSum {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceUnary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsSum {
-
-		[Export ("weight")]
-		float Weight { get; set; }
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnBinaryKernel))]
-	[DisableDefaultCtor] // You must use one of the sub-classes of MPSNNReduceBinary.
-	interface MPSNNReduceBinary {
-
-		[Export ("primarySourceClipRect", ArgumentSemantic.Assign)]
-		MTLRegion PrimarySourceClipRect { get; set; }
-
-		[Export ("secondarySourceClipRect", ArgumentSemantic.Assign)]
-		MTLRegion SecondarySourceClipRect { get; set; }
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceBinary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsAndWeightsMean {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSNNReduceBinary))]
-	[DisableDefaultCtor]
-	interface MPSNNReduceFeatureChannelsAndWeightsSum {
-
-		[Export ("doWeightedSumByNonZeroWeights")]
-		bool DoWeightedSumByNonZeroWeights { get; }
-
-		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithDevice:doWeightedSumByNonZeroWeights:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, bool doWeightedSumByNonZeroWeights);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNReshape {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
+		NativeHandle Constructor (IMTLDevice device);
 
 		[Export ("initWithCoder:device:")]
 		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
-	[BaseType (typeof (MPSCnnGradientKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNReshapeGradient {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNPad {
-
-		[Export ("paddingSizeBefore", ArgumentSemantic.Assign)]
-		MPSImageCoordinate PaddingSizeBefore { get; set; }
-
-		[Export ("paddingSizeAfter", ArgumentSemantic.Assign)]
-		MPSImageCoordinate PaddingSizeAfter { get; set; }
-
-		[Export ("fillValue")]
-		float FillValue { get; set; }
-
-		[Export ("initWithDevice:")]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithDevice:paddingSizeBefore:paddingSizeAfter:")]
-		IntPtr Constructor (IMTLDevice device, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter);
-
-		[Export ("initWithDevice:paddingSizeBefore:paddingSizeAfter:fillValueArray:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSImageCoordinate paddingSizeBefore, MPSImageCoordinate paddingSizeAfter, [NullAllowed] NSData fillValueArray);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (12,1), Mac (10,14,1, onlyOn64: true), iOS (12,1)]
-	[BaseType (typeof (MPSCnnGradientKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNPadGradient {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNResizeBilinear {
-
-		[Export ("resizeWidth")]
-		nuint ResizeWidth { get; }
-
-		[Export ("resizeHeight")]
-		nuint ResizeHeight { get; }
-
-		[Export ("alignCorners")]
-		bool AlignCorners { get; }
-
-		[Export ("initWithDevice:resizeWidth:resizeHeight:alignCorners:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint resizeWidth, nuint resizeHeight, bool alignCorners);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNCropAndResizeBilinear {
-
-		[Export ("resizeWidth")]
-		nuint ResizeWidth { get; }
-
-		[Export ("resizeHeight")]
-		nuint ResizeHeight { get; }
-
-		[Export ("numberOfRegions")]
-		nuint NumberOfRegions { get; }
-
-		[Export ("regions")]
-		IntPtr Regions { get; }
-
-		[Export ("initWithDevice:resizeWidth:resizeHeight:numberOfRegions:regions:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, nuint resizeWidth, nuint resizeHeight, nuint numberOfRegions, IntPtr regions);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder aDecoder, IMTLDevice device);
-	}
-
-	[TV (11,3), Mac (10,13,4, onlyOn64: true), iOS (11,3)]
-	[BaseType (typeof (MPSCnnKernel))]
-	[DisableDefaultCtor]
-	interface MPSNNSlice {
-
-		[Export ("initWithDevice:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSState), Name = "MPSRNNMatrixTrainingState")]
-	[DisableDefaultCtor]
-	interface MPSRnnMatrixTrainingState {
-
-		[Static][New]
-		[Export ("temporaryStateWithCommandBuffer:bufferSize:")]
-		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, nuint bufferSize);
-
-		[Static][New]
-		[Export ("temporaryStateWithCommandBuffer:textureDescriptor:")]
-		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MTLTextureDescriptor descriptor);
-
-		[Static][New]
-		[Export ("temporaryStateWithCommandBuffer:")]
-		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer);
-
-		[Export ("initWithDevice:bufferSize:")]
-		IntPtr Constructor (IMTLDevice device, nuint bufferSize);
-
-		[Export ("initWithDevice:textureDescriptor:")]
-		IntPtr Constructor (IMTLDevice device, MTLTextureDescriptor descriptor);
-
-		[Export ("initWithResource:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource resource);
-
-		[Export ("initWithDevice:resourceList:")]
-		IntPtr Constructor (IMTLDevice device, MPSStateResourceList resourceList);
-
-		[Static][New]
-		[Export ("temporaryStateWithCommandBuffer:resourceList:")]
-		MPSRnnMatrixTrainingState CreateTemporaryState (IMTLCommandBuffer commandBuffer, MPSStateResourceList resourceList);
-
-		[Export ("initWithResources:")]
-		IntPtr Constructor ([NullAllowed] IMTLResource [] resources);
-	}
-
-	[TV (12,0), Mac (10,14, onlyOn64: true), iOS (12,0)]
-	[BaseType (typeof (MPSKernel), Name = "MPSRNNMatrixTrainingLayer")]
-	[DisableDefaultCtor]
-	interface MPSRnnMatrixTrainingLayer {
-
-		[Export ("inputFeatureChannels")]
-		nuint InputFeatureChannels { get; }
-
-		[Export ("outputFeatureChannels")]
-		nuint OutputFeatureChannels { get; }
-
-		[Export ("storeAllIntermediateStates")]
-		bool StoreAllIntermediateStates { get; set; }
-
-		[Export ("recurrentOutputIsTemporary")]
-		bool RecurrentOutputIsTemporary { get; set; }
-
-		[Export ("trainingStateIsTemporary")]
-		bool TrainingStateIsTemporary { get; set; }
-
-		[Export ("accumulateWeightGradients")]
-		bool AccumulateWeightGradients { get; set; }
-
-		[Export ("initWithDevice:rnnDescriptor:trainableWeights:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (IMTLDevice device, MPSRnnDescriptor rnnDescriptor, NSMutableArray<MPSMatrix> trainableWeights);
-
-		[Export ("createWeightGradientMatrices:dataType:")]
-		void CreateWeightGradientMatrices (NSMutableArray<MPSMatrix> matrices, MPSDataType dataType);
-
-		[Export ("createTemporaryWeightGradientMatrices:dataType:commandBuffer:")]
-		void CreateTemporaryWeightGradientMatrices (NSMutableArray<MPSMatrix> matrices, MPSDataType dataType, IMTLCommandBuffer commandBuffer);
-
-		[Export ("createWeightMatrices:")]
-		void CreateWeightMatrices (NSMutableArray<MPSMatrix> matrices);
-
-		[Export ("encodeCopyWeightsToCommandBuffer:weights:matrixId:matrix:copyFromWeightsToMatrix:matrixOffset:")]
-		void EncodeCopyWeights (IMTLCommandBuffer commandBuffer, MPSMatrix[] weights, MPSRnnMatrixId matrixId, MPSMatrix matrix, bool copyFromWeightsToMatrix, MTLOrigin matrixOffset);
-
-		[Export ("encodeForwardSequenceToCommandBuffer:sourceMatrices:sourceOffsets:destinationMatrices:destinationOffsets:trainingStates:recurrentInputState:recurrentOutputStates:weights:")]
-		void EncodeForwardSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] sourceMatrices, [NullAllowed] IntPtr sourceOffsets, MPSMatrix[] destinationMatrices, [NullAllowed] IntPtr destinationOffsets, NSMutableArray<MPSRnnMatrixTrainingState> trainingStates, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates, MPSMatrix[] weights);
-
-		[Export ("encodeForwardSequenceToCommandBuffer:sourceMatrices:destinationMatrices:trainingStates:weights:")]
-		void EncodeForwardSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] sourceMatrices, MPSMatrix[] destinationMatrices, NSMutableArray<MPSRnnMatrixTrainingState> trainingStates, MPSMatrix[] weights);
-
-		[Export ("encodeGradientSequenceToCommandBuffer:forwardSources:forwardSourceOffsets:sourceGradients:sourceGradientOffsets:destinationGradients:destinationOffsets:weightGradients:trainingStates:recurrentInputState:recurrentOutputStates:weights:")]
-		void EncodeGradientSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] forwardSources, [NullAllowed] IntPtr forwardSourceOffsets, MPSMatrix[] sourceGradients, [NullAllowed] IntPtr sourceGradientOffsets, [NullAllowed] MPSMatrix[] destinationGradients, [NullAllowed] IntPtr destinationOffsets, [NullAllowed] MPSMatrix[] weightGradients, MPSRnnMatrixTrainingState[] trainingStates, [NullAllowed] MPSRnnRecurrentMatrixState recurrentInputState, [NullAllowed] NSMutableArray<MPSRnnRecurrentMatrixState> recurrentOutputStates, MPSMatrix[] weights);
-
-		[Export ("encodeGradientSequenceToCommandBuffer:forwardSources:sourceGradients:destinationGradients:weightGradients:trainingStates:weights:")]
-		void EncodeGradientSequence (IMTLCommandBuffer commandBuffer, MPSMatrix[] forwardSources, MPSMatrix[] sourceGradients, [NullAllowed] MPSMatrix[] destinationGradients, [NullAllowed] MPSMatrix[] weightGradients, MPSRnnMatrixTrainingState[] trainingStates, MPSMatrix[] weights);
-
-		[Export ("initWithCoder:device:")]
-		[DesignatedInitializer]
-		IntPtr Constructor (NSCoder decoder, IMTLDevice device);
+		NativeHandle Constructor (NSCoder aDecoder, IMTLDevice device);
 
 		[Export ("copyWithZone:device:")]
 		[return: Release]
-		MPSRnnMatrixTrainingLayer Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+		MPSTemporalAA Copy ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		[Export ("encodeWithCoder:")]
+		void Encode (NSCoder coder);
+
+		[Export ("encodeToCommandBuffer:sourceTexture:previousTexture:destinationTexture:motionVectorTexture:depthTexture:")]
+		void Encode (IMTLCommandBuffer commandBuffer, IMTLTexture sourceTexture, IMTLTexture previousTexture, IMTLTexture destinationTexture, [NullAllowed] IMTLTexture motionVectorTexture, [NullAllowed] IMTLTexture depthTexture);
+	}
+
+	/// <summary>Base class for objects that build Metal Shading Language functions.</summary>
+	[iOS (27, 0), TV (27, 0), Mac (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (NSObject))]
+	[DisableDefaultCtor]
+	interface MPSFunction : NSCopying, NSSecureCoding {
+		/// <summary>Gets a value that indicates whether the type supports secure coding.</summary>
+		[Static]
+		[Export ("supportsSecureCoding")]
+		bool SupportsSecureCoding { get; }
+
+		/// <summary>Creates a copy of the function for the specified Metal device.</summary>
+		/// <param name="zone">The allocation zone, or <see langword="null" /> to use the default zone.</param>
+		/// <param name="device">The device for the copy, or <see langword="null" /> to use the current device.</param>
+		/// <returns>A copy of the function.</returns>
+		[Export ("copyWithZone:device:")]
+		[return: Release]
+		MPSFunction CopyWithZone ([NullAllowed] NSZone zone, [NullAllowed] IMTLDevice device);
+
+		/// <summary>Gets the Metal Shading Language function name.</summary>
+		[Export ("name", ArgumentSemantic.Retain)]
+		string Name { get; }
+
+		/// <summary>Gets the Metal device where the function runs.</summary>
+		[Export ("device", ArgumentSemantic.Retain)]
+		IMTLDevice Device { get; }
+
+		/// <summary>Gets the compiled Metal function, or <see langword="null" /> if compilation failed.</summary>
+		[NullAllowed]
+		[Export ("function", ArgumentSemantic.Retain)]
+		IMTLFunction Function { get; }
+
+		/// <summary>Gets the error produced while building the function, or <see langword="null" /> if no error occurred.</summary>
+		[NullAllowed]
+		[Export ("error", ArgumentSemantic.Retain)]
+		NSError Error { get; }
+
+		/// <summary>Gets a source-level declaration of the generated function prototype.</summary>
+		[Export ("functionPrototype")]
+		string FunctionPrototype { get; }
+	}
+
+	/// <summary>Builds an inline Metal function that converts colors between color spaces.</summary>
+	[iOS (27, 0), TV (27, 0), Mac (27, 0), MacCatalyst (27, 0)]
+	[BaseType (typeof (MPSFunction))]
+	[DisableDefaultCtor]
+	interface MPSFColorConversion {
+		[Internal]
+		[Export ("initWithDevice:startColorSpace:endColorSpace:functionName:sourceRange:options:error:")]
+		NativeHandle _InitWithDevice (IMTLDevice device, CGColorSpace startColorSpace, CGColorSpace endColorSpace, string functionName, [NullAllowed] /* const MPSFunctions_AABB* */ IntPtr sourceRange, MPSFColorConversionOptions options, [NullAllowed] out NSError error);
+
+		[DesignatedInitializer]
+		[Internal]
+		[Export ("initWithDevice:conversion:functionName:sourceRange:options:error:")]
+		NativeHandle _InitWithDevice (IMTLDevice device, [NullAllowed] CGColorConversionInfo conversion, string functionName, [NullAllowed] /* const MPSFunctions_AABB* */ IntPtr sourceRange, MPSFColorConversionOptions options, [NullAllowed] out NSError error);
+
+		/// <summary>Gets the options used to build the conversion.</summary>
+		[Export ("options")]
+		MPSFColorConversionOptions Options { get; }
+
+		/// <summary>Gets the number of color channels consumed by the conversion.</summary>
+		[Export ("inputColorChannels")]
+		nuint InputColorChannels { get; }
+
+		/// <summary>Gets the number of color channels produced by the conversion.</summary>
+		[Export ("outputColorChannels")]
+		nuint OutputColorChannels { get; }
+
+		/// <summary>Estimates the output color gamut for the specified input range.</summary>
+		/// <param name="inputRange">The input color gamut.</param>
+		/// <returns>The estimated output color gamut.</returns>
+		[Export ("effectiveRange:")]
+		[MarshalDirective (NativePrefix = "xamarin_simd__", Library = "__Internal")]
+		MPSFunctionsAxisAlignedBoundingBox GetEffectiveRange (MPSFunctionsAxisAlignedBoundingBox inputRange);
+
+		/// <summary>Gets the descriptor for the first one-dimensional lookup texture, if one is required.</summary>
+		[NullAllowed]
+		[Export ("descriptorFor1DTexture1")]
+		MTLTextureDescriptor DescriptorFor1DTexture1 { get; }
+
+		/// <summary>Gets the descriptor for the first three-dimensional lookup texture, if one is required.</summary>
+		[NullAllowed]
+		[Export ("descriptorFor3DTexture1")]
+		MTLTextureDescriptor DescriptorFor3DTexture1 { get; }
+
+		/// <summary>Gets the descriptor for the second three-dimensional lookup texture, if one is required.</summary>
+		[NullAllowed]
+		[Export ("descriptorFor3DTexture2")]
+		MTLTextureDescriptor DescriptorFor3DTexture2 { get; }
+
+		/// <summary>Initializes the first one-dimensional lookup texture.</summary>
+		/// <param name="texture">The texture to initialize, or <see langword="null" /> if no texture is available.</param>
+		[Export ("initialize1DTexture1:")]
+		void Initialize1DTexture1 ([NullAllowed] IMTLTexture texture);
+
+		/// <summary>Initializes the first three-dimensional lookup texture.</summary>
+		/// <param name="texture">The texture to initialize, or <see langword="null" /> if no texture is available.</param>
+		[Export ("initialize3DTexture1:")]
+		void Initialize3DTexture1 ([NullAllowed] IMTLTexture texture);
+
+		/// <summary>Initializes the second three-dimensional lookup texture.</summary>
+		/// <param name="texture">The texture to initialize, or <see langword="null" /> if no texture is available.</param>
+		[Export ("initialize3DTexture2:")]
+		void Initialize3DTexture2 ([NullAllowed] IMTLTexture texture);
 	}
 }
-#endif

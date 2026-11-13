@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for AUViewController
 //
 // Authors:
@@ -7,25 +7,15 @@
 // Copyright 2016 Xamarin Inc. All rights reserved.
 //
 
-#if !__WATCHOS__ && !__TVOS__
+#if !__TVOS__
 
-using System;
-using System.Threading;
-#if XAMCORE_2_0
-using Foundation;
 using CoreAudioKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.CoreAudioKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreAudioKit {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
-	public class AUViewControllerTest
-	{
+	public class AUViewControllerTest {
 		[SetUp]
 		public void MinimumSdkCheck ()
 		{
@@ -46,4 +36,4 @@ namespace MonoTouchFixtures.CoreAudioKit {
 	}
 }
 
-#endif // !__WATCHOS__ && !__TVOS__
+#endif // !__TVOS__

@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for EKUIBundle
 //
 // Authors:
@@ -7,12 +7,9 @@
 // Copyright 2017 Xamarin Inc. All rights reserved.
 //
 
-#if XAMCORE_2_0 && !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if HAS_EVENTKITUI
 
-using System;
 using EventKitUI;
-using Foundation;
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.EventKitUI {
 	[TestFixture]
@@ -26,9 +23,9 @@ namespace MonoTouchFixtures.EventKitUI {
 				Assert.Ignore ("Ignoring tests: Requires iOS11+");
 
 			var bundle = EKUIBundle.UIBundle;
-			Assert.NotNull (bundle, "Was Null");
-			Assert.AreEqual ("com.apple.eventkitui", bundle.BundleIdentifier, "BundleIdentifier");
+			Assert.That (bundle, Is.Not.Null, "Was Null");
+			Assert.That (bundle.BundleIdentifier, Is.EqualTo ("com.apple.eventkitui"), "BundleIdentifier");
 		}
 	}
 }
-#endif
+#endif // HAS_EVENTKITUI

@@ -1,47 +1,112 @@
-using ObjCRuntime;
-using Foundation;
+
+#nullable enable
 
 namespace AVKit {
 
-#if !XAMCORE_3_0 || MONOMAC
+#if MONOMAC
 	// this enum only exists for OSX (not iOS)
+	/// <summary>Determines which user interface elements are visible in the AVPlayerView</summary>
 	[Native]
 	public enum AVPlayerViewControlsStyle : long {
+		/// <summary>Do not show any controls.</summary>
 		None,
+		/// <summary>Use inline controls.</summary>
 		Inline,
+		/// <summary>Use floating cnotrols.</summary>
 		Floating,
+		/// <summary>Use minimal controls.</summary>
 		Minimal,
-		Default = Inline 
-	}
-#endif
-
-#if MONOMAC
-	[Mac (10,10)]
-	[Native]
-	public enum AVCaptureViewControlsStyle : long {
-		Inline,
-		Floating,
-		InlineDeviceSelection,
+		/// <summary>Use the default style (Inline)</summary>
 		Default = Inline,
 	}
-
-	[Mac (10,9)]
-	[Native]
-	public enum AVPlayerViewTrimResult : long {
-		OKButton,
-		CancelButton
-	}
 #endif
 
-#if !TVOS && (!MONOMAC || !XAMCORE_4_0)
-	[iOS (9,0)]
+	// The version of the AVError.h header file in the tvOS SDK is much newer than in the iOS SDKs,
+	// (copyright 2016 vs 2019), so this is reflecting the tvOS SDK.
+	/// <summary>Enumeration of error states that can occur while using AVKit.</summary>
+	[NoMac]
+	[MacCatalyst (13, 1)]
 	[Native]
 	[ErrorDomain ("AVKitErrorDomain")]
 	public enum AVKitError : long {
+		/// <summary>No error occurred.</summary>
 		None = 0,
+		/// <summary>An unknown error occurred.</summary>
 		Unknown = -1000,
-		PictureInPictureStartFailed = -1001
+		/// <summary>Picture in Picture failed to start.</summary>
+		PictureInPictureStartFailed = -1001,
+		ContentRatingUnknown = -1100,
+		ContentDisallowedByPasscode = -1101,
+		ContentDisallowedByProfile = -1102,
+		RecordingFailed = -1200,
 	}
-#endif
 
-}	
+	[NoTV]
+	[NoMac]
+	[MacCatalyst (13, 1)]
+	[Native]
+	public enum AVAudioSessionRouteSelection : long {
+		None = 0,
+		Local = 1,
+		External = 2,
+	}
+
+	[NoiOS]
+	[NoTV]
+	[NoMacCatalyst]
+	[Native]
+	public enum AVRoutePickerViewButtonState : long {
+		Normal,
+		NormalHighlighted,
+		Active,
+		ActiveHighlighted,
+	}
+
+	[NoTV, Mac (26, 4), iOS (26, 4), MacCatalyst (26, 4)]
+	[Native]
+	public enum AVLegibleMediaOptionsMenuStateChangeReason : long {
+		None = 0,
+		LanguageMismatch,
+	}
+
+	[Flags]
+	[NoTV, Mac (26, 4), iOS (26, 4), MacCatalyst (26, 4)]
+	[Native]
+	public enum AVLegibleMediaOptionsMenuContents : long {
+		Legible = 1L << 0,
+		CaptionAppearance = 1L << 1,
+		All = Legible | CaptionAppearance,
+	}
+
+	[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+	[Native]
+	public enum AVPlaybackUserInterfacePlaybackState : long {
+		Normal = 0,
+		Scanning,
+		Scrubbing,
+	}
+
+	[Flags]
+	[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+	[Native]
+	public enum AVPlaybackUserInterfaceSeekCapabilities : ulong {
+		None = 0,
+		ScanForward = 1uL << 0,
+		ScanBackward = 1uL << 1,
+		Seek = 1uL << 2,
+	}
+
+	[NoTV, NoMac, iOS (27, 0), MacCatalyst (27, 0)]
+	[Native]
+	public enum AVPlaybackUserInterfaceTimelineSegmentType : long {
+		Primary = 0,
+		Advertisement,
+		Bonus,
+		Credits,
+		Intro,
+		Recap,
+		Trailer,
+		Other,
+	}
+
+}

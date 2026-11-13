@@ -1,4 +1,4 @@
-﻿//
+//
 // ILReader to parse the byte array provided by MethodBase.GetMethodBody ().GetILAsByteArray () into better-looking IL instructions.
 //
 // Authors:
@@ -9,21 +9,17 @@
 
 // Adapted code from here: https://blogs.msdn.microsoft.com/haibo_luo/2005/10/04/read-il-from-methodbody/
 
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Linker.Shared
-{
-	public class ILInstruction
-	{
+namespace Linker.Shared {
+	public class ILInstruction {
 		public MethodBase Method;
 		public OpCode OpCode;
 		public int Offset;
-		public object Operand;
+		public object? Operand;
 
-		public ILInstruction (MethodBase method, int offset, OpCode opcode, object operand = null)
+		public ILInstruction (MethodBase method, int offset, OpCode opcode, object? operand = null)
 		{
 			this.Method = method;
 			this.OpCode = opcode;
@@ -34,14 +30,13 @@ namespace Linker.Shared
 		public override string ToString ()
 		{
 			var methodOperand = Operand as MethodBase;
-			if (methodOperand != null)
-				return $"IL_{Offset:0000} {OpCode} {methodOperand.DeclaringType.FullName}.{methodOperand.Name}";
+			if (methodOperand is not null)
+				return $"IL_{Offset:0000} {OpCode} {methodOperand.DeclaringType?.FullName}.{methodOperand.Name}";
 			return $"IL_{Offset:0000} {OpCode} {(Operand is MethodBase ? ((MethodBase) Operand).Name : Operand?.ToString ())}";
 		}
 	}
 
-	public class ILReader : IEnumerable<ILInstruction>
-	{
+	public class ILReader : IEnumerable<ILInstruction> {
 		List<ILInstruction> instructions;
 
 		static OpCode [] oneByteOpcodes = new OpCode [0x100];
@@ -49,7 +44,7 @@ namespace Linker.Shared
 		static ILReader ()
 		{
 			foreach (var fi in typeof (OpCodes).GetFields (BindingFlags.Public | BindingFlags.Static)) {
-				var opCode = (OpCode) fi.GetValue (null);
+				var opCode = (OpCode) fi.GetValue (null)!;
 				var value = (ushort) opCode.Value;
 				if (value < 0x100)
 					oneByteOpcodes [value] = opCode;
@@ -79,10 +74,10 @@ namespace Linker.Shared
 			var position = 0;
 
 			var body = method.GetMethodBody ();
-			if (body == null)
+			if (body is null)
 				return rv;
 
-			var bytes = body.GetILAsByteArray ();
+			var bytes = body.GetILAsByteArray ()!;
 			while (position < bytes.Length)
 				rv.Add (ReadInstruction (method, bytes, ref position));
 
@@ -164,7 +159,7 @@ namespace Linker.Shared
 			}
 		}
 
-		static byte ReadByte (byte[] bytes, ref int position)
+		static byte ReadByte (byte [] bytes, ref int position)
 		{
 			return bytes [position++];
 		}

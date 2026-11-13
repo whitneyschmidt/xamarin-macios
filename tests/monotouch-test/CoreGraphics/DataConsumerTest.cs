@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGDataConsumer
 //
 // Authors:
@@ -7,19 +7,7 @@
 // Copyright 2015 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-#if XAMCORE_2_0
-using Foundation;
 using CoreGraphics;
-using ObjCRuntime;
-#else
-using MonoTouch;
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.CoreGraphics {
 

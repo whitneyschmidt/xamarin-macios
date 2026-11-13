@@ -27,20 +27,27 @@
 // NSString keys to an enum value for better API. An 'Unknown' value
 // exists on these enums for when a key cannot be mapped.
 
-using Foundation;
+#if !__MACCATALYST__
 
-namespace AppKit
-{
-	public enum NSFontCollectionAction
-	{
+#nullable enable
+
+namespace AppKit {
+	/// <summary>Specifies the action that occurred on a font collection.</summary>
+	public enum NSFontCollectionAction {
+		/// <summary>An unknown action.</summary>
 		Unknown,
+		/// <summary>The font collection was shown.</summary>
 		Shown,
+		/// <summary>The font collection was hidden.</summary>
 		Hidden,
-		Renamed
+		/// <summary>The font collection was renamed.</summary>
+		Renamed,
 	}
 
-	public partial class NSFontCollectionChangedEventArgs
-	{
+	/// <summary>Provides data for the font collection changed notification.</summary>
+	public partial class NSFontCollectionChangedEventArgs {
+		/// <summary>Gets the action that triggered the font collection change.</summary>
+		/// <value>The action that occurred on the font collection.</value>
 		public NSFontCollectionAction Action {
 			get {
 				if (_Action == NSFontCollection.ActionWasShown) {
@@ -55,20 +62,30 @@ namespace AppKit
 			}
 		}
 
+		/// <summary>Gets the visibility of the font collection after the change.</summary>
+		/// <value>The visibility scope flags for the font collection.</value>
 		public NSFontCollectionVisibility Visibility {
-			get { return (NSFontCollectionVisibility)(int)_Visibility; }
+			get { return (NSFontCollectionVisibility) (int) _Visibility; }
 		}
 	}
 
-	public enum NSPopoverCloseReason
-	{
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	public enum NSPopoverCloseReason {
+		/// <summary>To be added.</summary>
 		Unknown,
+		/// <summary>To be added.</summary>
 		Standard,
-		DetachToWindow
+		/// <summary>To be added.</summary>
+		DetachToWindow,
 	}
 
-	public partial class NSPopoverCloseEventArgs
-	{
+	/// <summary>To be added.</summary>
+	///     <remarks>To be added.</remarks>
+	public partial class NSPopoverCloseEventArgs {
+		/// <summary>To be added.</summary>
+		///         <value>To be added.</value>
+		///         <remarks>To be added.</remarks>
 		public NSPopoverCloseReason Reason {
 			get {
 				if (_Reason == NSPopover.CloseReasonStandard) {
@@ -82,3 +99,4 @@ namespace AppKit
 		}
 	}
 }
+#endif // !__MACCATALYST__

@@ -4,9 +4,8 @@
 
 #include "rename.h"
 
-#if !TARGET_OS_WATCH
 #import <ModelIO/ModelIO.h>
-#endif
+#import <SceneKit/SceneKit.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,19 +14,49 @@ extern "C" {
 int theUltimateAnswer ();
 void useZLib ();
 
+__attribute__ ((used)) unsigned long long x_native_field = 0xAABBCCDDEEFF8899;
+
+// NS_ASSUME_NONNULL_BEGIN doesn't work
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
+
 typedef void (^x_block_callback)();
 void x_call_block (x_block_callback block);
+void* x_call_func_3 (void* (*fptr)(void*, void*, void*), void* p1, void* p2, void* p3);
+int x_get_nsobject_data_with_association_lock (id object, void **data);
+
+// Helper for the issue #25861 design work: a C callback invoked from
+// InitSurfacesSelfToManaged's 'init' with the 'self' pointer, used to verify that
+// managed code can resolve 'self' to the wrapper being constructed while 'init'
+// is still executing (see InitSurfacesSelfToManaged below).
+typedef void (*init_self_callback) (void *self_ptr);
+void x_set_init_self_callback (init_self_callback callback);
+
+// Helper for the issue #25861 deterministic test: a C callback invoked from
+// ReuseSlotClassA's 'init' (after it has freed the alloc'd instance) with the freed
+// address, so managed code can allocate a ReuseSlotClassB that deterministically
+// reuses that address (see ReuseSlotClassA/ReuseSlotClassB below).
+typedef void (*reuse_alloc_callback) (void *original_ptr);
+void x_set_reuse_alloc_callback (reuse_alloc_callback callback);
 
 void x_get_matrix_float2x2 (id self, const char *sel, float* r0c0, float* r0c1, float* r1c0, float* r1c1);
 void x_get_matrix_float3x3 (id self, const char *sel, float* r0c0, float* r0c1, float* r0c2, float* r1c0, float* r1c1, float* r1c2, float* r2c0, float* r2c1, float* r2c2);
 void x_get_matrix_float4x4 (id self, const char *sel, float* r0c0, float* r0c1, float* r0c2, float* r0c3, float* r1c0, float* r1c1, float* r1c2, float* r1c3, float* r2c0, float* r2c1, float* r2c2, float* r2c3, float* r3c0, float* r3c1, float* r3c2, float* r3c3);
 void x_get_matrix_float4x3 (id self, const char *sel, float* r0c0, float* r0c1, float* r0c2, float* r0c3, float* r1c0, float* r1c1, float* r1c2, float* r1c3, float* r2c0, float* r2c1, float* r2c2, float* r2c3);
 
-#if !TARGET_OS_WATCH
 void x_mdltransformcomponent_get_local_transform (id<MDLTransformComponent> self, NSTimeInterval time, float* r0c0, float* r0c1, float* r0c2, float* r0c3, float* r1c0, float* r1c1, float* r1c2, float* r1c3, float* r2c0, float* r2c1, float* r2c2, float* r2c3, float* r3c0, float* r3c1, float* r3c2, float* r3c3);
 void x_mdltransform_create_global_transform (MDLObject *object, NSTimeInterval time, float* r0c0, float* r0c1, float* r0c2, float* r0c3, float* r1c0, float* r1c1, float* r1c2, float* r1c3, float* r2c0, float* r2c1, float* r2c2, float* r2c3, float* r3c0, float* r3c1, float* r3c2, float* r3c3);
 void x_mdltransform_get_rotation_matrix (MDLTransform *self, NSTimeInterval time, float* r0c0, float* r0c1, float* r0c2, float* r0c3, float* r1c0, float* r1c1, float* r1c2, float* r1c3, float* r2c0, float* r2c1, float* r2c2, float* r2c3, float* r3c0, float* r3c1, float* r3c2, float* r3c3);
+
+#if TARGET_OS_OSX
+#define pfloat CGFloat
+#else
+#define pfloat float
 #endif
+
+SCNMatrix4 x_SCNMatrix4MakeTranslation (pfloat tx, pfloat ty, pfloat tz);
+SCNMatrix4 x_SCNMatrix4MakeScale (pfloat tx, pfloat ty, pfloat tz);
+SCNMatrix4 x_SCNMatrix4Translate (SCNMatrix4 m, pfloat tx, pfloat ty, pfloat tz);
 
 /*
  * Various structs used in ObjCRegistrarTest
@@ -75,9 +104,29 @@ typedef unsigned int (^RegistrarTestBlock) (unsigned int magic);
 	@property char Pc4;
 	@property char Pc5;
 
+	@property (nonatomic, retain) NSObject* someObject;
+	@property (nonatomic, retain) NSArray* someArray;
+
+	@property void* VoidArg1;
+	@property void* VoidArg2;
+	@property void* VoidArg3;
+	@property void* VoidArg4;
+	@property void* VoidArg5;
+	@property void* VoidArg6;
+	@property void* VoidArg7;
+	@property void* VoidArg8;
+	@property void* VoidArg9;
+	@property void* VoidArg10;
+	@property void* VoidArg11;
+	@property void* VoidArg12;
+
+	@property float FloatArg1;
+	@property double DoubleArg1;
+
 #include "libtest.properties.h"
 
 	-(void) V;
+	+(void) staticV;
 
 	-(float) F;
 	-(double) D;
@@ -152,6 +201,19 @@ typedef unsigned int (^RegistrarTestBlock) (unsigned int magic);
 @protocol ObjCProtocolTest
 @required
 	-(void) idAsIntPtr: (id)p1;
+
+@optional
+	-(void) methodEncodings:
+		(inout NSObject **) obj1P
+		obj2: (in NSObject **) obj2P
+		obj3: (out NSObject **) obj3P
+		obj4: (const NSObject **) obj4P
+		obj5: (bycopy NSObject **) obj5P
+		obj6: (byref NSObject **) obj6P
+		obj7: (oneway NSObject **) obj7P
+		;
+
+	-(void) setPtrPropertyCGRect: (void *) p1 p2:(void *)p2 p3:(void *)p3 p4:(void *)p4 p5:(CGRect*)p5 p6:(void *)p6;
 @end
 
 // We need this class so that the ObjCProtocolTest protocol
@@ -197,7 +259,9 @@ typedef void (^simple_callback)();
 typedef void (^innerBlock) (int magic_number);
 typedef void (^outerBlock) (innerBlock callback);
 +(void) callAssertMainThreadBlockRelease: (outerBlock) completionHandler;
++(void) callAssertMainThreadBlockReleaseQOS: (outerBlock) completionHandler;
 -(void) callAssertMainThreadBlockReleaseCallback;
+-(void) callAssertMainThreadBlockReleaseCallbackQOS;
 -(void) assertMainThreadBlockReleaseCallback: (innerBlock) completionHandler;
 
 -(void) testFreedBlocks;
@@ -208,6 +272,8 @@ typedef void (^outerBlock) (innerBlock callback);
 
 +(void) setProtocolWithBlockProperties: (id<ProtocolWithBlockProperties>) obj required: (bool) required instance: (bool) instance;
 +(int) calledBlockCount;
+
+-(bool) nullableCallback: (void (^ __nullable)(int32_t magic_number))completionHandler;
 @end
 
 @interface FreedNotifier : NSObject {
@@ -234,7 +300,7 @@ typedef void (^outerBlock) (innerBlock callback);
 	-(void) testNSObject:      (int) action a:(id *)          refValue b:(id *)          outValue;
 	-(void) testNSValue:       (int) action a:(NSValue **)    refValue b:(NSValue **)    outValue;
 	-(void) testString:        (int) action a:(NSString **)   refValue b:(NSString **)   outValue;
-	-(void) testInt:           (int) action a:(int32_t *)     refValue b:(int32_t *)     outValue;
+	-(void) testInt:           (int) action a:(int32_t *)     refValue b:(int32_t *)     outValue c:(int32_t *) pointerValue;
 	-(void) testSelector:      (int) action a:(SEL *)         refValue b:(SEL *)         outValue;
 	-(void) testClass:         (int) action a:(Class *)       refValue b:(Class *)       outValue;
 
@@ -247,6 +313,142 @@ typedef void (^outerBlock) (innerBlock callback);
 	// Class isn't an NSObject either, but it quacks like one, so it's possible to put them in NSArrays.
 	// And Apple does (see UIAppearance appearanceWhenContainedInInstancesOfClasses for an example).
 @end
+
+@protocol ConstructorProtocol
+@required
+	-(id) initRequired: (NSString *) p0;
+@optional
+	-(id) initOptional: (NSDate *) p0;
+@end
+
+@interface TypeProvidingProtocolConstructors : NSObject <ConstructorProtocol> {
+}
+	-(id) initRequired: (NSString *) p0;
+	-(id) initOptional: (NSDate *) p0;
+
+@property (copy) NSString* stringValue;
+@property (copy) NSDate* dateValue;
+
+@end
+
+// VeryGeneric stuff
+
+@protocol VeryGenericElementProtocol <NSObject>
+@property (retain, readonly) NSDate * when;
+@end
+
+@protocol VeryGenericElementProtocol1 <VeryGenericElementProtocol>
+@property (readonly) NSInteger number;
+@end
+
+@protocol VeryGenericElementProtocol2 <VeryGenericElementProtocol>
+@property (retain, readonly) NSString * animal;
+@end
+
+@interface VeryGenericCollection<Key: NSString*, __covariant Element: id<VeryGenericElementProtocol>> : NSObject <NSFastEnumeration>
+@property (retain) Element element;
+@property () NSUInteger count;
+- (Element _Nullable)getElement:(Key)alias;
+- (NSEnumerator<Element> *)elementEnumerator;
+- (void) add: (Element) value;
+@end
+
+@protocol VeryGenericConsumerProtocol <NSObject>
+@property (retain, readonly) VeryGenericCollection<NSString *, id<VeryGenericElementProtocol1>> *first;
+@property (retain, readonly) VeryGenericCollection<NSString *, id<VeryGenericElementProtocol2>> *second;
+@end
+
+@interface VeryGenericFactory : NSObject {
+}
+	+(id<VeryGenericConsumerProtocol>) getConsumer;
+@end
+
+@interface WeakReferencedObject : NSObject {
+}
+-(int) doSomething;
+@end
+
+@interface WeakReferenceHolder : NSObject {
+}
+-(void) addObject: (WeakReferencedObject *) obj;
+-(void) callDoSomething: (int*) nilObjectCount nonNilObjectCount: (int *) nonNilObjectCount gotExpectedResponse: (int *) gotExpectedResponse gotUnexpectedResponse: (int *) gotUnexpectedResponse gotFinalizedResponse: (int *) gotFinalizedResponse;
+
+@property (retain) NSPointerArray* array;
+@end
+
+@interface ClassWithNoDefaultCtor : NSObject {
+}
+@end
+
+@class Hitchhiker;
+@protocol HitchhikerDelegate <NSObject>
+@required
+	-(void) byeByeDolphins: (Hitchhiker *) sender;
+@optional
+	-(void) buildIntergalacticHighway: (Hitchhiker *) sender;
+	-(void) hitchhikeWithVogons: (Hitchhiker *) sender;
+@end
+
+@interface Hitchhiker : NSObject {
+}
+@property (retain) id<HitchhikerDelegate> delegate;
+-(void) destroyEarth;
+-(void) buildHighway;
+@end
+
+// Helper for the issue #25861 design work: a native class whose 'init' calls a
+// method that can be overridden in managed code. Used to verify that an overridden
+// managed method is invoked (on the correct instance) while 'init' is still
+// executing.
+@interface InitCallsVirtualMethod : NSObject {
+}
+-(instancetype) init;
+-(void) virtualMethodCalledDuringInit: (int) value;
+@end
+
+// Helper for the issue #25861 design work: a directly-bound native class (no managed
+// subclass, so no gchandle ivar) whose 'init' synchronously surfaces 'self' to
+// managed code via a C callback. Used to verify that managed code resolves 'self'
+// to the wrapper being constructed (and doesn't create a duplicate wrapper) while
+// 'init' is still executing.
+@interface InitSurfacesSelfToManaged : NSObject {
+}
+-(instancetype) init;
+@end
+
+// Helpers for a deterministic reproduction of the alloc/init handle-reuse race in
+// issue #25861 (and #9478). ReuseSlotClassA's 'init' frees its own instance and forces
+// the next allocation to reuse that exact address, so a ReuseSlotClassB allocated from
+// managed code during that 'init' deterministically lands on the freed address. Both are
+// directly-bound native classes (no managed subclass), so their alloc/dealloc aren't
+// managed by the registrar and this address-reuse trick works. This reproduces the exact
+// object_map clobber of issue #25861: while ReuseSlotClassA is executing its 'init', its
+// (still-registered) alloc address is reused by a ReuseSlotClassB; when ReuseSlotClassA
+// then rebinds its handle to the value 'init' returns, a non-ownership-aware unregister
+// would remove the ReuseSlotClassB that now occupies that address from the object_map.
+@interface ReuseSlotClassA : NSObject {
+}
+-(instancetype) init;
+@end
+
+@interface ReuseSlotClassB : NSObject {
+}
+@end
+
+// Helper for issue #23679: a native class whose 'init' fails by raising an Objective-C
+// exception. Constructing the managed wrapper throws; a later GC must not crash.
+@interface InitReturnsNilClass : NSObject {
+}
+-(instancetype) init;
+@end
+
+@interface ThreadExitObject : NSObject
++ (BOOL) releaseOnThreadExit: (NSObject *) object;
++ (int) releasedObjectCount;
+@end
+
+#pragma clang diagnostic pop
+// NS_ASSUME_NONNULL_END
 
 #ifdef __cplusplus
 } /* extern "C" */

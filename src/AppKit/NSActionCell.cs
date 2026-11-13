@@ -25,16 +25,18 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using ObjCRuntime;
-using Foundation;
+
+#if !__MACCATALYST__
+
+#nullable enable
 
 namespace AppKit {
 
 	public partial class NSActionCell {
-		NSObject target;
-		Selector action;
+		NSObject? target;
+		Selector? action;
 
+		/// <summary>Occurs when the cell is activated by the user.</summary>
 		public event EventHandler Activated {
 			add {
 				target = ActionDispatcher.SetupAction (Target, value);
@@ -54,3 +56,4 @@ namespace AppKit {
 
 	}
 }
+#endif // !__MACCATALYST__

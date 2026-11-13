@@ -1,11 +1,13 @@
-using System;
-using System.Runtime.InteropServices;
-using ObjCRuntime;
+#nullable enable
 
 namespace StoreKit {
 
 	partial class SKReceiptRefreshRequest {
-		[iOS (7,1), Mac (10,14, onlyOn64: true)]
+		/// <summary>Terminates the application if the receipt is invalid.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("macos")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		[DllImport (Constants.StoreKitLibrary, EntryPoint = "SKTerminateForInvalidReceipt")]
 		static extern public void TerminateForInvalidReceipt ();
 	}

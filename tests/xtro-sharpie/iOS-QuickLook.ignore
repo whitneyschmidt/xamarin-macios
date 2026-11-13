@@ -1,2 +1,0 @@
-## fixed for XAMCORE_4_0
-!incorrect-protocol-member! QLPreviewItem::previewItemTitle is OPTIONAL and should NOT be abstract

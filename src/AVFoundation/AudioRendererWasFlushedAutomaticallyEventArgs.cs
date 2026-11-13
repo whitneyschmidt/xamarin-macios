@@ -1,17 +1,22 @@
-#if !WATCH
-using Foundation;
 using CoreMedia;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace AVFoundation {
-
-	[TV (11, 0), NoWatch, Mac (10, 13), iOS (11, 0)]
+	/// <summary>Provides data for the  event.</summary>
+	///     <remarks>
+	///     </remarks>
+	[SupportedOSPlatform ("tvos")]
+	[SupportedOSPlatform ("macos")]
+	[SupportedOSPlatform ("ios")]
+	[SupportedOSPlatform ("maccatalyst")]
 	public partial class AudioRendererWasFlushedAutomaticallyEventArgs {
-		public CMTime AudioRendererFlushTime { 
+		/// <summary>Gets the time at which the audio renderer was flushed.</summary>
+		/// <value>The presentation time at which the flush occurred.</value>
+		public CMTime AudioRendererFlushTime {
 			get {
 				return _AudioRendererFlushTime.CMTimeValue;
 			}
 		}
 	}
 }
-#endif

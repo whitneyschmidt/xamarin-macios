@@ -19,51 +19,20 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System;
-using System.Runtime.InteropServices;
+
+#nullable enable
 
 namespace Foundation {
-	
+
 	public partial class NSRunLoop {
-#if !XAMCORE_2_0
-		static NSString GetRealMode (string mode)
-		{
-			if (mode == NSDefaultRunLoopMode)
-				return NSDefaultRunLoopMode;
-			else if (mode == NSRunLoopCommonModes)
-				return NSRunLoopCommonModes;
-#if IOS || TVOS
-			else if (mode == UITrackingRunLoopMode)
-				return UITrackingRunLoopMode;
-#endif
-			else
-				return new NSString (mode);
-		}
 
-		[Advice ("Use 'AddTimer (NSTimer, NSRunLoopMode)'.")]
-		public void AddTimer (NSTimer timer, string forMode)
-		{
-			AddTimer (timer, GetRealMode (forMode));
-		}
-
-		[Advice ("Use 'LimitDateForMode (NSRunLoopMode)' instead.")]
-		public NSDate LimitDateForMode (string mode)
-		{
-			return LimitDateForMode (GetRealMode (mode));
-		}
-
-		[Advice ("Use 'AcceptInputForMode (NSRunLoopMode, NSDate)'.")]
-		public void AcceptInputForMode (string mode, NSDate limitDate)
-		{
-			AcceptInputForMode (GetRealMode (mode), limitDate);
-		}
-#endif
-		
+		/// <summary>Stops the receiver's underlying run loop.</summary>
 		public void Stop ()
 		{
 			GetCFRunLoop ().Stop ();
 		}
 
+		/// <summary>Wakes the receiver's underlying run loop.</summary>
 		public void WakeUp ()
 		{
 			GetCFRunLoop ().WakeUp ();
@@ -73,14 +42,18 @@ namespace Foundation {
 	static public partial class NSRunLoopModeExtensions {
 
 		// this is a less common pattern so it's not automatically generated
-		public static NSString[] GetConstants (this NSRunLoopMode[] self)
+		/// <summary>Gets the native constants for a collection of run loop modes.</summary>
+		/// <param name="self">The run loop modes to convert.</param>
+		/// <returns>The native constants corresponding to the specified run loop modes.</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="self" /> is <see langword="null" />.</exception>
+		public static NSString [] GetConstants (this NSRunLoopMode [] self)
 		{
-			if (self == null)
-				throw new ArgumentNullException (nameof (self));
-			
+			if (self is null)
+				ObjCRuntime.ThrowHelper.ThrowArgumentNullException (nameof (self));
+
 			var array = new NSString [self.Length];
 			for (int n = 0; n < self.Length; n++)
-				array [n] = self [n].GetConstant ();
+				array [n] = self [n].GetConstant ()!;
 			return array;
 		}
 	}

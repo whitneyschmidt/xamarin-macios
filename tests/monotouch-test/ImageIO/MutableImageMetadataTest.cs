@@ -7,18 +7,9 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using ImageIO;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ImageIO;
-using MonoTouch.ObjCRuntime;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+
+using CGImageProperties = ImageIO.CGImageProperties;
 
 namespace MonoTouchFixtures.ImageIO {
 
@@ -39,26 +30,26 @@ namespace MonoTouchFixtures.ImageIO {
 			using (var meta = new CGMutableImageMetadata ()) {
 				Console.WriteLine (meta);
 				NSError err;
-				Assert.True (meta.RegisterNamespace (CGImageMetadataTagNamespaces.Exif, CGImageMetadataTagPrefixes.Exif, out err), "RegisterNamespace");
-				Assert.Null (err, "NSError");
+				Assert.That (meta.RegisterNamespace (CGImageMetadataTagNamespaces.Exif, CGImageMetadataTagPrefixes.Exif, out err), Is.True, "RegisterNamespace");
+				Assert.That (err, Is.Null, "NSError");
 
 				// nothing to see at this stage
 				using (var data = meta.CreateXMPData ()) {
-					Assert.Null (data, "CreateXMPData-1");
+					Assert.That (data, Is.Null, "CreateXMPData-1");
 				}
 
 				using (var tag = new CGImageMetadataTag (nspace, prefix, name, CGImageMetadataType.Default, true)) {
-					Assert.True (meta.SetTag (null, path, tag), "SetTag");
+					Assert.That (meta.SetTag (null, path, tag), Is.True, "SetTag");
 				}
 
 				// now we're talking
 				using (var data = meta.CreateXMPData ()) {
-					Assert.NotNull (data, "CreateXMPData-2");
+					Assert.That (data, Is.Not.Null, "CreateXMPData-2");
 				}
 
-				Assert.True (meta.SetValue (null, path, false), "SetValue");
+				Assert.That (meta.SetValue (null, path, false), Is.True, "SetValue");
 
-				Assert.True (meta.SetValueMatchingImageProperty (CGImageProperties.ExifDictionary, CGImageProperties.ExifDateTimeOriginal, (NSDate)DateTime.Now), "SetValueMatchingImageProperty");
+				Assert.That (meta.SetValueMatchingImageProperty (CGImageProperties.ExifDictionary, CGImageProperties.ExifDateTimeOriginal, (NSDate) DateTime.Now), Is.True, "SetValueMatchingImageProperty");
 			}
 		}
 	}

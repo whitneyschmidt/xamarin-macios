@@ -7,19 +7,16 @@
 // Copyright 2009 Novell, Inc
 //
 
-#if !WATCH
-
-using Foundation;
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace UIKit {
 	[Register]
 	class UIControlEventProxy : NSObject {
-		EventHandler eh;
-		UIControl source;
+		EventHandler? eh;
+		UIControl? source;
 		internal int Counter = 1;
 		internal const string BridgeSelector = "BridgeSelector";
 
@@ -34,10 +31,14 @@ namespace UIKit {
 		[Preserve (Conditional = true)]
 		public void Activated ()
 		{
+			if (eh is null)
+				return;
+
 			for (int i = 0; i < Counter; i++)
 				eh (source, EventArgs.Empty);
 		}
 
+		/// <inheritdoc />
 		protected override void Dispose (bool disposing)
 		{
 			eh = null;
@@ -45,39 +46,30 @@ namespace UIKit {
 			base.Dispose (disposing);
 		}
 	}
-	
+
 	public partial class UIControl {
-#if XAMCORE_2_0
-		static ConditionalWeakTable<UIControl,Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>>> allTargets = new
-			ConditionalWeakTable<UIControl,Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>>> ();
-#else
-		Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>> targets;
-#endif
-		
+		static ConditionalWeakTable<UIControl, Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>>>? allTargets;
+
+		/// <summary>Adds an event handler for the specified set of events.</summary>
+		/// <param name="notification">The event handler to invoke.</param>
+		/// <param name="events">The event mask that will trigger the event to be invoked.</param>
+		/// <remarks>The <paramref name="notification" /> handler will be invoked when the control receives any of the events listed in the <paramref name="events" /> mask.</remarks>
 		public void AddTarget (EventHandler notification, UIControlEvent events)
 		{
-#if XAMCORE_2_0
-			var targets = allTargets.GetValue (this, k =>
-			{
+			if (allTargets is null)
+				allTargets = new ();
+
+			var targets = allTargets.GetValue (this, k => {
 				MarkDirty ();
 				return new Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>> ();
 			});
-#else
-			if (targets == null) {
-				targets = new Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>> ();
-				MarkDirty ();
-			}
-#endif
 
-			Dictionary<UIControlEvent, UIControlEventProxy> t;
-			if (!targets.TryGetValue (notification, out t)) {
+			if (!targets.TryGetValue (notification, out var t)) {
 				t = new Dictionary<UIControlEvent, UIControlEventProxy> ();
 				targets [notification] = t;
 			}
 
-			UIControlEventProxy ep;
-
-			if (!t.TryGetValue (events, out ep)) {
+			if (!t.TryGetValue (events, out var ep)) {
 				ep = new UIControlEventProxy (this, notification);
 				t [events] = ep;
 				AddTarget (ep, Selector.GetHandle (UIControlEventProxy.BridgeSelector), events);
@@ -86,27 +78,21 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Removes a previously installed event handler for the specified event list.</summary>
+		/// <param name="notification">The event handler previously specified in <see cref="AddTarget(EventHandler, UIControlEvent)" />.</param>
+		/// <param name="events">The event mask to remove.</param>
 		public void RemoveTarget (EventHandler notification, UIControlEvent events)
 		{
-#if XAMCORE_2_0
-			Dictionary<EventHandler, Dictionary<UIControlEvent, UIControlEventProxy>> targets;
-
-			if (allTargets == null)
+			if (allTargets is null)
 				return;
 
-			if (!allTargets.TryGetValue (this, out targets))
-				return;
-#else
-			if (targets == null)
-				return;
-#endif
-
-			Dictionary<UIControlEvent, UIControlEventProxy> t;
-			if (!targets.TryGetValue (notification, out t))
+			if (!allTargets.TryGetValue (this, out var targets))
 				return;
 
-			UIControlEventProxy ep;
-			if (!t.TryGetValue (events, out ep))
+			if (!targets.TryGetValue (notification, out var t))
+				return;
+
+			if (!t.TryGetValue (events, out var ep))
 				return;
 
 			ep.Counter--;
@@ -120,6 +106,7 @@ namespace UIKit {
 				targets.Remove (notification);
 		}
 
+		/// <summary>Raised when the user touches the control.</summary>
 		public event EventHandler TouchDown {
 			add {
 				AddTarget (value, UIControlEvent.TouchDown);
@@ -129,6 +116,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when the user double taps the control.</summary>
 		public event EventHandler TouchDownRepeat {
 			add {
 				AddTarget (value, UIControlEvent.TouchDownRepeat);
@@ -138,15 +126,17 @@ namespace UIKit {
 			}
 		}
 
-		public event EventHandler TouchDragInside  {
+		/// <summary>Raised on <see cref="UIControlEvent.TouchDragInside" /> events.</summary>
+		public event EventHandler TouchDragInside {
 			add {
-				AddTarget (value, UIControlEvent.TouchDragInside );
+				AddTarget (value, UIControlEvent.TouchDragInside);
 			}
 			remove {
-				RemoveTarget (value, UIControlEvent.TouchDragInside );
+				RemoveTarget (value, UIControlEvent.TouchDragInside);
 			}
 		}
 
+		/// <summary>Raised on <see cref="UIControlEvent.TouchDragOutside" /> events.</summary>
 		public event EventHandler TouchDragOutside {
 			add {
 				AddTarget (value, UIControlEvent.TouchDragOutside);
@@ -156,6 +146,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised on <see cref="UIControlEvent.TouchDragEnter" /> events.</summary>
 		public event EventHandler TouchDragEnter {
 			add {
 				AddTarget (value, UIControlEvent.TouchDragEnter);
@@ -165,6 +156,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised on <see cref="UIControlEvent.TouchDragExit" /> events.</summary>
 		public event EventHandler TouchDragExit {
 			add {
 				AddTarget (value, UIControlEvent.TouchDragExit);
@@ -174,6 +166,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised on <see cref="UIControlEvent.TouchUpInside" /> events.</summary>
 		public event EventHandler TouchUpInside {
 			add {
 				AddTarget (value, UIControlEvent.TouchUpInside);
@@ -183,6 +176,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised on <see cref="UIControlEvent.TouchUpOutside" /> events.</summary>
 		public event EventHandler TouchUpOutside {
 			add {
 				AddTarget (value, UIControlEvent.TouchUpOutside);
@@ -192,6 +186,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when the touch event has been canceled.</summary>
 		public event EventHandler TouchCancel {
 			add {
 				AddTarget (value, UIControlEvent.TouchCancel);
@@ -201,6 +196,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when the value has changed.</summary>
 		public event EventHandler ValueChanged {
 			add {
 				AddTarget (value, UIControlEvent.ValueChanged);
@@ -210,7 +206,10 @@ namespace UIKit {
 			}
 		}
 
-		[iOS (9,0)]
+		/// <summary>Raised when the primary action associated with this <see cref="UIControl" /> is triggered.</summary>
+		[SupportedOSPlatform ("ios")]
+		[SupportedOSPlatform ("maccatalyst")]
+		[SupportedOSPlatform ("tvos")]
 		public event EventHandler PrimaryActionTriggered {
 			add {
 				AddTarget (value, UIControlEvent.PrimaryActionTriggered);
@@ -220,6 +219,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when editing has started.</summary>
 		public event EventHandler EditingDidBegin {
 			add {
 				AddTarget (value, UIControlEvent.EditingDidBegin);
@@ -229,6 +229,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when the editing value has changed.</summary>
 		public event EventHandler EditingChanged {
 			add {
 				AddTarget (value, UIControlEvent.EditingChanged);
@@ -238,6 +239,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when editing has ended.</summary>
 		public event EventHandler EditingDidEnd {
 			add {
 				AddTarget (value, UIControlEvent.EditingDidEnd);
@@ -247,6 +249,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised when editing has ended and the user exited the control.</summary>
 		public event EventHandler EditingDidEndOnExit {
 			add {
 				AddTarget (value, UIControlEvent.EditingDidEndOnExit);
@@ -256,6 +259,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised for any touch event.</summary>
 		public event EventHandler AllTouchEvents {
 			add {
 				AddTarget (value, UIControlEvent.AllTouchEvents);
@@ -265,6 +269,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised for any editing event.</summary>
 		public event EventHandler AllEditingEvents {
 			add {
 				AddTarget (value, UIControlEvent.AllEditingEvents);
@@ -274,6 +279,7 @@ namespace UIKit {
 			}
 		}
 
+		/// <summary>Raised for any event.</summary>
 		public event EventHandler AllEvents {
 			add {
 				AddTarget (value, UIControlEvent.AllEvents);
@@ -284,5 +290,3 @@ namespace UIKit {
 		}
 	}
 }
-
-#endif // !WATCH

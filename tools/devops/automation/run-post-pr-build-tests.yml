@@ -1,0 +1,31 @@
+# YAML pipeline for post build operations.
+# This pipeline will build the workloads and then execute the tests for the CI on a PR.
+
+trigger: none
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - '*'  # yes, you do need the quote, * has meaning in yamls
+  paths:
+    exclude:
+      - .github
+      - docs
+      - CODEOWNERS
+      - ISSUE_TEMPLATE.md
+      - LICENSE
+      - NOTICE.txt
+      - SECURITY.MD
+      - README.md
+      - src/README.md
+      - tools/mtouch/README.md
+      - msbuild/Xamarin.Localization.MSBuild/README.md
+      - '**/TranslatedAssemblies/*.*.resx'
+
+extends:
+  template: templates/pipelines/run-tests-pipeline.yml
+  parameters:
+    isPR: true
+    buildPackages: true
+    useACES: true  # flip to false to opt PR simulator tests out of ACES; see templates/variables/common.yml

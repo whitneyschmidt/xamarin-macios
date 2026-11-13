@@ -1,0 +1,23 @@
+//
+// Unit tests for CGVector
+//
+// Authors:
+//	Sebastien Pouliot < sebastien.pouliot@gmail.com>
+//
+
+using CoreGraphics;
+
+namespace MonoTouchFixtures.CoreGraphics {
+
+	[TestFixture]
+	[Preserve (AllMembers = true)]
+	public class VectorTest {
+
+		[Test]
+		public void ToStringTest ()
+		{
+			var vector = new CGVector ((nfloat) 1, (nfloat) 2);
+			Assert.That (vector.ToString (), Is.EqualTo ("{1, 2}"), "ToString");
+		}
+	}
+}

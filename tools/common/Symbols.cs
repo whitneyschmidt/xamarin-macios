@@ -5,42 +5,42 @@ using System.IO;
 
 using Mono.Cecil;
 
-namespace Xamarin.Bundler
-{
-	public enum SymbolType
-	{
+#nullable enable
+
+namespace Xamarin.Bundler {
+	public enum SymbolType {
 		Function,
 		ObjectiveCClass,
 		Field,
 	}
 
-	public enum SymbolMode
-	{
+	public enum SymbolMode {
 		Default,
 		Linker, // pass "-u symbol" to the native linker
 		Code, // generate code
 		Ignore, // do nothing and hope for the best
 	}
 
-	public class Symbol
-	{
+	public class Symbol {
 		public SymbolType Type;
+		public SymbolMode Mode;
 		public bool Ignore;
+		public Abi? ValidAbis;
 
-		static string ObjectiveCPrefix {
+		public static string ObjectiveCPrefix {
 			get {
-				return Driver.SupportsModernObjectiveC ? "OBJC_CLASS_$_" : ".objc_class_name_";
+				return "OBJC_CLASS_$_";
 			}
 		}
 
-		string name;
+		string? name;
 		public string Name {
 			get {
-				if (name != null)
+				if (name is not null)
 					return name;
-				if (ObjectiveCName != null)
+				if (ObjectiveCName is not null)
 					return ObjectiveCPrefix + ObjectiveCName;
-				throw ErrorHelper.CreateError (99, $"Internal error: symbol without a name (type: {Type}). Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+				throw ErrorHelper.CreateError (99, Errors.MX0099, $"symbol without a name (type: {Type})");
 			}
 			set {
 				name = value;
@@ -50,15 +50,9 @@ namespace Xamarin.Bundler
 				}
 			}
 		}
-		public string ObjectiveCName;
+		public string? ObjectiveCName;
 
-		public string Prefix {
-			get {
-				if (ObjectiveCName != null && !Driver.SupportsModernObjectiveC)
-					return string.Empty;
-				return "_";
-			}
-		}
+		public const string Prefix = "_";
 
 		List<MemberReference> members = new List<MemberReference> ();
 		public IEnumerable<MemberReference> Members { get { return members; } }
@@ -77,8 +71,7 @@ namespace Xamarin.Bundler
 		}
 	}
 
-	public class Symbols : IEnumerable<Symbol>
-	{
+	public class Symbols : IEnumerable<Symbol> {
 		Dictionary<string, Symbol> store = new Dictionary<string, Symbol> (StringComparer.Ordinal);
 
 		public int Count {
@@ -92,34 +85,35 @@ namespace Xamarin.Bundler
 			store.Add (symbol.Name, symbol);
 		}
 
-		public Symbol AddObjectiveCClass (string class_name)
+		public Symbol AddObjectiveCClass (string class_name, SymbolMode mode = SymbolMode.Default)
 		{
 			var symbol = new Symbol {
 				Type = SymbolType.ObjectiveCClass,
 				ObjectiveCName = class_name,
+				Mode = mode,
 			};
 			var existing = Find (symbol.Name);
-			if (existing != null)
+			if (existing is not null)
 				return existing;
 			Add (symbol);
 			return symbol;
 		}
 
-		public Symbol AddField (string name)
+		public Symbol AddField (string name, SymbolMode mode = SymbolMode.Default)
 		{
-			Symbol rv = Find (name);
-			if (rv == null) {
-				rv = new Symbol { Name = name, Type = SymbolType.Field };
+			var rv = Find (name);
+			if (rv is null) {
+				rv = new Symbol { Name = name, Type = SymbolType.Field, Mode = mode };
 				Add (rv);
 			}
 			return rv;
 		}
 
-		public Symbol AddFunction (string name)
+		public Symbol AddFunction (string name, SymbolMode mode = SymbolMode.Default)
 		{
-			Symbol rv = Find (name);
-			if (rv == null) {
-				rv = new Symbol { Name = name, Type = SymbolType.Function };
+			var rv = Find (name);
+			if (rv is null) {
+				rv = new Symbol { Name = name, Type = SymbolType.Function, Mode = mode };
 				Add (rv);
 			}
 			return rv;
@@ -143,10 +137,9 @@ namespace Xamarin.Bundler
 			return store.Values.GetEnumerator ();
 		}
 
-		public Symbol Find (string name)
+		public Symbol? Find (string name)
 		{
-			Symbol rv;
-			store.TryGetValue (name, out rv);
+			store.TryGetValue (name, out var rv);
 			return rv;
 		}
 
@@ -161,19 +154,21 @@ namespace Xamarin.Bundler
 			}
 		}
 
-		public void Load (string filename, Target target)
+#if !MSBUILD_TASKS
+		public void Load (string filename, Application app)
 		{
 			using (var reader = new StreamReader (filename)) {
-				string line;
-				Symbol current = null;
-				while ((line = reader.ReadLine ()) != null) {
+				string? line;
+				Symbol? current = null;
+				while ((line = reader.ReadLine ()) is not null) {
 					if (line.Length == 0)
 						continue;
 					if (line [0] == '\t') {
 						var asm = line.Substring (1);
-						Assembly assembly;
-						if (!target.Assemblies.TryGetValue (Assembly.GetIdentity (asm), out assembly))
-							throw ErrorHelper.CreateError (99, $"Internal error: serialized assembly {asm} for symbol {current.Name}, but no such assembly loaded. Please file a bug report with a test case (https://github.com/xamarin/xamarin-macios/issues/new).");
+						if (current is null)
+							throw ErrorHelper.CreateError (99, Errors.MX0099, $"serialized symbol for assembly {asm}, but no current symbol");
+						if (!app.Assemblies.TryGetValue (Assembly.GetIdentity (asm), out var assembly))
+							throw ErrorHelper.CreateError (99, Errors.MX0099, $"serialized assembly {asm} for symbol {current?.Name}, but no such assembly loaded");
 						current.AddAssembly (assembly.AssemblyDefinition);
 					} else {
 						var eq = line.IndexOf ('=');
@@ -185,6 +180,7 @@ namespace Xamarin.Bundler
 				}
 			}
 		}
+#endif // !MSBUILD_TASKS
 
 		public void Save (string filename)
 		{

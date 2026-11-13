@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for CGFunction
 //
 // Authors:
@@ -8,46 +8,24 @@
 //
 
 #if !MONOMAC
-using System;
-using System.Drawing;
-#if XAMCORE_2_0
-using Foundation;
 using CoreGraphics;
 using UIKit;
-#else
-using MonoTouch.CoreGraphics;
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using RectangleF=CoreGraphics.CGRect;
-using SizeF=CoreGraphics.CGSize;
-using PointF=CoreGraphics.CGPoint;
-#else
-using nfloat=global::System.Single;
-using nint=global::System.Int32;
-using nuint=global::System.UInt32;
-#endif
 
 namespace MonoTouchFixtures.CoreGraphics {
 
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class FunctionTest {
-#if !__WATCHOS__ // FIXME: It doesn't look like this test needs to use UIKit, so it might be possible to rewrite it to run on WatchOS as well.
 		[Test]
 		public void Test ()
 		{
 			bool tested = false;
 			using (var vc = new UIViewController ()) {
-				vc.View = new CustomView ()
-				{
+				vc.View = new CustomView () {
 					BackgroundColor = UIColor.Green,
 					Shaded = () => tested = true,
 				};
-				MonoTouchFixtures.AppDelegate.PresentModalViewController (vc, 0.1);
+				AppDelegate.PresentModalViewController (vc, 0.1);
 			}
 
 			if (!tested)
@@ -56,40 +34,58 @@ namespace MonoTouchFixtures.CoreGraphics {
 
 		class CustomView : UIView {
 			public Action Shaded;
-			public unsafe override void Draw (RectangleF rect)
+			public unsafe override void Draw (CGRect rect)
 			{
-				var start = new PointF (rect.Left, rect.Bottom);
-				var end = new PointF (rect.Left, rect.Top);
+				var start = new CGPoint (rect.Left, rect.Bottom);
+				var end = new CGPoint (rect.Left, rect.Top);
 
-				var domain = new nfloat[] {0f, 1f};
-				var range = new nfloat[] {0f, 1f, 0f, 1f};
 				using (var context = UIGraphics.GetCurrentContext ())
-				using (var rgb = CGColorSpace.CreateDeviceGray())
-				using (var shadingFunction = new CGFunction(domain, range, Shading))
-				using (var shading = CGShading.CreateAxial (rgb, start, end, shadingFunction, true, false))
-				{
+				using (var rgb = CGColorSpace.CreateDeviceGray ())
+				using (var shadingFunction = CreateSlopedFunction (Shaded))
+				using (var shading = CGShading.CreateAxial (rgb, start, end, shadingFunction, true, false)) {
 					context.DrawShading (shading);
 				}
 
 				base.Draw (rect);
 			}
-
-			public unsafe void Shading (nfloat* data, nfloat* outData)
-			{
-				var p = data[0];
-				outData[0] = 0.0f;
-				outData[1] = (1.0f-Slope(p, 2.0f)) * 0.5f;
-				Shaded ();
-			}
-
-			public nfloat Slope (nfloat x, nfloat A)
-			{
-				var p = Math.Pow(x, A);
-				return (nfloat)(p/(p + Math.Pow(1.0f-x, A)));
-			}
 		}
 
-#if XAMCORE_2_0
+		public unsafe static CGFunction CreateSlopedFunction (Action? shadedCallback, nint inputs = 1, nint outputs = 2)
+		{
+			if (inputs < 1 || outputs < 1)
+				throw new ArgumentOutOfRangeException ();
+
+			var domain = new List<nfloat> ();
+			for (var i = 0; i < inputs; i++) {
+				domain.Add (0);
+				domain.Add (1);
+			}
+			var range = new List<nfloat> ();
+			for (var i = 0; i < outputs; i++) {
+				range.Add (0);
+				range.Add (1);
+			}
+			return new CGFunction (domain.ToArray (), range.ToArray (), Shading);
+
+			nfloat Slope (nfloat x, nfloat A)
+			{
+				var p = Math.Pow (x, A);
+				return (nfloat) (p / (p + Math.Pow (1.0f - x, A)));
+			}
+
+			void Shading (nfloat* data, nfloat* outData)
+			{
+				outData [0] = 0.0f;
+				for (var x = 0; x < inputs; x++) {
+					var p = data [x];
+					for (var y = 1; y < outputs; y++) {
+						outData [y] = (1.0f - Slope (p, 2.0f)) * (1.0f / outputs) * y;
+					}
+				}
+				if (shadedCallback is not null)
+					shadedCallback ();
+			}
+		}
 
 		[Test]
 		public void CoreGraphicsStrongDictionary ()
@@ -104,13 +100,13 @@ namespace MonoTouchFixtures.CoreGraphics {
 			};
 
 			var retrievedRect = graphicsDict.Rect;
-			Assert.IsTrue (rect == retrievedRect, "CoreGraphicsStrongDictionary CGRect");
+			Assert.That (rect == retrievedRect, Is.True, "CoreGraphicsStrongDictionary CGRect");
 
 			var retrievedSize = graphicsDict.Size;
-			Assert.IsTrue (size == retrievedSize, "CoreGraphicsStrongDictionary CGSize");
+			Assert.That (size == retrievedSize, Is.True, "CoreGraphicsStrongDictionary CGSize");
 
 			var retrievedPoint = graphicsDict.Point;
-			Assert.IsTrue (point == retrievedPoint, "CoreGraphicsStrongDictionary CGPoint");
+			Assert.That (point == retrievedPoint, Is.True, "CoreGraphicsStrongDictionary CGPoint");
 		}
 
 		class GraphicsDict : DictionaryContainer {
@@ -132,9 +128,6 @@ namespace MonoTouchFixtures.CoreGraphics {
 				set { SetCGPointValue (PointKey, value); }
 			}
 		}
-
-#endif // XAMCORE_2_0
-#endif // !__WATCHOS__
 	}
 }
 #endif

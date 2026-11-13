@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for ARReferenceObject
 //
 // Authors:
@@ -7,15 +7,13 @@
 // Copyright 2018 Microsoft. All rights reserved.
 //
 
-#if XAMCORE_2_0 && __IOS__
+#if HAS_ARKIT
 
-using System;
 using ARKit;
-using Foundation;
-using NUnit.Framework;
+using Xamarin.Utils;
 
-using VectorFloat3 = global::OpenTK.NVector3;
-using MatrixFloat4x4 = global::OpenTK.NMatrix4;
+using VectorFloat3 = global::CoreGraphics.NVector3;
+using MatrixFloat4x4 = global::CoreGraphics.NMatrix4;
 
 namespace MonoTouchFixtures.ARKit {
 
@@ -27,19 +25,24 @@ namespace MonoTouchFixtures.ARKit {
 		public void Setup ()
 		{
 			TestRuntime.AssertXcodeVersion (10, 0);
+			// The API here was introduced to Mac Catalyst later than for the other frameworks, so we have this additional check
+			TestRuntime.AssertSystemVersion (ApplePlatform.MacCatalyst, 14, 0, throwIfOtherPlatform: false);
 		}
 
 		[Test]
 		public void MarshallingTest ()
 		{
+			TestRuntime.AssertNotSimulator (); // The Objective-C constructor is just stubbed out to return NULL in the simulator, so this test only works on device.
+
 			var model3 = new ARReferenceObject (NSUrl.FromFilename ("Model3.arobject"), out NSError error);
-			Assert.AreEqual ("Model3", model3.Name, "Name");
-			Assert.NotNull (model3.Center, "Center");
-			Assert.NotNull (model3.Extent, "Extent");
-			Assert.NotNull (model3.Scale, "Scale");
-			Assert.NotNull (model3.ApplyTransform (MatrixFloat4x4.Identity), "ApplyTransform");
+			Assert.That (error, Is.Null, "Error");
+			Assert.That (model3.Name, Is.EqualTo ("Model3"), "Name");
+			Assert.That (model3.Center, Is.Not.Null, "Center");
+			Assert.That (model3.Extent, Is.Not.Null, "Extent");
+			Assert.That (model3.Scale, Is.Not.Null, "Scale");
+			Assert.That (model3.ApplyTransform (MatrixFloat4x4.Identity), Is.Not.Null, "ApplyTransform");
 		}
 	}
 }
 
-#endif
+#endif // HAS_ARKIT

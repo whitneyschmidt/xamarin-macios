@@ -1,4 +1,4 @@
-﻿//
+//
 // Test fixture for class_ptr introspection tests
 //
 // Authors:
@@ -6,24 +6,13 @@
 //
 // Copyright 2012-2014, 2016 Xamarin Inc.
 //
-using System;
 using System.Reflection;
 using System.Linq;
 
-using NUnit.Framework;
 using Xamarin.Utils;
 using System.Runtime.CompilerServices;
 
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#elif MONOMAC
-using MonoMac.Foundation;
-using MonoMac.ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+#nullable enable
 
 namespace Introspection {
 
@@ -38,33 +27,37 @@ namespace Introspection {
 				if (ca is ModelAttribute)
 					return true;
 			}
+
+			// skip types that we renamed / rewrite since they won't behave correctly (by design)
+			if (SkipDueToRejectedTypes (type))
+				return true;
+
 			return SkipDueToAttribute (type);
 		}
 
-		Type GetExtendedType (Type extensionType)
+		Type? GetExtendedType (Type extensionType)
 		{
-			var method = 
+			var method =
 				(from m in extensionType.GetMethods (BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-				where m.IsDefined (typeof (ExtensionAttribute), false)
-				select m).FirstOrDefault();
+				 where m.IsDefined (typeof (ExtensionAttribute), false)
+				 select m).FirstOrDefault ();
 
-			if (method != null) {
+			if (method is not null) {
 				var paramType = method.GetParameters () [0].ParameterType;
 				if (paramType.Name == "String")
 					return typeof (NSString);
 				else
 					return paramType;
-			}
-			else
+			} else
 				return null;
 		}
 
-		IntPtr GetClassPtrFromRegister (Type t) 
+		IntPtr GetClassPtrFromRegister (Type t)
 		{
-			var attribs = t.GetCustomAttributes (typeof (RegisterAttribute), true);
-			if (attribs.Length > 0) {
-				var register = ((RegisterAttribute) attribs [0]);
-				return Class.GetHandle (register.Name);
+			var attribs = t.GetCustomAttributes<RegisterAttribute> (true);
+			if (attribs.Any ()) {
+				var register = attribs.First ();
+				return Class.GetHandle (register.Name ?? "");
 			}
 			return IntPtr.Zero;
 		}
@@ -81,39 +74,38 @@ namespace Introspection {
 
 				if (Skip (t))
 					continue;
-				
-				FieldInfo fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-				if (fi == null)
-					continue;			
-				IntPtr class_ptr = (IntPtr) fi.GetValue (null);
+
+				var fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+				if (fi is null)
+					continue;
+				IntPtr class_ptr = (IntPtr) (NativeHandle) fi.GetValue (null)!;
 				IntPtr register_class_ptr = GetClassPtrFromRegister (t);
 
-				Assert.AreEqual (class_ptr, register_class_ptr, "class_ptr and RegisterAttribute are different: " + t.Name);
+				Assert.That (register_class_ptr, Is.EqualTo (class_ptr), "class_ptr and RegisterAttribute are different: " + t.Name);
 			}
 		}
 
 		[Test]
 		public void VerifyClassPtrCategories ()
 		{
-			foreach (Type t in Assembly.GetTypes().Where (t => t.IsClass && t.IsSealed && t.IsAbstract)) {
+			foreach (Type t in Assembly.GetTypes ().Where (t => t.IsClass && t.IsSealed && t.IsAbstract)) {
 				if (Skip (t))
 					continue;
 
-				FieldInfo fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-				if (fi == null)
+				var fi = t.GetField ("class_ptr", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+				if (fi is null)
 					continue;
-				IntPtr class_ptr = (IntPtr)fi.GetValue (null);
+				IntPtr class_ptr = (IntPtr) (NativeHandle) fi.GetValue (null)!;
 
 				var extendedType = GetExtendedType (t);
 				IntPtr extended_class_ptr;
-				if (extendedType == null)
+				if (extendedType is null)
 					extended_class_ptr = IntPtr.Zero;
 				else
 					extended_class_ptr = GetClassPtrFromRegister (extendedType);
 
-				Assert.AreEqual (class_ptr, extended_class_ptr, "class_ptr and RegisterAttribute from extended class are different: " + t.Name);
+				Assert.That (extended_class_ptr, Is.EqualTo (class_ptr), "class_ptr and RegisterAttribute from extended class are different: " + t.Name);
 			}
 		}
 	}
 }
-

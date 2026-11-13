@@ -1,18 +1,10 @@
-﻿#if !__WATCHOS__
 
-using System;
-
-#if XAMCORE_2_0
 using Metal;
-#else
-using MonoTouch.Metal;
-#endif
-
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.Metal {
 
 	[TestFixture]
+	[Preserve (AllMembers = true)]
 	public class MTLTextureReferenceTypeTests {
 		MTLTextureReferenceType reference = null;
 
@@ -26,7 +18,7 @@ namespace MonoTouchFixtures.Metal {
 		[TearDown]
 		public void TearDown ()
 		{
-			if (reference != null)
+			if (reference is not null)
 				reference.Dispose ();
 			reference = null;
 		}
@@ -34,27 +26,25 @@ namespace MonoTouchFixtures.Metal {
 		[Test]
 		public void GetAccessTest ()
 		{
-			Assert.AreEqual (MTLArgumentAccess.ReadOnly, reference.Access);
+			Assert.That (reference.Access, Is.EqualTo (MTLArgumentAccess.ReadOnly));
 		}
 
 		[Test]
 		public void GetIsDepthTextureTest ()
 		{
-			Assert.False (reference.IsDepthTexture);
+			Assert.That (reference.IsDepthTexture, Is.False);
 		}
 
 		[Test]
 		public void GetTextureDataType ()
 		{
-			Assert.AreEqual (MTLDataType.None, reference.TextureDataType);
+			Assert.That (reference.TextureDataType, Is.EqualTo (MTLDataType.None));
 		}
 
 		[Test]
 		public void GetTextureType ()
 		{
-			Assert.AreEqual (MTLTextureType.k1D, reference.TextureType);
+			Assert.That (reference.TextureType, Is.EqualTo (MTLTextureType.k1D));
 		}
 	}
 }
-
-#endif // !__WATCHOS__

@@ -20,42 +20,40 @@
 //
 // Copyright 2011, 2012 Xamarin Inc
 //
-using System;
-using System.Runtime.InteropServices;
 using CoreFoundation;
-using Foundation;
-using ObjCRuntime;
+
+#nullable enable
 
 namespace Foundation {
 
 	public partial class NSKeyedArchiver {
 
+		/// <summary>Sets the global class name for a specified class.</summary>
+		/// <param name="name">The class name to use during archiving.</param>
+		/// <param name="kls">The <see cref="ObjCRuntime.Class" /> to associate with the name.</param>
+		/// <remarks>This method associates a class name with a class for all instances of <see cref="NSKeyedArchiver" />. Use <see cref="SetClassName(System.String,ObjCRuntime.Class)" /> to set the class name for a specific archiver instance.</remarks>
 		public static void GlobalSetClassName (string name, Class kls)
 		{
-			if (name == null)
-				throw new ArgumentNullException ("name");
-			if (kls == null)
-				throw new ArgumentNullException ("kls");
+			ArgumentNullException.ThrowIfNull (name);
+			ArgumentNullException.ThrowIfNull (kls);
 
-			var nsname = new NSString (name);
-			ObjCRuntime.Messaging.void_objc_msgSend_IntPtr_IntPtr (class_ptr, Selector.GetHandle ("setClassName:forClass:"), nsname.Handle, kls.Handle);
-			nsname.Dispose ();
+			var ptr = CFString.CreateNative (name);
+			ObjCRuntime.Messaging.void_objc_msgSend_IntPtr_IntPtr (class_ptr, Selector.GetHandle ("setClassName:forClass:"), ptr, kls.Handle);
+			GC.KeepAlive (kls);
+			CFString.ReleaseNative (ptr);
 		}
 
-		public static string GlobalGetClassName (Class kls)
+		/// <summary>Gets the global class name for a specified class.</summary>
+		/// <param name="kls">The <see cref="ObjCRuntime.Class" /> to query.</param>
+		/// <returns>The class name associated with the class, or <see langword="null" /> if no class name has been set.</returns>
+		/// <remarks>This method retrieves the class name associated with a class for all instances of <see cref="NSKeyedArchiver" />. Use <see cref="GetClassName(ObjCRuntime.Class)" /> to get the class name for a specific archiver instance.</remarks>
+		public static string? GlobalGetClassName (Class kls)
 		{
-			if (kls == null)
-				throw new ArgumentNullException ("kls");
-			return NSString.FromHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (class_ptr, Selector.GetHandle ("classNameForClass:"), kls.Handle));
-		}
+			ArgumentNullException.ThrowIfNull (kls);
 
-		public bool RequiresSecureCoding {
-			get {
-				return GetRequiresSecureCoding ();
-			}
-			set {
-				SetRequiresSecureCoding (value);
-			}
+			string? result = CFString.FromHandle (ObjCRuntime.Messaging.IntPtr_objc_msgSend_IntPtr (class_ptr, Selector.GetHandle ("classNameForClass:"), kls.Handle));
+			GC.KeepAlive (kls);
+			return result;
 		}
 	}
 }

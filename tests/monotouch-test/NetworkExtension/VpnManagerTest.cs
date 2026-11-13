@@ -1,4 +1,4 @@
-﻿//
+//
 // Unit tests for NEVpnManager
 //
 // Authors:
@@ -7,19 +7,10 @@
 // Copyright 2014 Xamarin Inc. All rights reserved.
 //
 
-#if !__TVOS__ && !__WATCHOS__
+#if !__TVOS__
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using NetworkExtension;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.NetworkExtension;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
+using Xamarin.Utils;
 
 namespace MonoTouchFixtures.NetworkExtension {
 
@@ -30,49 +21,43 @@ namespace MonoTouchFixtures.NetworkExtension {
 		[Test]
 		public void SharedManager ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 11, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
 
 			var shared = NEVpnManager.SharedManager;
 			// https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html#//apple_ref/doc/uid/TP40012582-CH26-SW59
 			// Enabling Personal VPN (iOS Only)
-			if (shared == null)
+			if (shared is null)
 				Assert.Inconclusive ("Requires enabling Personal PVN (entitlements)");
 
 			Assert.That (shared.Connection.Status, Is.EqualTo (NEVpnStatus.Invalid), "Connection");
-#if MONOMAC
-			Assert.True (shared.Enabled, "Enabled");
+#if MONOMAC || __MACCATALYST__
+			Assert.That (shared.Enabled, Is.True, "Enabled");
 #else
-			Assert.False (shared.Enabled, "Enabled");
+			Assert.That (shared.Enabled, Is.False, "Enabled");
 #endif
 #if __IOS__
-			var HasLocalizedDescription = TestRuntime.CheckSystemVersion (PlatformName.iOS, 9, 0);
+			var HasLocalizedDescription = TestRuntime.CheckSystemVersion (ApplePlatform.iOS, 9, 0);
 #elif __MACOS__
-			var HasLocalizedDescription = TestRuntime.CheckSystemVersion (PlatformName.MacOSX, 10, 11);
+			var HasLocalizedDescription = true;
 #endif
 			if (HasLocalizedDescription) {
-#if MONOMAC
-				Assert.AreEqual ("xammac_tests", shared.LocalizedDescription, "LocalizedDescription");
-#else
-				Assert.AreEqual ("MonoTouchTest", shared.LocalizedDescription, "LocalizedDescription");
-#endif
+				Assert.That (shared.LocalizedDescription, Is.EqualTo ("MonoTouchTest"), "LocalizedDescription");
 			} else {
-				Assert.IsNull (shared.LocalizedDescription, "LocalizedDescription");
+				Assert.That (shared.LocalizedDescription, Is.Null, "LocalizedDescription");
 			}
-			Assert.False (shared.OnDemandEnabled, "OnDemandEnabled");
-			Assert.Null (shared.OnDemandRules, "OnDemandRules");
-			Assert.Null (shared.Protocol, "Protocol");
+			Assert.That (shared.OnDemandEnabled, Is.False, "OnDemandEnabled");
+			Assert.That (shared.OnDemandRules, Is.Null, "OnDemandRules");
+			Assert.That (shared.Protocol, Is.Null, "Protocol");
 		}
 
 		[Test]
 		public void Fields ()
 		{
-			TestRuntime.AssertSystemVersion (PlatformName.iOS, 8, 0, throwIfOtherPlatform: false);
-			TestRuntime.AssertSystemVersion (PlatformName.MacOSX, 10, 11, throwIfOtherPlatform: false);
+			TestRuntime.AssertSystemVersion (ApplePlatform.iOS, 8, 0, throwIfOtherPlatform: false);
 
-			Assert.That (NEVpnManager.ErrorDomain.ToString (), Is.EqualTo ("NEVPNErrorDomain"), "ErrorDomain");
+			Assert.That (NEVpnError.ConnectionFailed.GetDomain ().ToString (), Is.EqualTo ("NEVPNErrorDomain"), "ErrorDomain");
 		}
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__

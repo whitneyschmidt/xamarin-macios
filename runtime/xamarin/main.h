@@ -15,6 +15,11 @@
 #ifndef __XAMARIN_MAIN_H__
 #define __XAMARIN_MAIN_H__
 
+// Universal builds are supported for macOS, Mac Catalyst, and simulator platforms.
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST || ((TARGET_OS_IOS || TARGET_OS_TV) && TARGET_OS_SIMULATOR)
+#define SUPPORTS_UNIVERSAL_BUILDS 1
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,35 +46,107 @@ enum MarshalManagedExceptionMode : int {
 enum XamarinLaunchMode {
 	XamarinLaunchModeApp = 0,
 	XamarinLaunchModeExtension = 1,
-	XamarinLaunchModeEmbedded = 2,
+};
+
+// This has a managed equivalent in NSObject2.cs
+enum NSObjectFlags {
+	NSObjectFlagsDisposed = 1,
+	NSObjectFlagsNativeRef = 2,
+	NSObjectFlagsIsDirectBinding = 4,
+	NSObjectFlagsRegisteredToggleRef = 8,
+	NSObjectFlagsInFinalizerQueue = 16,
+	NSObjectFlagsHasManagedRef = 32,
+	// 64, // Used by SoM
+	NSObjectFlagsIsCustomType = 128,
+};
+
+enum XamarinGCHandleType : int {
+	XamarinGCHandleTypeWeak = 0,
+	XamarinGCHandleTypeWeakTrackResurrection = 1,
+	XamarinGCHandleTypeNormal = 2,
+	XamarinGCHandleTypePinned = 3,
+};
+
+// Keep in sync with Runtime.LookupTypes in Runtime.CoreCLR.cs
+enum XamarinLookupTypes : int {
+	XamarinLookupTypes_System_Array,
+	XamarinLookupTypes_System_String,
+	XamarinLookupTypes_System_IntPtr,
+	XamarinLookupTypes_Foundation_NSNumber,
+	XamarinLookupTypes_Foundation_NSObject,
+	XamarinLookupTypes_Foundation_NSString,
+	XamarinLookupTypes_Foundation_NSValue,
+	XamarinLookupTypes_ObjCRuntime_INativeObject,
+	XamarinLookupTypes_ObjCRuntime_NativeHandle,
+};
+
+// Keep in sync with Runtime.ExceptionType in Runtime.CoreCLR.cs
+enum XamarinExceptionTypes : int {
+	XamarinExceptionTypes_System_Exception,
+	XamarinExceptionTypes_System_InvalidCastException,
+	XamarinExceptionTypes_System_EntryPointNotFoundException,
+	XamarinExceptionTypes_System_OutOfMemoryException,
+};
+
+// Keep in sync with AssemblyBuildTarget in AssemblyBuildTarget.cs
+enum XamarinNativeLinkMode : int {
+	XamarinNativeLinkModeStaticObject,
+	XamarinNativeLinkModeDynamicLibrary,
+	XamarinNativeLinkModeFramework,
+};
+
+enum XamarinTriState : int {
+	XamarinTriStateNone,
+	XamarinTriStateEnabled,
+	XamarinTriStateDisabled,
 };
 
 extern bool mono_use_llvm; // this is defined inside mono
 
-#if MONOMAC
-extern bool xamarin_use_new_assemblies;
+#if defined (NATIVEAOT)
+#define SUPPORTS_DYNAMIC_REGISTRATION 0
 #else
-	#define xamarin_use_new_assemblies 1
+#define SUPPORTS_DYNAMIC_REGISTRATION 1
 #endif
-#if DEBUG
-extern bool xamarin_gc_pump;
-#endif
+
 extern bool xamarin_debug_mode;
 extern bool xamarin_disable_lldb_attach;
+extern bool xamarin_disable_omit_fp;
 #if MONOMAC
 extern bool xamarin_mac_hybrid_aot;
 extern bool xamarin_mac_modern;
-extern char *xamarin_entry_assembly_path;
 #endif
 extern bool xamarin_init_mono_debug;
 extern int xamarin_log_level;
 extern const char *xamarin_executable_name;
+#if MONOMAC || TARGET_OS_MACCATALYST
+extern NSString *xamarin_custom_bundle_name;
+#endif
 extern const char *xamarin_arch_name;
-extern bool xamarin_is_gc_coop;
 extern enum MarshalObjectiveCExceptionMode xamarin_marshal_objectivec_exception_mode;
 extern enum MarshalManagedExceptionMode xamarin_marshal_managed_exception_mode;
 extern enum XamarinLaunchMode xamarin_launch_mode;
+#if SUPPORTS_DYNAMIC_REGISTRATION
 extern bool xamarin_supports_dynamic_registration;
+#endif
+extern const char *xamarin_runtime_configuration_name;
+extern int xamarin_runtime_config_property_count;
+extern const char **xamarin_runtime_config_property_keys;
+extern const char **xamarin_runtime_config_property_values;
+extern enum XamarinNativeLinkMode xamarin_libmono_native_link_mode;
+extern const char** xamarin_runtime_libraries;
+extern const char * const *xamarin_trusted_platform_assembly_names;
+#if defined (SUPPORTS_UNIVERSAL_BUILDS)
+extern bool xamarin_is_multi_rid_build;
+#endif
+
+struct xamarin_r2r_module {
+	const char *name;
+	void *header;
+};
+
+extern struct xamarin_r2r_module *xamarin_r2r_modules;
+extern int xamarin_r2r_module_count;
 
 typedef void (*xamarin_setup_callback) ();
 typedef int (*xamarin_extension_main_callback) (int argc, char** argv);
@@ -84,8 +161,6 @@ void xamarin_set_is_unified (bool value);  /* Public API */
 bool xamarin_get_is_unified ();  /* Public API */
 
 int xamarin_get_launch_mode ();
-
-int xamarin_watchextension_main (int argc, char **argv);
 
 #ifndef MONOTOUCH
 void xamarin_set_is_mkbundle (bool value); /* Not Public API, exact semantics is not defined yet */

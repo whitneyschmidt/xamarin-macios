@@ -1,19 +1,11 @@
 // Copyright 2012 Xamarin Inc. All rights reserved
 
-#if !__TVOS__ && !__WATCHOS__ && !MONOMAC
+#if !__TVOS__ && !MONOMAC
 
-using System;
-#if XAMCORE_2_0
-using Foundation;
 using UIKit;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.UIKit;
-#endif
-using NUnit.Framework;
 
 namespace MonoTouchFixtures.UIKit {
-	
+
 	[TestFixture]
 	[Preserve (AllMembers = true)]
 	public class AlertViewDelegateTest {
@@ -28,7 +20,7 @@ namespace MonoTouchFixtures.UIKit {
 			}
 		}
 #endif
-		
+
 		class MyAlertViewDelegate2 : UIAlertViewDelegate {
 		}
 
@@ -42,4 +34,4 @@ namespace MonoTouchFixtures.UIKit {
 	}
 }
 
-#endif // !__TVOS__ && !__WATCHOS__
+#endif // !__TVOS__ && !MONOMAC

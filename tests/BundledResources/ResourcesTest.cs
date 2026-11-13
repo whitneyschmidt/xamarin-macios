@@ -7,17 +7,8 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
 using System.IO;
-using NUnit.Framework;
-
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
+using System.Linq;
 
 namespace BundledResources {
 
@@ -30,19 +21,43 @@ namespace BundledResources {
 		{
 			// files are extracted (by MonoDevelop) so we can see them in the file system
 			// that's true for simulator or devices and whatever the linker settings are
-			var dir = NSBundle.MainBundle.BundlePath;
-			Assert.True (File.Exists (Path.Combine (dir, "basn3p08.png")), "file-basn3p08.png");
-			Assert.True (File.Exists (Path.Combine (dir, "xamvideotest.mp4")), "xamvideotest.mp4");
+			var dir = NSBundle.MainBundle.ResourcePath!;
+			Assert.That (File.Exists (Path.Combine (dir, "basn3p08.png")), Is.True, "file-basn3p08.png");
+			Assert.That (File.Exists (Path.Combine (dir, "basn3p08_with_loc.png")), Is.True, "file-basn3p08_with_loc.png");
+			Assert.That (File.Exists (Path.Combine (dir, "xamvideotest.mp4")), Is.True, "xamvideotest.mp4");
 
 			// resources are removed by the linker or an extra step (e.g. "link sdk" or "don't link") but that
 			// extra step is done only on device (to keep the simulator builds as fast as possible)
-			var resources = typeof(ResourcesTest).Assembly.GetManifestResourceNames ();
-			if (Runtime.Arch == Arch.DEVICE) {
+			// Note: Also we need to remove the shared-dotnet.plist file from the list of resources if present
+			// since normally it has been embedded in the app bundle manifest (and not as a resource)
+			// unless we are running under the context of (bundle original resources).
+			var resources = typeof (ResourcesTest).Assembly.GetManifestResourceNames ()
+				.Where (r => !r.Contains ("shared-dotnet.plist"))
+				.ToArray ();
+
+#if __MACOS__ || __MACCATALYST__
+			var isSimulator = false;
+#else
+			var isSimulator = Runtime.Arch != Arch.DEVICE;
+#endif
+
+			// In a hot-reload-compatible build, resource stripping is skipped for reloadable
+			// (non-linked) user assemblies, because stripping would re-serialize the assembly and
+			// break Hot Reload. So the bundled resources remain embedded unless this assembly was
+			// linked (in which case it's re-saved regardless, and stripping still applies).
+			AppContext.TryGetSwitch ("ObjCRuntime.Runtime.HotReloadCompatible", out var hotReloadCompatible);
+			var hasResources = isSimulator || (hotReloadCompatible && !TestRuntime.IsLinkAll);
+			if (!hasResources) {
 				Assert.That (resources.Length, Is.EqualTo (0), "No resources");
 			} else {
-				Assert.That (resources.Length, Is.GreaterThanOrEqualTo (2), "Resources");
-				Assert.That (resources, Contains.Item ("__monotouch_content_basn3p08.png"), "res-basn3p08.png");
-				Assert.That (resources, Contains.Item ("__monotouch_content_xamvideotest.mp4"), "res-xamvideotest.mp4");
+				var expectedResources = new string [] {
+					"basn3p08.png",
+					"basn3p08__with__loc.png",
+					"xamvideotest.mp4",
+				};
+				var oldPrefixed = expectedResources.Select (v => $"__monotouch_content_{v}").ToArray ();
+				var newPrefixed = expectedResources.Select (v => $"__monotouch_item_BundleResource_{v}").ToArray ();
+				Assert.That (resources, Is.EquivalentTo (oldPrefixed).Or.EquivalentTo (newPrefixed), "Resources");
 			}
 		}
 	}

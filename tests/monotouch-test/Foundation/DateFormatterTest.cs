@@ -7,17 +7,6 @@
 // Copyright 2013 Xamarin Inc. All rights reserved.
 //
 
-using System;
-using System.Net;
-#if XAMCORE_2_0
-using Foundation;
-using ObjCRuntime;
-#else
-using MonoTouch.Foundation;
-using MonoTouch.ObjCRuntime;
-#endif
-using NUnit.Framework;
-
 namespace MonoTouchFixtures.Foundation {
 
 	[TestFixture]
@@ -28,7 +17,7 @@ namespace MonoTouchFixtures.Foundation {
 		public void ToLocalizedStringTest ()
 		{
 			var str = NSDateFormatter.ToLocalizedString (NSDate.Now, NSDateFormatterStyle.Full, NSDateFormatterStyle.Full);
-			Assert.IsNotNull (str);
+			Assert.That (str, Is.Not.Null);
 		}
 
 		[Test]
@@ -39,10 +28,10 @@ namespace MonoTouchFixtures.Foundation {
 			const string dateComponents = "yMMMMd";
 
 			var dateFormat = NSDateFormatter.GetDateFormatFromTemplate (dateComponents, 0, us_locale);
-			Assert.AreEqual ("MMMM d, y", dateFormat, "#US");
+			Assert.That (dateFormat, Is.EqualTo ("MMMM d, y"), "#US");
 
 			dateFormat = NSDateFormatter.GetDateFormatFromTemplate (dateComponents, 0, gb_locale);
-			Assert.AreEqual ("d MMMM y", dateFormat, "GB");
+			Assert.That (dateFormat, Is.EqualTo ("d MMMM y"), "GB");
 		}
 	}
 }

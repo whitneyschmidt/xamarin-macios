@@ -26,21 +26,24 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.Runtime.InteropServices;
+using CoreFoundation;
 
-using ObjCRuntime;
+#nullable enable
 
-namespace Foundation
-{
-	public static class NSSearchPath
-	{
-		public static string[] GetDirectories (NSSearchPathDirectory directory, NSSearchPathDomain domainMask, bool expandTilde = true)
+namespace Foundation {
+	/// <summary>Provides search paths utilities for finding system directories.</summary>
+	public static class NSSearchPath {
+		/// <summary>Builds an array of directory search paths in the specified directory and domains.</summary>
+		/// <param name="directory">The directory kind to search for.</param>
+		/// <param name="domainMask">The domains to search in.</param>
+		/// <param name="expandTilde">If <see langword="true" />, tildes in the paths will be expanded; otherwise, <see langword="false" />. Default is <see langword="true" />.</param>
+		/// <returns>An array of directory paths. The array is in the order in which you should search the directories. The directories returned may not exist.</returns>
+		public static string [] GetDirectories (NSSearchPathDirectory directory, NSSearchPathDomain domainMask, bool expandTilde = true)
 		{
-			return NSArray.StringArrayFromHandle (NSSearchPathForDirectoriesInDomains ((nuint)(ulong)directory, (nuint)(ulong)domainMask, expandTilde));
+			return CFArray.StringArrayFromHandle (NSSearchPathForDirectoriesInDomains ((nuint) (ulong) directory, (nuint) (ulong) domainMask, expandTilde.AsByte ()))!;
 		}
 
 		[DllImport (Constants.FoundationLibrary)]
-		static extern IntPtr NSSearchPathForDirectoriesInDomains (nuint directory, nuint domainMask, bool expandTilde);
+		static extern IntPtr NSSearchPathForDirectoriesInDomains (nuint directory, nuint domainMask, byte expandTilde);
 	}
 }
